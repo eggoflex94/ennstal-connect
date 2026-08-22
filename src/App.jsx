@@ -424,59 +424,42 @@ function App() {
   }
 
   useEffect(() => {
-    if (!supabase) return;
+  if (!profile || !supabase) return;
 
-    supabase.auth
-      .getSession()
-      .then(({ data }) => {
-        const currentSession =
-          data.session || null;
+  async function setOnline() {
+    const { error } = await supabase.rpc(
+      "update_online_status",
+      {
+        online_status: true
+      }
+    );
 
-        setSession(currentSession);
-
-        if (currentSession?.user) {
-          loadAll(
-            currentSession.user.id
-          );
-        } else {
-          loadAll(null);
-        }
-      });
-
-    const {
-      data: { subscription }
-    } =
-      supabase.auth.onAuthStateChange(
-        (_event, newSession) => {
-          setSession(newSession);
-
-          if (newSession?.user) {
-            loadAll(
-              newSession.user.id
-            );
-          } else {
-            setProfile(null);
-            loadMembers();
-            loadGroups();
-          }
-        }
+    if (error) {
+      console.error(
+        "Online-Status Fehler:",
+        error.message
       );
+    }
+  }
 
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
+  setOnline();
 
-  useEffect(() => {
-    if (!profile || !supabase) return;
+  const interval = window.setInterval(
+    setOnline,
+    60000
+  );
 
-    supabase
-      .from("profiles")
-      .update({
-        is_online: true,
-        last_seen: new Date().toISOString()
-      })
-      .eq("id", profile.id);
+  return () => {
+    window.clearInterval(interval);
+
+    supabase.rpc(
+      "update_online_status",
+      {
+        online_status: false
+      }
+    );
+  };
+}, [profile?.id]);
 
     const interval =
       window.setInterval(() => {
@@ -496,27 +479,40 @@ function App() {
   }, [profile?.id]);
 
   async function signOut() {
-    if (!user) return;
+  if (!user) return;
 
-    await supabase
-      .from("profiles")
-      .update({
-        is_online: false,
-        last_seen:
-          new Date().toISOString()
-      })
-      .eq("id", user.id);
+  const { error: onlineError } =
+    await supabase.rpc(
+      "update_online_status",
+      {
+        online_status: false
+      }
+    );
 
-    await supabase.auth.signOut();
-
-    setProfile(null);
-    setSession(null);
-    setPage("start");
-
-    showNotice(
-      "Du wurdest abgemeldet."
+  if (onlineError) {
+    console.error(
+      onlineError.message
     );
   }
+
+  const { error } =
+    await supabase.auth.signOut();
+
+  if (error) {
+    showNotice(error.message);
+    return;
+  }
+
+  setProfile(null);
+  setSession(null);
+  setPage("start");
+
+  await loadMembers();
+
+  showNotice(
+    "Du wurdest abgemeldet."
+  );
+}
 
   async function saveProfile(event) {
     event.preventDefault();
@@ -789,81 +785,73 @@ function App() {
     await loadMembers();
   }
 
-  async function changePoints(member) {
-    const value =
-      window.prompt(
-        "Punkte eingeben, z.B. 10 oder -5:"
-      );
+ async function changePoints(member) {
+  if (!profile) return;
 
-    if (value === null) return;
+  const value = window.prompt(
+    `Punkte für ${getName(member)} eingeben.
 
-    const amount =
-      Number(value);
+10 = Punkte hinzufügen
+-5 = Punkte abziehen`
+  );
 
-    if (
-      !Number.isFinite(amount) ||
-      amount === 0
-    ) {
-      showNotice(
-        "Bitte eine gültige Punktezahl eingeben."
-      );
-      return;
-    }
+  if (value === null) return;
 
-    const reason =
-      window.prompt(
-        "Grund für die Punkteänderung:"
-      );
+  const amount = Number(value);
 
-    if (
-      !reason ||
-      reason.trim().length < 3
-    ) {
-      showNotice(
-        "Eine Begründung ist erforderlich."
-      );
-      return;
-    }
-
-    const newPoints =
-      Math.max(
-        0,
-        Number(
-          member.community_points || 0
-        ) + amount
-      );
-
-    const { error } =
-      await supabase
-        .from("profiles")
-        .update({
-          community_points:
-            newPoints
-        })
-        .eq("id", member.id);
-
-    if (!error) {
-      await supabase
-        .from("point_history")
-        .insert({
-          user_id: member.id,
-          amount,
-          reason:
-            reason.trim(),
-          created_by: profile.id
-        });
-    }
-
+  if (!Number.isFinite(amount) || amount === 0) {
     showNotice(
+      "Bitte eine gültige Punktezahl eingeben."
+    );
+    return;
+  }
+
+  const reason = window.prompt(
+    "Grund für die Punkteänderung eingeben:"
+  );
+
+  if (!reason || reason.trim().length < 3) {
+    showNotice(
+      "Bitte einen Grund mit mindestens 3 Zeichen eingeben."
+    );
+    return;
+  }
+
+  const { error } = await supabase.rpc(
+    "admin_change_points",
+    {
+      target_user: member.id,
+      delta: amount,
+      change_kind:
+        amount > 0 ? "ADD" : "REMOVE",
+      reason_text: reason.trim()
+    }
+  );
+
+  if (error) {
+    console.error(
+      "Fehler bei Punkteänderung:",
       error
-        ? error.message
-        : `${getName(member)}: ${
-            amount > 0 ? "+" : ""
-          }${amount} Punkte`
     );
 
-    await loadMembers();
+    showNotice(error.message);
+    return;
   }
+
+  showNotice(
+    `${getName(member)} hat ${
+      amount > 0 ? "+" : ""
+    }${amount} Punkte erhalten.`
+  );
+
+  await loadMembers();
+
+  if (profile.id === member.id) {
+    await loadProfile(profile.id);
+  }
+}
+
+async function claimOnlineReward() {
 
   async function claimOnlineReward() {
     const { data, error } =
