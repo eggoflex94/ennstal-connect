@@ -3,20 +3,15 @@ import { createClient } from "@supabase/supabase-js";
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-let supabase = null;
-let supabaseConfigError = "";
+export const supabaseConfigError =
+  !supabaseUrl || !supabaseAnonKey
+    ? "Supabase ist noch nicht konfiguriert. Bitte überprüfe VITE_SUPABASE_URL und VITE_SUPABASE_ANON_KEY."
+    : "";
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  supabaseConfigError =
-    "Supabase ist noch nicht eingerichtet. Bitte überprüfe die Umgebungsvariablen.";
-} else {
-  supabase = createClient(
-    supabaseUrl,
-    supabaseAnonKey
-  );
-}
-
-export {
-  supabase,
+export const supabase =
   supabaseConfigError
-};
+    ? null
+    : createClient(
+        supabaseUrl,
+        supabaseAnonKey
+      );
