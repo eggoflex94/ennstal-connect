@@ -1,16 +1,16 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import ReactDOM from "react-dom/client";
 import "./styles.css";
 
 const ADMIN_EMAIL = "eggermarco@gmx.net";
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+const BLACK_NICKNAME_PRICE = 100;
 
 const starterNews = [
   {
     id: 1,
     title: "Willkommen bei Ennstal Connect",
     content:
-      "Die regionale Community für Ennstal und Obersteiermark ist online. Hier findest du News, Beiträge, Veranstaltungen und vieles mehr.",
+      "Die regionale Community für Ennstal und Obersteiermark ist online.",
     category: "Community",
     date: new Date().toLocaleDateString("de-AT"),
     author: "Ennstal Connect",
@@ -22,19 +22,20 @@ const starterPosts = [
     id: 1,
     name: "Ennstal Connect",
     role: "admin",
-    profileImage: "",
     text: "Willkommen in unserer Community! Wir freuen uns, dass du dabei bist.",
-    date: new Date().toLocaleDateString("de-AT"),
+    date: new Date().toLocaleString("de-AT"),
   },
 ];
 
 function App() {
   const [activePage, setActivePage] = useState("home");
-
   const [user, setUser] = useState(null);
   const [users, setUsers] = useState([]);
   const [news, setNews] = useState([]);
   const [posts, setPosts] = useState([]);
+
+  const [selectedProfile, setSelectedProfile] = useState(null);
+  const [memberSearch, setMemberSearch] = useState("");
 
   const [loginOpen, setLoginOpen] = useState(false);
   const [registerOpen, setRegisterOpen] = useState(false);
@@ -43,14 +44,18 @@ function App() {
   const [password, setPassword] = useState("");
   const [nickname, setNickname] = useState("");
 
-  const [profileImage, setProfileImage] = useState("");
-  const [profileImagePreview, setProfileImagePreview] = useState("");
-
   const [postText, setPostText] = useState("");
 
   const [newsTitle, setNewsTitle] = useState("");
   const [newsContent, setNewsContent] = useState("");
   const [newsCategory, setNewsCategory] = useState("Allgemein");
+
+  const [profileForm, setProfileForm] = useState({
+    bio: "",
+    location: "",
+    interests: "",
+    avatar: "",
+  });
 
   const [message, setMessage] = useState("");
 
@@ -60,12 +65,54 @@ function App() {
     const savedNews = localStorage.getItem("ennstal_news");
     const savedPosts = localStorage.getItem("ennstal_posts");
 
+    let loadedUsers = [];
+
     if (savedUsers) {
-      setUsers(JSON.parse(savedUsers));
+      loadedUsers = JSON.parse(savedUsers).map((member) => ({
+        ...member,
+        status: member.status || "approved",
+        isOnline: member.isOnline || false,
+        lastOnline: member.lastOnline || member.createdAt || "",
+        avatar: member.avatar || "",
+        bio: member.bio || "",
+        location: member.location || "",
+        interests: member.interests || "",
+        communityPoints: member.communityPoints || 0,
+        buyPoints: member.buyPoints || 0,
+        hasBlackNickname: member.hasBlackNickname || false,
+        profileVisits: member.profileVisits || 0,
+      }));
+
+      setUsers(loadedUsers);
     }
 
     if (savedUser) {
-      setUser(JSON.parse(savedUser));
+      const currentUser = JSON.parse(savedUser);
+
+      const updatedUser = {
+        ...currentUser,
+        isOnline: true,
+      };
+
+      setUser(updatedUser);
+
+      const updatedUsers = loadedUsers.map((member) =>
+        member.id === updatedUser.id
+          ? { ...member, ...updatedUser, isOnline: true }
+          : member
+      );
+
+      setUsers(updatedUsers);
+
+      localStorage.setItem(
+        "ennstal_users",
+        JSON.stringify(updatedUsers)
+      );
+
+      localStorage.setItem(
+        "ennstal_current_user",
+        JSON.stringify(updatedUser)
+      );
     }
 
     if (savedNews) {
@@ -88,6 +135,40 @@ function App() {
       );
     }
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const interval = setInterval(() => {
+      const now = new Date().toLocaleString("de-AT");
+
+      const updatedUsers = users.map((member) =>
+        member.id === user.id
+          ? {
+              ...member,
+              isOnline: true,
+              lastOnline: now,
+            }
+          : member
+      );
+
+      saveUsers(updatedUsers);
+
+      const updatedCurrentUser =
+        updatedUsers.find((member) => member.id === user.id);
+
+      if (updatedCurrentUser) {
+        setUser(updatedCurrentUser);
+
+        localStorage.setItem(
+          "ennstal_current_user",
+          JSON.stringify(updatedCurrentUser)
+        );
+      }
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, [user, users]);
 
   function saveUsers(newUsers) {
     setUsers(newUsers);
@@ -116,15 +197,6 @@ function App() {
     );
   }
 
-  function saveCurrentUser(updatedUser) {
-    setUser(updatedUser);
-
-    localStorage.setItem(
-      "ennstal_current_user",
-      JSON.stringify(updatedUser)
-    );
-  }
-
   function showMessage(text) {
     setMessage(text);
 
@@ -133,64 +205,14 @@ function App() {
     }, 3500);
   }
 
-  function resetForm() {
+  function clearAuthFields() {
     setEmail("");
     setPassword("");
     setNickname("");
-    setProfileImage("");
-    setProfileImagePreview("");
-  }
-
-  function handleProfileImageChange(event) {
-    const file = event.target.files?.[0];
-
-    if (!file) {
-      return;
-    }
-
-    const allowedTypes = [
-      "image/jpeg",
-      "image/jpg",
-      "image/png",
-      "image/webp",
-    ];
-
-    if (!allowedTypes.includes(file.type)) {
-      showMessage(
-        "Bitte nur JPG, PNG oder WEBP Bilder hochladen."
-      );
-
-      event.target.value = "";
-      return;
-    }
-
-    if (file.size > MAX_IMAGE_SIZE) {
-      showMessage(
-        "Das Profilbild darf maximal 5 MB groß sein."
-      );
-
-      event.target.value = "";
-      return;
-    }
-
-    const reader = new FileReader();
-
-    reader.onload = () => {
-      const imageData = reader.result;
-
-      setProfileImage(imageData);
-      setProfileImagePreview(imageData);
-    };
-
-    reader.readAsDataURL(file);
   }
 
   function register() {
-    if (
-      !nickname.trim() ||
-      !email.trim() ||
-      !password.trim()
-    ) {
+    if (!nickname.trim() || !email.trim() || !password.trim()) {
       showMessage("Bitte alle Felder ausfüllen.");
       return;
     }
@@ -198,7 +220,7 @@ function App() {
     const emailExists = users.some(
       (existingUser) =>
         existingUser.email.toLowerCase() ===
-        email.toLowerCase()
+        email.trim().toLowerCase()
     );
 
     if (emailExists) {
@@ -209,7 +231,7 @@ function App() {
     }
 
     const isMainAdmin =
-      email.toLowerCase() ===
+      email.trim().toLowerCase() ===
       ADMIN_EMAIL.toLowerCase();
 
     const newUser = {
@@ -218,41 +240,56 @@ function App() {
       email: email.trim().toLowerCase(),
       password,
       role: isMainAdmin ? "admin" : "member",
-      profileImage: profileImage || "",
+      status: isMainAdmin ? "approved" : "pending",
       createdAt: new Date().toLocaleDateString("de-AT"),
+      isOnline: isMainAdmin,
+      lastOnline: new Date().toLocaleString("de-AT"),
+      avatar: "",
+      bio: "",
+      location: "",
+      interests: "",
+      communityPoints: 0,
+      buyPoints: 0,
+      hasBlackNickname: false,
+      profileVisits: 0,
     };
 
-    const updatedUsers = [
-      ...users,
-      newUser,
-    ];
+    const updatedUsers = [...users, newUser];
 
     saveUsers(updatedUsers);
-    saveCurrentUser(newUser);
 
+    clearAuthFields();
     setRegisterOpen(false);
-    resetForm();
 
-    showMessage(
-      isMainAdmin
-        ? "Hauptadmin erfolgreich erstellt."
-        : "Dein Konto wurde erfolgreich erstellt."
-    );
+    if (isMainAdmin) {
+      setUser(newUser);
+
+      localStorage.setItem(
+        "ennstal_current_user",
+        JSON.stringify(newUser)
+      );
+
+      showMessage(
+        "Hauptadmin erfolgreich erstellt."
+      );
+    } else {
+      showMessage(
+        "Registrierung erfolgreich. Ein Admin muss dein Konto noch freigeben."
+      );
+    }
   }
 
   function login() {
     if (!email.trim() || !password.trim()) {
-      showMessage(
-        "Bitte E-Mail-Adresse und Passwort eingeben."
-      );
+      showMessage("Bitte E-Mail und Passwort eingeben.");
       return;
     }
 
     const foundUser = users.find(
-      (existingUser) =>
-        existingUser.email.toLowerCase() ===
-          email.toLowerCase() &&
-        existingUser.password === password
+      (member) =>
+        member.email.toLowerCase() ===
+          email.trim().toLowerCase() &&
+        member.password === password
     );
 
     if (!foundUser) {
@@ -262,185 +299,87 @@ function App() {
       return;
     }
 
-    saveCurrentUser(foundUser);
+    if (foundUser.status !== "approved") {
+      showMessage(
+        "Dein Konto wurde noch nicht von einem Admin freigegeben."
+      );
+      return;
+    }
 
+    const updatedUser = {
+      ...foundUser,
+      isOnline: true,
+      lastOnline: new Date().toLocaleString("de-AT"),
+    };
+
+    const updatedUsers = users.map((member) =>
+      member.id === updatedUser.id
+        ? updatedUser
+        : member
+    );
+
+    saveUsers(updatedUsers);
+
+    setUser(updatedUser);
+
+    localStorage.setItem(
+      "ennstal_current_user",
+      JSON.stringify(updatedUser)
+    );
+
+    clearAuthFields();
     setLoginOpen(false);
 
-    setEmail("");
-    setPassword("");
-
     showMessage(
-      `Willkommen zurück, ${foundUser.nickname}!`
+      `Willkommen zurück, ${updatedUser.nickname}!`
     );
   }
 
   function logout() {
-    setUser(null);
+    if (!user) return;
+
+    const now = new Date().toLocaleString("de-AT");
+
+    const updatedUsers = users.map((member) =>
+      member.id === user.id
+        ? {
+            ...member,
+            isOnline: false,
+            lastOnline: now,
+          }
+        : member
+    );
+
+    saveUsers(updatedUsers);
 
     localStorage.removeItem(
       "ennstal_current_user"
     );
 
+    setUser(null);
+    setSelectedProfile(null);
     setActivePage("home");
 
-    showMessage(
-      "Du wurdest erfolgreich abgemeldet."
-    );
+    showMessage("Du wurdest abgemeldet.");
   }
 
-  function createNews() {
-    if (
-      user?.role !== "admin" ||
-      !newsTitle.trim() ||
-      !newsContent.trim()
-    ) {
-      showMessage(
-        "Bitte Titel und Inhalt der News ausfüllen."
-      );
-      return;
+  function getNicknameColor(member) {
+    if (member.role === "admin") {
+      return "#d62828";
     }
 
-    const newNewsItem = {
-      id: Date.now(),
-      title: newsTitle.trim(),
-      content: newsContent.trim(),
-      category: newsCategory,
-      date: new Date().toLocaleDateString("de-AT"),
-      author: user.nickname,
-    };
+    if (member.hasBlackNickname) {
+      return "#111111";
+    }
 
-    const updatedNews = [
-      newNewsItem,
-      ...news,
-    ];
-
-    saveNews(updatedNews);
-
-    setNewsTitle("");
-    setNewsContent("");
-    setNewsCategory("Allgemein");
-
-    showMessage(
-      "News wurde erfolgreich veröffentlicht."
-    );
+    return "#777777";
   }
 
-  function deleteNews(id) {
-    if (user?.role !== "admin") {
-      return;
-    }
+  function roleName(role) {
+    if (role === "admin") return "Administrator";
+    if (role === "supporter") return "Unterstützer";
 
-    const updatedNews = news.filter(
-      (newsItem) => newsItem.id !== id
-    );
-
-    saveNews(updatedNews);
-
-    showMessage("News wurde gelöscht.");
-  }
-
-  function createPost() {
-    if (!user) {
-      showMessage(
-        "Bitte melde dich zuerst an."
-      );
-      return;
-    }
-
-    if (!postText.trim()) {
-      showMessage(
-        "Bitte schreibe zuerst einen Beitrag."
-      );
-      return;
-    }
-
-    const newPost = {
-      id: Date.now(),
-      name: user.nickname,
-      role: user.role,
-      profileImage: user.profileImage || "",
-      text: postText.trim(),
-      date: new Date().toLocaleDateString("de-AT"),
-    };
-
-    const updatedPosts = [
-      newPost,
-      ...posts,
-    ];
-
-    savePosts(updatedPosts);
-
-    setPostText("");
-
-    showMessage(
-      "Dein Beitrag wurde veröffentlicht."
-    );
-  }
-
-  function deletePost(id) {
-    const postToDelete = posts.find(
-      (post) => post.id === id
-    );
-
-    if (!postToDelete) {
-      return;
-    }
-
-    if (
-      user?.role !== "admin" &&
-      user?.nickname !== postToDelete.name
-    ) {
-      showMessage(
-        "Du darfst diesen Beitrag nicht löschen."
-      );
-      return;
-    }
-
-    const updatedPosts = posts.filter(
-      (post) => post.id !== id
-    );
-
-    savePosts(updatedPosts);
-
-    showMessage("Beitrag wurde gelöscht.");
-  }
-
-  function makeSupporter(userId) {
-    if (user?.role !== "admin") {
-      return;
-    }
-
-    const updatedUsers = users.map(
-      (communityUser) => {
-        if (communityUser.id !== userId) {
-          return communityUser;
-        }
-
-        return {
-          ...communityUser,
-          role:
-            communityUser.role === "supporter"
-              ? "member"
-              : "supporter",
-        };
-      }
-    );
-
-    saveUsers(updatedUsers);
-
-    if (user?.id === userId) {
-      const updatedCurrentUser =
-        updatedUsers.find(
-          (communityUser) =>
-            communityUser.id === userId
-        );
-
-      saveCurrentUser(updatedCurrentUser);
-    }
-
-    showMessage(
-      "Mitgliederstatus wurde aktualisiert."
-    );
+    return "Mitglied";
   }
 
   function renderStar(role) {
@@ -467,47 +406,366 @@ function App() {
     return null;
   }
 
-  function roleName(role) {
-    if (role === "admin") {
-      return "Administrator";
+  function openProfile(member) {
+    if (!user) {
+      showMessage(
+        "Bitte melde dich an, um Mitgliederprofile zu öffnen."
+      );
+      return;
     }
 
-    if (role === "supporter") {
-      return "Unterstützer";
+    if (member.id !== user.id) {
+      const updatedUsers = users.map((existingMember) =>
+        existingMember.id === member.id
+          ? {
+              ...existingMember,
+              profileVisits:
+                (existingMember.profileVisits || 0) + 1,
+            }
+          : existingMember
+      );
+
+      saveUsers(updatedUsers);
+
+      const updatedProfile = updatedUsers.find(
+        (existingMember) =>
+          existingMember.id === member.id
+      );
+
+      setSelectedProfile(updatedProfile);
+    } else {
+      setSelectedProfile(member);
     }
 
-    return "Mitglied";
+    setActivePage("profile");
   }
 
-  function ProfileAvatar({
-    image,
-    name,
-    role,
-    className = "",
+  function handleAvatarUpload(event) {
+    const file = event.target.files?.[0];
+
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      showMessage(
+        "Bitte wähle eine gültige Bilddatei."
+      );
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      setProfileForm((current) => ({
+        ...current,
+        avatar: reader.result,
+      }));
+    };
+
+    reader.readAsDataURL(file);
+  }
+
+  function saveProfile() {
+    if (!user) return;
+
+    const updatedUser = {
+      ...user,
+      bio: profileForm.bio,
+      location: profileForm.location,
+      interests: profileForm.interests,
+      avatar: profileForm.avatar,
+    };
+
+    const updatedUsers = users.map((member) =>
+      member.id === user.id
+        ? updatedUser
+        : member
+    );
+
+    saveUsers(updatedUsers);
+
+    setUser(updatedUser);
+
+    localStorage.setItem(
+      "ennstal_current_user",
+      JSON.stringify(updatedUser)
+    );
+
+    setSelectedProfile(updatedUser);
+
+    showMessage("Profil gespeichert.");
+  }
+
+  function openOwnProfile() {
+    if (!user) return;
+
+    setSelectedProfile(user);
+
+    setProfileForm({
+      bio: user.bio || "",
+      location: user.location || "",
+      interests: user.interests || "",
+      avatar: user.avatar || "",
+    });
+
+    setActivePage("profile");
+  }
+
+  function createPost() {
+    if (!user) {
+      showMessage(
+        "Bitte melde dich an, um Beiträge zu erstellen."
+      );
+      return;
+    }
+
+    if (!postText.trim()) {
+      showMessage("Bitte schreibe einen Beitrag.");
+      return;
+    }
+
+    const newPost = {
+      id: Date.now(),
+      userId: user.id,
+      name: user.nickname,
+      role: user.role,
+      hasBlackNickname: user.hasBlackNickname,
+      avatar: user.avatar || "",
+      text: postText.trim(),
+      date: new Date().toLocaleString("de-AT"),
+    };
+
+    savePosts([newPost, ...posts]);
+
+    setPostText("");
+
+    showMessage("Beitrag veröffentlicht.");
+  }
+
+  function deletePost(id) {
+    savePosts(
+      posts.filter((post) => post.id !== id)
+    );
+
+    showMessage("Beitrag gelöscht.");
+  }
+
+  function createNews() {
+    if (user?.role !== "admin") return;
+
+    if (
+      !newsTitle.trim() ||
+      !newsContent.trim()
+    ) {
+      showMessage(
+        "Bitte Titel und Inhalt eingeben."
+      );
+      return;
+    }
+
+    const newNews = {
+      id: Date.now(),
+      title: newsTitle.trim(),
+      content: newsContent.trim(),
+      category: newsCategory,
+      date: new Date().toLocaleDateString("de-AT"),
+      author: user.nickname,
+    };
+
+    saveNews([newNews, ...news]);
+
+    setNewsTitle("");
+    setNewsContent("");
+
+    showMessage("News veröffentlicht.");
+  }
+
+  function deleteNews(id) {
+    saveNews(
+      news.filter(
+        (newsItem) => newsItem.id !== id
+      )
+    );
+
+    showMessage("News gelöscht.");
+  }
+
+  function approveUser(id) {
+    const updatedUsers = users.map((member) =>
+      member.id === id
+        ? {
+            ...member,
+            status: "approved",
+          }
+        : member
+    );
+
+    saveUsers(updatedUsers);
+
+    showMessage("Mitglied freigegeben.");
+  }
+
+  function rejectUser(id) {
+    const updatedUsers = users.map((member) =>
+      member.id === id
+        ? {
+            ...member,
+            status: "rejected",
+          }
+        : member
+    );
+
+    saveUsers(updatedUsers);
+
+    showMessage("Registrierung abgelehnt.");
+  }
+
+  function toggleSupporter(id) {
+    const updatedUsers = users.map((member) => {
+      if (member.id !== id) return member;
+      if (member.role === "admin") return member;
+
+      return {
+        ...member,
+        role:
+          member.role === "supporter"
+            ? "member"
+            : "supporter",
+      };
+    });
+
+    saveUsers(updatedUsers);
+
+    showMessage(
+      "Unterstützerstatus geändert."
+    );
+  }
+
+  function buyBlackNickname() {
+    if (!user) {
+      showMessage(
+        "Bitte melde dich an."
+      );
+      return;
+    }
+
+    if (user.role === "admin") {
+      showMessage(
+        "Als Admin ist dein Nickname automatisch rot."
+      );
+      return;
+    }
+
+    if (user.hasBlackNickname) {
+      showMessage(
+        "Du besitzt bereits den schwarzen Nickname."
+      );
+      return;
+    }
+
+    if (user.buyPoints < BLACK_NICKNAME_PRICE) {
+      showMessage(
+        `Du benötigst ${BLACK_NICKNAME_PRICE} Kaufpunkte.`
+      );
+      return;
+    }
+
+    const updatedUser = {
+      ...user,
+      buyPoints:
+        user.buyPoints -
+        BLACK_NICKNAME_PRICE,
+      hasBlackNickname: true,
+    };
+
+    const updatedUsers = users.map((member) =>
+      member.id === user.id
+        ? updatedUser
+        : member
+    );
+
+    saveUsers(updatedUsers);
+
+    setUser(updatedUser);
+
+    localStorage.setItem(
+      "ennstal_current_user",
+      JSON.stringify(updatedUser)
+    );
+
+    showMessage(
+      "Schwarze Nickname-Farbe erfolgreich gekauft!"
+    );
+  }
+
+  const approvedUsers = useMemo(
+    () =>
+      users.filter(
+        (member) =>
+          member.status === "approved"
+      ),
+    [users]
+  );
+
+  const onlineUsers = useMemo(
+    () =>
+      approvedUsers.filter(
+        (member) => member.isOnline
+      ),
+    [approvedUsers]
+  );
+
+  const filteredUsers = useMemo(() => {
+    const search =
+      memberSearch.toLowerCase().trim();
+
+    if (!search) return approvedUsers;
+
+    return approvedUsers.filter((member) =>
+      member.nickname
+        .toLowerCase()
+        .includes(search)
+    );
+  }, [
+    approvedUsers,
+    memberSearch,
+  ]);
+
+  const pendingUsers = users.filter(
+    (member) =>
+      member.status === "pending"
+  );
+
+  function Nickname({
+    member,
+    clickable = true,
   }) {
+    const canOpen = Boolean(user) && clickable;
+
     return (
-      <div
-        className={`user-avatar ${role || ""} ${className}`}
+      <span
+        className={
+          canOpen
+            ? "clickable-nickname"
+            : "nickname"
+        }
+        style={{
+          color: getNicknameColor(member),
+        }}
+        onClick={() => {
+          if (canOpen) {
+            openProfile(member);
+          }
+        }}
       >
-        {image ? (
-          <img
-            src={image}
-            alt={`${name} Profilbild`}
-            className="profile-image"
-          />
-        ) : (
-          <span>
-            {name
-              ? name.charAt(0).toUpperCase()
-              : "?"}
-          </span>
-        )}
-      </div>
+        {member.nickname}
+        {renderStar(member.role)}
+      </span>
     );
   }
 
   return (
-    <>
+    <div className="app">
+
       <header className="site-header">
         <div className="header-container">
 
@@ -525,7 +783,6 @@ function App() {
           </button>
 
           <nav className="main-nav">
-
             <button
               className={
                 activePage === "home"
@@ -565,25 +822,36 @@ function App() {
               Community
             </button>
 
-            {user?.role === "admin" && (
+            <button
+              className={
+                activePage === "members"
+                  ? "nav-link active"
+                  : "nav-link"
+              }
+              onClick={() =>
+                setActivePage("members")
+              }
+            >
+              Mitglieder
+            </button>
+
+            {user && (
               <button
                 className={
-                  activePage === "admin"
+                  activePage === "market"
                     ? "nav-link active"
                     : "nav-link"
                 }
                 onClick={() =>
-                  setActivePage("admin")
+                  setActivePage("market")
                 }
               >
-                Admin
+                Marktplatz
               </button>
             )}
-
           </nav>
 
           <div className="header-user">
-
             {!user ? (
               <>
                 <button
@@ -606,22 +874,15 @@ function App() {
               </>
             ) : (
               <>
-                <div
-                  className={`user-badge ${user.role}`}
+                <button
+                  className="user-badge"
+                  onClick={openOwnProfile}
                 >
-                  <ProfileAvatar
-                    image={user.profileImage}
-                    name={user.nickname}
-                    role={user.role}
-                    className="header-avatar"
+                  <Nickname
+                    member={user}
+                    clickable={false}
                   />
-
-                  <span>
-                    {user.nickname}
-                  </span>
-
-                  {renderStar(user.role)}
-                </div>
+                </button>
 
                 <button
                   className="logout-button"
@@ -631,7 +892,6 @@ function App() {
                 </button>
               </>
             )}
-
           </div>
 
         </div>
@@ -651,6 +911,10 @@ function App() {
               <div className="hero-overlay">
                 <div className="hero-content">
 
+                  <p className="eyebrow">
+                    REGIONAL. VERBUNDEN. GEMEINSAM.
+                  </p>
+
                   <h1>
                     Willkommen bei
                     <span>
@@ -659,14 +923,15 @@ function App() {
                   </h1>
 
                   <p>
-                    Die regionale Community für
-                    Ennstal und Obersteiermark.
+                    Die regionale Community
+                    für Ennstal und
+                    Obersteiermark.
                   </p>
 
                   <button
                     className="hero-button"
                     onClick={() =>
-                      setActivePage("community")
+                      setActivePage("members")
                     }
                   >
                     Community entdecken
@@ -676,7 +941,7 @@ function App() {
               </div>
             </section>
 
-            <section className="section home-news">
+            <section className="section">
               <div className="section-heading">
                 <div>
                   <p className="eyebrow">
@@ -684,7 +949,7 @@ function App() {
                   </p>
 
                   <h2>
-                    Neuigkeiten aus der Community
+                    Neuigkeiten
                   </h2>
                 </div>
 
@@ -694,13 +959,14 @@ function App() {
                     setActivePage("news")
                   }
                 >
-                  Alle News ansehen
+                  Alle News →
                 </button>
               </div>
 
               <div className="news-grid">
-                {news.slice(0, 3).map(
-                  (newsItem) => (
+                {news
+                  .slice(0, 3)
+                  .map((newsItem) => (
                     <article
                       className="news-card"
                       key={newsItem.id}
@@ -717,62 +983,116 @@ function App() {
                         {newsItem.content}
                       </p>
 
-                      <small>
-                        {newsItem.date}
-                      </small>
+                      <div className="card-footer">
+                        <span>
+                          {newsItem.date}
+                        </span>
+
+                        <span>
+                          von {newsItem.author}
+                        </span>
+                      </div>
                     </article>
-                  )
-                )}
+                  ))}
               </div>
             </section>
 
-            <section className="section features">
-              <div className="feature-card">
-                <div className="feature-icon">
-                  🌄
-                </div>
-
-                <h3>
-                  Region entdecken
-                </h3>
+            {!user && (
+              <section className="guest-notice">
+                <h2>
+                  Du bist als Gast unterwegs
+                </h2>
 
                 <p>
-                  Entdecke Menschen, Orte,
-                  Veranstaltungen und Neuigkeiten
-                  aus deiner Region.
+                  Du kannst die öffentlichen
+                  Bereiche ansehen und sehen,
+                  welche Mitglieder gerade
+                  online sind. Für Profile,
+                  Beiträge, Nachrichten,
+                  Punkte und alle Community-
+                  Funktionen musst du dich
+                  anmelden.
                 </p>
+
+                <button
+                  className="primary-button"
+                  onClick={() =>
+                    setRegisterOpen(true)
+                  }
+                >
+                  Jetzt registrieren
+                </button>
+              </section>
+            )}
+
+            <section className="section">
+              <div className="section-heading">
+                <div>
+                  <p className="eyebrow">
+                    LIVE
+                  </p>
+
+                  <h2>
+                    Gerade online
+                  </h2>
+                </div>
+
+                <span className="online-counter">
+                  {onlineUsers.length} online
+                </span>
               </div>
 
-              <div className="feature-card">
-                <div className="feature-icon">
-                  💬
-                </div>
+              <div className="members-grid compact-grid">
+                {onlineUsers.length === 0 ? (
+                  <p className="empty-state">
+                    Derzeit ist kein Mitglied online.
+                  </p>
+                ) : (
+                  onlineUsers.map((member) => (
+                    <article
+                      className={`member-card ${member.role}`}
+                      key={member.id}
+                    >
+                      <div className="member-card-top">
 
-                <h3>
-                  Gemeinsam austauschen
-                </h3>
+                        <div className="avatar-wrap">
+                          {member.avatar ? (
+                            <img
+                              src={member.avatar}
+                              alt={member.nickname}
+                              className="member-avatar"
+                            />
+                          ) : (
+                            <div className="member-avatar placeholder-avatar">
+                              {member.nickname
+                                .charAt(0)
+                                .toUpperCase()}
+                            </div>
+                          )}
 
-                <p>
-                  Tausche dich mit anderen
-                  Mitgliedern aus und teile
-                  deine Beiträge.
-                </p>
-              </div>
+                          <span className="status-dot online-dot" />
+                        </div>
 
-              <div className="feature-card">
-                <div className="feature-icon">
-                  ⭐
-                </div>
+                        <div className="member-info">
+                          <h3>
+                            <Nickname
+                              member={member}
+                            />
+                          </h3>
 
-                <h3>
-                  Unterstützen
-                </h3>
+                          <p>
+                            {roleName(member.role)}
+                          </p>
 
-                <p>
-                  Unterstützer erhalten einen
-                  eigenen grünen Stern neben
-                  ihrem Namen.
-                </p>
+                          <span className="online-status">
+                            🟢 Online
+                          </span>
+                        </div>
+
+                      </div>
+                    </article>
+                  ))
+                )}
               </div>
             </section>
           </>
@@ -791,14 +1111,13 @@ function App() {
               </h1>
 
               <p>
-                Alle öffentlich veröffentlichten
-                Informationen aus unserer Community.
+                Aktuelle Informationen
+                aus unserer Community.
               </p>
             </div>
 
             {user?.role === "admin" && (
               <div className="admin-news-form">
-
                 <h2>
                   Neue News veröffentlichen
                 </h2>
@@ -855,20 +1174,16 @@ function App() {
                 >
                   News veröffentlichen
                 </button>
-
               </div>
             )}
 
             <div className="news-list">
-
               {news.map((newsItem) => (
                 <article
                   className="large-news-card"
                   key={newsItem.id}
                 >
-
                   <div className="news-card-top">
-
                     <div className="news-category">
                       {newsItem.category}
                     </div>
@@ -883,7 +1198,6 @@ function App() {
                         Löschen
                       </button>
                     )}
-
                   </div>
 
                   <h2>
@@ -900,14 +1214,11 @@ function App() {
                     </span>
 
                     <span>
-                      Veröffentlicht von{" "}
-                      {newsItem.author}
+                      von {newsItem.author}
                     </span>
                   </div>
-
                 </article>
               ))}
-
             </div>
 
           </section>
@@ -917,7 +1228,6 @@ function App() {
           <section className="section page-section">
 
             <div className="page-title">
-
               <p className="eyebrow">
                 COMMUNITY
               </p>
@@ -927,260 +1237,349 @@ function App() {
               </h1>
 
               <p>
-                Teile deine Gedanken,
-                Informationen und Beiträge mit
-                der Ennstal Connect Community.
+                Teile deine Gedanken
+                mit der Community.
               </p>
-
             </div>
 
-            {user ? (
-              <div className="create-post">
-
-                <div className="create-post-user">
-                  <ProfileAvatar
-                    image={user.profileImage}
-                    name={user.nickname}
-                    role={user.role}
-                  />
-
-                  <div>
-                    <strong>
-                      {user.nickname}
-                    </strong>
-
-                    {renderStar(user.role)}
-                  </div>
-                </div>
-
-                <textarea
-                  placeholder="Was möchtest du mit der Community teilen?"
-                  value={postText}
-                  onChange={(event) =>
-                    setPostText(event.target.value)
-                  }
-                />
-
-                <button
-                  className="primary-button"
-                  onClick={createPost}
-                >
-                  Beitrag veröffentlichen
-                </button>
-
-              </div>
-            ) : (
-              <div className="login-hint">
-
+            {!user ? (
+              <div className="restricted-box">
                 <h2>
-                  Werde Teil der Community
+                  Community-Bereich
                 </h2>
 
                 <p>
-                  Melde dich an oder registriere
-                  dich, um eigene Beiträge zu
-                  veröffentlichen.
+                  Als Gast kannst du diesen
+                  Bereich nicht aktiv nutzen.
+                  Bitte melde dich an oder
+                  registriere dich.
                 </p>
 
                 <button
                   className="primary-button"
                   onClick={() =>
-                    setRegisterOpen(true)
+                    setLoginOpen(true)
                   }
                 >
-                  Jetzt registrieren
+                  Jetzt anmelden
                 </button>
-
               </div>
-            )}
+            ) : (
+              <>
+                <div className="create-post">
+                  <h2>
+                    Neuen Beitrag erstellen
+                  </h2>
 
-            <div className="posts-list">
+                  <textarea
+                    placeholder="Was möchtest du mit der Community teilen?"
+                    value={postText}
+                    onChange={(event) =>
+                      setPostText(
+                        event.target.value
+                      )
+                    }
+                  />
 
-              {posts.map((post) => (
-                <article
-                  className={`post-card ${post.role}`}
-                  key={post.id}
-                >
+                  <button
+                    className="primary-button"
+                    onClick={createPost}
+                  >
+                    Beitrag veröffentlichen
+                  </button>
+                </div>
 
-                  <div className="post-header">
+                <div className="posts-list">
+                  {posts.map((post) => (
+                    <article
+                      className="post-card"
+                      key={post.id}
+                    >
+                      <div className="post-header">
 
-                    <ProfileAvatar
-                      image={post.profileImage}
-                      name={post.name}
-                      role={post.role}
-                    />
+                        <div className="post-avatar">
+                          {post.avatar ? (
+                            <img
+                              src={post.avatar}
+                              alt={post.name}
+                            />
+                          ) : (
+                            post.name
+                              .charAt(0)
+                              .toUpperCase()
+                          )}
+                        </div>
 
-                    <div className="post-user-info">
+                        <div className="post-user-info">
+                          <strong
+                            className="clickable-nickname"
+                            style={{
+                              color:
+                                post.role === "admin"
+                                  ? "#d62828"
+                                  : post.hasBlackNickname
+                                  ? "#111111"
+                                  : "#777777",
+                            }}
+                            onClick={() => {
+                              const member =
+                                users.find(
+                                  (existingMember) =>
+                                    existingMember.id ===
+                                    post.userId
+                                );
 
-                      <div className="post-name">
+                              if (member) {
+                                openProfile(member);
+                              }
+                            }}
+                          >
+                            {post.name}
+                            {renderStar(post.role)}
+                          </strong>
 
-                        <strong>
-                          {post.name}
-                        </strong>
+                          <span>
+                            {roleName(post.role)} ·{" "}
+                            {post.date}
+                          </span>
+                        </div>
 
-                        {renderStar(post.role)}
+                        {(user.role === "admin" ||
+                          user.id === post.userId) && (
+                          <button
+                            className="delete-button"
+                            onClick={() =>
+                              deletePost(post.id)
+                            }
+                          >
+                            Löschen
+                          </button>
+                        )}
 
                       </div>
 
-                      <span>
-                        {roleName(post.role)} ·{" "}
-                        {post.date}
-                      </span>
+                      <p className="post-text">
+                        {post.text}
+                      </p>
+                    </article>
+                  ))}
+                </div>
+              </>
+            )}
+
+          </section>
+        )}
+
+        {activePage === "members" && (
+          <section className="section page-section">
+
+            <div className="page-title">
+              <p className="eyebrow">
+                COMMUNITY
+              </p>
+
+              <h1>
+                Mitglieder
+              </h1>
+
+              <p>
+                Finde Mitglieder
+                aus der Community.
+              </p>
+            </div>
+
+            <div className="member-search">
+              <input
+                type="text"
+                placeholder="Mitglied oder Nickname suchen..."
+                value={memberSearch}
+                onChange={(event) =>
+                  setMemberSearch(
+                    event.target.value
+                  )
+                }
+              />
+
+              <span>
+                {filteredUsers.length} Mitglieder
+              </span>
+            </div>
+
+            {!user && (
+              <div className="guest-members-info">
+                Als Gast siehst du nur Mitglieder,
+                die aktuell online sind. Profile
+                können erst nach der Anmeldung
+                geöffnet werden.
+              </div>
+            )}
+
+            <div className="members-grid">
+
+              {(user
+                ? filteredUsers
+                : filteredUsers.filter(
+                    (member) => member.isOnline
+                  )
+              ).map((member) => (
+                <article
+                  className={`member-card ${member.role}`}
+                  key={member.id}
+                >
+                  <div className="member-card-top">
+
+                    <div className="avatar-wrap">
+
+                      {member.avatar ? (
+                        <img
+                          src={member.avatar}
+                          alt={member.nickname}
+                          className="member-avatar"
+                        />
+                      ) : (
+                        <div className="member-avatar placeholder-avatar">
+                          {member.nickname
+                            .charAt(0)
+                            .toUpperCase()}
+                        </div>
+                      )}
+
+                      {member.isOnline && (
+                        <span className="status-dot online-dot" />
+                      )}
+
+                      {!member.isOnline && user && (
+                        <span className="status-dot offline-dot" />
+                      )}
 
                     </div>
 
-                    {user &&
-                      (user.role === "admin" ||
-                        user.nickname === post.name) && (
-                        <button
-                          className="delete-button"
-                          onClick={() =>
-                            deletePost(post.id)
-                          }
-                        >
-                          Löschen
-                        </button>
-                      )}
+                    <div className="member-info">
+
+                      <h3>
+                        <Nickname
+                          member={member}
+                        />
+                      </h3>
+
+                      <p>
+                        {roleName(member.role)}
+                      </p>
+
+                      {member.isOnline ? (
+                        <span className="online-status">
+                          🟢 Online
+                        </span>
+                      ) : user ? (
+                        <span className="offline-status">
+                          ⚪ Zuletzt online:{" "}
+                          {member.lastOnline ||
+                            "nicht verfügbar"}
+                        </span>
+                      ) : null}
+
+                    </div>
 
                   </div>
-
-                  <p className="post-text">
-                    {post.text}
-                  </p>
 
                 </article>
               ))}
 
             </div>
 
-          </section>
-        )}
+            {user?.role === "admin" && (
+              <section className="admin-member-management">
 
-        {activePage === "admin" &&
-          user?.role === "admin" && (
-            <section className="section page-section">
+                <div className="section-heading">
+                  <div>
+                    <p className="eyebrow">
+                      VERWALTUNG
+                    </p>
 
-              <div className="page-title">
-
-                <p className="eyebrow">
-                  VERWALTUNG
-                </p>
-
-                <h1>
-                  Admin-Dashboard
-                </h1>
-
-                <p>
-                  Verwalte Mitglieder, Unterstützer
-                  und Inhalte deiner Community.
-                </p>
-
-              </div>
-
-              <div className="admin-stats">
-
-                <div className="stat-card">
-                  <span>
-                    Mitglieder
-                  </span>
-
-                  <strong>
-                    {users.length}
-                  </strong>
+                    <h2>
+                      Mitglieder verwalten
+                    </h2>
+                  </div>
                 </div>
 
-                <div className="stat-card">
-                  <span>
-                    News
-                  </span>
+                <div className="admin-members-grid">
+                  {users.map((member) => (
+                    <article
+                      className={`member-card admin-management-card ${member.role}`}
+                      key={member.id}
+                    >
+                      <div className="member-card-top">
 
-                  <strong>
-                    {news.length}
-                  </strong>
-                </div>
+                        <div className="avatar-wrap">
 
-                <div className="stat-card">
-                  <span>
-                    Beiträge
-                  </span>
-
-                  <strong>
-                    {posts.length}
-                  </strong>
-                </div>
-
-              </div>
-
-              <div className="admin-users">
-
-                <h2>
-                  Mitglieder verwalten
-                </h2>
-
-                {users.length === 0 ? (
-                  <p className="empty-state">
-                    Noch keine registrierten Mitglieder.
-                  </p>
-                ) : (
-                  users.map(
-                    (communityUser) => (
-                      <div
-                        className={`admin-user-row ${communityUser.role}`}
-                        key={communityUser.id}
-                      >
-
-                        <div className="admin-user-profile">
-
-                          <ProfileAvatar
-                            image={
-                              communityUser.profileImage
-                            }
-                            name={
-                              communityUser.nickname
-                            }
-                            role={
-                              communityUser.role
-                            }
-                            className="admin-avatar"
-                          />
-
-                          <div>
-
-                            <div className="admin-user-name">
-
-                              <strong>
-                                {
-                                  communityUser.nickname
-                                }
-                              </strong>
-
-                              {renderStar(
-                                communityUser.role
-                              )}
-
+                          {member.avatar ? (
+                            <img
+                              src={member.avatar}
+                              alt={member.nickname}
+                              className="member-avatar"
+                            />
+                          ) : (
+                            <div className="member-avatar placeholder-avatar">
+                              {member.nickname
+                                .charAt(0)
+                                .toUpperCase()}
                             </div>
-
-                            <span>
-                              {
-                                communityUser.email
-                              }
-                            </span>
-
-                          </div>
+                          )}
 
                         </div>
 
-                        {communityUser.role !==
-                          "admin" && (
+                        <div className="member-info">
+                          <h3>
+                            <Nickname
+                              member={member}
+                            />
+                          </h3>
+
+                          <p>
+                            {roleName(member.role)}
+                          </p>
+
+                          <span>
+                            Status: {member.status}
+                          </span>
+                        </div>
+
+                      </div>
+
+                      <div className="admin-card-actions">
+
+                        {member.status === "pending" && (
+                          <>
+                            <button
+                              className="approve-button"
+                              onClick={() =>
+                                approveUser(member.id)
+                              }
+                            >
+                              Freigeben
+                            </button>
+
+                            <button
+                              className="reject-button"
+                              onClick={() =>
+                                rejectUser(member.id)
+                              }
+                            >
+                              Ablehnen
+                            </button>
+                          </>
+                        )}
+
+                        {member.role !== "admin" && (
                           <button
                             className="supporter-button"
                             onClick={() =>
-                              makeSupporter(
-                                communityUser.id
+                              toggleSupporter(
+                                member.id
                               )
                             }
                           >
-                            {communityUser.role ===
+                            {member.role ===
                             "supporter"
                               ? "Unterstützer entfernen"
                               : "Als Unterstützer markieren"}
@@ -1188,8 +1587,245 @@ function App() {
                         )}
 
                       </div>
-                    )
-                  )
+
+                    </article>
+                  ))}
+                </div>
+
+              </section>
+            )}
+
+          </section>
+        )}
+
+        {activePage === "profile" &&
+          selectedProfile && (
+            <section className="section page-section profile-page">
+
+              <button
+                className="back-button"
+                onClick={() =>
+                  setActivePage("members")
+                }
+              >
+                ← Zurück
+              </button>
+
+              <div
+                className={`profile-card ${selectedProfile.role}`}
+              >
+
+                <div className="profile-header">
+
+                  <div className="profile-avatar">
+
+                    {selectedProfile.avatar ? (
+                      <img
+                        src={selectedProfile.avatar}
+                        alt={
+                          selectedProfile.nickname
+                        }
+                      />
+                    ) : (
+                      selectedProfile.nickname
+                        .charAt(0)
+                        .toUpperCase()
+                    )}
+
+                  </div>
+
+                  <div>
+
+                    <h1>
+                      <Nickname
+                        member={selectedProfile}
+                        clickable={false}
+                      />
+                    </h1>
+
+                    <p>
+                      {roleName(
+                        selectedProfile.role
+                      )}
+                    </p>
+
+                    {selectedProfile.isOnline ? (
+                      <span className="online-status">
+                        🟢 Online
+                      </span>
+                    ) : (
+                      <span className="offline-status">
+                        ⚪ Zuletzt online:{" "}
+                        {selectedProfile.lastOnline ||
+                          "nicht verfügbar"}
+                      </span>
+                    )}
+
+                  </div>
+
+                </div>
+
+                <div className="profile-content">
+
+                  {selectedProfile.bio && (
+                    <div className="profile-info-box">
+                      <h3>
+                        Über mich
+                      </h3>
+
+                      <p>
+                        {selectedProfile.bio}
+                      </p>
+                    </div>
+                  )}
+
+                  {selectedProfile.location && (
+                    <div className="profile-info-box">
+                      <h3>
+                        Wohnort / Region
+                      </h3>
+
+                      <p>
+                        {selectedProfile.location}
+                      </p>
+                    </div>
+                  )}
+
+                  {selectedProfile.interests && (
+                    <div className="profile-info-box">
+                      <h3>
+                        Interessen
+                      </h3>
+
+                      <p>
+                        {selectedProfile.interests}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="profile-info-box">
+                    <h3>
+                      Mitglied seit
+                    </h3>
+
+                    <p>
+                      {selectedProfile.createdAt}
+                    </p>
+                  </div>
+
+                  <div className="profile-info-box">
+                    <h3>
+                      Profilbesuche
+                    </h3>
+
+                    <p>
+                      {selectedProfile.profileVisits || 0}
+                    </p>
+                  </div>
+
+                  {user?.role === "admin" &&
+                    selectedProfile.email && (
+                      <div className="admin-private-info">
+                        <h3>
+                          🔒 Admin-Informationen
+                        </h3>
+
+                        <p>
+                          <strong>
+                            E-Mail-Adresse:
+                          </strong>
+
+                          <br />
+
+                          {selectedProfile.email}
+                        </p>
+                      </div>
+                    )}
+
+                </div>
+
+                {user?.id === selectedProfile.id && (
+                  <div className="profile-editor">
+
+                    <h2>
+                      Mein Profil bearbeiten
+                    </h2>
+
+                    <label>
+                      Profilbild
+                    </label>
+
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleAvatarUpload}
+                    />
+
+                    <p className="small-text">
+                      JPG, PNG und andere
+                      Bildformate werden automatisch
+                      an den Profilrahmen angepasst.
+                    </p>
+
+                    <label>
+                      Über mich
+                    </label>
+
+                    <textarea
+                      value={profileForm.bio}
+                      onChange={(event) =>
+                        setProfileForm({
+                          ...profileForm,
+                          bio:
+                            event.target.value,
+                        })
+                      }
+                    />
+
+                    <label>
+                      Wohnort / Region
+                    </label>
+
+                    <input
+                      type="text"
+                      value={
+                        profileForm.location
+                      }
+                      onChange={(event) =>
+                        setProfileForm({
+                          ...profileForm,
+                          location:
+                            event.target.value,
+                        })
+                      }
+                    />
+
+                    <label>
+                      Interessen
+                    </label>
+
+                    <input
+                      type="text"
+                      value={
+                        profileForm.interests
+                      }
+                      onChange={(event) =>
+                        setProfileForm({
+                          ...profileForm,
+                          interests:
+                            event.target.value,
+                        })
+                      }
+                    />
+
+                    <button
+                      className="primary-button"
+                      onClick={saveProfile}
+                    >
+                      Profil speichern
+                    </button>
+
+                  </div>
                 )}
 
               </div>
@@ -1197,133 +1833,71 @@ function App() {
             </section>
           )}
 
-        {activePage === "impressum" && (
-          <section className="legal-page">
+        {activePage === "market" && user && (
+          <section className="section page-section">
 
-            <h1>
-              Impressum
-            </h1>
+            <div className="page-title">
+              <p className="eyebrow">
+                MARKTPLATZ
+              </p>
 
-            <h2>
-              Angaben gemäß § 5 ECG
-            </h2>
+              <h1>
+                Persönliche Extras
+              </h1>
 
-            <p>
-              Marco Egger
-              <br />
-              Waidbachstrasse
-              <br />
-              8700 Leoben
-              <br />
-              Österreich
-            </p>
+              <p>
+                Verfügbare Kaufpunkte:{" "}
+                <strong>
+                  {user.buyPoints || 0}
+                </strong>
+              </p>
+            </div>
 
-            <h2>
-              Kontakt
-            </h2>
+            <div className="market-grid">
 
-            <p>
-              E-Mail:
-              <br />
-              eggermarco@gmx.net
-            </p>
+              <article className="market-card">
 
-            <h2>
-              Verantwortlich für den Inhalt
-            </h2>
+                <div className="market-icon">
+                  🎨
+                </div>
 
-            <p>
-              Marco Egger
-            </p>
+                <h2>
+                  Schwarzer Nickname
+                </h2>
 
-            <h2>
-              Haftung für Inhalte
-            </h2>
+                <p>
+                  Dein Nickname wird dauerhaft
+                  schwarz angezeigt.
+                </p>
 
-            <p>
-              Die Inhalte dieser Website werden
-              mit größtmöglicher Sorgfalt erstellt.
-              Für die Richtigkeit, Vollständigkeit
-              und Aktualität der Inhalte kann jedoch
-              keine Gewähr übernommen werden.
-            </p>
+                <strong className="market-price">
+                  {BLACK_NICKNAME_PRICE}
+                  {" "}Kaufpunkte
+                </strong>
 
-            <h2>
-              Urheberrecht
-            </h2>
+                {user.role === "admin" ? (
+                  <div className="owned-item">
+                    Admins haben alle Extras.
+                    Dein Nickname bleibt rot.
+                  </div>
+                ) : user.hasBlackNickname ? (
+                  <div className="owned-item">
+                    Bereits gekauft ✓
+                  </div>
+                ) : (
+                  <button
+                    className="primary-button"
+                    onClick={
+                      buyBlackNickname
+                    }
+                  >
+                    Kaufen
+                  </button>
+                )}
 
-            <p>
-              Die auf dieser Website erstellten
-              Inhalte und Werke unterliegen dem
-              Urheberrecht. Eine Verwendung außerhalb
-              der gesetzlichen Grenzen bedarf der
-              Zustimmung des jeweiligen Rechteinhabers.
-            </p>
+              </article>
 
-          </section>
-        )}
-
-        {activePage === "privacy" && (
-          <section className="legal-page">
-
-            <h1>
-              Datenschutzerklärung
-            </h1>
-
-            <h2>
-              Allgemeine Informationen
-            </h2>
-
-            <p>
-              Der Schutz deiner persönlichen Daten
-              ist uns wichtig. Personenbezogene Daten
-              werden nur im Rahmen der gesetzlichen
-              Bestimmungen verarbeitet.
-            </p>
-
-            <h2>
-              Registrierung
-            </h2>
-
-            <p>
-              Bei der Registrierung werden die von dir
-              angegebenen Daten wie Nickname,
-              E-Mail-Adresse und optional dein
-              Profilbild zur Nutzung der Community
-              verarbeitet.
-            </p>
-
-            <h2>
-              Community-Inhalte
-            </h2>
-
-            <p>
-              Beiträge, die du innerhalb der Community
-              veröffentlichst, können für andere
-              Besucher und Mitglieder sichtbar sein.
-            </p>
-
-            <h2>
-              Deine Rechte
-            </h2>
-
-            <p>
-              Du hast grundsätzlich das Recht auf
-              Auskunft, Berichtigung, Löschung,
-              Einschränkung, Datenübertragbarkeit
-              und Widerspruch im Rahmen der geltenden
-              Datenschutzbestimmungen.
-            </p>
-
-            <h2>
-              Kontakt
-            </h2>
-
-            <p>
-              Bei Fragen zum Datenschutz:
-              <br />
-              eggermarco@gmx.net
-            </p>
+            </div>
 
           </section>
         )}
@@ -1342,8 +1916,9 @@ function App() {
             />
 
             <p>
-              Die regionale Community für
-              Ennstal und Obersteiermark.
+              Die regionale Community
+              für Ennstal und
+              Obersteiermark.
             </p>
           </div>
 
@@ -1370,10 +1945,111 @@ function App() {
         </div>
 
         <div className="footer-bottom">
-          © {new Date().getFullYear()} Ennstal Connect
+          © {new Date().getFullYear()}
+          {" "}Ennstal Connect
         </div>
 
       </footer>
+
+      {activePage === "impressum" && (
+        <div className="legal-overlay">
+          <section className="legal-page">
+            <button
+              className="close-button"
+              onClick={() =>
+                setActivePage("home")
+              }
+            >
+              ×
+            </button>
+
+            <h1>
+              Impressum
+            </h1>
+
+            <p>
+              <strong>
+                Marco Egger
+              </strong>
+
+              <br />
+
+              Waidbachstrasse
+
+              <br />
+
+              8700 Leoben
+            </p>
+
+            <p>
+              E-Mail:
+              <br />
+
+              eggermarco@gmx.net
+            </p>
+
+            <p>
+              <strong>
+                Inhalt verantwortlich:
+              </strong>
+
+              <br />
+
+              Marco Egger
+            </p>
+          </section>
+        </div>
+      )}
+
+      {activePage === "privacy" && (
+        <div className="legal-overlay">
+          <section className="legal-page">
+            <button
+              className="close-button"
+              onClick={() =>
+                setActivePage("home")
+              }
+            >
+              ×
+            </button>
+
+            <h1>
+              Datenschutz
+            </h1>
+
+            <h2>
+              Allgemeines
+            </h2>
+
+            <p>
+              Personenbezogene Daten werden
+              nur im Rahmen des Betriebs
+              der Community verarbeitet.
+            </p>
+
+            <h2>
+              Deine Rechte
+            </h2>
+
+            <p>
+              Du hast grundsätzlich das Recht
+              auf Auskunft, Berichtigung,
+              Löschung, Einschränkung,
+              Datenübertragbarkeit und
+              Widerspruch im Rahmen der
+              geltenden Bestimmungen.
+            </p>
+
+            <h2>
+              Kontakt
+            </h2>
+
+            <p>
+              eggermarco@gmx.net
+            </p>
+          </section>
+        </div>
+      )}
 
       {loginOpen && (
         <div className="modal-overlay">
@@ -1382,11 +2058,9 @@ function App() {
 
             <button
               className="close-button"
-              onClick={() => {
-                setLoginOpen(false);
-                setEmail("");
-                setPassword("");
-              }}
+              onClick={() =>
+                setLoginOpen(false)
+              }
             >
               ×
             </button>
@@ -1446,10 +2120,9 @@ function App() {
 
             <button
               className="close-button"
-              onClick={() => {
-                setRegisterOpen(false);
-                resetForm();
-              }}
+              onClick={() =>
+                setRegisterOpen(false)
+              }
             >
               ×
             </button>
@@ -1457,48 +2130,6 @@ function App() {
             <h2>
               Registrieren
             </h2>
-
-            <div className="profile-upload">
-
-              <div className="profile-preview">
-
-                {profileImagePreview ? (
-                  <img
-                    src={profileImagePreview}
-                    alt="Profilbild Vorschau"
-                    className="profile-image"
-                  />
-                ) : (
-                  <span>
-                    {nickname
-                      ? nickname
-                          .charAt(0)
-                          .toUpperCase()
-                      : "?"}
-                  </span>
-                )}
-
-              </div>
-
-              <label
-                htmlFor="profile-image"
-                className="profile-upload-label"
-              >
-                Profilbild auswählen
-              </label>
-
-              <input
-                id="profile-image"
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                onChange={handleProfileImageChange}
-              />
-
-              <small>
-                JPG, PNG oder WEBP · maximal 5 MB
-              </small>
-
-            </div>
 
             <input
               type="text"
@@ -1535,12 +2166,9 @@ function App() {
             </button>
 
             <p className="small-text">
-              Bei der Registrierung mit{" "}
-              <strong>
-                {ADMIN_EMAIL}
-              </strong>{" "}
-              wird automatisch der
-              Hauptadmin-Account erstellt.
+              Neue Mitglieder müssen zuerst
+              von einem Admin freigegeben
+              werden.
             </p>
 
           </div>
@@ -1548,7 +2176,7 @@ function App() {
         </div>
       )}
 
-    </>
+    </div>
   );
 }
 
