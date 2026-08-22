@@ -3,6 +3,10 @@ import { supabase, supabaseConfigError } from "./supabase";
 
 const LOGO = "/logo.png";
 
+function isAdmin(role) {
+  return role === "ADMIN" || role === "HEAD_ADMIN";
+}
+
 function getName(member) {
   if (!member) return "Mitglied";
 
@@ -17,48 +21,9 @@ function getInitial(member) {
   return getName(member).charAt(0).toUpperCase();
 }
 
-function isAdmin(member) {
-  return (
-    member?.role === "ADMIN" ||
-    member?.role === "HEAD_ADMIN"
-  );
-}
-
-function getAge(birthDate) {
-  if (!birthDate) return null;
-
-  const birth = new Date(birthDate);
-  const today = new Date();
-
-  let age =
-    today.getFullYear() -
-    birth.getFullYear();
-
-  const month =
-    today.getMonth() -
-    birth.getMonth();
-
-  if (
-    month < 0 ||
-    (month === 0 &&
-      today.getDate() <
-        birth.getDate())
-  ) {
-    age--;
-  }
-
-  return age;
-}
-
 function Avatar({ member, large = false }) {
   return (
-    <div
-      className={
-        large
-          ? "avatar avatar-large"
-          : "avatar"
-      }
-    >
+    <div className={`avatar ${large ? "avatar-large" : ""}`}>
       {member?.avatar_url ? (
         <img
           src={member.avatar_url}
@@ -71,31 +36,15 @@ function Avatar({ member, large = false }) {
   );
 }
 
-function AdminBadge({ member }) {
-  if (!isAdmin(member)) return null;
+function AdminStar({ member }) {
+  if (!member || !isAdmin(member.role)) return null;
 
   return (
     <span
-      className="admin-badge"
-      title="Administrator"
+      className="admin-star"
+      title="Admin"
     >
       ★
-    </span>
-  );
-}
-
-function RoleBadge({ role }) {
-  const labels = {
-    HEAD_ADMIN: "Hauptadmin",
-    ADMIN: "Admin",
-    MEMBER: "Mitglied"
-  };
-
-  return (
-    <span
-      className={`role-badge role-${role || "MEMBER"}`}
-    >
-      {labels[role] || "Mitglied"}
     </span>
   );
 }
@@ -105,18 +54,16 @@ function AuthModal({
   onClose,
   showNotice
 }) {
-  const [loading, setLoading] =
-    useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const [form, setForm] =
-    useState({
-      first_name: "",
-      last_name: "",
-      nickname: "",
-      birth_date: "",
-      email: "",
-      password: ""
-    });
+  const [form, setForm] = useState({
+    first_name: "",
+    last_name: "",
+    nickname: "",
+    birth_date: "",
+    email: "",
+    password: ""
+  });
 
   function updateField(field, value) {
     setForm((old) => ({
@@ -139,31 +86,24 @@ function AuthModal({
             email: form.email.trim(),
             password: form.password,
             options: {
-              emailRedirectTo:
-                window.location.origin,
+              emailRedirectTo: window.location.origin,
               data: {
-                first_name:
-                  form.first_name.trim(),
-                last_name:
-                  form.last_name.trim(),
-                nickname:
-                  form.nickname.trim(),
-                birth_date:
-                  form.birth_date
+                first_name: form.first_name.trim(),
+                last_name: form.last_name.trim(),
+                nickname: form.nickname.trim(),
+                birth_date: form.birth_date
               }
             }
           });
 
         if (error) {
           showNotice(error.message);
-          return;
+        } else {
+          showNotice(
+            "Registrierung erfolgreich. Bitte bestätige deine E-Mail."
+          );
+          onClose();
         }
-
-        showNotice(
-          "Registrierung erfolgreich. Bitte bestätige deine E-Mail."
-        );
-
-        onClose();
       }
 
       if (mode === "login") {
@@ -175,14 +115,10 @@ function AuthModal({
 
         if (error) {
           showNotice(error.message);
-          return;
+        } else {
+          showNotice("Erfolgreich angemeldet.");
+          onClose();
         }
-
-        showNotice(
-          "Erfolgreich angemeldet."
-        );
-
-        onClose();
       }
     } finally {
       setLoading(false);
@@ -221,10 +157,10 @@ function AuthModal({
                 <input
                   required
                   value={form.first_name}
-                  onChange={(event) =>
+                  onChange={(e) =>
                     updateField(
                       "first_name",
-                      event.target.value
+                      e.target.value
                     )
                   }
                 />
@@ -235,10 +171,10 @@ function AuthModal({
                 <input
                   required
                   value={form.last_name}
-                  onChange={(event) =>
+                  onChange={(e) =>
                     updateField(
                       "last_name",
-                      event.target.value
+                      e.target.value
                     )
                   }
                 />
@@ -251,10 +187,10 @@ function AuthModal({
                 required
                 minLength="3"
                 value={form.nickname}
-                onChange={(event) =>
+                onChange={(e) =>
                   updateField(
                     "nickname",
-                    event.target.value
+                    e.target.value
                   )
                 }
               />
@@ -263,13 +199,12 @@ function AuthModal({
             <label>
               Geburtsdatum
               <input
-                required
                 type="date"
                 value={form.birth_date}
-                onChange={(event) =>
+                onChange={(e) =>
                   updateField(
                     "birth_date",
-                    event.target.value
+                    e.target.value
                   )
                 }
               />
@@ -280,14 +215,14 @@ function AuthModal({
         <label>
           E-Mail
           <input
-            required
             type="email"
+            required
             autoComplete="email"
             value={form.email}
-            onChange={(event) =>
+            onChange={(e) =>
               updateField(
                 "email",
-                event.target.value
+                e.target.value
               )
             }
           />
@@ -296,8 +231,8 @@ function AuthModal({
         <label>
           Passwort
           <input
-            required
             type="password"
+            required
             minLength="6"
             autoComplete={
               mode === "login"
@@ -305,10 +240,10 @@ function AuthModal({
                 : "new-password"
             }
             value={form.password}
-            onChange={(event) =>
+            onChange={(e) =>
               updateField(
                 "password",
-                event.target.value
+                e.target.value
               )
             }
           />
@@ -330,17 +265,10 @@ function AuthModal({
 }
 
 function App() {
-  const [session, setSession] =
-    useState(null);
-
-  const [profile, setProfile] =
-    useState(null);
-
-  const [members, setMembers] =
-    useState([]);
-
-  const [groups, setGroups] =
-    useState([]);
+  const [session, setSession] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [members, setMembers] = useState([]);
+  const [groups, setGroups] = useState([]);
 
   const [page, setPage] =
     useState("start");
@@ -363,6 +291,9 @@ function App() {
   const [editProfile, setEditProfile] =
     useState(false);
 
+  const [groupOpen, setGroupOpen] =
+    useState(false);
+
   const [profileForm, setProfileForm] =
     useState({
       nickname: "",
@@ -372,9 +303,6 @@ function App() {
       interests: ""
     });
 
-  const [groupOpen, setGroupOpen] =
-    useState(false);
-
   const [groupForm, setGroupForm] =
     useState({
       name: "",
@@ -382,14 +310,33 @@ function App() {
       image_url: ""
     });
 
-  const [friendships, setFriendships] =
-    useState([]);
+  const user = session?.user || null;
 
-  const [messages, setMessages] =
-    useState([]);
+  const approvedMembers = useMemo(() => {
+    return members.filter(
+      (member) =>
+        member.status === "APPROVED"
+    );
+  }, [members]);
 
-  const user =
-    session?.user || null;
+  const filteredMembers = useMemo(() => {
+    const value =
+      search.trim().toLowerCase();
+
+    if (!value) {
+      return approvedMembers;
+    }
+
+    return approvedMembers.filter(
+      (member) =>
+        getName(member)
+          .toLowerCase()
+          .includes(value)
+    );
+  }, [
+    approvedMembers,
+    search
+  ]);
 
   function showNotice(message) {
     setNotice(message);
@@ -410,24 +357,22 @@ function App() {
         .from("profiles")
         .select("*")
         .eq("id", userId)
-        .maybeSingle();
+        .single();
 
     if (error) {
-      console.error(error);
+      showNotice(error.message);
       return null;
     }
 
     setProfile(data);
 
-    if (data) {
-      setProfileForm({
-        nickname: data.nickname || "",
-        bio: data.bio || "",
-        location: data.location || "",
-        website: data.website || "",
-        interests: data.interests || ""
-      });
-    }
+    setProfileForm({
+      nickname: data.nickname || "",
+      bio: data.bio || "",
+      location: data.location || "",
+      website: data.website || "",
+      interests: data.interests || ""
+    });
 
     return data;
   }
@@ -437,15 +382,10 @@ function App() {
       await supabase
         .from("profiles")
         .select("*")
-        .order("nickname", {
-          ascending: true
-        });
+        .order("nickname");
 
     if (error) {
-      console.error(
-        "Mitglieder Fehler:",
-        error.message
-      );
+      console.error(error);
       return;
     }
 
@@ -462,8 +402,8 @@ function App() {
         });
 
     if (error) {
-      console.error(
-        "Gruppen Fehler:",
+      console.warn(
+        "Gruppen konnten noch nicht geladen werden:",
         error.message
       );
       return;
@@ -472,197 +412,59 @@ function App() {
     setGroups(data || []);
   }
 
-  async function loadFriendships() {
-    if (!user) {
-      setFriendships([]);
-      return;
-    }
-
-    const { data, error } =
-      await supabase
-        .from("friendships")
-        .select("*");
-
-    if (error) {
-      console.error(
-        "Freundschaften Fehler:",
-        error.message
-      );
-      return;
-    }
-
-    setFriendships(data || []);
-  }
-
-  async function loadMessages() {
-    if (!user) {
-      setMessages([]);
-      return;
-    }
-
-    const { data, error } =
-      await supabase
-        .from("messages")
-        .select("*")
-        .order("created_at", {
-          ascending: false
-        });
-
-    if (error) {
-      console.error(
-        "Nachrichten Fehler:",
-        error.message
-      );
-      return;
-    }
-
-    setMessages(data || []);
-  }
-
   async function loadAll(userId) {
-    setLoading(true);
-
     await loadMembers();
     await loadGroups();
 
     if (userId) {
       await loadProfile(userId);
-      await loadFriendships();
-      await loadMessages();
     }
 
     setLoading(false);
   }
-
   useEffect(() => {
     if (!supabase) return;
-
-    async function initialize() {
-      const {
-        data: { session: currentSession }
-      } =
-        await supabase.auth.getSession();
-
+    supabase.auth.getSession().then(({ data }) => {
+      const currentSession = data.session || null;
       setSession(currentSession);
-
-      await loadAll(
-        currentSession?.user?.id
-      );
-    }
-
-    initialize();
-
-    const {
-      data: { subscription }
-    } =
-      supabase.auth.onAuthStateChange(
-        async (_event, newSession) => {
-          setSession(newSession);
-
-          if (newSession?.user) {
-            await loadAll(
-              newSession.user.id
-            );
-          } else {
-            setProfile(null);
-            setFriendships([]);
-            setMessages([]);
-            await loadMembers();
-            await loadGroups();
-          }
-        }
-      );
-
-    return () => {
-      subscription.unsubscribe();
-    };
+      loadAll(currentSession?.user?.id || null);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession);
+      setLoading(true);
+      loadAll(newSession?.user?.id || null);
+      if (!newSession) { setProfile(null); setPage("start"); }
+    });
+    return () => subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
     if (!profile || !supabase) return;
-
-    async function setOnline() {
-      const { error } =
-        await supabase.rpc(
-          "update_online_status",
-          {
-            online_status: true
-          }
-        );
-
-      if (error) {
-        console.error(
-          "Online-Status Fehler:",
-          error.message
-        );
-      }
-    }
-
-    setOnline();
-
-    const interval =
-      window.setInterval(
-        setOnline,
-        60000
-      );
-
-    return () => {
-      window.clearInterval(interval);
+    const setOnline = async () => {
+      await supabase.rpc("update_online_status", { online_status: true });
     };
+    setOnline();
+    const interval = window.setInterval(setOnline, 60000);
+    return () => window.clearInterval(interval);
   }, [profile?.id]);
-
-  const visibleMembers =
-    useMemo(() => {
-      const value =
-        search.trim().toLowerCase();
-
-      if (!value) {
-        return members;
-      }
-
-      return members.filter(
-        (member) =>
-          getName(member)
-            .toLowerCase()
-            .includes(value)
-      );
-    }, [members, search]);
 
   async function signOut() {
     if (!supabase) return;
-
-    await supabase.rpc(
-      "update_online_status",
-      {
-        online_status: false
-      }
-    );
-
-    const { error } =
-      await supabase.auth.signOut();
-
-    if (error) {
-      showNotice(error.message);
-      return;
-    }
-
-    setProfile(null);
-    setSession(null);
-    setPage("start");
-
-    showNotice(
-      "Du wurdest abgemeldet."
-    );
+    await supabase.rpc("update_online_status", { online_status: false });
+    const { error } = await supabase.auth.signOut();
+    if (error) { showNotice(error.message); return; }
+    setProfile(null); setSession(null); setPage("start");
+    showNotice("Du wurdest abgemeldet.");
   }
 
   async function saveProfile(event) {
-    event.preventDefault();
+  event.preventDefault();
 
-    if (!profile) return;
+  if (!profile) return;
 
-    const { error } =
-      await supabase
-        .from("profiles")
+  const { error } =
+    await supabase
+      .from("profiles")
         .update({
           nickname:
             profileForm.nickname.trim(),
@@ -711,7 +513,7 @@ function App() {
       file.name.split(".").pop();
 
     const filePath =
-      `${profile.id}/avatar.${extension}`;
+      `${profile.id}/avatar-${Date.now()}.${extension}`;
 
     const { error: uploadError } =
       await supabase.storage
@@ -739,7 +541,7 @@ function App() {
         .getPublicUrl(filePath);
 
     const avatarUrl =
-      `${publicUrlData.publicUrl}?v=${Date.now()}`;
+      publicUrlData.publicUrl;
 
     const { error } =
       await supabase
@@ -758,7 +560,7 @@ function App() {
     await loadMembers();
 
     showNotice(
-      "Profilbild gespeichert."
+      "Profilbild wurde gespeichert."
     );
   }
 
@@ -782,34 +584,41 @@ function App() {
     await loadMembers();
 
     showNotice(
-      "Profilbild gelöscht."
+      "Profilbild gelöscht. No Pic ist wieder aktiv."
     );
   }
 
   async function changeOwnEmail() {
     const newEmail =
       window.prompt(
-        "Neue E-Mail-Adresse:"
+        "Neue E-Mail-Adresse eingeben:"
       );
 
-    if (!newEmail) return;
+    if (
+      !newEmail ||
+      !newEmail.includes("@")
+    ) {
+      return;
+    }
 
     const { error } =
       await supabase.auth.updateUser({
         email: newEmail.trim()
       });
 
-    showNotice(
-      error
-        ? error.message
-        : "Bitte bestätige die neue E-Mail-Adresse."
-    );
+    if (error) {
+      showNotice(error.message);
+    } else {
+      showNotice(
+        "E-Mail-Änderung wurde gestartet. Bitte bestätige die neue Adresse."
+      );
+    }
   }
 
   async function changeOwnPassword() {
     const newPassword =
       window.prompt(
-        "Neues Passwort:"
+        "Neues Passwort eingeben:"
       );
 
     if (
@@ -839,6 +648,17 @@ function App() {
 
     if (!profile) return;
 
+    if (
+      !groupForm.name.trim() ||
+      !groupForm.description.trim() ||
+      !groupForm.image_url.trim()
+    ) {
+      showNotice(
+        "Gruppenname, Beschreibung und Bild sind Pflicht."
+      );
+      return;
+    }
+
     const { error } =
       await supabase
         .from("groups")
@@ -848,10 +668,8 @@ function App() {
           description:
             groupForm.description.trim(),
           image_url:
-            groupForm.image_url.trim() ||
-            null,
-          created_by:
-            profile.id
+            groupForm.image_url.trim(),
+          created_by: profile.id
         });
 
     if (error) {
@@ -874,167 +692,165 @@ function App() {
     );
   }
 
-  async function changePoints(member) {
-    if (!isAdmin(profile)) {
-      showNotice(
-        "Du hast keine Adminrechte."
-      );
-      return;
-    }
-
-    const value =
-      window.prompt(
-        "Punkte eingeben, z.B. 10 oder -5:"
-      );
-
-    if (value === null) return;
-
-    const delta = Number(value);
-
-    if (
-      !Number.isFinite(delta) ||
-      delta === 0
-    ) {
-      showNotice(
-        "Ungültige Punktezahl."
-      );
-      return;
-    }
-
-    const reason =
-      window.prompt(
-        "Grund für die Änderung:"
-      );
-
-    if (!reason) return;
-
+  async function approveMember(member) {
     const { error } =
+      await supabase
+        .from("profiles")
+        .update({
+          status: "APPROVED"
+        })
+        .eq("id", member.id);
+
+    showNotice(
+      error
+        ? error.message
+        : `${getName(member)} wurde freigegeben.`
+    );
+
+    await loadMembers();
+  }
+
+  async function rejectMember(member) {
+    const { error } =
+      await supabase
+        .from("profiles")
+        .update({
+          status: "REJECTED"
+        })
+        .eq("id", member.id);
+
+    showNotice(
+      error
+        ? error.message
+        : "Mitglied wurde abgelehnt."
+    );
+
+    await loadMembers();
+  }
+
+ async function changePoints(member) {
+  if (!profile) return;
+
+  const value = window.prompt(
+    `Punkte für ${getName(member)} eingeben.
+
+10 = Punkte hinzufügen
+-5 = Punkte abziehen`
+  );
+
+  if (value === null) return;
+
+  const amount = Number(value);
+
+  if (!Number.isFinite(amount) || amount === 0) {
+    showNotice(
+      "Bitte eine gültige Punktezahl eingeben."
+    );
+    return;
+  }
+
+  const reason = window.prompt(
+    "Grund für die Punkteänderung eingeben:"
+  );
+
+  if (!reason || reason.trim().length < 3) {
+    showNotice(
+      "Bitte einen Grund mit mindestens 3 Zeichen eingeben."
+    );
+    return;
+  }
+
+  const { error } = await supabase.rpc(
+    "admin_change_points",
+    {
+      target_user: member.id,
+      delta: amount,
+      change_kind:
+        amount > 0 ? "ADD" : "REMOVE",
+      reason_text: reason.trim()
+    }
+  );
+
+  if (error) {
+    console.error(
+      "Fehler bei Punkteänderung:",
+      error
+    );
+
+    showNotice(error.message);
+    return;
+  }
+
+  showNotice(
+    `${getName(member)} hat ${
+      amount > 0 ? "+" : ""
+    }${amount} Punkte erhalten.`
+  );
+
+  await loadMembers();
+
+  if (profile.id === member.id) {
+    await loadProfile(profile.id);
+  }
+}
+
+async function claimOnlineReward() {
+    const { data, error } =
       await supabase.rpc(
-        "admin_change_points",
-        {
-          target_user: member.id,
-          delta,
-          reason_text: reason
-        }
+        "claim_online_reward"
       );
 
     if (error) {
       showNotice(error.message);
       return;
+    }
+
+    if (data?.message) {
+      showNotice(data.message);
+    }
+
+    if (profile) {
+      await loadProfile(profile.id);
     }
 
     await loadMembers();
+  }
 
-    showNotice(
-      "Punkte wurden geändert."
+  const pendingMembers =
+    members.filter(
+      (member) =>
+        member.status ===
+        "PENDING_ADMIN"
     );
-  }
-
-  async function sendFriendRequest(member) {
-    const { error } =
-      await supabase.rpc(
-        "send_friend_request",
-        {
-          target_user: member.id
-        }
-      );
-
-    if (error) {
-      showNotice(error.message);
-      return;
-    }
-
-    await loadFriendships();
-
-    showNotice(
-      "Freundschaftsanfrage gesendet."
-    );
-  }
-
-  async function acceptFriendRequest(friendship) {
-    const { error } =
-      await supabase.rpc(
-        "accept_friend_request",
-        {
-          friendship_id: friendship.id
-        }
-      );
-
-    if (error) {
-      showNotice(error.message);
-      return;
-    }
-
-    await loadFriendships();
-
-    showNotice(
-      "Freundschaft angenommen."
-    );
-  }
-
-  async function sendMessage(member) {
-    const message =
-      window.prompt(
-        `Nachricht an ${getName(member)}:`
-      );
-
-    if (!message) return;
-
-    const { error } =
-      await supabase.rpc(
-        "send_private_message",
-        {
-          target_user: member.id,
-          message_text: message
-        }
-      );
-
-    if (error) {
-      showNotice(error.message);
-      return;
-    }
-
-    showNotice(
-      "Nachricht wurde gesendet."
-    );
-  }
-
-  async function openMember(member) {
-    setSelectedMember(member);
-
-    if (
-      user &&
-      member.id !== user.id
-    ) {
-      await supabase.rpc(
-        "record_profile_visit",
-        {
-          target_profile: member.id
-        }
-      );
-    }
-  }
-
-  function getFriendship(memberId) {
-    if (!user) return null;
-
-    return friendships.find(
-      (friendship) =>
-        friendship.requester_id === memberId ||
-        friendship.addressee_id === memberId
-    );
-  }
 
   if (supabaseConfigError) {
     return (
       <div className="loading-screen">
         <div className="setup-card">
+          <img
+            src={LOGO}
+            alt="Ennstal Connect"
+            className="setup-logo"
+          />
+
           <h1>
-            Supabase konfigurieren
+            Verbindung wird eingerichtet
           </h1>
 
           <p>
             {supabaseConfigError}
+          </p>
+
+          <p>
+            Bitte überprüfe in Netlify:
+            <br />
+            <strong>
+              VITE_SUPABASE_URL
+            </strong>
+            <br />
+            <strong>
+              VITE_SUPABASE_ANON_KEY
+            </strong>
           </p>
         </div>
       </div>
@@ -1045,6 +861,12 @@ function App() {
     return (
       <div className="loading-screen">
         <div className="setup-card">
+          <img
+            src={LOGO}
+            alt="Ennstal Connect"
+            className="setup-logo"
+          />
+
           <p>
             Community wird geladen...
           </p>
@@ -1057,6 +879,7 @@ function App() {
     <div className="app">
       <header className="site-header">
         <div className="header-content">
+
           <button
             className="logo-button"
             onClick={() =>
@@ -1072,39 +895,39 @@ function App() {
 
           <nav className="nav-links">
             <button
+              onClick={() =>
+                setPage("start")
+              }
               className={
                 page === "start"
                   ? "active"
                   : ""
-              }
-              onClick={() =>
-                setPage("start")
               }
             >
               Start
             </button>
 
             <button
+              onClick={() =>
+                setPage("members")
+              }
               className={
                 page === "members"
                   ? "active"
                   : ""
-              }
-              onClick={() =>
-                setPage("members")
               }
             >
               Mitglieder
             </button>
 
             <button
+              onClick={() =>
+                setPage("groups")
+              }
               className={
                 page === "groups"
                   ? "active"
                   : ""
-              }
-              onClick={() =>
-                setPage("groups")
               }
             >
               Gruppen
@@ -1112,13 +935,13 @@ function App() {
 
             {user && (
               <button
+                onClick={() =>
+                  setPage("profile")
+                }
                 className={
                   page === "profile"
                     ? "active"
                     : ""
-                }
-                onClick={() =>
-                  setPage("profile")
                 }
               >
                 Mein Bereich
@@ -1141,7 +964,7 @@ function App() {
                     {getName(profile)}
                   </span>
 
-                  <AdminBadge
+                  <AdminStar
                     member={profile}
                   />
                 </button>
@@ -1195,9 +1018,12 @@ function App() {
       )}
 
       <main className="main-layout">
+
         {page === "start" && (
           <>
             <section className="hero">
+              <div className="hero-overlay" />
+
               <div className="hero-content">
                 <span className="eyebrow">
                   REGIONAL. VERBUNDEN. GEMEINSAM.
@@ -1210,18 +1036,32 @@ function App() {
                 </h1>
 
                 <p>
-                  Deine Community für das
-                  Ennstal und die Obersteiermark.
+                  Die regionale Community
+                  für Ennstal und
+                  Obersteiermark.
                 </p>
 
                 {!user && (
                   <button
-                    className="primary-button"
+                    className="primary-button hero-button"
                     onClick={() =>
-                      setAuthMode("register")
+                      setAuthMode(
+                        "register"
+                      )
                     }
                   >
                     Community entdecken
+                  </button>
+                )}
+
+                {user && (
+                  <button
+                    className="primary-button hero-button"
+                    onClick={() =>
+                      setPage("members")
+                    }
+                  >
+                    Mitglieder entdecken
                   </button>
                 )}
               </div>
@@ -1234,12 +1074,12 @@ function App() {
                 </span>
 
                 <h2>
-                  Mitglieder
+                  Gerade online
                 </h2>
               </div>
 
               <div className="online-grid">
-                {members
+                {approvedMembers
                   .filter(
                     (member) =>
                       member.is_online
@@ -1249,9 +1089,11 @@ function App() {
                     <button
                       key={member.id}
                       className="online-card"
-                      onClick={() =>
-                        openMember(member)
-                      }
+                      onClick={() => {
+                        setSelectedMember(
+                          member
+                        );
+                      }}
                     >
                       <Avatar member={member} />
 
@@ -1260,7 +1102,7 @@ function App() {
                           {getName(member)}
                         </strong>
 
-                        <AdminBadge
+                        <AdminStar
                           member={member}
                         />
 
@@ -1271,12 +1113,13 @@ function App() {
                     </button>
                   ))}
 
-                {!members.some(
+                {!approvedMembers.some(
                   (member) =>
                     member.is_online
                 ) && (
                   <div className="empty-card">
-                    Derzeit ist kein Mitglied online.
+                    Derzeit ist kein Mitglied
+                    online.
                   </div>
                 )}
               </div>
@@ -1297,7 +1140,8 @@ function App() {
                 </h1>
 
                 <p>
-                  Entdecke Menschen aus deiner Region.
+                  Entdecke Menschen aus
+                  deiner Region.
                 </p>
               </div>
 
@@ -1305,104 +1149,63 @@ function App() {
                 className="search-input"
                 placeholder="Mitglied suchen..."
                 value={search}
-                onChange={(event) =>
+                onChange={(e) =>
                   setSearch(
-                    event.target.value
+                    e.target.value
                   )
                 }
               />
             </div>
 
             <div className="member-grid">
-              {visibleMembers.map(
-                (member) => {
-                  const age =
-                    getAge(
-                      member.birth_date
-                    );
+              {filteredMembers.map(
+                (member) => (
+                  <button
+                    key={member.id}
+                    className="member-card"
+                    onClick={() =>
+                      setSelectedMember(
+                        member
+                      )
+                    }
+                  >
+                  
 
-                  const friendship =
-                    getFriendship(
-                      member.id
-                    );
 
-                  return (
-                    <article
-                      key={member.id}
-                      className={`member-card role-card-${member.role || "MEMBER"}`}
-                    >
-                      <div className="member-card-top">
-                        <Avatar
-                          member={member}
-                          large
-                        />
+                    <h3>
+                      {getName(member)}
 
-                        <div className="member-symbols">
-                          <AdminBadge
-                            member={member}
-                          />
-
-                          {friendship?.status ===
-                            "ACCEPTED" && (
-                            <span
-                              className="friend-badge"
-                              title="Freund"
-                            >
-                              ♥
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      <h3>
-                        {getName(member)}
-                      </h3>
-
-                      {age !== null && (
-                        <p>
-                          {age} Jahre
-                        </p>
-                      )}
-
-                      <RoleBadge
-                        role={member.role}
+                      <AdminStar
+                        member={member}
                       />
+                    </h3>
 
-                      <p className="member-location">
-                        {member.location ||
-                          "Ennstal & Obersteiermark"}
-                      </p>
+                    <p className="member-location">
+                      {member.location ||
+                        "Ennstal & Obersteiermark"}
+                    </p>
 
-                      <div className="member-points">
-                        ★{" "}
-                        {member.community_points || 0}{" "}
-                        Punkte
-                      </div>
+                    <div className="member-points">
+                      ★{" "}
+                      {member.community_points ||
+                        0}{" "}
+                      Punkte
+                    </div>
 
-                      <p
-                        className={
-                          member.is_online
-                            ? "online-text"
-                            : "offline-text"
-                        }
-                      >
-                        ●{" "}
-                        {member.is_online
-                          ? "Online"
-                          : "Offline"}
-                      </p>
-
-                      <button
-                        className="secondary-button full"
-                        onClick={() =>
-                          openMember(member)
-                        }
-                      >
-                        Profil ansehen
-                      </button>
-                    </article>
-                  );
-                }
+                    <small
+                      className={
+                        member.is_online
+                          ? "online-text"
+                          : "offline-text"
+                      }
+                    >
+                      ●{" "}
+                      {member.is_online
+                        ? "Online"
+                        : "Offline"}
+                    </small>
+                  </button>
+                )
               )}
             </div>
           </section>
@@ -1444,12 +1247,10 @@ function App() {
                   key={group.id}
                   className="group-card"
                 >
-                  {group.image_url && (
-                    <img
-                      src={group.image_url}
-                      alt={group.name}
-                    />
-                  )}
+                  <img
+                    src={group.image_url}
+                    alt={group.name}
+                  />
 
                   <div className="group-card-content">
                     <h3>
@@ -1466,6 +1267,9 @@ function App() {
               {!groups.length && (
                 <div className="empty-card">
                   Noch keine Gruppen vorhanden.
+                  <br />
+                  Sei der Erste und erstelle
+                  eine Gruppe.
                 </div>
               )}
             </div>
@@ -1477,6 +1281,7 @@ function App() {
           profile && (
             <section className="section profile-layout">
               <div className="profile-main">
+
                 <div className="profile-card">
                   <div className="profile-top">
                     <Avatar
@@ -1487,11 +1292,11 @@ function App() {
                     <div>
                       <h1>
                         {getName(profile)}
-                      </h1>
 
-                      <RoleBadge
-                        role={profile.role}
-                      />
+                        <AdminStar
+                          member={profile}
+                        />
+                      </h1>
 
                       <p>
                         {profile.location ||
@@ -1506,7 +1311,8 @@ function App() {
                     </span>
 
                     <strong>
-                      {profile.community_points || 0}
+                      {profile.community_points ||
+                        0}
                     </strong>
                   </div>
 
@@ -1523,10 +1329,18 @@ function App() {
                   >
                     Profil bearbeiten
                   </button>
+
+                  <button
+                    className="secondary-button"
+                    onClick={claimOnlineReward}
+                  >
+                    Onlinezeit-Belohnung prüfen
+                  </button>
                 </div>
               </div>
 
               <aside className="profile-sidebar">
+
                 <section className="sidebar-card">
                   <h3>
                     Mein Bereich
@@ -1547,36 +1361,96 @@ function App() {
                   </button>
 
                   <button
-                    onClick={changeOwnPassword}
+                    onClick={
+                      changeOwnPassword
+                    }
                   >
                     Passwort ändern
                   </button>
                 </section>
 
-                {isAdmin(profile) && (
+                {isAdmin(profile.role) && (
                   <section className="sidebar-card admin-panel">
                     <span className="admin-label">
                       NUR ADMIN
                     </span>
 
                     <h3>
-                      Mitglieder verwalten
+                      Admin Tools
                     </h3>
 
+                    <div className="admin-stat">
+                      Offene Mitglieder:
+                      <strong>
+                        {pendingMembers.length}
+                      </strong>
+                    </div>
+
+                    <p>
+                      Mitglieder freigeben,
+                      ablehnen und Punkte
+                      verwalten.
+                    </p>
+
+                    {pendingMembers.map(
+                      (member) => (
+                        <div
+                          key={member.id}
+                          className="pending-member"
+                        >
+                          <div>
+                            <strong>
+                              {getName(
+                                member
+                              )}
+                            </strong>
+                          </div>
+
+                          <div className="admin-actions">
+                            <button
+                              className="approve-button"
+                              onClick={() =>
+                                approveMember(
+                                  member
+                                )
+                              }
+                            >
+                              ✓
+                            </button>
+
+                            <button
+                              className="danger-button"
+                              onClick={() =>
+                                rejectMember(
+                                  member
+                                )
+                              }
+                            >
+                              ×
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    )}
+
                     <div className="admin-member-list">
-                      {members.map(
+                      {approvedMembers.map(
                         (member) => (
                           <div
                             key={member.id}
                             className="admin-member-row"
                           >
                             <span>
-                              {getName(member)}
+                              {getName(
+                                member
+                              )}
                             </span>
 
                             <button
                               onClick={() =>
-                                changePoints(member)
+                                changePoints(
+                                  member
+                                )
                               }
                             >
                               Punkte
@@ -1585,18 +1459,6 @@ function App() {
                         )
                       )}
                     </div>
-                  </section>
-                )}
-
-                {messages.length > 0 && (
-                  <section className="sidebar-card">
-                    <h3>
-                      Nachrichten
-                    </h3>
-
-                    <strong>
-                      {messages.length}
-                    </strong>
                   </section>
                 )}
               </aside>
@@ -1624,18 +1486,38 @@ function App() {
 
               <div>
                 <h2>
-                  {getName(selectedMember)}
+                  {getName(
+                    selectedMember
+                  )}
+
+                  <AdminStar
+                    member={
+                      selectedMember
+                    }
+                  />
                 </h2>
 
-                <RoleBadge
-                  role={selectedMember.role}
-                />
+                <p>
+                  {selectedMember.location ||
+                    "Ennstal & Obersteiermark"}
+                </p>
               </div>
+            </div>
+
+            <div className="points-panel">
+              <span>
+                Community-Punkte
+              </span>
+
+              <strong>
+                {selectedMember.community_points ||
+                  0}
+              </strong>
             </div>
 
             <p>
               {selectedMember.bio ||
-                "Dieses Mitglied hat noch keine Beschreibung."}
+                "Dieses Mitglied hat noch keine Beschreibung hinzugefügt."}
             </p>
 
             <p>
@@ -1645,45 +1527,18 @@ function App() {
                 "Noch keine Angaben"}
             </p>
 
-            {user &&
-              selectedMember.id !== user.id && (
-                <div className="member-modal-actions">
-                  <button
-                    className="primary-button"
-                    onClick={() =>
-                      sendFriendRequest(
-                        selectedMember
-                      )
-                    }
-                  >
-                    ♥ Freundschaft
-                  </button>
-
-                  <button
-                    className="secondary-button"
-                    onClick={() =>
-                      sendMessage(
-                        selectedMember
-                      )
-                    }
-                  >
-                    ✉ Nachricht
-                  </button>
-
-                  {isAdmin(profile) && (
-                    <button
-                      className="secondary-button"
-                      onClick={() =>
-                        changePoints(
-                          selectedMember
-                        )
-                      }
-                    >
-                      ★ Punkte ändern
-                    </button>
-                  )}
-                </div>
-              )}
+            <p
+              className={
+                selectedMember.is_online
+                  ? "online-text"
+                  : "offline-text"
+              }
+            >
+              ●{" "}
+              {selectedMember.is_online
+                ? "Dieses Mitglied ist online"
+                : "Dieses Mitglied ist derzeit offline"}
+            </p>
           </div>
         </div>
       )}
@@ -1717,11 +1572,12 @@ function App() {
 
                 <label className="upload-button">
                   Profilbild auswählen
-
                   <input
                     type="file"
                     accept="image/*"
-                    onChange={uploadAvatar}
+                    onChange={
+                      uploadAvatar
+                    }
                   />
                 </label>
 
@@ -1739,13 +1595,17 @@ function App() {
               <label>
                 Spitzname
                 <input
-                  value={profileForm.nickname}
-                  onChange={(event) =>
-                    setProfileForm((old) => ({
-                      ...old,
-                      nickname:
-                        event.target.value
-                    }))
+                  value={
+                    profileForm.nickname
+                  }
+                  onChange={(e) =>
+                    setProfileForm(
+                      (old) => ({
+                        ...old,
+                        nickname:
+                          e.target.value
+                      })
+                    )
                   }
                 />
               </label>
@@ -1754,13 +1614,17 @@ function App() {
                 Über mich
                 <textarea
                   rows="4"
-                  value={profileForm.bio}
-                  onChange={(event) =>
-                    setProfileForm((old) => ({
-                      ...old,
-                      bio:
-                        event.target.value
-                    }))
+                  value={
+                    profileForm.bio
+                  }
+                  onChange={(e) =>
+                    setProfileForm(
+                      (old) => ({
+                        ...old,
+                        bio:
+                          e.target.value
+                      })
+                    )
                   }
                 />
               </label>
@@ -1768,13 +1632,17 @@ function App() {
               <label>
                 Wohnort / Region
                 <input
-                  value={profileForm.location}
-                  onChange={(event) =>
-                    setProfileForm((old) => ({
-                      ...old,
-                      location:
-                        event.target.value
-                    }))
+                  value={
+                    profileForm.location
+                  }
+                  onChange={(e) =>
+                    setProfileForm(
+                      (old) => ({
+                        ...old,
+                        location:
+                          e.target.value
+                      })
+                    )
                   }
                 />
               </label>
@@ -1782,13 +1650,17 @@ function App() {
               <label>
                 Website
                 <input
-                  value={profileForm.website}
-                  onChange={(event) =>
-                    setProfileForm((old) => ({
-                      ...old,
-                      website:
-                        event.target.value
-                    }))
+                  value={
+                    profileForm.website
+                  }
+                  onChange={(e) =>
+                    setProfileForm(
+                      (old) => ({
+                        ...old,
+                        website:
+                          e.target.value
+                      })
+                    )
                   }
                 />
               </label>
@@ -1796,14 +1668,18 @@ function App() {
               <label>
                 Interessen
                 <input
-                  placeholder="z.B. Wandern, Musik"
-                  value={profileForm.interests}
-                  onChange={(event) =>
-                    setProfileForm((old) => ({
-                      ...old,
-                      interests:
-                        event.target.value
-                    }))
+                  placeholder="z.B. Wandern, Musik, Fußball"
+                  value={
+                    profileForm.interests
+                  }
+                  onChange={(e) =>
+                    setProfileForm(
+                      (old) => ({
+                        ...old,
+                        interests:
+                          e.target.value
+                      })
+                    )
                   }
                 />
               </label>
@@ -1836,49 +1712,61 @@ function App() {
             </h2>
 
             <label>
-              Gruppenname
+              Gruppenname *
               <input
                 required
-                value={groupForm.name}
-                onChange={(event) =>
-                  setGroupForm((old) => ({
-                    ...old,
-                    name:
-                      event.target.value
-                  }))
+                value={
+                  groupForm.name
+                }
+                onChange={(e) =>
+                  setGroupForm(
+                    (old) => ({
+                      ...old,
+                      name:
+                        e.target.value
+                    })
+                  )
                 }
               />
             </label>
 
             <label>
-              Beschreibung
+              Beschreibung *
               <textarea
                 required
                 rows="5"
                 value={
                   groupForm.description
                 }
-                onChange={(event) =>
-                  setGroupForm((old) => ({
-                    ...old,
-                    description:
-                      event.target.value
-                  }))
+                onChange={(e) =>
+                  setGroupForm(
+                    (old) => ({
+                      ...old,
+                      description:
+                        e.target.value
+                    })
+                  )
                 }
               />
             </label>
 
             <label>
-              Bild-URL
+              Bild-URL *
               <input
+                required
                 type="url"
-                value={groupForm.image_url}
-                onChange={(event) =>
-                  setGroupForm((old) => ({
-                    ...old,
-                    image_url:
-                      event.target.value
-                  }))
+                placeholder="https://..."
+                value={
+                  groupForm.image_url
+                }
+                onChange={(e) =>
+                  setGroupForm(
+                    (old) => ({
+                      ...old,
+                      image_url:
+                        e.target.value
+                    })
+                  )
                 }
               />
             </label>
