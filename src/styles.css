@@ -1026,5 +1026,52 @@ a {
 .message-item.unread { border-color:#4f8cff; }
 .admin-tools { margin-top:18px; padding:16px; border:1px solid #6b3131; border-radius:14px; background:rgba(110,20,20,.12); }
 .permission-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+@media (max-width:650px){
+  .permission-grid{
+    grid-template-columns:1fr
+  }
+
+  .media-grid{
+    grid-template-columns:repeat(2,1fr)
+  }
+}
+
+/* =================================
+   HIER BEGINNT DER NEUE CSS-CODE
+================================= */
+
+/* NORMALES MITGLIED */
+.member-role-member {
+  background: linear-gradient(
+    145deg,
+    #1d2430,
+    #303a4a
+  );
+}
+
+/* SUPPORTER */
+.member-role-supporter {
+  background: linear-gradient(
+    145deg,
+    #063b19,
+    #0b8a38,
+    #032a11
+  );
+
+  border-color: #29d36a;
+}
+
+/* ADMIN */
+.member-role-admin,
+.member-role-head_admin {
+  background: linear-gradient(
+    145deg,
+    #4b0000,
+    #9b0000,
+    #300000
+  );
+
+  border-color: #ff4141;
+}
 .profile-visit-list { display:grid; gap:8px; }
 @media (max-width:650px){.permission-grid{grid-template-columns:1fr}.media-grid{grid-template-columns:repeat(2,1fr)}}
