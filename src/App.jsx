@@ -7,6 +7,17 @@ function isAdmin(role) {
   return ADMIN_ROLES.includes(role);
 }
 
+function getAge(birthDate) {
+  if (!birthDate) return null;
+  const date = new Date(`${birthDate}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return null;
+  const today = new Date();
+  let age = today.getFullYear() - date.getFullYear();
+  const month = today.getMonth() - date.getMonth();
+  if (month < 0 || (month === 0 && today.getDate() < date.getDate())) age -= 1;
+  return age >= 0 ? age : null;
+}
+
 function initials(member) {
   return (
     member?.nickname?.trim()?.slice(0, 1)?.toUpperCase() ||
@@ -69,6 +80,8 @@ function App() {
   const [selectedMember, setSelectedMember] = useState(null);
   const [adminOpen, setAdminOpen] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [editingOwnProfile, setEditingOwnProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState({});
 
   const user = session?.user;
   const admin = isAdmin(profile?.role);
@@ -254,6 +267,19 @@ function App() {
   async function openMember(member) {
     setSelectedMember(member);
     setProfileOpen(true);
+    setEditingOwnProfile(Boolean(user && member?.id === user.id));
+    if (user && member?.id === user.id) {
+      setProfileForm({
+        nickname: member.nickname || "",
+        first_name: member.first_name || "",
+        last_name: member.last_name || "",
+        birth_date: member.birth_date || "",
+        bio: member.bio || "",
+        location: member.location || "",
+        website: member.website || "",
+        interests: member.interests || "",
+      });
+    }
 
     if (user && member?.id && member.id !== user.id) {
       await supabase.from("profile_visits").insert({
@@ -343,6 +369,36 @@ function App() {
     await Promise.all([loadMembers(), loadPending()]);
   }
 
+  async function saveOwnProfile(event) {
+    event.preventDefault();
+    if (!user || !profile) return;
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        nickname: String(profileForm.nickname || "").trim(),
+        first_name: String(profileForm.first_name || "").trim(),
+        last_name: String(profileForm.last_name || "").trim(),
+        birth_date: profileForm.birth_date || null,
+        bio: String(profileForm.bio || "").trim(),
+        location: String(profileForm.location || "").trim(),
+        website: String(profileForm.website || "").trim(),
+        interests: String(profileForm.interests || "").trim(),
+      })
+      .eq("id", user.id);
+
+    if (error) return showNotice(error.message);
+
+    await refreshAll(user.id);
+    const { data } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
+    if (data) {
+      setSelectedMember(data);
+      setProfile(data);
+    }
+    setEditingOwnProfile(false);
+    showNotice("Profil gespeichert.");
+  }
+
   async function signOut() {
     if (user) {
       await supabase
@@ -363,6 +419,7 @@ function App() {
     const nickname = String(form.get("nickname") || "").trim();
     const first_name = String(form.get("first_name") || "").trim();
     const last_name = String(form.get("last_name") || "").trim();
+    const birth_date = String(form.get("birth_date") || "").trim();
 
     if (!email || !password) return showNotice("Bitte E-Mail und Passwort eingeben.");
 
@@ -373,15 +430,15 @@ function App() {
       return;
     }
 
-    if (!nickname || !first_name || !last_name) {
-      return showNotice("Bitte alle Registrierungsfelder ausfüllen.");
+    if (!nickname || !first_name || !last_name || !birth_date) {
+      return showNotice("Bitte alle Pflichtfelder inklusive Geburtsdatum ausfüllen.");
     }
 
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { nickname, first_name, last_name },
+        data: { nickname, first_name, last_name, birth_date },
       },
     });
 
@@ -472,7 +529,7 @@ function App() {
 
                         <button className="member-main" onClick={() => openMember(member)}>
                           <Avatar member={member} />
-                          <h2>{member.nickname || "Mitglied"}</h2>
+                          <h2>{member.nickname || "Mitglied"}{getAge(member.birth_date) !== null ? ` (${getAge(member.birth_date)})` : ""}</h2>
                           <p>{[member.first_name, member.last_name].filter(Boolean).join(" ") || "Community-Mitglied"}</p>
                           <strong className="points">{Number(member.community_points || 0).toLocaleString("de-AT")} Punkte</strong>
                           <Status member={member} />
@@ -524,6 +581,11 @@ function App() {
           {page === "groups" && <section className="empty-page"><h1>Gruppen</h1><p>Deine Gruppenübersicht ist bereit für deine bestehenden Gruppendaten.</p></section>}
           {page === "events" && <section className="empty-page"><h1>Events</h1><p>Hier können regionale Veranstaltungen angezeigt werden.</p></section>}
           {page === "start" && <section className="empty-page"><h1>Willkommen bei Ennstal Connect</h1></section>}
+          {page === "privacy" && <section className="empty-page legal-page"><h1>Datenschutz</h1><p>Diese Datenschutzerklärung informiert über die Verarbeitung personenbezogener Daten innerhalb von Ennstal Connect. Personenbezogene Daten werden nur verarbeitet, soweit dies für Registrierung, Profil, Community-Funktionen und den Betrieb der Plattform erforderlich ist.</p><p>Mitglieder können ihre Profildaten im eigenen Profil bearbeiten. Für Auskunfts-, Berichtigungs- oder Löschanfragen kann der Kontaktbereich verwendet werden.</p></section>}
+          {page === "imprint" && <section className="empty-page legal-page"><h1>Impressum</h1><p><strong>Ennstal Connect</strong><br />8700 Leoben</p><p><strong>Verantwortlich für den Inhalt:</strong><br />Marco Egger</p></section>}
+          {page === "about" && <section className="empty-page"><h1>Über uns</h1><p>Ennstal Connect ist die regionale Community für Ennstal und Obersteiermark.</p></section>}
+          {page === "rules" && <section className="empty-page"><h1>Community Regeln</h1><p>Respektvoller Umgang, keine beleidigenden Inhalte und keine missbräuchliche Nutzung der Community.</p></section>}
+          {page === "contact" && <section className="empty-page"><h1>Kontakt</h1><p>Kontaktmöglichkeiten können hier von der Administration ergänzt werden.</p></section>}
         </section>
 
         <aside className="right-sidebar">
@@ -597,7 +659,11 @@ function App() {
       </main>
 
       <footer>
-        <span>ⓘ Über uns</span><span>♢ Community Regeln</span><span>▣ Datenschutz</span><span>⚖ Impressum</span><span>✉ Kontakt</span>
+        <button onClick={() => setPage("about")}>ⓘ Über uns</button>
+        <button onClick={() => setPage("rules")}>♢ Community Regeln</button>
+        <button onClick={() => setPage("privacy")}>▣ Datenschutz</button>
+        <button onClick={() => setPage("imprint")}>⚖ Impressum</button>
+        <button onClick={() => setPage("contact")}>✉ Kontakt</button>
         <p>© 2026 <b>Ennstal Connect</b> – Die Regionale Community für Ennstal & Obersteiermark</p>
       </footer>
 
@@ -614,6 +680,7 @@ function App() {
                 <input name="first_name" placeholder="Vorname" required />
                 <input name="last_name" placeholder="Nachname" required />
                 <input name="nickname" placeholder="Nickname" required />
+                <input type="date" name="birth_date" aria-label="Geburtsdatum" required />
               </div>
             )}
 
@@ -641,10 +708,46 @@ function App() {
               <Avatar member={selectedMember} />
               <RoleStar member={selectedMember} />
             </div>
-            <h2>{selectedMember.nickname}</h2>
-            <p>{[selectedMember.first_name, selectedMember.last_name].filter(Boolean).join(" ")}</p>
-            <strong className="points">{Number(selectedMember.community_points || 0).toLocaleString("de-AT")} Punkte</strong>
-            <Status member={selectedMember} />
+            {editingOwnProfile ? (
+              <form className="profile-edit-form" onSubmit={saveOwnProfile}>
+                <h2>Mein Profil bearbeiten</h2>
+                <div className="two-cols">
+                  <input value={profileForm.first_name || ""} onChange={(e) => setProfileForm({ ...profileForm, first_name: e.target.value })} placeholder="Vorname" required />
+                  <input value={profileForm.last_name || ""} onChange={(e) => setProfileForm({ ...profileForm, last_name: e.target.value })} placeholder="Nachname" required />
+                </div>
+                <input value={profileForm.nickname || ""} onChange={(e) => setProfileForm({ ...profileForm, nickname: e.target.value })} placeholder="Nickname" required />
+                <label>Geburtsdatum *</label>
+                <input type="date" value={profileForm.birth_date || ""} onChange={(e) => setProfileForm({ ...profileForm, birth_date: e.target.value })} required />
+                <textarea value={profileForm.bio || ""} onChange={(e) => setProfileForm({ ...profileForm, bio: e.target.value })} placeholder="Über mich" rows="4" />
+                <input value={profileForm.location || ""} onChange={(e) => setProfileForm({ ...profileForm, location: e.target.value })} placeholder="Wohnort" />
+                <input value={profileForm.interests || ""} onChange={(e) => setProfileForm({ ...profileForm, interests: e.target.value })} placeholder="Interessen" />
+                <input value={profileForm.website || ""} onChange={(e) => setProfileForm({ ...profileForm, website: e.target.value })} placeholder="Website / Link" />
+                <button className="primary submit" type="submit">Profil speichern</button>
+                <button type="button" className="switch-auth" onClick={() => setEditingOwnProfile(false)}>Abbrechen</button>
+              </form>
+            ) : (
+              <>
+                <h2>{selectedMember.nickname}{getAge(selectedMember.birth_date) !== null ? ` (${getAge(selectedMember.birth_date)})` : ""}</h2>
+                <p>{[selectedMember.first_name, selectedMember.last_name].filter(Boolean).join(" ")}</p>
+                <strong className="points">{Number(selectedMember.community_points || 0).toLocaleString("de-AT")} Punkte</strong>
+                <Status member={selectedMember} />
+                {selectedMember.id === user?.id && (
+                  <button className="primary submit" onClick={() => {
+                    setEditingOwnProfile(true);
+                    setProfileForm({
+                      nickname: selectedMember.nickname || "",
+                      first_name: selectedMember.first_name || "",
+                      last_name: selectedMember.last_name || "",
+                      birth_date: selectedMember.birth_date || "",
+                      bio: selectedMember.bio || "",
+                      location: selectedMember.location || "",
+                      website: selectedMember.website || "",
+                      interests: selectedMember.interests || "",
+                    });
+                  }}>Profil bearbeiten</button>
+                )}
+              </>
+            )}
             {user && selectedMember.id !== user.id && (
               <button className="primary submit" onClick={() => toggleFriend(selectedMember)}>
                 {friends.some((friend) => friend.id === selectedMember.id) ? "♣ Freund entfernen" : "♧ Freund hinzufügen"}
