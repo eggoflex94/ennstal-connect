@@ -422,71 +422,90 @@ function App() {
 
     setLoading(false);
   }
-useEffect(() => {
-  if (!profile || !supabase) return;
 
-  async function setOnline() {
-    const { error } = await supabase.rpc(
-      "update_online_status",
-      {
-        online_status: true
-      }
-    );
+  useEffect(() => {
+    if (!supabase) return;
 
-    if (error) {
-      console.error(
-        "Online-Status Fehler:",
-        error.message
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        const currentSession =
+          data.session || null;
+
+        setSession(currentSession);
+
+        if (currentSession?.user) {
+          loadAll(
+            currentSession.user.id
+          );
+        } else {
+          loadAll(null);
+        }
+      });
+
+    const {
+      data: { subscription }
+    } =
+      supabase.auth.onAuthStateChange(
+        (_event, newSession) => {
+          setSession(newSession);
+
+          if (newSession?.user) {
+            loadAll(
+              newSession.user.id
+            );
+          } else {
+            setProfile(null);
+            loadMembers();
+            loadGroups();
+          }
+        }
       );
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!profile || !supabase) return;
+
+    async function setOnline() {
+      const { error } = await supabase.rpc("set_user_online");
+      if (error) console.error("Online-Status Fehler:", error.message);
     }
+
+    setOnline();
+    const interval = window.setInterval(setOnline, 60000);
+    return () => window.clearInterval(interval);
+  }, [profile?.id]);
+
+  async function signOut() {
+    if (!user || !supabase) return;
+
+    const { error: offlineError } = await supabase.rpc("set_user_offline");
+    if (offlineError) console.error("Offline-Status Fehler:", offlineError.message);
+
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      showNotice(error.message);
+      return;
+    }
+
+    setProfile(null);
+    setSession(null);
+    setPage("start");
+    showNotice("Du wurdest abgemeldet.");
   }
 
-  setOnline();
+  async function saveProfile(event) {
+    event.preventDefault();
 
-  const interval = window.setInterval(
-    setOnline,
-    60000
-  );
+    if (!profile) return;
 
-  return () => {
-    window.clearInterval(interval);
-  };
-}, [profile?.id]);
-saveprofile {
-  if (!user || !supabase) return;
-
-  await supabase.rpc(
-    "update_online_status",
-    {
-      online_status: false
-    }
-  );
-const { error } =
-  await supabase.auth.signOut();
-
-if (error) {
-  showNotice(error.message);
-  return;
-}
-
-setProfile(null);
-setSession(null);
-setPage("start");
-
-showNotice(
-  "Du wurdest abgemeldet."
-);
-}
-
-
-async function saveProfile(event) {
-  event.preventDefault();
-
-  if (!profile) return;
-
-  const { error } =
-    await supabase
-      .from("profiles")
+    const { error } =
+      await supabase
+        .from("profiles")
         .update({
           nickname:
             profileForm.nickname.trim(),
@@ -750,73 +769,43 @@ async function saveProfile(event) {
     await loadMembers();
   }
 
- async function changePoints(member) {
-  if (!profile) return;
+  async function changePoints(member) {
+    if (!profile) return;
 
-  const value = window.prompt(
-    `Punkte für ${getName(member)} eingeben.
+    const value = window.prompt(`Punkte für ${getName(member)} eingeben.
 
-10 = Punkte hinzufügen
--5 = Punkte abziehen`
-  );
+10 = hinzufügen
+-5 = abziehen`);
+    if (value === null) return;
 
-  if (value === null) return;
+    const amount = Number(value);
+    if (!Number.isFinite(amount) || amount === 0) {
+      showNotice("Bitte eine gültige Punktezahl eingeben.");
+      return;
+    }
 
-  const amount = Number(value);
+    const reason = window.prompt("Grund für die Punkteänderung:");
+    if (!reason || reason.trim().length < 3) {
+      showNotice("Bitte einen Grund mit mindestens 3 Zeichen eingeben.");
+      return;
+    }
 
-  if (!Number.isFinite(amount) || amount === 0) {
-    showNotice(
-      "Bitte eine gültige Punktezahl eingeben."
-    );
-    return;
-  }
-
-  const reason = window.prompt(
-    "Grund für die Punkteänderung eingeben:"
-  );
-
-  if (!reason || reason.trim().length < 3) {
-    showNotice(
-      "Bitte einen Grund mit mindestens 3 Zeichen eingeben."
-    );
-    return;
-  }
-
-  const { error } = await supabase.rpc(
-    "admin_change_points",
-    {
+    const { error } = await supabase.rpc("admin_change_points", {
       target_user: member.id,
       delta: amount,
-      change_kind:
-        amount > 0 ? "ADD" : "REMOVE",
+      change_kind: amount > 0 ? "ADD" : "REMOVE",
       reason_text: reason.trim()
+    });
+
+    if (error) {
+      showNotice(error.message);
+      return;
     }
-  );
 
-  if (error) {
-    console.error(
-      "Fehler bei Punkteänderung:",
-      error
-    );
-
-    showNotice(error.message);
-    return;
+    showNotice(`${getName(member)}: ${amount > 0 ? "+" : ""}${amount} Punkte`);
+    await loadMembers();
+    if (profile.id === member.id) await loadProfile(profile.id);
   }
-
-  showNotice(
-    `${getName(member)} hat ${
-      amount > 0 ? "+" : ""
-    }${amount} Punkte erhalten.`
-  );
-
-  await loadMembers();
-
-  if (profile.id === member.id) {
-    await loadProfile(profile.id);
-  }
-}
-
-async function claimOnlineReward() {
 
   async function claimOnlineReward() {
     const { data, error } =
@@ -1193,8 +1182,20 @@ async function claimOnlineReward() {
                       )
                     }
                   >
-                  
+                    <div className="member-card-top">
+                      <Avatar
+                        member={member}
+                        large
+                      />
 
+                      <span
+                        className={
+                          member.is_online
+                            ? "status-dot online"
+                            : "status-dot"
+                        }
+                      />
+                    </div>
 
                     <h3>
                       {getName(member)}
