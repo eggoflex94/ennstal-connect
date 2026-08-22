@@ -1,266 +1,55 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase, supabaseConfigError } from "./supabase";
 
-const LOGO = "/logo.png";
+const ADMIN_ROLES = ["ADMIN", "HEAD_ADMIN"];
 
 function isAdmin(role) {
-  return role === "ADMIN" || role === "HEAD_ADMIN";
+  return ADMIN_ROLES.includes(role);
 }
 
-function getName(member) {
-  if (!member) return "Mitglied";
-
+function initials(member) {
   return (
-    member.nickname ||
-    `${member.first_name || ""} ${member.last_name || ""}`.trim() ||
-    "Mitglied"
+    member?.nickname?.trim()?.slice(0, 1)?.toUpperCase() ||
+    member?.first_name?.trim()?.slice(0, 1)?.toUpperCase() ||
+    "?"
   );
 }
 
-function getInitial(member) {
-  return getName(member).charAt(0).toUpperCase();
+function roleClass(role) {
+  if (isAdmin(role)) return "admin";
+  if (role === "SUPPORTER") return "supporter";
+  return "member";
 }
 
-function Avatar({ member, large = false }) {
+function Avatar({ member, size = "" }) {
   return (
-    <div className={`avatar ${large ? "avatar-large" : ""}`}>
+    <div className={`avatar ${size}`}>
       {member?.avatar_url ? (
-        <img
-          src={member.avatar_url}
-          alt={getName(member)}
-        />
+        <img src={member.avatar_url} alt={member.nickname || "Profilbild"} />
       ) : (
-        <span>{getInitial(member)}</span>
+        initials(member)
       )}
     </div>
   );
 }
 
-function AdminStar({ member }) {
-  if (!member || !isAdmin(member.role)) return null;
-
+function RoleStar({ member }) {
+  if (!member || (!isAdmin(member.role) && member.role !== "SUPPORTER")) return null;
   return (
     <span
-      className="admin-star"
-      title="Admin"
+      className={`role-star ${isAdmin(member.role) ? "red" : "green"}`}
+      title={isAdmin(member.role) ? "Admin" : "Supporter"}
     >
       ★
     </span>
   );
 }
 
-function AuthModal({
-  mode,
-  onClose,
-  showNotice
-}) {
-  const [loading, setLoading] = useState(false);
-
-  const [form, setForm] = useState({
-    first_name: "",
-    last_name: "",
-    nickname: "",
-    birth_date: "",
-    email: "",
-    password: ""
-  });
-
-  function updateField(field, value) {
-    setForm((old) => ({
-      ...old,
-      [field]: value
-    }));
-  }
-
-  async function submit(event) {
-    event.preventDefault();
-
-    if (!supabase) return;
-
-    setLoading(true);
-
-    try {
-      if (mode === "register") {
-        const { error } =
-          await supabase.auth.signUp({
-            email: form.email.trim(),
-            password: form.password,
-            options: {
-              emailRedirectTo: window.location.origin,
-              data: {
-                first_name: form.first_name.trim(),
-                last_name: form.last_name.trim(),
-                nickname: form.nickname.trim(),
-                birth_date: form.birth_date
-              }
-            }
-          });
-
-        if (error) {
-          showNotice(error.message);
-        } else {
-          showNotice(
-            "Registrierung erfolgreich. Bitte bestätige deine E-Mail."
-          );
-          onClose();
-        }
-      }
-
-      if (mode === "login") {
-        const { error } =
-          await supabase.auth.signInWithPassword({
-            email: form.email.trim(),
-            password: form.password
-          });
-
-        if (error) {
-          showNotice(error.message);
-        } else {
-          showNotice("Erfolgreich angemeldet.");
-          onClose();
-        }
-      }
-    } finally {
-      setLoading(false);
-    }
-  }
-
+function Status({ member }) {
   return (
-    <div className="modal-overlay">
-      <form
-        className="modal auth-modal"
-        onSubmit={submit}
-      >
-        <button
-          type="button"
-          className="close-button"
-          onClick={onClose}
-        >
-          ×
-        </button>
-
-        <span className="eyebrow">
-          ENNSTAL CONNECT
-        </span>
-
-        <h2>
-          {mode === "login"
-            ? "Anmelden"
-            : "Mitglied werden"}
-        </h2>
-
-        {mode === "register" && (
-          <>
-            <div className="form-grid">
-              <label>
-                Vorname
-                <input
-                  required
-                  value={form.first_name}
-                  onChange={(e) =>
-                    updateField(
-                      "first_name",
-                      e.target.value
-                    )
-                  }
-                />
-              </label>
-
-              <label>
-                Nachname
-                <input
-                  required
-                  value={form.last_name}
-                  onChange={(e) =>
-                    updateField(
-                      "last_name",
-                      e.target.value
-                    )
-                  }
-                />
-              </label>
-            </div>
-
-            <label>
-              Spitzname
-              <input
-                required
-                minLength="3"
-                value={form.nickname}
-                onChange={(e) =>
-                  updateField(
-                    "nickname",
-                    e.target.value
-                  )
-                }
-              />
-            </label>
-
-            <label>
-              Geburtsdatum
-              <input
-                type="date"
-                value={form.birth_date}
-                onChange={(e) =>
-                  updateField(
-                    "birth_date",
-                    e.target.value
-                  )
-                }
-              />
-            </label>
-          </>
-        )}
-
-        <label>
-          E-Mail
-          <input
-            type="email"
-            required
-            autoComplete="email"
-            value={form.email}
-            onChange={(e) =>
-              updateField(
-                "email",
-                e.target.value
-              )
-            }
-          />
-        </label>
-
-        <label>
-          Passwort
-          <input
-            type="password"
-            required
-            minLength="6"
-            autoComplete={
-              mode === "login"
-                ? "current-password"
-                : "new-password"
-            }
-            value={form.password}
-            onChange={(e) =>
-              updateField(
-                "password",
-                e.target.value
-              )
-            }
-          />
-        </label>
-
-        <button
-          className="primary-button full"
-          disabled={loading}
-        >
-          {loading
-            ? "Bitte warten..."
-            : mode === "login"
-            ? "Anmelden"
-            : "Registrieren"}
-        </button>
-      </form>
-    </div>
+    <span className={`status ${member?.is_online ? "online" : "offline"}`}>
+      <i /> {member?.is_online ? "Online" : "Offline"}
+    </span>
   );
 }
 
@@ -268,1519 +57,610 @@ function App() {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
   const [members, setMembers] = useState([]);
-  const [groups, setGroups] = useState([]);
+  const [friends, setFriends] = useState([]);
+  const [pending, setPending] = useState([]);
+  const [visitors, setVisitors] = useState([]);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState("members");
+  const [notice, setNotice] = useState("");
+  const [authOpen, setAuthOpen] = useState(false);
+  const [authMode, setAuthMode] = useState("login");
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [selectedMember, setSelectedMember] = useState(null);
+  const [adminOpen, setAdminOpen] = useState(true);
+  const [loading, setLoading] = useState(true);
 
-  const [page, setPage] =
-    useState("start");
-
-  const [authMode, setAuthMode] =
-    useState(null);
-
-  const [notice, setNotice] =
-    useState("");
-
-  const [loading, setLoading] =
-    useState(true);
-
-  const [search, setSearch] =
-    useState("");
-
-  const [selectedMember, setSelectedMember] =
-    useState(null);
-
-  const [editProfile, setEditProfile] =
-    useState(false);
-
-  const [groupOpen, setGroupOpen] =
-    useState(false);
-
-  const [profileForm, setProfileForm] =
-    useState({
-      nickname: "",
-      bio: "",
-      location: "",
-      website: "",
-      interests: ""
-    });
-
-  const [groupForm, setGroupForm] =
-    useState({
-      name: "",
-      description: "",
-      image_url: ""
-    });
-
-  const user = session?.user || null;
-
-  const approvedMembers = useMemo(() => {
-    return members.filter(
-      (member) =>
-        member.status === "APPROVED"
-    );
-  }, [members]);
-
-  const filteredMembers = useMemo(() => {
-    const value =
-      search.trim().toLowerCase();
-
-    if (!value) {
-      return approvedMembers;
-    }
-
-    return approvedMembers.filter(
-      (member) =>
-        getName(member)
-          .toLowerCase()
-          .includes(value)
-    );
-  }, [
-    approvedMembers,
-    search
-  ]);
+  const user = session?.user;
+  const admin = isAdmin(profile?.role);
 
   function showNotice(message) {
-    setNotice(message);
-
-    window.clearTimeout(
-      window.__ennstalNoticeTimer
-    );
-
-    window.__ennstalNoticeTimer =
-      window.setTimeout(() => {
-        setNotice("");
-      }, 5000);
+    setNotice(message || "");
+    if (message) window.setTimeout(() => setNotice(""), 5000);
   }
 
   async function loadProfile(userId) {
-    const { data, error } =
-      await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", userId)
-        .single();
-
-    if (error) {
-      showNotice(error.message);
-      return null;
-    }
-
-    setProfile(data);
-
-    setProfileForm({
-      nickname: data.nickname || "",
-      bio: data.bio || "",
-      location: data.location || "",
-      website: data.website || "",
-      interests: data.interests || ""
-    });
-
-    return data;
+    if (!userId) return;
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .maybeSingle();
+    if (error) throw error;
+    setProfile(data || null);
   }
 
   async function loadMembers() {
-    const { data, error } =
-      await supabase
-        .from("profiles")
-        .select("*")
-        .order("nickname");
-
-    if (error) {
-      console.error(error);
-      return;
-    }
-
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .order("community_points", { ascending: false });
+    if (error) throw error;
     setMembers(data || []);
   }
 
-  async function loadGroups() {
-    const { data, error } =
-      await supabase
-        .from("groups")
-        .select("*")
-        .order("created_at", {
-          ascending: false
-        });
+  async function loadFriends(userId) {
+    if (!userId) {
+      setFriends([]);
+      return;
+    }
+    const { data, error } = await supabase
+      .from("friendships")
+      .select("id, requester_id, receiver_id, status")
+      .eq("status", "ACCEPTED")
+      .or(`requester_id.eq.${userId},receiver_id.eq.${userId}`);
+    if (error) throw error;
 
-    if (error) {
-      console.warn(
-        "Gruppen konnten noch nicht geladen werden:",
-        error.message
-      );
+    const ids = [...new Set((data || []).map((row) =>
+      row.requester_id === userId ? row.receiver_id : row.requester_id
+    ))];
+
+    if (!ids.length) {
+      setFriends([]);
       return;
     }
 
-    setGroups(data || []);
+    const { data: friendProfiles, error: profileError } = await supabase
+      .from("profiles")
+      .select("*")
+      .in("id", ids);
+
+    if (profileError) throw profileError;
+    setFriends(friendProfiles || []);
   }
 
-  async function loadAll(userId) {
-    await loadMembers();
-    await loadGroups();
+  async function loadPending() {
+    if (!admin) return;
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("status", "PENDING_ADMIN")
+      .order("created_at", { ascending: true });
+    if (!error) setPending(data || []);
+  }
 
-    if (userId) {
-      await loadProfile(userId);
+  async function loadVisitors() {
+    if (!user) return;
+    const { data, error } = await supabase
+      .from("profile_visits")
+      .select("visitor_id, visited_at")
+      .eq("profile_id", user.id)
+      .order("visited_at", { ascending: false })
+      .limit(20);
+
+    if (error || !data?.length) {
+      setVisitors([]);
+      return;
     }
 
-    setLoading(false);
+    const ids = [...new Set(data.map((row) => row.visitor_id).filter(Boolean))];
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("*")
+      .in("id", ids);
+
+    const map = new Map((profiles || []).map((p) => [p.id, p]));
+    setVisitors(data.map((row) => ({ ...map.get(row.visitor_id), visited_at: row.visited_at })).filter(Boolean));
   }
+
+  async function refreshAll(userId = user?.id) {
+    setLoading(true);
+    try {
+      await Promise.all([loadMembers(), loadProfile(userId), loadFriends(userId)]);
+    } catch (error) {
+      showNotice(error.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   useEffect(() => {
-    if (!supabase) return;
-    supabase.auth.getSession().then(({ data }) => {
-      const currentSession = data.session || null;
-      setSession(currentSession);
-      loadAll(currentSession?.user?.id || null);
+    if (!supabase || supabaseConfigError) {
+      setLoading(false);
+      return;
+    }
+
+    let active = true;
+
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!active) return;
+      setSession(session);
+      if (session?.user) await refreshAll(session.user.id);
+      else {
+        await loadMembers().catch((error) => showNotice(error.message));
+        setLoading(false);
+      }
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      setSession(newSession);
-      setLoading(true);
-      loadAll(newSession?.user?.id || null);
-      if (!newSession) { setProfile(null); setPage("start"); }
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+      if (nextSession?.user) {
+        window.setTimeout(() => refreshAll(nextSession.user.id), 0);
+      } else {
+        setProfile(null);
+        setFriends([]);
+        setPending([]);
+        setVisitors([]);
+      }
     });
-    return () => subscription.unsubscribe();
+
+    return () => {
+      active = false;
+      listener.subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
-    if (!profile || !supabase) return;
-    const setOnline = async () => {
-      await supabase.rpc("update_online_status", { online_status: true });
-    };
-    setOnline();
-    const interval = window.setInterval(setOnline, 60000);
-    return () => window.clearInterval(interval);
-  }, [profile?.id]);
+    if (!user || !profile) return;
+
+    supabase
+      .from("profiles")
+      .update({ is_online: true, last_seen: new Date().toISOString() })
+      .eq("id", user.id)
+      .then(() => {});
+
+    const timer = window.setInterval(() => {
+      supabase
+        .from("profiles")
+        .update({ is_online: true, last_seen: new Date().toISOString() })
+        .eq("id", user.id)
+        .then(() => {});
+    }, 60000);
+
+    return () => window.clearInterval(timer);
+  }, [user?.id, profile?.id]);
+
+  useEffect(() => {
+    if (!admin) {
+      setPending([]);
+      return;
+    }
+    loadPending();
+  }, [admin, members.length]);
+
+  useEffect(() => {
+    loadVisitors();
+  }, [user?.id]);
+
+  const filteredMembers = useMemo(() => {
+    const value = search.trim().toLowerCase();
+    if (!value) return members.filter((m) => m.status !== "REJECTED");
+    return members.filter((m) =>
+      `${m.nickname || ""} ${m.first_name || ""} ${m.last_name || ""}`
+        .toLowerCase()
+        .includes(value)
+    );
+  }, [members, search]);
+
+  async function openMember(member) {
+    setSelectedMember(member);
+    setProfileOpen(true);
+
+    if (user && member?.id && member.id !== user.id) {
+      await supabase.from("profile_visits").insert({
+        profile_id: member.id,
+        visitor_id: user.id,
+        visited_at: new Date().toISOString(),
+      }).then(() => {});
+    }
+  }
+
+  async function toggleFriend(member) {
+    if (!user) {
+      setAuthMode("login");
+      setAuthOpen(true);
+      return;
+    }
+    if (member.id === user.id) return;
+
+    const existing = friends.find((friend) => friend.id === member.id);
+
+    if (existing) {
+      const { error } = await supabase
+        .from("friendships")
+        .delete()
+        .or(
+          `and(requester_id.eq.${user.id},receiver_id.eq.${member.id}),and(requester_id.eq.${member.id},receiver_id.eq.${user.id})`
+        );
+      if (error) return showNotice(error.message);
+      showNotice("Freundschaft entfernt.");
+    } else {
+      const { data: relation } = await supabase
+        .from("friendships")
+        .select("id,status")
+        .or(
+          `and(requester_id.eq.${user.id},receiver_id.eq.${member.id}),and(requester_id.eq.${member.id},receiver_id.eq.${user.id})`
+        )
+        .maybeSingle();
+
+      if (relation?.status === "PENDING") {
+        return showNotice("Eine Freundschaftsanfrage ist bereits offen.");
+      }
+
+      const { error } = await supabase.from("friendships").insert({
+        requester_id: user.id,
+        receiver_id: member.id,
+        status: "ACCEPTED",
+      });
+      if (error) return showNotice(error.message);
+      showNotice(`${member.nickname} wurde zu deinen Freunden hinzugefügt.`);
+    }
+
+    await refreshAll(user.id);
+  }
+
+  async function updateRole(member, role) {
+    const { error } = await supabase
+      .from("profiles")
+      .update({ role })
+      .eq("id", member.id);
+    if (error) return showNotice(error.message);
+    showNotice("Rolle gespeichert.");
+    await loadMembers();
+  }
+
+  async function changePoints(member) {
+    const value = window.prompt(`Punkte für ${member.nickname}:`, member.community_points || 0);
+    if (value === null) return;
+    const points = Number(value);
+    if (!Number.isFinite(points) || points < 0) {
+      return showNotice("Bitte eine gültige Punktezahl eingeben.");
+    }
+    const { error } = await supabase
+      .from("profiles")
+      .update({ community_points: points })
+      .eq("id", member.id);
+    if (error) return showNotice(error.message);
+    await loadMembers();
+  }
+
+  async function approveMember(memberId, approved) {
+    const { error } = await supabase
+      .from("profiles")
+      .update({ status: approved ? "APPROVED" : "REJECTED" })
+      .eq("id", memberId);
+    if (error) return showNotice(error.message);
+    showNotice(approved ? "Mitglied freigegeben." : "Registrierung abgelehnt.");
+    await Promise.all([loadMembers(), loadPending()]);
+  }
 
   async function signOut() {
-    if (!supabase) return;
-    await supabase.rpc("update_online_status", { online_status: false });
+    if (user) {
+      await supabase
+        .from("profiles")
+        .update({ is_online: false, last_seen: new Date().toISOString() })
+        .eq("id", user.id);
+    }
     const { error } = await supabase.auth.signOut();
-    if (error) { showNotice(error.message); return; }
-    setProfile(null); setSession(null); setPage("start");
-    showNotice("Du wurdest abgemeldet.");
+    if (error) return showNotice(error.message);
+    setPage("members");
   }
 
-  async function saveProfile(event) {
-  event.preventDefault();
-
-  if (!profile) return;
-
-  const { error } =
-    await supabase
-      .from("profiles")
-        .update({
-          nickname:
-            profileForm.nickname.trim(),
-          bio:
-            profileForm.bio.trim(),
-          location:
-            profileForm.location.trim(),
-          website:
-            profileForm.website.trim(),
-          interests:
-            profileForm.interests.trim()
-        })
-        .eq("id", profile.id);
-
-    if (error) {
-      showNotice(error.message);
-      return;
-    }
-
-    await loadProfile(profile.id);
-    await loadMembers();
-
-    setEditProfile(false);
-
-    showNotice(
-      "Profil wurde gespeichert."
-    );
-  }
-
-  async function uploadAvatar(event) {
-    const file =
-      event.target.files?.[0];
-
-    if (!file || !profile) return;
-
-    if (
-      !file.type.startsWith("image/")
-    ) {
-      showNotice(
-        "Bitte wähle ein Bild aus."
-      );
-      return;
-    }
-
-    const extension =
-      file.name.split(".").pop();
-
-    const filePath =
-      `${profile.id}/avatar-${Date.now()}.${extension}`;
-
-    const { error: uploadError } =
-      await supabase.storage
-        .from("avatars")
-        .upload(
-          filePath,
-          file,
-          {
-            upsert: true
-          }
-        );
-
-    if (uploadError) {
-      showNotice(
-        uploadError.message
-      );
-      return;
-    }
-
-    const {
-      data: publicUrlData
-    } =
-      supabase.storage
-        .from("avatars")
-        .getPublicUrl(filePath);
-
-    const avatarUrl =
-      publicUrlData.publicUrl;
-
-    const { error } =
-      await supabase
-        .from("profiles")
-        .update({
-          avatar_url: avatarUrl
-        })
-        .eq("id", profile.id);
-
-    if (error) {
-      showNotice(error.message);
-      return;
-    }
-
-    await loadProfile(profile.id);
-    await loadMembers();
-
-    showNotice(
-      "Profilbild wurde gespeichert."
-    );
-  }
-
-  async function deleteAvatar() {
-    if (!profile) return;
-
-    const { error } =
-      await supabase
-        .from("profiles")
-        .update({
-          avatar_url: null
-        })
-        .eq("id", profile.id);
-
-    if (error) {
-      showNotice(error.message);
-      return;
-    }
-
-    await loadProfile(profile.id);
-    await loadMembers();
-
-    showNotice(
-      "Profilbild gelöscht. No Pic ist wieder aktiv."
-    );
-  }
-
-  async function changeOwnEmail() {
-    const newEmail =
-      window.prompt(
-        "Neue E-Mail-Adresse eingeben:"
-      );
-
-    if (
-      !newEmail ||
-      !newEmail.includes("@")
-    ) {
-      return;
-    }
-
-    const { error } =
-      await supabase.auth.updateUser({
-        email: newEmail.trim()
-      });
-
-    if (error) {
-      showNotice(error.message);
-    } else {
-      showNotice(
-        "E-Mail-Änderung wurde gestartet. Bitte bestätige die neue Adresse."
-      );
-    }
-  }
-
-  async function changeOwnPassword() {
-    const newPassword =
-      window.prompt(
-        "Neues Passwort eingeben:"
-      );
-
-    if (
-      !newPassword ||
-      newPassword.length < 6
-    ) {
-      showNotice(
-        "Das Passwort muss mindestens 6 Zeichen haben."
-      );
-      return;
-    }
-
-    const { error } =
-      await supabase.auth.updateUser({
-        password: newPassword
-      });
-
-    showNotice(
-      error
-        ? error.message
-        : "Passwort wurde geändert."
-    );
-  }
-
-  async function createGroup(event) {
+  async function submitAuth(event) {
     event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const email = String(form.get("email") || "").trim();
+    const password = String(form.get("password") || "");
+    const nickname = String(form.get("nickname") || "").trim();
+    const first_name = String(form.get("first_name") || "").trim();
+    const last_name = String(form.get("last_name") || "").trim();
 
-    if (!profile) return;
+    if (!email || !password) return showNotice("Bitte E-Mail und Passwort eingeben.");
 
-    if (
-      !groupForm.name.trim() ||
-      !groupForm.description.trim() ||
-      !groupForm.image_url.trim()
-    ) {
-      showNotice(
-        "Gruppenname, Beschreibung und Bild sind Pflicht."
-      );
+    if (authMode === "login") {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) return showNotice(error.message);
+      setAuthOpen(false);
       return;
     }
 
-    const { error } =
-      await supabase
-        .from("groups")
-        .insert({
-          name:
-            groupForm.name.trim(),
-          description:
-            groupForm.description.trim(),
-          image_url:
-            groupForm.image_url.trim(),
-          created_by: profile.id
-        });
-
-    if (error) {
-      showNotice(error.message);
-      return;
+    if (!nickname || !first_name || !last_name) {
+      return showNotice("Bitte alle Registrierungsfelder ausfüllen.");
     }
 
-    setGroupForm({
-      name: "",
-      description: "",
-      image_url: ""
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { nickname, first_name, last_name },
+      },
     });
 
-    setGroupOpen(false);
+    if (error) return showNotice(error.message);
 
-    await loadGroups();
-
-    showNotice(
-      "Gruppe wurde erstellt."
-    );
-  }
-
-  async function approveMember(member) {
-    const { error } =
-      await supabase
-        .from("profiles")
-        .update({
-          status: "APPROVED"
-        })
-        .eq("id", member.id);
-
-    showNotice(
-      error
-        ? error.message
-        : `${getName(member)} wurde freigegeben.`
-    );
-
-    await loadMembers();
-  }
-
-  async function rejectMember(member) {
-    const { error } =
-      await supabase
-        .from("profiles")
-        .update({
-          status: "REJECTED"
-        })
-        .eq("id", member.id);
-
-    showNotice(
-      error
-        ? error.message
-        : "Mitglied wurde abgelehnt."
-    );
-
-    await loadMembers();
-  }
-
- async function changePoints(member) {
-  if (!profile) return;
-
-  const value = window.prompt(
-    `Punkte für ${getName(member)} eingeben.
-
-10 = Punkte hinzufügen
--5 = Punkte abziehen`
-  );
-
-  if (value === null) return;
-
-  const amount = Number(value);
-
-  if (!Number.isFinite(amount) || amount === 0) {
-    showNotice(
-      "Bitte eine gültige Punktezahl eingeben."
-    );
-    return;
-  }
-
-  const reason = window.prompt(
-    "Grund für die Punkteänderung eingeben:"
-  );
-
-  if (!reason || reason.trim().length < 3) {
-    showNotice(
-      "Bitte einen Grund mit mindestens 3 Zeichen eingeben."
-    );
-    return;
-  }
-
-  const { error } = await supabase.rpc(
-    "admin_change_points",
-    {
-      target_user: member.id,
-      delta: amount,
-      change_kind:
-        amount > 0 ? "ADD" : "REMOVE",
-      reason_text: reason.trim()
+    if (data.user && !data.session) {
+      showNotice("Registrierung gespeichert. Falls E-Mail-Bestätigung aktiviert ist, bestätige deine E-Mail.");
+    } else {
+      showNotice("Registrierung erfolgreich.");
+      setAuthOpen(false);
     }
-  );
-
-  if (error) {
-    console.error(
-      "Fehler bei Punkteänderung:",
-      error
-    );
-
-    showNotice(error.message);
-    return;
   }
-
-  showNotice(
-    `${getName(member)} hat ${
-      amount > 0 ? "+" : ""
-    }${amount} Punkte erhalten.`
-  );
-
-  await loadMembers();
-
-  if (profile.id === member.id) {
-    await loadProfile(profile.id);
-  }
-}
-
-async function claimOnlineReward() {
-    const { data, error } =
-      await supabase.rpc(
-        "claim_online_reward"
-      );
-
-    if (error) {
-      showNotice(error.message);
-      return;
-    }
-
-    if (data?.message) {
-      showNotice(data.message);
-    }
-
-    if (profile) {
-      await loadProfile(profile.id);
-    }
-
-    await loadMembers();
-  }
-
-  const pendingMembers =
-    members.filter(
-      (member) =>
-        member.status ===
-        "PENDING_ADMIN"
-    );
 
   if (supabaseConfigError) {
-    return (
-      <div className="loading-screen">
-        <div className="setup-card">
-          <img
-            src={LOGO}
-            alt="Ennstal Connect"
-            className="setup-logo"
-          />
-
-          <h1>
-            Verbindung wird eingerichtet
-          </h1>
-
-          <p>
-            {supabaseConfigError}
-          </p>
-
-          <p>
-            Bitte überprüfe in Netlify:
-            <br />
-            <strong>
-              VITE_SUPABASE_URL
-            </strong>
-            <br />
-            <strong>
-              VITE_SUPABASE_ANON_KEY
-            </strong>
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="loading-screen">
-        <div className="setup-card">
-          <img
-            src={LOGO}
-            alt="Ennstal Connect"
-            className="setup-logo"
-          />
-
-          <p>
-            Community wird geladen...
-          </p>
-        </div>
-      </div>
-    );
+    return <div className="fatal-error">Supabase-Konfiguration fehlt: {supabaseConfigError}</div>;
   }
 
   return (
-    <div className="app">
-      <header className="site-header">
-        <div className="header-content">
+    <div className="app-shell">
+      <header className="topbar">
+        <button className="brand" onClick={() => setPage("members")}>
+          <img src="/logo.png" alt="Ennstal Connect" onError={(e) => (e.currentTarget.style.display = "none")} />
+          <span><b>ennstal</b><strong>connect</strong><small>DIE REGIONALE COMMUNITY FÜR ENNSTAL & OBERSTEIERMARK</small></span>
+        </button>
 
-          <button
-            className="logo-button"
-            onClick={() =>
-              setPage("start")
-            }
-          >
-            <img
-              className="site-logo"
-              src={LOGO}
-              alt="Ennstal Connect"
-            />
-          </button>
+        <nav className="main-nav">
+          <button onClick={() => setPage("start")} className={page === "start" ? "active" : ""}>⌂ <span>Start</span></button>
+          <button onClick={() => setPage("members")} className={page === "members" ? "active" : ""}>♙ <span>Mitglieder</span></button>
+          <button onClick={() => setPage("groups")} className={page === "groups" ? "active" : ""}>♧ <span>Gruppen</span></button>
+          <button onClick={() => setPage("events")} className={page === "events" ? "active" : ""}>▣ <span>Events</span></button>
+        </nav>
 
-          <nav className="nav-links">
-            <button
-              onClick={() =>
-                setPage("start")
-              }
-              className={
-                page === "start"
-                  ? "active"
-                  : ""
-              }
-            >
-              Start
-            </button>
-
-            <button
-              onClick={() =>
-                setPage("members")
-              }
-              className={
-                page === "members"
-                  ? "active"
-                  : ""
-              }
-            >
-              Mitglieder
-            </button>
-
-            <button
-              onClick={() =>
-                setPage("groups")
-              }
-              className={
-                page === "groups"
-                  ? "active"
-                  : ""
-              }
-            >
-              Gruppen
-            </button>
-
-            {user && (
-              <button
-                onClick={() =>
-                  setPage("profile")
-                }
-                className={
-                  page === "profile"
-                    ? "active"
-                    : ""
-                }
-              >
-                Mein Bereich
+        <div className="top-actions">
+          <button className="icon-button" onClick={() => setPage("members")} title="Suche">⌕</button>
+          {user ? (
+            <>
+              <button className="icon-button notification" title="Benachrichtigungen">♧<b>{pending.length || 0}</b></button>
+              <button className="user-button" onClick={() => openMember(profile)}>
+                <Avatar member={profile} size="tiny" />⌄
               </button>
-            )}
-          </nav>
-
-          <div className="header-actions">
-            {user ? (
-              <>
-                <button
-                  className="user-button"
-                  onClick={() =>
-                    setPage("profile")
-                  }
-                >
-                  <Avatar member={profile} />
-
-                  <span>
-                    {getName(profile)}
-                  </span>
-
-                  <AdminStar
-                    member={profile}
-                  />
-                </button>
-
-                <button
-                  className="secondary-button"
-                  onClick={signOut}
-                >
-                  Abmelden
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  className="secondary-button"
-                  onClick={() =>
-                    setAuthMode("login")
-                  }
-                >
-                  Anmelden
-                </button>
-
-                <button
-                  className="primary-button"
-                  onClick={() =>
-                    setAuthMode("register")
-                  }
-                >
-                  Registrieren
-                </button>
-              </>
-            )}
-          </div>
+            </>
+          ) : (
+            <>
+              <button className="ghost" onClick={() => { setAuthMode("login"); setAuthOpen(true); }}>Anmelden</button>
+              <button className="primary" onClick={() => { setAuthMode("register"); setAuthOpen(true); }}>Registrieren</button>
+            </>
+          )}
         </div>
       </header>
 
-      {notice && (
-        <div className="notice">
-          {notice}
-        </div>
-      )}
-
-      {authMode && (
-        <AuthModal
-          mode={authMode}
-          onClose={() =>
-            setAuthMode(null)
-          }
-          showNotice={showNotice}
-        />
-      )}
-
-      <main className="main-layout">
-
-        {page === "start" && (
-          <>
-            <section className="hero">
-              <div className="hero-overlay" />
-
-              <div className="hero-content">
-                <span className="eyebrow">
-                  REGIONAL. VERBUNDEN. GEMEINSAM.
-                </span>
-
-                <h1>
-                  Willkommen bei
-                  <br />
-                  Ennstal Connect
-                </h1>
-
-                <p>
-                  Die regionale Community
-                  für Ennstal und
-                  Obersteiermark.
-                </p>
-
-                {!user && (
-                  <button
-                    className="primary-button hero-button"
-                    onClick={() =>
-                      setAuthMode(
-                        "register"
-                      )
-                    }
-                  >
-                    Community entdecken
-                  </button>
-                )}
-
-                {user && (
-                  <button
-                    className="primary-button hero-button"
-                    onClick={() =>
-                      setPage("members")
-                    }
-                  >
-                    Mitglieder entdecken
-                  </button>
-                )}
-              </div>
-            </section>
-
-            <section className="section">
-              <div className="section-heading">
-                <span className="eyebrow">
-                  COMMUNITY
-                </span>
-
-                <h2>
-                  Gerade online
-                </h2>
+      <main className="dashboard">
+        <section className="content-column">
+          {page === "members" && (
+            <>
+              <div className="page-heading">
+                <div>
+                  <h1>Mitglieder</h1>
+                  <p>Entdecke Menschen aus deiner Region und vernetze dich mit ihnen.</p>
+                </div>
               </div>
 
-              <div className="online-grid">
-                {approvedMembers
-                  .filter(
-                    (member) =>
-                      member.is_online
-                  )
-                  .slice(0, 6)
-                  .map((member) => (
-                    <button
-                      key={member.id}
-                      className="online-card"
-                      onClick={() => {
-                        setSelectedMember(
-                          member
-                        );
-                      }}
-                    >
-                      <Avatar member={member} />
-
-                      <div>
-                        <strong>
-                          {getName(member)}
-                        </strong>
-
-                        <AdminStar
-                          member={member}
-                        />
-
-                        <small className="online-text">
-                          ● Online
-                        </small>
-                      </div>
-                    </button>
-                  ))}
-
-                {!approvedMembers.some(
-                  (member) =>
-                    member.is_online
-                ) && (
-                  <div className="empty-card">
-                    Derzeit ist kein Mitglied
-                    online.
-                  </div>
-                )}
-              </div>
-            </section>
-          </>
-        )}
-
-        {page === "members" && (
-          <section className="section">
-            <div className="section-heading members-heading">
-              <div>
-                <span className="eyebrow">
-                  COMMUNITY
-                </span>
-
-                <h1>
-                  Mitglieder
-                </h1>
-
-                <p>
-                  Entdecke Menschen aus
-                  deiner Region.
-                </p>
+              <div className="search-row">
+                <div className="search-box">
+                  <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Mitglieder oder Nickname suchen ..." />
+                  <span>⌕</span>
+                </div>
+                <button className="filter-button">⚱ Filter</button>
               </div>
 
-              <input
-                className="search-input"
-                placeholder="Mitglied suchen..."
-                value={search}
-                onChange={(e) =>
-                  setSearch(
-                    e.target.value
-                  )
-                }
-              />
-            </div>
+              {loading ? <p className="loading">Mitglieder werden geladen …</p> : (
+                <section className="member-grid">
+                  {filteredMembers.map((member) => {
+                    const friend = friends.some((item) => item.id === member.id);
+                    return (
+                      <article className={`member-card ${roleClass(member.role)}`} key={member.id}>
+                        <div className="card-corner">
+                          <RoleStar member={member} />
+                          {user && member.id !== user.id && (
+                            <button
+                              className={`friend-badge ${friend ? "is-friend" : ""}`}
+                              onClick={() => toggleFriend(member)}
+                              title={friend ? "Freundschaft entfernen" : "Zu Freunden hinzufügen"}
+                            >
+                              {friend ? "♣" : "♧"}
+                            </button>
+                          )}
+                        </div>
 
-            <div className="member-grid">
-              {filteredMembers.map(
-                (member) => (
-                  <button
-                    key={member.id}
-                    className="member-card"
-                    onClick={() =>
-                      setSelectedMember(
-                        member
-                      )
-                    }
-                  >
-                  
+                        <button className="member-main" onClick={() => openMember(member)}>
+                          <Avatar member={member} />
+                          <h2>{member.nickname || "Mitglied"}</h2>
+                          <p>{[member.first_name, member.last_name].filter(Boolean).join(" ") || "Community-Mitglied"}</p>
+                          <strong className="points">{Number(member.community_points || 0).toLocaleString("de-AT")} Punkte</strong>
+                          <Status member={member} />
+                        </button>
 
-
-                    <h3>
-                      {getName(member)}
-
-                      <AdminStar
-                        member={member}
-                      />
-                    </h3>
-
-                    <p className="member-location">
-                      {member.location ||
-                        "Ennstal & Obersteiermark"}
-                    </p>
-
-                    <div className="member-points">
-                      ★{" "}
-                      {member.community_points ||
-                        0}{" "}
-                      Punkte
-                    </div>
-
-                    <small
-                      className={
-                        member.is_online
-                          ? "online-text"
-                          : "offline-text"
-                      }
-                    >
-                      ●{" "}
-                      {member.is_online
-                        ? "Online"
-                        : "Offline"}
-                    </small>
-                  </button>
-                )
+                        {admin && member.id !== user.id && (
+                          <div className="card-admin-actions">
+                            <button onClick={() => changePoints(member)}>Punkte</button>
+                            <button onClick={() => updateRole(member, member.role === "SUPPORTER" ? "MEMBER" : "SUPPORTER")}>Supporter</button>
+                            <button onClick={() => updateRole(member, isAdmin(member.role) ? "MEMBER" : "ADMIN")}>Admin</button>
+                          </div>
+                        )}
+                      </article>
+                    );
+                  })}
+                </section>
               )}
-            </div>
-          </section>
-        )}
 
-        {page === "groups" && (
-          <section className="section">
-            <div className="section-heading groups-heading">
-              <div>
-                <span className="eyebrow">
-                  GEMEINSCHAFT
-                </span>
-
-                <h1>
-                  Gruppen
-                </h1>
-
-                <p>
-                  Finde Menschen mit
-                  gemeinsamen Interessen.
-                </p>
-              </div>
+              <section className="legend">
+                <span><RoleStar member={{ role: "ADMIN" }} /> Admins</span>
+                <span><RoleStar member={{ role: "SUPPORTER" }} /> Supporter</span>
+                <span><i className="legend-dot" /> Mitglieder</span>
+                <span><i className="legend-dot online-dot" /> Online</span>
+                <span><i className="legend-dot" /> Offline</span>
+              </section>
 
               {user && (
-                <button
-                  className="primary-button"
-                  onClick={() =>
-                    setGroupOpen(true)
-                  }
-                >
-                  + Gruppe erstellen
-                </button>
-              )}
-            </div>
-
-            <div className="group-grid">
-              {groups.map((group) => (
-                <article
-                  key={group.id}
-                  className="group-card"
-                >
-                  <img
-                    src={group.image_url}
-                    alt={group.name}
-                  />
-
-                  <div className="group-card-content">
-                    <h3>
-                      {group.name}
-                    </h3>
-
-                    <p>
-                      {group.description}
-                    </p>
+                <section className="friends-panel">
+                  <div className="section-title">
+                    <h2>Deine Freunde ({friends.length})</h2>
+                    <button onClick={() => setSearch("")}>Alle anzeigen →</button>
                   </div>
-                </article>
-              ))}
-
-              {!groups.length && (
-                <div className="empty-card">
-                  Noch keine Gruppen vorhanden.
-                  <br />
-                  Sei der Erste und erstelle
-                  eine Gruppe.
-                </div>
-              )}
-            </div>
-          </section>
-        )}
-
-        {page === "profile" &&
-          user &&
-          profile && (
-            <section className="section profile-layout">
-              <div className="profile-main">
-
-                <div className="profile-card">
-                  <div className="profile-top">
-                    <Avatar
-                      member={profile}
-                      large
-                    />
-
-                    <div>
-                      <h1>
-                        {getName(profile)}
-
-                        <AdminStar
-                          member={profile}
-                        />
-                      </h1>
-
-                      <p>
-                        {profile.location ||
-                          "Ennstal & Obersteiermark"}
-                      </p>
-                    </div>
+                  <div className="friend-strip">
+                    {friends.length ? friends.map((friend) => (
+                      <button className="friend-tile" key={friend.id} onClick={() => openMember(friend)}>
+                        <Avatar member={friend} size="small" />
+                        <span>{friend.nickname}</span>
+                        <b>♣</b>
+                      </button>
+                    )) : <p>Noch keine Freunde hinzugefügt.</p>}
                   </div>
-
-                  <div className="points-panel">
-                    <span>
-                      Community-Punkte
-                    </span>
-
-                    <strong>
-                      {profile.community_points ||
-                        0}
-                    </strong>
-                  </div>
-
-                  <p className="profile-bio">
-                    {profile.bio ||
-                      "Noch keine Beschreibung vorhanden."}
-                  </p>
-
-                  <button
-                    className="primary-button"
-                    onClick={() =>
-                      setEditProfile(true)
-                    }
-                  >
-                    Profil bearbeiten
-                  </button>
-
-                  <button
-                    className="secondary-button"
-                    onClick={claimOnlineReward}
-                  >
-                    Onlinezeit-Belohnung prüfen
-                  </button>
-                </div>
-              </div>
-
-              <aside className="profile-sidebar">
-
-                <section className="sidebar-card">
-                  <h3>
-                    Mein Bereich
-                  </h3>
-
-                  <button
-                    onClick={() =>
-                      setEditProfile(true)
-                    }
-                  >
-                    Profil gestalten
-                  </button>
-
-                  <button
-                    onClick={changeOwnEmail}
-                  >
-                    E-Mail ändern
-                  </button>
-
-                  <button
-                    onClick={
-                      changeOwnPassword
-                    }
-                  >
-                    Passwort ändern
-                  </button>
                 </section>
+              )}
 
-                {isAdmin(profile.role) && (
-                  <section className="sidebar-card admin-panel">
-                    <span className="admin-label">
-                      NUR ADMIN
-                    </span>
+              {page === "start" && <section className="empty-page"><h2>Willkommen bei Ennstal Connect</h2></section>}
+            </>
+          )}
 
-                    <h3>
-                      Admin Tools
-                    </h3>
+          {page === "groups" && <section className="empty-page"><h1>Gruppen</h1><p>Deine Gruppenübersicht ist bereit für deine bestehenden Gruppendaten.</p></section>}
+          {page === "events" && <section className="empty-page"><h1>Events</h1><p>Hier können regionale Veranstaltungen angezeigt werden.</p></section>}
+          {page === "start" && <section className="empty-page"><h1>Willkommen bei Ennstal Connect</h1></section>}
+        </section>
 
-                    <div className="admin-stat">
-                      Offene Mitglieder:
-                      <strong>
-                        {pendingMembers.length}
-                      </strong>
-                    </div>
-
-                    <p>
-                      Mitglieder freigeben,
-                      ablehnen und Punkte
-                      verwalten.
-                    </p>
-
-                    {pendingMembers.map(
-                      (member) => (
-                        <div
-                          key={member.id}
-                          className="pending-member"
-                        >
-                          <div>
-                            <strong>
-                              {getName(
-                                member
-                              )}
-                            </strong>
-                          </div>
-
-                          <div className="admin-actions">
-                            <button
-                              className="approve-button"
-                              onClick={() =>
-                                approveMember(
-                                  member
-                                )
-                              }
-                            >
-                              ✓
-                            </button>
-
-                            <button
-                              className="danger-button"
-                              onClick={() =>
-                                rejectMember(
-                                  member
-                                )
-                              }
-                            >
-                              ×
-                            </button>
-                          </div>
-                        </div>
-                      )
-                    )}
-
-                    <div className="admin-member-list">
-                      {approvedMembers.map(
-                        (member) => (
-                          <div
-                            key={member.id}
-                            className="admin-member-row"
-                          >
-                            <span>
-                              {getName(
-                                member
-                              )}
-                            </span>
-
-                            <button
-                              onClick={() =>
-                                changePoints(
-                                  member
-                                )
-                              }
-                            >
-                              Punkte
-                            </button>
-                          </div>
-                        )
-                      )}
-                    </div>
-                  </section>
-                )}
-              </aside>
+        <aside className="right-sidebar">
+          {user && profile && (
+            <section className="side-card my-area">
+              <div className="side-title">
+                <h2>⌂ Mein Bereich</h2>
+              </div>
+              <button onClick={() => openMember(profile)}>◉ Mein Profil</button>
+              <button onClick={() => setPage("members")}>♧ Freunde</button>
+              <button onClick={() => showNotice("Nachrichten können über deine bestehende Nachrichten-Tabelle verbunden werden.")}>✉ Nachrichten</button>
+              <button onClick={loadVisitors}>◌ Besucher ({visitors.length})</button>
+              <button className="logout" onClick={signOut}>↪ Abmelden</button>
             </section>
           )}
+
+          {admin && (
+            <section className="side-card admin-area">
+              <div className="side-title">
+                <h2>♜ Admin Bereich</h2>
+                <button className="admin-chip" onClick={() => setAdminOpen(!adminOpen)}>ADMIN</button>
+              </div>
+              <button onClick={() => setAdminOpen(!adminOpen)}>♙ Mitglieder verwalten</button>
+              <button onClick={loadPending}>♧ Freigaben <b>{pending.length}</b></button>
+              <button onClick={() => showNotice("Punkte können direkt über die Mitgliederkarten geändert werden.")}>★ Punkteverlauf</button>
+              <button onClick={() => setPage("members")}>⌕ Profilsuche</button>
+              <button onClick={() => showNotice("Meldungen sind für deine vorhandene Meldungsfunktion reserviert.")}>⚑ Meldungen</button>
+
+              {adminOpen && (
+                <div className="admin-list">
+                  <h3>Offene Registrierungen</h3>
+                  {!pending.length && <p>Keine offenen Registrierungen.</p>}
+                  {pending.map((member) => (
+                    <div className="pending-row" key={member.id}>
+                      <Avatar member={member} size="tiny" />
+                      <span>{member.nickname}</span>
+                      <button onClick={() => approveMember(member.id, true)}>✓</button>
+                      <button onClick={() => approveMember(member.id, false)}>×</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+
+          <section className="side-card friends-side">
+            <div className="side-title">
+              <h2>♧ Freunde ({friends.length})</h2>
+            </div>
+            {friends.length ? friends.slice(0, 8).map((friend) => (
+              <button className="side-friend" key={friend.id} onClick={() => openMember(friend)}>
+                <Avatar member={friend} size="tiny" />
+                <span>{friend.nickname}<Status member={friend} /></span>
+                <b>▢</b>
+              </button>
+            )) : <p>Deine Freundesliste ist noch leer.</p>}
+          </section>
+
+          {user && (
+            <section className="side-card visitors-side">
+              <div className="side-title"><h2>◌ Besucher</h2></div>
+              {visitors.length ? visitors.slice(0, 6).map((visitor, index) => (
+                <button className="side-friend" key={`${visitor.id}-${index}`} onClick={() => openMember(visitor)}>
+                  <Avatar member={visitor} size="tiny" />
+                  <span>{visitor.nickname}</span>
+                </button>
+              )) : <p>Noch keine Besucher gespeichert.</p>}
+            </section>
+          )}
+        </aside>
       </main>
 
-      {selectedMember && (
-        <div className="modal-overlay">
-          <div className="modal member-modal">
-            <button
-              className="close-button"
-              onClick={() =>
-                setSelectedMember(null)
-              }
-            >
-              ×
+      <footer>
+        <span>ⓘ Über uns</span><span>♢ Community Regeln</span><span>▣ Datenschutz</span><span>⚖ Impressum</span><span>✉ Kontakt</span>
+        <p>© 2026 <b>Ennstal Connect</b> – Die Regionale Community für Ennstal & Obersteiermark</p>
+      </footer>
+
+      {notice && <div className="toast">{notice}</div>}
+
+      {authOpen && (
+        <div className="modal-backdrop" onMouseDown={() => setAuthOpen(false)}>
+          <form className="auth-modal" onSubmit={submitAuth} onMouseDown={(e) => e.stopPropagation()}>
+            <button type="button" className="close" onClick={() => setAuthOpen(false)}>×</button>
+            <h2>{authMode === "login" ? "Anmelden" : "Registrieren"}</h2>
+
+            {authMode === "register" && (
+              <div className="two-cols">
+                <input name="first_name" placeholder="Vorname" required />
+                <input name="last_name" placeholder="Nachname" required />
+                <input name="nickname" placeholder="Nickname" required />
+              </div>
+            )}
+
+            <input type="email" name="email" placeholder="E-Mail-Adresse" required />
+            <input type="password" name="password" minLength="6" placeholder="Passwort" required />
+            <button className="primary submit" type="submit">
+              {authMode === "login" ? "Jetzt anmelden" : "Konto erstellen"}
             </button>
-
-            <div className="profile-top">
-              <Avatar
-                member={selectedMember}
-                large
-              />
-
-              <div>
-                <h2>
-                  {getName(
-                    selectedMember
-                  )}
-
-                  <AdminStar
-                    member={
-                      selectedMember
-                    }
-                  />
-                </h2>
-
-                <p>
-                  {selectedMember.location ||
-                    "Ennstal & Obersteiermark"}
-                </p>
-              </div>
-            </div>
-
-            <div className="points-panel">
-              <span>
-                Community-Punkte
-              </span>
-
-              <strong>
-                {selectedMember.community_points ||
-                  0}
-              </strong>
-            </div>
-
-            <p>
-              {selectedMember.bio ||
-                "Dieses Mitglied hat noch keine Beschreibung hinzugefügt."}
-            </p>
-
-            <p>
-              Interessen:
-              <br />
-              {selectedMember.interests ||
-                "Noch keine Angaben"}
-            </p>
-
-            <p
-              className={
-                selectedMember.is_online
-                  ? "online-text"
-                  : "offline-text"
-              }
-            >
-              ●{" "}
-              {selectedMember.is_online
-                ? "Dieses Mitglied ist online"
-                : "Dieses Mitglied ist derzeit offline"}
-            </p>
-          </div>
-        </div>
-      )}
-
-      {editProfile &&
-        profile && (
-          <div className="modal-overlay">
-            <form
-              className="modal edit-profile-modal"
-              onSubmit={saveProfile}
-            >
-              <button
-                type="button"
-                className="close-button"
-                onClick={() =>
-                  setEditProfile(false)
-                }
-              >
-                ×
-              </button>
-
-              <h2>
-                Mein Profil gestalten
-              </h2>
-
-              <div className="avatar-edit">
-                <Avatar
-                  member={profile}
-                  large
-                />
-
-                <label className="upload-button">
-                  Profilbild auswählen
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={
-                      uploadAvatar
-                    }
-                  />
-                </label>
-
-                {profile.avatar_url && (
-                  <button
-                    type="button"
-                    className="danger-button"
-                    onClick={deleteAvatar}
-                  >
-                    Bild löschen
-                  </button>
-                )}
-              </div>
-
-              <label>
-                Spitzname
-                <input
-                  value={
-                    profileForm.nickname
-                  }
-                  onChange={(e) =>
-                    setProfileForm(
-                      (old) => ({
-                        ...old,
-                        nickname:
-                          e.target.value
-                      })
-                    )
-                  }
-                />
-              </label>
-
-              <label>
-                Über mich
-                <textarea
-                  rows="4"
-                  value={
-                    profileForm.bio
-                  }
-                  onChange={(e) =>
-                    setProfileForm(
-                      (old) => ({
-                        ...old,
-                        bio:
-                          e.target.value
-                      })
-                    )
-                  }
-                />
-              </label>
-
-              <label>
-                Wohnort / Region
-                <input
-                  value={
-                    profileForm.location
-                  }
-                  onChange={(e) =>
-                    setProfileForm(
-                      (old) => ({
-                        ...old,
-                        location:
-                          e.target.value
-                      })
-                    )
-                  }
-                />
-              </label>
-
-              <label>
-                Website
-                <input
-                  value={
-                    profileForm.website
-                  }
-                  onChange={(e) =>
-                    setProfileForm(
-                      (old) => ({
-                        ...old,
-                        website:
-                          e.target.value
-                      })
-                    )
-                  }
-                />
-              </label>
-
-              <label>
-                Interessen
-                <input
-                  placeholder="z.B. Wandern, Musik, Fußball"
-                  value={
-                    profileForm.interests
-                  }
-                  onChange={(e) =>
-                    setProfileForm(
-                      (old) => ({
-                        ...old,
-                        interests:
-                          e.target.value
-                      })
-                    )
-                  }
-                />
-              </label>
-
-              <button className="primary-button full">
-                Änderungen speichern
-              </button>
-            </form>
-          </div>
-        )}
-
-      {groupOpen && (
-        <div className="modal-overlay">
-          <form
-            className="modal"
-            onSubmit={createGroup}
-          >
             <button
               type="button"
-              className="close-button"
-              onClick={() =>
-                setGroupOpen(false)
-              }
+              className="switch-auth"
+              onClick={() => setAuthMode(authMode === "login" ? "register" : "login")}
             >
-              ×
-            </button>
-
-            <h2>
-              Neue Gruppe erstellen
-            </h2>
-
-            <label>
-              Gruppenname *
-              <input
-                required
-                value={
-                  groupForm.name
-                }
-                onChange={(e) =>
-                  setGroupForm(
-                    (old) => ({
-                      ...old,
-                      name:
-                        e.target.value
-                    })
-                  )
-                }
-              />
-            </label>
-
-            <label>
-              Beschreibung *
-              <textarea
-                required
-                rows="5"
-                value={
-                  groupForm.description
-                }
-                onChange={(e) =>
-                  setGroupForm(
-                    (old) => ({
-                      ...old,
-                      description:
-                        e.target.value
-                    })
-                  )
-                }
-              />
-            </label>
-
-            <label>
-              Bild-URL *
-              <input
-                required
-                type="url"
-                placeholder="https://..."
-                value={
-                  groupForm.image_url
-                }
-                onChange={(e) =>
-                  setGroupForm(
-                    (old) => ({
-                      ...old,
-                      image_url:
-                        e.target.value
-                    })
-                  )
-                }
-              />
-            </label>
-
-            <button className="primary-button full">
-              Gruppe erstellen
+              {authMode === "login" ? "Noch kein Konto? Registrieren" : "Bereits registriert? Anmelden"}
             </button>
           </form>
         </div>
       )}
 
-      <footer>
-        © 2026 Ennstal Connect
-      </footer>
+      {profileOpen && selectedMember && (
+        <div className="modal-backdrop" onMouseDown={() => setProfileOpen(false)}>
+          <section className="profile-modal" onMouseDown={(e) => e.stopPropagation()}>
+            <button className="close" onClick={() => setProfileOpen(false)}>×</button>
+            <div className={`profile-cover ${roleClass(selectedMember.role)}`}>
+              <Avatar member={selectedMember} />
+              <RoleStar member={selectedMember} />
+            </div>
+            <h2>{selectedMember.nickname}</h2>
+            <p>{[selectedMember.first_name, selectedMember.last_name].filter(Boolean).join(" ")}</p>
+            <strong className="points">{Number(selectedMember.community_points || 0).toLocaleString("de-AT")} Punkte</strong>
+            <Status member={selectedMember} />
+            {user && selectedMember.id !== user.id && (
+              <button className="primary submit" onClick={() => toggleFriend(selectedMember)}>
+                {friends.some((friend) => friend.id === selectedMember.id) ? "♣ Freund entfernen" : "♧ Freund hinzufügen"}
+              </button>
+            )}
+            {admin && selectedMember.id !== user?.id && (
+              <div className="modal-admin-tools">
+                <button onClick={() => changePoints(selectedMember)}>Punkte ändern</button>
+                <button onClick={() => updateRole(selectedMember, "MEMBER")}>Mitglied</button>
+                <button onClick={() => updateRole(selectedMember, "SUPPORTER")}>Supporter</button>
+                <button onClick={() => updateRole(selectedMember, "ADMIN")}>Admin</button>
+              </div>
+            )}
+          </section>
+        </div>
+      )}
     </div>
   );
 }
