@@ -2,7 +2,13 @@
    ENNSTAL CONNECT – DARK COMMUNITY DESIGN
 ========================================================= */
 
-:root {
+body {
+  ...
+}
+
+* {
+  ...
+}
   --bg: #101514;
   --bg-secondary: #161d1b;
   --bg-card: #1b2421;
