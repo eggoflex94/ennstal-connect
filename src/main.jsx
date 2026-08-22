@@ -5,10 +5,41 @@ import './styles.css';
 
 
 /* =========================================
-   ANMELDEN / REGISTRIEREN
+   HILFSFUNKTIONEN
+========================================= */
+
+function formatDate(date) {
+  if (!date) return '';
+
+  return new Date(date).toLocaleDateString(
+    'de-AT',
+    {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric'
+    }
+  );
+}
+
+
+function categoryLabel(category) {
+  const labels = {
+    NEWS: 'News',
+    EVENT: 'Event',
+    ANNOUNCEMENT: 'Ankündigung',
+    COMMUNITY: 'Community'
+  };
+
+  return labels[category] || category;
+}
+
+
+/* =========================================
+   AUTH
 ========================================= */
 
 function Auth({ onClose, initialMode = 'login' }) {
+
   const [mode, setMode] = useState(initialMode);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
@@ -22,14 +53,17 @@ function Auth({ onClose, initialMode = 'login' }) {
     password: ''
   });
 
-  const setField = (key, value) => {
+
+  function setField(key, value) {
     setForm({
       ...form,
       [key]: value
     });
-  };
+  }
+
 
   async function submit(e) {
+
     e.preventDefault();
 
     setLoading(true);
@@ -37,12 +71,16 @@ function Auth({ onClose, initialMode = 'login' }) {
 
     let error;
 
+
     if (mode === 'register') {
+
       ({ error } = await supabase.auth.signUp({
         email: form.email,
         password: form.password,
+
         options: {
           emailRedirectTo: window.location.origin,
+
           data: {
             first_name: form.first_name,
             last_name: form.last_name,
@@ -52,30 +90,36 @@ function Auth({ onClose, initialMode = 'login' }) {
         }
       }));
 
+
       setMessage(
         error
           ? error.message
-          : 'Registrierung erfolgreich. Bitte bestätige deine E-Mail. Danach wartet dein Konto auf die Freigabe.'
+          : 'Registrierung erfolgreich. Bitte bestätige deine E-Mail.'
       );
 
     } else {
 
-      ({ error } = await supabase.auth.signInWithPassword({
-        email: form.email,
-        password: form.password
-      }));
+      ({ error } =
+        await supabase.auth.signInWithPassword({
+          email: form.email,
+          password: form.password
+        }));
+
 
       setMessage(
         error
           ? error.message
           : 'Erfolgreich angemeldet.'
       );
+
     }
 
     setLoading(false);
   }
 
+
   return (
+
     <div className="modalBackdrop">
 
       <form
@@ -90,6 +134,7 @@ function Auth({ onClose, initialMode = 'login' }) {
         >
           ×
         </button>
+
 
         <h2>
           {mode === 'login'
@@ -112,6 +157,7 @@ function Auth({ onClose, initialMode = 'login' }) {
               }
             />
 
+
             <input
               required
               placeholder="Nachname"
@@ -123,6 +169,7 @@ function Auth({ onClose, initialMode = 'login' }) {
               }
             />
 
+
             <input
               required
               type="date"
@@ -133,6 +180,7 @@ function Auth({ onClose, initialMode = 'login' }) {
                 )
               }
             />
+
 
             <input
               required
@@ -207,658 +255,339 @@ function Auth({ onClose, initialMode = 'login' }) {
             )
           }
         >
+
           {mode === 'login'
             ? 'Noch kein Konto? Registrieren'
             : 'Bereits registriert? Anmelden'}
+
         </button>
 
       </form>
 
     </div>
+
   );
 }
 
 
 /* =========================================
-   IMPRESSUM / DATENSCHUTZ / REGELN
+   POST EDITOR
 ========================================= */
 
-function LegalModal({ type, onClose }) {
-
-  const content = {
-
-
-    /* =====================================
-       IMPRESSUM
-    ===================================== */
-
-    impressum: {
-      title: 'Impressum',
-
-      body: (
-        <>
-
-          <h2>Betreiber und Medieninhaber</h2>
-
-          <p>
-            <strong>Marco Egger</strong>
-            <br />
-            Waidbachstraße
-            <br />
-            8700 Leoben
-            <br />
-            Österreich
-          </p>
-
-
-          <p>
-            <strong>Kontakt</strong>
-            <br />
-            E-Mail: eggermarco@gmx.net
-          </p>
-
-
-          <h2>Verantwortlich für den Inhalt</h2>
-
-          <p>
-            Marco Egger
-            <br />
-            Waidbachstraße
-            <br />
-            8700 Leoben
-            <br />
-            Österreich
-          </p>
-
-
-          <h2>Zweck der Website</h2>
-
-          <p>
-            ennstal connect ist eine regionale
-            Online-Community für Menschen aus dem
-            Ennstal, der Obersteiermark und den
-            umliegenden Regionen.
-          </p>
-
-          <p>
-            Die Plattform dient insbesondere:
-          </p>
-
-          <ul>
-            <li>der Vernetzung von Menschen</li>
-            <li>dem Austausch innerhalb der Community</li>
-            <li>der Entdeckung von Aktivitäten und Veranstaltungen</li>
-            <li>der Bildung von Gruppen und gemeinsamen Interessen</li>
-            <li>dem Teilen von Informationen und Erfahrungen</li>
-            <li>der Förderung regionaler Gemeinschaft und Begegnung</li>
-          </ul>
-
-
-          <h2>Grundlegende Richtung</h2>
-
-          <p>
-            ennstal connect dient der Information,
-            Vernetzung und Kommunikation von Menschen
-            innerhalb einer regionalen Online-Community.
-          </p>
-
-          <p>
-            Die Plattform soll Gemeinschaft,
-            regionalen Austausch, gemeinsame Aktivitäten,
-            Veranstaltungen und soziale Kontakte fördern.
-          </p>
-
-
-          <h2>Haftung für Inhalte</h2>
-
-          <p>
-            Die Inhalte dieser Website werden mit
-            größtmöglicher Sorgfalt erstellt.
-            Dennoch kann keine Gewähr für die
-            Richtigkeit, Vollständigkeit und Aktualität
-            sämtlicher Inhalte übernommen werden.
-          </p>
-
-          <p>
-            Beiträge, Kommentare und sonstige Inhalte
-            von Community-Mitgliedern geben nicht
-            zwingend die Meinung des Betreibers wieder.
-          </p>
-
-          <p>
-            Für selbst veröffentlichte Inhalte sind
-            grundsätzlich die jeweiligen Nutzerinnen
-            und Nutzer verantwortlich.
-          </p>
-
-          <p>
-            Bei Bekanntwerden von rechtswidrigen
-            Inhalten werden diese geprüft und
-            gegebenenfalls im Rahmen der gesetzlichen
-            Möglichkeiten entfernt.
-          </p>
-
-
-          <h2>Haftung für Links</h2>
-
-          <p>
-            Diese Website kann Links zu externen
-            Websites Dritter enthalten.
-          </p>
-
-          <p>
-            Auf deren Inhalte besteht kein Einfluss.
-            Für die Inhalte externer Websites ist
-            grundsätzlich der jeweilige Betreiber
-            verantwortlich.
-          </p>
-
-
-          <h2>Urheberrecht</h2>
-
-          <p>
-            Die vom Betreiber erstellten Inhalte,
-            Texte, Grafiken, Logos und Designs
-            unterliegen den geltenden gesetzlichen
-            Schutzbestimmungen.
-          </p>
-
-          <p>
-            Eine Verwendung außerhalb der gesetzlichen
-            Grenzen ist ohne Zustimmung des jeweiligen
-            Rechteinhabers nicht gestattet.
-          </p>
-
-
-          <h2>Inhalte von Community-Mitgliedern</h2>
-
-          <p>
-            Registrierte Nutzerinnen und Nutzer können,
-            abhängig von den verfügbaren Funktionen,
-            eigene Inhalte, Beiträge, Kommentare,
-            Bilder oder sonstige Informationen
-            veröffentlichen.
-          </p>
-
-          <p>
-            Für diese Inhalte ist grundsätzlich die
-            veröffentlichende Person verantwortlich.
-          </p>
-
-
-          <p>
-            Insbesondere untersagt sind:
-          </p>
-
-          <ul>
-            <li>rechtswidrige Inhalte</li>
-            <li>beleidigende oder diskriminierende Inhalte</li>
-            <li>gewaltverherrlichende Inhalte</li>
-            <li>menschenverachtende Inhalte</li>
-            <li>urheberrechtsverletzende Inhalte</li>
-            <li>personenbezogene Daten Dritter ohne Berechtigung</li>
-            <li>Spam oder betrügerische Inhalte</li>
-            <li>Inhalte, die Rechte Dritter verletzen</li>
-          </ul>
-
-
-          <h2>Meldung rechtswidriger Inhalte</h2>
-
-          <p>
-            Rechtswidrige oder möglicherweise
-            rechtsverletzende Inhalte können gemeldet
-            werden an:
-          </p>
-
-          <p>
-            <strong>
-              eggermarco@gmx.net
-            </strong>
-          </p>
-
-          <p>
-            Bitte gib möglichst einen Link oder eine
-            genaue Beschreibung des betreffenden
-            Inhalts sowie den Grund der Meldung an.
-          </p>
-
-
-          <p>
-            <strong>
-              Stand: August 2026
-            </strong>
-          </p>
-
-        </>
-      )
-    },
-
-
-    /* =====================================
-       DATENSCHUTZ
-    ===================================== */
-
-    datenschutz: {
-      title: 'Datenschutzerklärung',
-
-      body: (
-        <>
-
-          <h2>1. Verantwortlicher</h2>
-
-          <p>
-            Verantwortlich für die Verarbeitung
-            personenbezogener Daten im Zusammenhang
-            mit ennstal connect ist:
-          </p>
-
-          <p>
-            <strong>Marco Egger</strong>
-            <br />
-            Waidbachstraße
-            <br />
-            8700 Leoben
-            <br />
-            Österreich
-          </p>
-
-          <p>
-            E-Mail: eggermarco@gmx.net
-          </p>
-
-
-          <h2>2. Allgemeines zur Datenverarbeitung</h2>
-
-          <p>
-            Der Schutz deiner persönlichen Daten ist
-            wichtig. Personenbezogene Daten werden
-            nur verarbeitet, soweit dies für den
-            Betrieb und die Bereitstellung der
-            Community erforderlich ist oder eine
-            entsprechende rechtliche Grundlage
-            besteht.
-          </p>
-
-
-          <h2>3. Registrierung und Benutzerkonto</h2>
-
-          <p>
-            Bei der Registrierung können insbesondere
-            folgende Daten verarbeitet werden:
-          </p>
-
-          <ul>
-            <li>Vorname</li>
-            <li>Nachname</li>
-            <li>Geburtsdatum</li>
-            <li>Nickname</li>
-            <li>E-Mail-Adresse</li>
-            <li>Passwort in technisch geschützter Form</li>
-          </ul>
-
-          <p>
-            Diese Daten werden benötigt, um ein
-            Benutzerkonto einzurichten und die
-            Community-Funktionen bereitzustellen.
-          </p>
-
-
-          <h2>4. Profildaten</h2>
-
-          <p>
-            Abhängig von den Funktionen der Plattform
-            können Informationen wie Nickname,
-            Profilbild, Rolle innerhalb der Community,
-            Community-Punkte oder Online-Status
-            verarbeitet und innerhalb der Community
-            angezeigt werden.
-          </p>
-
-
-          <h2>5. Anmeldung</h2>
-
-          <p>
-            Bei der Anmeldung werden die für die
-            Authentifizierung erforderlichen Daten
-            verarbeitet, um dein Benutzerkonto zu
-            erkennen und einen sicheren Zugriff auf
-            die Plattform zu ermöglichen.
-          </p>
-
-
-          <h2>6. Supabase</h2>
-
-          <p>
-            Für Funktionen wie Benutzerverwaltung,
-            Authentifizierung und Datenbank kann
-            ennstal connect den Dienst Supabase
-            verwenden.
-          </p>
-
-          <p>
-            Dabei können die für die Bereitstellung
-            der jeweiligen Funktionen erforderlichen
-            personenbezogenen Daten verarbeitet
-            werden.
-          </p>
-
-
-          <h2>7. Hosting über Vercel</h2>
-
-          <p>
-            Diese Website kann über die Plattform
-            Vercel bereitgestellt werden.
-          </p>
-
-          <p>
-            Beim Aufruf einer Website können
-            technisch notwendige Daten verarbeitet
-            werden, beispielsweise:
-          </p>
-
-          <ul>
-            <li>IP-Adresse</li>
-            <li>Datum und Uhrzeit des Zugriffs</li>
-            <li>aufgerufene Seiten</li>
-            <li>technische Informationen zum Browser</li>
-            <li>Informationen zum verwendeten Gerät</li>
-          </ul>
-
-          <p>
-            Diese Daten können erforderlich sein,
-            um die Website technisch bereitzustellen,
-            Sicherheit zu gewährleisten und Fehler
-            zu erkennen.
-          </p>
-
-
-          <h2>8. Cookies und technische Speicherung</h2>
-
-          <p>
-            Die Plattform kann technisch notwendige
-            Speichermechanismen verwenden, damit
-            Anmeldung, Sitzungen und bestimmte
-            Funktionen der Website funktionieren.
-          </p>
-
-          <p>
-            Falls zukünftig Analyse-, Marketing- oder
-            sonstige nicht technisch notwendige
-            Cookies eingesetzt werden, wird diese
-            Datenschutzerklärung entsprechend
-            ergänzt und gegebenenfalls eine
-            erforderliche Einwilligung eingeholt.
-          </p>
-
-
-          <h2>9. Community-Inhalte</h2>
-
-          <p>
-            Wenn Mitglieder Beiträge, Kommentare,
-            Bilder oder andere Inhalte veröffentlichen,
-            können diese Daten innerhalb der Community
-            für andere berechtigte Nutzer sichtbar
-            sein.
-          </p>
-
-          <p>
-            Bitte veröffentliche keine personenbezogenen
-            Daten anderer Personen, wenn dafür keine
-            entsprechende Berechtigung vorliegt.
-          </p>
-
-
-          <h2>10. Empfänger von Daten</h2>
-
-          <p>
-            Daten können an technische Dienstleister
-            übermittelt oder dort verarbeitet werden,
-            soweit dies für den Betrieb der Plattform
-            erforderlich ist.
-          </p>
-
-          <p>
-            Dazu können insbesondere Anbieter für
-            Hosting und Datenbank- bzw.
-            Authentifizierungsdienste gehören.
-          </p>
-
-
-          <h2>11. Speicherung und Löschung</h2>
-
-          <p>
-            Personenbezogene Daten werden grundsätzlich
-            nur so lange gespeichert, wie dies für
-            den jeweiligen Zweck erforderlich ist oder
-            gesetzliche Aufbewahrungspflichten bestehen.
-          </p>
-
-          <p>
-            Bei einer Löschung eines Benutzerkontos
-            können Daten gelöscht oder – soweit
-            erforderlich – entsprechend gesetzlicher
-            Vorgaben weiter gespeichert werden.
-          </p>
-
-
-          <h2>12. Deine Rechte</h2>
-
-          <p>
-            Du hast im Rahmen der geltenden
-            Datenschutzgesetze grundsätzlich das Recht
-            auf:
-          </p>
-
-          <ul>
-            <li>Auskunft über deine gespeicherten Daten</li>
-            <li>Berichtigung unrichtiger Daten</li>
-            <li>Löschung deiner Daten</li>
-            <li>Einschränkung der Verarbeitung</li>
-            <li>Widerspruch gegen bestimmte Verarbeitungen</li>
-            <li>Datenübertragbarkeit, soweit anwendbar</li>
-          </ul>
-
-          <p>
-            Wenn du eines dieser Rechte ausüben
-            möchtest, kannst du dich per E-Mail
-            an den Betreiber wenden.
-          </p>
-
-
-          <p>
-            <strong>
-              Kontakt:
-            </strong>
-            <br />
-            eggermarco@gmx.net
-          </p>
-
-
-          <h2>13. Beschwerderecht</h2>
-
-          <p>
-            Wenn du der Ansicht bist, dass die
-            Verarbeitung deiner personenbezogenen
-            Daten gegen geltendes Datenschutzrecht
-            verstößt, hast du grundsätzlich das Recht,
-            dich bei einer zuständigen
-            Datenschutzaufsichtsbehörde zu beschweren.
-          </p>
-
-
-          <h2>14. Datensicherheit</h2>
-
-          <p>
-            Es werden angemessene technische und
-            organisatorische Maßnahmen eingesetzt,
-            um personenbezogene Daten vor unbefugtem
-            Zugriff, Verlust, Missbrauch oder
-            unzulässiger Veränderung zu schützen.
-          </p>
-
-
-          <h2>15. Änderungen dieser Datenschutzerklärung</h2>
-
-          <p>
-            Diese Datenschutzerklärung kann angepasst
-            werden, wenn sich Funktionen der Website,
-            gesetzliche Anforderungen oder die Art
-            der Datenverarbeitung ändern.
-          </p>
-
-
-          <p>
-            <strong>
-              Stand: August 2026
-            </strong>
-          </p>
-
-        </>
-      )
-    },
-
-
-    /* =====================================
-       COMMUNITY-REGELN
-    ===================================== */
-
-    regeln: {
-      title: 'Community-Regeln',
-
-      body: (
-        <>
-
-          <h2>Willkommen bei ennstal connect</h2>
-
-          <p>
-            ennstal connect soll ein respektvoller,
-            freundlicher und sicherer Ort für Menschen
-            aus der Region sein.
-          </p>
-
-
-          <h2>1. Respektvoller Umgang</h2>
-
-          <p>
-            Behandle andere Mitglieder so, wie du
-            selbst behandelt werden möchtest.
-          </p>
-
-          <p>
-            Beleidigungen, Diskriminierung,
-            Bedrohungen oder gezielte Belästigung
-            sind nicht erlaubt.
-          </p>
-
-
-          <h2>2. Ehrliche Profile</h2>
-
-          <p>
-            Verwende bei der Registrierung
-            wahrheitsgemäße Angaben.
-          </p>
-
-          <p>
-            Fake-Profile oder das Vortäuschen einer
-            falschen Identität können entfernt werden.
-          </p>
-
-
-          <h2>3. Datenschutz respektieren</h2>
-
-          <p>
-            Veröffentliche keine persönlichen Daten
-            anderer Personen ohne deren Zustimmung.
-          </p>
-
-
-          <h2>4. Keine illegalen Inhalte</h2>
-
-          <p>
-            Es dürfen keine Inhalte veröffentlicht
-            werden, die gegen geltendes Recht
-            verstoßen.
-          </p>
-
-
-          <h2>5. Respektiere Urheberrechte</h2>
-
-          <p>
-            Lade nur Bilder, Texte oder andere Inhalte
-            hoch, für die du die erforderlichen Rechte
-            besitzt.
-          </p>
-
-
-          <h2>6. Kein Spam</h2>
-
-          <p>
-            Werbung, Spam, betrügerische Inhalte oder
-            wiederholte unerwünschte Nachrichten sind
-            nicht erlaubt.
-          </p>
-
-
-          <h2>7. Melden von Problemen</h2>
-
-          <p>
-            Problematische oder rechtswidrige Inhalte
-            können dem Betreiber gemeldet werden:
-          </p>
-
-          <p>
-            <strong>
-              eggermarco@gmx.net
-            </strong>
-          </p>
-
-
-          <h2>8. Maßnahmen bei Verstößen</h2>
-
-          <p>
-            Bei Verstößen gegen diese Community-Regeln
-            können Inhalte entfernt, Funktionen
-            eingeschränkt oder Benutzerkonten
-            vorübergehend oder dauerhaft gesperrt
-            werden.
-          </p>
-
-
-          <p>
-            <strong>
-              Stand: August 2026
-            </strong>
-          </p>
-
-        </>
-      )
+function PostEditor({
+  post,
+  onClose,
+  onSaved,
+  user
+}) {
+
+  const [form, setForm] = useState({
+    title: post?.title || '',
+    excerpt: post?.excerpt || '',
+    content: post?.content || '',
+    image_url: post?.image_url || '',
+    category: post?.category || 'NEWS',
+    event_date: post?.event_date
+      ? post.event_date.slice(0, 16)
+      : '',
+    location: post?.location || '',
+    status: post?.status || 'DRAFT',
+    featured: post?.featured || false
+  });
+
+  const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
+
+
+  function setField(key, value) {
+    setForm({
+      ...form,
+      [key]: value
+    });
+  }
+
+
+  async function save(statusOverride) {
+
+    if (!form.title.trim()) {
+      setMessage('Bitte gib einen Titel ein.');
+      return;
     }
 
-  };
+    setLoading(true);
 
 
-  const page = content[type];
+    const data = {
+      ...form,
+
+      status:
+        statusOverride ||
+        form.status,
+
+      event_date:
+        form.category === 'EVENT' &&
+        form.event_date
+          ? new Date(
+              form.event_date
+            ).toISOString()
+          : null,
+
+      location:
+        form.category === 'EVENT'
+          ? form.location
+          : null,
+
+      updated_at:
+        new Date().toISOString()
+    };
+
+
+    let error;
+
+
+    if (post?.id) {
+
+      ({ error } =
+        await supabase
+          .from('posts')
+          .update(data)
+          .eq('id', post.id));
+
+    } else {
+
+      ({ error } =
+        await supabase
+          .from('posts')
+          .insert({
+            ...data,
+            author_id: user.id
+          }));
+
+    }
+
+
+    if (error) {
+
+      setMessage(error.message);
+      setLoading(false);
+      return;
+
+    }
+
+
+    onSaved();
+    onClose();
+  }
 
 
   return (
 
-    <div className="legalBackdrop">
+    <div className="modalBackdrop">
 
-      <div className="legalModal">
+      <div className="editorModal">
 
         <button
-          type="button"
           className="close"
           onClick={onClose}
         >
           ×
         </button>
 
-        <h1>
-          {page.title}
-        </h1>
 
-        {page.body}
+        <h2>
+
+          {post
+            ? 'Beitrag bearbeiten'
+            : 'Neuen Beitrag erstellen'}
+
+        </h2>
+
+
+        <label>
+          Kategorie
+        </label>
+
+        <select
+          value={form.category}
+          onChange={e =>
+            setField(
+              'category',
+              e.target.value
+            )
+          }
+        >
+
+          <option value="NEWS">
+            📰 News
+          </option>
+
+          <option value="EVENT">
+            📅 Event
+          </option>
+
+          <option value="ANNOUNCEMENT">
+            📌 Ankündigung
+          </option>
+
+          <option value="COMMUNITY">
+            🌿 Community
+          </option>
+
+        </select>
+
+
+        <label>
+          Titel
+        </label>
+
+        <input
+          value={form.title}
+          placeholder="Titel eingeben..."
+          onChange={e =>
+            setField(
+              'title',
+              e.target.value
+            )
+          }
+        />
+
+
+        <label>
+          Kurzbeschreibung
+        </label>
+
+        <textarea
+          value={form.excerpt}
+          placeholder="Kurze Zusammenfassung..."
+          onChange={e =>
+            setField(
+              'excerpt',
+              e.target.value
+            )
+          }
+        />
+
+
+        <label>
+          Vollständiger Inhalt
+        </label>
+
+        <textarea
+          className="largeTextarea"
+          value={form.content}
+          placeholder="Hier kommt dein vollständiger Beitrag..."
+          onChange={e =>
+            setField(
+              'content',
+              e.target.value
+            )
+          }
+        />
+
+
+        <label>
+          Bild-URL
+        </label>
+
+        <input
+          value={form.image_url}
+          placeholder="https://..."
+          onChange={e =>
+            setField(
+              'image_url',
+              e.target.value
+            )
+          }
+        />
+
+
+        {form.category === 'EVENT' && (
+          <>
+
+            <label>
+              Datum und Uhrzeit
+            </label>
+
+            <input
+              type="datetime-local"
+              value={form.event_date}
+              onChange={e =>
+                setField(
+                  'event_date',
+                  e.target.value
+                )
+              }
+            />
+
+
+            <label>
+              Ort
+            </label>
+
+            <input
+              value={form.location}
+              placeholder="z.B. Leoben"
+              onChange={e =>
+                setField(
+                  'location',
+                  e.target.value
+                )
+              }
+            />
+
+          </>
+        )}
+
+
+        <label className="checkboxLabel">
+
+          <input
+            type="checkbox"
+            checked={form.featured}
+            onChange={e =>
+              setField(
+                'featured',
+                e.target.checked
+              )
+            }
+          />
+
+          Beitrag hervorheben
+
+        </label>
+
+
+        {message && (
+          <div className="authMessage">
+            {message}
+          </div>
+        )}
+
+
+        <div className="editorActions">
+
+          <button
+            className="ghost"
+            disabled={loading}
+            onClick={() =>
+              save('DRAFT')
+            }
+          >
+            📝 Entwurf speichern
+          </button>
+
+
+          <button
+            className="primary"
+            disabled={loading}
+            onClick={() =>
+              save('PUBLISHED')
+            }
+          >
+            🚀 Veröffentlichen
+          </button>
+
+        </div>
 
       </div>
 
@@ -869,26 +598,395 @@ function LegalModal({ type, onClose }) {
 
 
 /* =========================================
-   HAUPT-APP
+   POST CARD
+========================================= */
+
+function PostCard({
+  post,
+  admin,
+  onEdit,
+  onDelete
+}) {
+
+  const [expanded, setExpanded] = useState(false);
+
+
+  return (
+
+    <article
+      className={`postCard ${post.featured ? 'featured' : ''}`}
+    >
+
+      {post.image_url && (
+        <img
+          className="postImage"
+          src={post.image_url}
+          alt={post.title}
+        />
+      )}
+
+
+      <div className="postContent">
+
+        <div className="postMeta">
+
+          <span className={`category ${post.category}`}>
+            {categoryLabel(post.category)}
+          </span>
+
+
+          <span>
+            {formatDate(post.created_at)}
+          </span>
+
+        </div>
+
+
+        <h3>
+          {post.title}
+        </h3>
+
+
+        {post.excerpt && (
+          <p className="excerpt">
+            {post.excerpt}
+          </p>
+        )}
+
+
+        {post.category === 'EVENT' && (
+
+          <div className="eventInfo">
+
+            {post.event_date && (
+              <div>
+                📅 {formatDate(post.event_date)}
+              </div>
+            )}
+
+            {post.location && (
+              <div>
+                📍 {post.location}
+              </div>
+            )}
+
+          </div>
+
+        )}
+
+
+        {expanded && post.content && (
+          <div className="fullPost">
+            {post.content}
+          </div>
+        )}
+
+
+        {post.content && (
+          <button
+            className="readMore"
+            onClick={() =>
+              setExpanded(!expanded)
+            }
+          >
+            {expanded
+              ? 'Weniger anzeigen'
+              : 'Mehr erfahren'}
+          </button>
+        )}
+
+
+        {admin && (
+
+          <div className="postAdminActions">
+
+            <button
+              onClick={() =>
+                onEdit(post)
+              }
+            >
+              ✏️ Bearbeiten
+            </button>
+
+
+            <button
+              className="deleteButton"
+              onClick={() =>
+                onDelete(post.id)
+              }
+            >
+              🗑️ Löschen
+            </button>
+
+          </div>
+
+        )}
+
+      </div>
+
+    </article>
+
+  );
+}
+
+
+/* =========================================
+   ADMIN DASHBOARD
+========================================= */
+
+function AdminDashboard({
+  posts,
+  pending,
+  onNewPost,
+  onEditPost,
+  onDeletePost,
+  onChangeStatus
+}) {
+
+  const [tab, setTab] = useState('content');
+
+
+  return (
+
+    <section className="adminDashboard">
+
+      <div className="dashboardHeader">
+
+        <div>
+
+          <p className="eyebrow dark">
+            VERWALTUNG
+          </p>
+
+          <h2>
+            Admin-Dashboard
+          </h2>
+
+        </div>
+
+
+        <button
+          className="primary"
+          onClick={onNewPost}
+        >
+          ＋ Neuen Beitrag erstellen
+        </button>
+
+      </div>
+
+
+      <div className="adminTabs">
+
+        <button
+          className={
+            tab === 'content'
+              ? 'active'
+              : ''
+          }
+          onClick={() =>
+            setTab('content')
+          }
+        >
+          📰 Inhalte ({posts.length})
+        </button>
+
+
+        <button
+          className={
+            tab === 'members'
+              ? 'active'
+              : ''
+          }
+          onClick={() =>
+            setTab('members')
+          }
+        >
+          👥 Freigaben ({pending.length})
+        </button>
+
+      </div>
+
+
+      {tab === 'content' && (
+
+        <div className="adminContentList">
+
+          {posts.map(post => (
+
+            <div
+              className="adminContentRow"
+              key={post.id}
+            >
+
+              <div>
+
+                <span className={`category ${post.category}`}>
+                  {categoryLabel(post.category)}
+                </span>
+
+
+                <strong>
+                  {post.title}
+                </strong>
+
+
+                <small>
+
+                  {post.status === 'PUBLISHED'
+                    ? '👁 Öffentlich'
+                    : '📝 Entwurf'}
+
+                </small>
+
+              </div>
+
+
+              <div className="rowActions">
+
+                <button
+                  onClick={() =>
+                    onEditPost(post)
+                  }
+                >
+                  ✏️
+                </button>
+
+
+                <button
+                  className="deleteButton"
+                  onClick={() =>
+                    onDeletePost(post.id)
+                  }
+                >
+                  🗑️
+                </button>
+
+              </div>
+
+            </div>
+
+          ))}
+
+
+          {!posts.length && (
+            <p>
+              Noch keine Inhalte vorhanden.
+            </p>
+          )}
+
+        </div>
+
+      )}
+
+
+      {tab === 'members' && (
+
+        <div className="pendingList">
+
+          {pending.map(member => (
+
+            <div
+              className="pending"
+              key={member.id}
+            >
+
+              <div>
+
+                <strong>
+                  {member.nickname}
+                </strong>
+
+
+                <span>
+
+                  {member.first_name}{' '}
+                  {member.last_name}
+
+                </span>
+
+              </div>
+
+
+              <div>
+
+                <button
+                  className="approve"
+                  onClick={() =>
+                    onChangeStatus(
+                      member.id,
+                      'APPROVED'
+                    )
+                  }
+                >
+                  Freigeben
+                </button>
+
+
+                <button
+                  className="reject"
+                  onClick={() =>
+                    onChangeStatus(
+                      member.id,
+                      'REJECTED'
+                    )
+                  }
+                >
+                  Ablehnen
+                </button>
+
+              </div>
+
+            </div>
+
+          ))}
+
+
+          {!pending.length && (
+            <p>
+              Keine offenen Registrierungen.
+            </p>
+          )}
+
+        </div>
+
+      )}
+
+    </section>
+
+  );
+}
+
+
+/* =========================================
+   APP
 ========================================= */
 
 function App() {
 
-  const [query, setQuery] = useState('');
-  const [adminOpen, setAdminOpen] = useState(false);
-
-  const [authOpen, setAuthOpen] = useState(false);
-  const [authMode, setAuthMode] = useState('login');
-
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
 
+  const [posts, setPosts] = useState([]);
   const [members, setMembers] = useState([]);
   const [pending, setPending] = useState([]);
-  const [logs, setLogs] = useState([]);
 
-  const [notice, setNotice] = useState('');
-  const [legalPage, setLegalPage] = useState(null);
+  const [activePage, setActivePage] =
+    useState('home');
+
+  const [authOpen, setAuthOpen] =
+    useState(false);
+
+  const [authMode, setAuthMode] =
+    useState('login');
+
+  const [editorOpen, setEditorOpen] =
+    useState(false);
+
+  const [editingPost, setEditingPost] =
+    useState(null);
+
+  const [notice, setNotice] =
+    useState('');
 
 
   const isAdmin =
@@ -896,67 +994,75 @@ function App() {
     profile?.role === 'HEAD_ADMIN';
 
 
-  const isHead =
-    profile?.role === 'HEAD_ADMIN';
+  async function loadData() {
+
+    const {
+      data: {
+        user: currentUser
+      }
+    } = await supabase.auth.getUser();
 
 
-  async function load() {
+    if (currentUser) {
 
-    const { data } = await supabase
-      .from('profiles')
-      .select(`
-        id,
-        first_name,
-        last_name,
-        nickname,
-        avatar_url,
-        role,
-        community_points,
-        is_online,
-        status
-      `)
-      .eq('status', 'APPROVED')
-      .order('nickname');
+      const { data: profileData } =
+        await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', currentUser.id)
+          .single();
 
 
-    setMembers(data || []);
-
-
-    if (isAdmin) {
-
-      const { data: p } = await supabase
-        .from('profiles')
-        .select(`
-          id,
-          first_name,
-          last_name,
-          nickname,
-          status,
-          created_at
-        `)
-        .eq('status', 'PENDING_ADMIN')
-        .order('created_at');
-
-
-      setPending(p || []);
+      setProfile(profileData);
 
     }
 
 
-    if (isHead) {
-
-      const { data: l } = await supabase
-        .from('admin_logs')
+    let postQuery =
+      supabase
+        .from('posts')
         .select('*')
-        .order('created_at', {
+        .order('featured', {
           ascending: false
         })
-        .limit(20);
+        .order('created_at', {
+          ascending: false
+        });
 
 
-      setLogs(l || []);
+    if (!currentUser ||
+        !['ADMIN', 'HEAD_ADMIN'].includes(
+          profile?.role
+        )) {
+
+      postQuery =
+        postQuery.eq(
+          'status',
+          'PUBLISHED'
+        );
 
     }
+
+
+    const { data: postData } =
+      await postQuery;
+
+
+    setPosts(postData || []);
+
+
+    const { data: memberData } =
+      await supabase
+        .from('profiles')
+        .select('*')
+        .eq(
+          'status',
+          'APPROVED'
+        )
+        .order('nickname');
+
+
+    setMembers(memberData || []);
 
   }
 
@@ -972,11 +1078,16 @@ function App() {
 
     const {
       data: { subscription }
-    } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setUser(session?.user || null);
-      }
-    );
+    } =
+      supabase.auth.onAuthStateChange(
+        (_event, session) => {
+
+          setUser(
+            session?.user || null
+          );
+
+        }
+      );
 
 
     return () =>
@@ -988,8 +1099,10 @@ function App() {
   useEffect(() => {
 
     if (!user) {
+
       setProfile(null);
       return;
+
     }
 
 
@@ -999,7 +1112,9 @@ function App() {
       .eq('id', user.id)
       .single()
       .then(({ data }) => {
+
         setProfile(data || null);
+
       });
 
   }, [user]);
@@ -1007,12 +1122,95 @@ function App() {
 
   useEffect(() => {
 
-    load();
+    loadData();
 
-  }, [
-    user,
-    profile?.role
-  ]);
+  }, [user, profile?.role]);
+
+
+  useEffect(() => {
+
+    if (!isAdmin) {
+
+      setPending([]);
+      return;
+
+    }
+
+
+    supabase
+      .from('profiles')
+      .select('*')
+      .eq(
+        'status',
+        'PENDING_ADMIN'
+      )
+      .order(
+        'created_at',
+        {
+          ascending: false
+        }
+      )
+      .then(({ data }) => {
+
+        setPending(data || []);
+
+      });
+
+  }, [isAdmin]);
+
+
+  function openAuth(mode) {
+
+    setAuthMode(mode);
+    setAuthOpen(true);
+
+  }
+
+
+  function openNewPost() {
+
+    setEditingPost(null);
+    setEditorOpen(true);
+
+  }
+
+
+  function openEditPost(post) {
+
+    setEditingPost(post);
+    setEditorOpen(true);
+
+  }
+
+
+  async function deletePost(id) {
+
+    const confirmed =
+      window.confirm(
+        'Diesen Beitrag wirklich löschen?'
+      );
+
+
+    if (!confirmed) return;
+
+
+    const { error } =
+      await supabase
+        .from('posts')
+        .delete()
+        .eq('id', id);
+
+
+    setNotice(
+      error
+        ? error.message
+        : 'Beitrag wurde gelöscht.'
+    );
+
+
+    loadData();
+
+  }
 
 
   async function changeStatus(
@@ -1038,84 +1236,565 @@ function App() {
     );
 
 
-    load();
+    if (!error) {
 
-  }
-
-
-  async function changePoints(id) {
-
-    const delta = Number(
-      prompt(
-        'Punkte eingeben, z.B. 5 oder -3:'
-      )
-    );
-
-
-    if (!delta) return;
-
-
-    const reason = prompt(
-      'Begründung (Pflicht):'
-    );
-
-
-    if (
-      !reason ||
-      reason.trim().length < 3
-    ) {
-
-      setNotice(
-        'Eine Begründung ist erforderlich.'
+      setPending(
+        pending.filter(
+          member =>
+            member.id !== id
+        )
       );
 
-      return;
     }
 
-
-    const { error } =
-      await supabase.rpc(
-        'admin_change_points',
-        {
-          target_user: id,
-          delta,
-          change_kind:
-            delta > 0
-              ? 'PLUS'
-              : 'MINUS',
-          reason_text: reason
-        }
-      );
+  }
 
 
-    setNotice(
-      error
-        ? error.message
-        : 'Punkte erfolgreich geändert.'
+  const announcements =
+    posts.filter(
+      post =>
+        post.category === 'ANNOUNCEMENT'
     );
 
 
-    load();
+  const news =
+    posts.filter(
+      post =>
+        post.category === 'NEWS'
+    );
+
+
+  const events =
+    posts.filter(
+      post =>
+        post.category === 'EVENT'
+    );
+
+
+  const community =
+    posts.filter(
+      post =>
+        post.category === 'COMMUNITY'
+    );
+
+
+  function renderHome() {
+
+    return (
+
+      <>
+
+        <section className="homeHero">
+
+          <div className="homeHeroOverlay" />
+
+          <div className="homeHeroContent">
+
+            <p className="eyebrow">
+              WILLKOMMEN IM ENNSTAL
+            </p>
+
+
+            <h1>
+              Was ist los
+              <br />
+              im Ennstal?
+            </h1>
+
+
+            <p>
+              News, Menschen, Veranstaltungen
+              und Geschichten aus deiner Region.
+            </p>
+
+
+            <div className="heroButtons">
+
+              <button
+                className="primary big"
+                onClick={() =>
+                  setActivePage('community')
+                }
+              >
+                Community entdecken
+              </button>
+
+
+              <button
+                className="heroSecondary"
+                onClick={() =>
+                  setActivePage('events')
+                }
+              >
+                Events entdecken
+              </button>
+
+            </div>
+
+          </div>
+
+        </section>
+
+
+        {announcements.length > 0 && (
+
+          <section className="announcementSection">
+
+            <div className="sectionWrap">
+
+              <div className="sectionTitle">
+
+                <span>
+                  📌
+                </span>
+
+                <div>
+
+                  <p className="eyebrow dark">
+                    WICHTIG
+                  </p>
+
+                  <h2>
+                    Ankündigungen
+                  </h2>
+
+                </div>
+
+              </div>
+
+
+              <div className="announcementGrid">
+
+                {announcements
+                  .slice(0, 3)
+                  .map(post => (
+
+                    <PostCard
+                      key={post.id}
+                      post={post}
+                      admin={isAdmin}
+                      onEdit={openEditPost}
+                      onDelete={deletePost}
+                    />
+
+                  ))}
+
+              </div>
+
+            </div>
+
+          </section>
+
+        )}
+
+
+        <section className="sectionWrap contentSection">
+
+          <div className="sectionHeader">
+
+            <div>
+
+              <p className="eyebrow dark">
+                AKTUELL
+              </p>
+
+              <h2>
+                Neuigkeiten aus der Region
+              </h2>
+
+            </div>
+
+
+            <button
+              className="textButton"
+              onClick={() =>
+                setActivePage('news')
+              }
+            >
+              Alle News →
+            </button>
+
+          </div>
+
+
+          <div className="postGrid">
+
+            {news
+              .slice(0, 3)
+              .map(post => (
+
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  admin={isAdmin}
+                  onEdit={openEditPost}
+                  onDelete={deletePost}
+                />
+
+              ))}
+
+
+            {!news.length && (
+
+              <div className="emptyState">
+
+                <h3>
+                  Noch keine News
+                </h3>
+
+                <p>
+                  Hier erscheinen bald aktuelle
+                  Neuigkeiten aus der Region.
+                </p>
+
+              </div>
+
+            )}
+
+          </div>
+
+        </section>
+
+
+        <section className="eventSection">
+
+          <div className="sectionWrap">
+
+            <div className="sectionHeader">
+
+              <div>
+
+                <p className="eyebrow">
+                  GEMEINSAM ERLEBEN
+                </p>
+
+                <h2>
+                  Kommende Events
+                </h2>
+
+              </div>
+
+
+              <button
+                className="textButton light"
+                onClick={() =>
+                  setActivePage('events')
+                }
+              >
+                Alle Events →
+              </button>
+
+            </div>
+
+
+            <div className="postGrid">
+
+              {events
+                .slice(0, 3)
+                .map(post => (
+
+                  <PostCard
+                    key={post.id}
+                    post={post}
+                    admin={isAdmin}
+                    onEdit={openEditPost}
+                    onDelete={deletePost}
+                  />
+
+                ))}
+
+
+              {!events.length && (
+
+                <div className="emptyState darkEmpty">
+
+                  <h3>
+                    Noch keine Events
+                  </h3>
+
+                  <p>
+                    Neue Veranstaltungen erscheinen
+                    bald hier.
+                  </p>
+
+                </div>
+
+              )}
+
+            </div>
+
+          </div>
+
+        </section>
+
+
+        <section className="sectionWrap contentSection">
+
+          <div className="sectionHeader">
+
+            <div>
+
+              <p className="eyebrow dark">
+                MENSCHEN & GESCHICHTEN
+              </p>
+
+              <h2>
+                Aus der Community
+              </h2>
+
+            </div>
+
+
+            <button
+              className="textButton"
+              onClick={() =>
+                setActivePage('community')
+              }
+            >
+              Mehr entdecken →
+            </button>
+
+          </div>
+
+
+          <div className="postGrid">
+
+            {community
+              .slice(0, 3)
+              .map(post => (
+
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  admin={isAdmin}
+                  onEdit={openEditPost}
+                  onDelete={deletePost}
+                />
+
+              ))}
+
+          </div>
+
+        </section>
+
+      </>
+
+    );
 
   }
 
 
-  const filtered =
-    members.filter(m =>
-      `${m.nickname} ${m.first_name} ${m.last_name}`
-        .toLowerCase()
-        .includes(
-          query.toLowerCase()
-        )
+  function renderPostsPage(
+    title,
+    subtitle,
+    data
+  ) {
+
+    return (
+
+      <section className="pageSection">
+
+        <div className="sectionWrap">
+
+          <div className="pageHeading">
+
+            <p className="eyebrow dark">
+              ENNSTAL CONNECT
+            </p>
+
+            <h1>
+              {title}
+            </h1>
+
+            <p>
+              {subtitle}
+            </p>
+
+          </div>
+
+
+          <div className="postGrid largeGrid">
+
+            {data.map(post => (
+
+              <PostCard
+                key={post.id}
+                post={post}
+                admin={isAdmin}
+                onEdit={openEditPost}
+                onDelete={deletePost}
+              />
+
+            ))}
+
+
+            {!data.length && (
+
+              <div className="emptyState">
+
+                <h3>
+                  Noch nichts vorhanden
+                </h3>
+
+                <p>
+                  Neue Inhalte erscheinen bald hier.
+                </p>
+
+              </div>
+
+            )}
+
+          </div>
+
+        </div>
+
+      </section>
+
     );
 
+  }
 
-  const openAuth = mode => {
 
-    setAuthMode(mode);
-    setAuthOpen(true);
+  function renderMembers() {
 
-  };
+    return (
+
+      <section className="pageSection">
+
+        <div className="sectionWrap">
+
+          <div className="pageHeading">
+
+            <p className="eyebrow dark">
+              COMMUNITY
+            </p>
+
+            <h1>
+              Mitglieder
+            </h1>
+
+            <p>
+              Entdecke Menschen aus deiner Region.
+            </p>
+
+          </div>
+
+
+          <div className="memberGrid">
+
+            {members.map(member => {
+
+              const adminMember =
+                member.role === 'ADMIN' ||
+                member.role === 'HEAD_ADMIN';
+
+              const supporter =
+                member.role === 'SUPPORTER';
+
+
+              return (
+
+                <article
+                  key={member.id}
+                  className={
+                    `memberCard ${
+                      adminMember
+                        ? 'admin'
+                        : supporter
+                        ? 'supporter'
+                        : ''
+                    }`
+                  }
+                >
+
+                  <div className="avatar">
+
+                    {member.avatar_url ? (
+
+                      <img
+                        src={member.avatar_url}
+                        alt=""
+                      />
+
+                    ) : (
+
+                      member.nickname
+                        ?.charAt(0)
+                        ?.toUpperCase()
+
+                    )}
+
+                  </div>
+
+
+                  <h3>
+
+                    {member.nickname}
+
+
+                    {adminMember &&
+                      member.is_online && (
+
+                      <img
+                        src="/admin-star.png"
+                        className="nicknameStar"
+                        alt="Admin"
+                      />
+
+                    )}
+
+
+                    {supporter &&
+                      member.is_online && (
+
+                      <img
+                        src="/supporter-star.png"
+                        className="nicknameStar"
+                        alt="Unterstützer"
+                      />
+
+                    )}
+
+                  </h3>
+
+
+                  <p>
+
+                    {member.first_name}{' '}
+                    {member.last_name}
+
+                  </p>
+
+
+                  <small
+                    className={
+                      member.is_online
+                        ? 'online'
+                        : 'offline'
+                    }
+                  >
+
+                    ● {member.is_online
+                      ? 'Online'
+                      : 'Offline'}
+
+                  </small>
+
+                </article>
+
+              );
+
+            })}
+
+          </div>
+
+        </div>
+
+      </section>
+
+    );
+
+  }
 
 
   return (
@@ -1135,32 +1814,137 @@ function App() {
       )}
 
 
-      {legalPage && (
+      {editorOpen && (
 
-        <LegalModal
-          type={legalPage}
+        <PostEditor
+          post={editingPost}
+          user={user}
           onClose={() =>
-            setLegalPage(null)
+            setEditorOpen(false)
           }
+          onSaved={() => {
+
+            setNotice(
+              'Beitrag erfolgreich gespeichert.'
+            );
+
+            loadData();
+
+          }}
         />
 
       )}
 
 
-      <header>
+      <header className="mainHeader">
 
-        <div className="brand">
-          🏔️
-          <b>ennstal connect</b>
-        </div>
+        <button
+          className="brandButton"
+          onClick={() =>
+            setActivePage('home')
+          }
+        >
+
+          <span className="brandIcon">
+            🏔️
+          </span>
+
+          <span>
+            ennstal connect
+          </span>
+
+        </button>
 
 
-        <nav>
-          <a>Start</a>
-          <a>Neuigkeiten</a>
-          <a>Mitglieder</a>
-          <a>Gruppen</a>
-          <a>Events</a>
+        <nav className="mainNav">
+
+          <button
+            onClick={() =>
+              setActivePage('home')
+            }
+            className={
+              activePage === 'home'
+                ? 'active'
+                : ''
+            }
+          >
+            Start
+          </button>
+
+
+          <button
+            onClick={() =>
+              setActivePage('news')
+            }
+            className={
+              activePage === 'news'
+                ? 'active'
+                : ''
+            }
+          >
+            News
+          </button>
+
+
+          <button
+            onClick={() =>
+              setActivePage('events')
+            }
+            className={
+              activePage === 'events'
+                ? 'active'
+                : ''
+            }
+          >
+            Events
+          </button>
+
+
+          <button
+            onClick={() =>
+              setActivePage('community')
+            }
+            className={
+              activePage === 'community'
+                ? 'active'
+                : ''
+            }
+          >
+            Community
+          </button>
+
+
+          <button
+            onClick={() =>
+              setActivePage('members')
+            }
+            className={
+              activePage === 'members'
+                ? 'active'
+                : ''
+            }
+          >
+            Mitglieder
+          </button>
+
+
+          {isAdmin && (
+
+            <button
+              className={
+                activePage === 'admin'
+                  ? 'active adminNav'
+                  : 'adminNav'
+              }
+              onClick={() =>
+                setActivePage('admin')
+              }
+            >
+              🔒 Admin
+            </button>
+
+          )}
+
         </nav>
 
 
@@ -1170,39 +1954,39 @@ function App() {
 
             <>
 
-              <span className="welcome">
+              <div className="userHeader">
 
-                {profile?.nickname ||
-                  user.email}
+                <span>
 
-                {profile?.is_online &&
-                  profile?.role === 'HEAD_ADMIN' && (
-                    <img
-                      src="/admin-star.png"
-                      alt="Hauptadmin"
-                      className="headerRoleStar"
-                    />
-                  )}
+                  {profile?.nickname ||
+                    user.email}
 
-                {profile?.is_online &&
-                  profile?.role === 'ADMIN' && (
-                    <img
-                      src="/admin-star.png"
-                      alt="Admin"
-                      className="headerRoleStar"
-                    />
-                  )}
+                </span>
 
-                {profile?.is_online &&
-                  profile?.role === 'SUPPORTER' && (
-                    <img
-                      src="/supporter-star.png"
-                      alt="Unterstützer"
-                      className="headerRoleStar"
-                    />
-                  )}
 
-              </span>
+                {(profile?.role === 'ADMIN' ||
+                  profile?.role === 'HEAD_ADMIN') && (
+
+                  <img
+                    src="/admin-star.png"
+                    className="headerRoleStar"
+                    alt="Admin"
+                  />
+
+                )}
+
+
+                {profile?.role === 'SUPPORTER' && (
+
+                  <img
+                    src="/supporter-star.png"
+                    className="headerRoleStar"
+                    alt="Unterstützer"
+                  />
+
+                )}
+
+              </div>
 
 
               <button
@@ -1236,7 +2020,7 @@ function App() {
                   openAuth('register')
                 }
               >
-                Registrieren
+                Mitmachen
               </button>
 
             </>
@@ -1248,458 +2032,95 @@ function App() {
       </header>
 
 
+      {notice && (
+
+        <div className="globalNotice">
+
+          {notice}
+
+          <button
+            onClick={() =>
+              setNotice('')
+            }
+          >
+            ×
+          </button>
+
+        </div>
+
+      )}
+
 
       <main>
 
-
-        <section className="hero">
-
-          <div className="mountains" />
-
-          <div className="heroContent">
-
-            <p className="eyebrow">
-              WILLKOMMEN IN DER REGION
-            </p>
-
-
-            <h1>
-              ennstal connect
-            </h1>
-
-
-            <p>
-              Die regionale Community für
-              Ennstal & Obersteiermark.
-            </p>
-
-
-            <button
-              className="primary big"
-              onClick={() =>
-                openAuth('register')
-              }
-            >
-              Community entdecken
-            </button>
-
-          </div>
-
-        </section>
-
-
-
-        {notice && (
-
-          <section className="statusBanner">
-            {notice}
-          </section>
-
-        )}
-
-
-
-        {profile &&
-          profile.status !== 'APPROVED' && (
-
-          <section className="statusBanner">
-
-            <b>
-              Dein Konto ist noch nicht freigegeben.
-            </b>
-
-            {' '}
-
-            Ein Admin prüft deine Registrierung.
-
-          </section>
-
-        )}
-
-
-
-        <section className="toolbar">
-
-          <div>
-
-            <h2>
-              Mitglieder
-            </h2>
-
-            <p>
-              Finde Menschen aus deiner Region
-              und bleibe verbunden.
-            </p>
-
-          </div>
-
-
-          <input
-            value={query}
-            onChange={e =>
-              setQuery(e.target.value)
-            }
-            placeholder="Mitglieder oder Nickname suchen ..."
-          />
-
-        </section>
-
-
-
-        <section className="layout">
-
-          <div className="content">
-
-            <div className="grid">
-
-              {filtered.map(m => {
-
-
-                const isAdminMember =
-                  m.role === 'ADMIN' ||
-                  m.role === 'HEAD_ADMIN';
-
-
-                const isSupporter =
-                  m.role === 'SUPPORTER';
-
-
-                const roleClass =
-                  isAdminMember
-                    ? 'admin'
-                    : isSupporter
-                    ? 'supporter'
-                    : 'member';
-
-
-                return (
-
-                  <article
-                    className={`card ${roleClass}`}
-                    key={m.id}
-                  >
-
-
-                    <div className="avatar">
-
-                      {m.avatar_url ? (
-
-                        <img
-                          src={m.avatar_url}
-                          alt="Profilbild"
-                        />
-
-                      ) : (
-
-                        m.nickname
-                          ?.charAt(0)
-                          ?.toUpperCase()
-
-                      )}
-
-                    </div>
-
-
-
-                    <h3 className="memberNickname">
-
-                      {m.nickname}
-
-
-                      {isAdminMember &&
-                        m.is_online && (
-
-                        <img
-                          src="/admin-star.png"
-                          alt="Admin"
-                          className="nicknameStar"
-                        />
-
-                      )}
-
-
-                      {isSupporter &&
-                        m.is_online && (
-
-                        <img
-                          src="/supporter-star.png"
-                          alt="Unterstützer"
-                          className="nicknameStar"
-                        />
-
-                      )}
-
-
-                      <span>
-                        ({m.community_points})
-                      </span>
-
-                    </h3>
-
-
-
-                    <p>
-
-                      {m.first_name}{' '}
-                      {m.last_name}
-
-                    </p>
-
-
-
-                    <small
-                      className={
-                        m.is_online
-                          ? 'online'
-                          : 'offline'
-                      }
-                    >
-
-                      {m.is_online
-                        ? '● Online'
-                        : '● Offline'}
-
-                    </small>
-
-
-
-                    {isAdmin && (
-
-                      <button
-                        className="smallAction"
-                        onClick={() =>
-                          changePoints(m.id)
-                        }
-                      >
-                        Punkte ändern
-                      </button>
-
-                    )}
-
-
-                  </article>
-
-                );
-
-              })}
-
-            </div>
-
-          </div>
-
-
-
-          <aside className="side">
-
-
-            {isAdmin && (
-
-              <button
-                className="adminToggle"
-                onClick={() =>
-                  setAdminOpen(!adminOpen)
-                }
-              >
-
-                🔒 Admin-Bereich{' '}
-
-                {adminOpen
-                  ? '⌃'
-                  : '⌄'}
-
-              </button>
-
-            )}
-
-
-
-            {isAdmin &&
-              adminOpen && (
-
-              <div className="adminPanel">
-
-                <h3>
-                  Admin-Dashboard
-                </h3>
-
-
-                <b>
-                  Neue Mitglieder ({pending.length})
-                </b>
-
-
-                {pending.map(p => (
-
-                  <div
-                    className="pending"
-                    key={p.id}
-                  >
-
-                    <strong>
-                      {p.nickname}
-                    </strong>
-
-
-                    <span>
-
-                      {p.first_name}{' '}
-                      {p.last_name}
-
-                    </span>
-
-
-                    <div>
-
-                      <button
-                        onClick={() =>
-                          changeStatus(
-                            p.id,
-                            'APPROVED'
-                          )
-                        }
-                      >
-                        Freigeben
-                      </button>
-
-
-                      <button
-                        onClick={() =>
-                          changeStatus(
-                            p.id,
-                            'REJECTED'
-                          )
-                        }
-                      >
-                        Ablehnen
-                      </button>
-
-                    </div>
-
-                  </div>
-
-                ))}
-
-
-                {!pending.length && (
-
-                  <p>
-                    Keine offenen Registrierungen.
-                  </p>
-
-                )}
-
-
-                {isHead && (
-
-                  <>
-
-                    <hr />
-
-
-                    <b>
-                      Hauptadmin-Protokoll
-                    </b>
-
-
-                    {logs.map(l => (
-
-                      <small
-                        className="log"
-                        key={l.id}
-                      >
-
-                        {new Date(
-                          l.created_at
-                        ).toLocaleString()}
-
-                        {' · '}
-
-                        {l.action}
-
-                      </small>
-
-                    ))}
-
-                  </>
-
-                )}
-
-              </div>
-
-            )}
-
-
-
-            <div className="onlineBox">
-
-              <h3>
-                🟢 Gerade online
-              </h3>
-
-
-              <p>
-
-                {
-                  members.filter(
-                    m => m.is_online
-                  ).length
-                }
-
-                {' '}
-
-                Mitglieder sind aktiv.
-
-              </p>
-
-            </div>
-
-
-          </aside>
-
-        </section>
-
+        {activePage === 'home' &&
+          renderHome()}
+
+        {activePage === 'news' &&
+          renderPostsPage(
+            'Aktuelle News',
+            'Neuigkeiten und Geschichten aus dem Ennstal.',
+            news
+          )}
+
+        {activePage === 'events' &&
+          renderPostsPage(
+            'Events',
+            'Entdecke Veranstaltungen und gemeinsame Erlebnisse.',
+            events
+          )}
+
+        {activePage === 'community' &&
+          renderPostsPage(
+            'Community',
+            'Menschen, Geschichten und Beiträge aus der Region.',
+            community
+          )}
+
+        {activePage === 'members' &&
+          renderMembers()}
+
+        {activePage === 'admin' &&
+          isAdmin && (
+
+            <AdminDashboard
+              posts={posts}
+              pending={pending}
+              onNewPost={openNewPost}
+              onEditPost={openEditPost}
+              onDeletePost={deletePost}
+              onChangeStatus={changeStatus}
+            />
+
+          )}
 
       </main>
 
 
-
-      {/* =====================================
-          FOOTER
-      ===================================== */}
-
       <footer className="siteFooter">
 
         <div>
-          © 2026 ennstal connect ·
-          Regional. Verbunden. Sicher.
+
+          © 2026 ennstal connect
+
+          <span>
+            · Regional. Verbunden. Gemeinsam.
+          </span>
+
         </div>
 
 
         <div className="footerLinks">
 
-          <button
-            onClick={() =>
-              setLegalPage('impressum')
-            }
-          >
+          <button>
             Impressum
           </button>
 
-
-          <button
-            onClick={() =>
-              setLegalPage('datenschutz')
-            }
-          >
+          <button>
             Datenschutz
           </button>
 
-
-          <button
-            onClick={() =>
-              setLegalPage('regeln')
-            }
-          >
+          <button>
             Community-Regeln
           </button>
 
@@ -1707,10 +2128,10 @@ function App() {
 
       </footer>
 
-
     </div>
 
   );
+
 }
 
 
