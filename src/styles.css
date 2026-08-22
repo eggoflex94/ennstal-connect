@@ -27,3 +27,83 @@ footer{padding:28px 6%;display:flex;justify-content:space-between;gap:16px;backg
 .profile-preview .profile-avatar { width:150px; height:150px; border-radius:50%; }
 .member-card .avatar { width:86px; height:86px; border-radius:50%; }
 .post-header .avatar.tiny, .mini-post .avatar.tiny, .online-member .avatar.tiny { border-radius:50%; overflow:hidden; }
+/* ================================
+   HEADER
+================================ */
+
+.topbar {
+  width: 100%;
+  min-height: 92px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 10px 32px;
+
+  background: #ffffff;
+
+  box-sizing: border-box;
+
+  position: relative;
+  z-index: 100;
+}
+
+/* Logo bleibt ganz links */
+.brand {
+  display: flex;
+  align-items: center;
+
+  margin: 0;
+  padding: 0;
+
+  flex-shrink: 0;
+}
+
+/* Großes Logo */
+.header-logo {
+  display: block;
+
+  width: auto;
+  height: 72px;
+
+  max-width: 420px;
+
+  object-fit: contain;
+
+  margin: 0;
+  padding: 0;
+}
+
+/* Rechte Buttons */
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* ================================
+   MOBILE
+================================ */
+
+@media (max-width: 700px) {
+
+  .topbar {
+    min-height: 76px;
+    padding: 8px 16px;
+  }
+
+  .header-logo {
+    height: 58px;
+    max-width: 260px;
+  }
+
+  .nav-actions {
+    gap: 8px;
+  }
+
+  .nav-actions button {
+    padding: 10px 12px;
+    font-size: 14px;
+  }
+}
