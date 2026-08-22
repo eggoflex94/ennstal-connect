@@ -387,3 +387,91 @@ footer h3 {
     padding: 26px 20px;
   }
 }
+/* =========================================
+   ROLLEN: ADMIN / UNTERSTÜTZER / MITGLIED
+========================================= */
+
+
+/* ADMIN – GELBER HINTERGRUND */
+
+.card.admin {
+  background: #fff6c7;
+  border: 2px solid #f2cf54;
+}
+
+
+/* ADMIN – HOVER */
+
+.card.admin:hover {
+  background: #fff1a8;
+}
+
+
+/* UNTERSTÜTZER – HELLGRÜNER HINTERGRUND */
+
+.card.supporter {
+  background: #e5f7df;
+  border: 2px solid #8dcc82;
+}
+
+
+/* UNTERSTÜTZER – HOVER */
+
+.card.supporter:hover {
+  background: #d7f2cf;
+}
+
+
+/* NORMALES MITGLIED */
+
+.card.member {
+  background: #ffffff;
+}
+
+
+/* =========================================
+   NICKNAME MIT STERN
+========================================= */
+
+.memberNickname {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+
+/* STERN HINTER DEM NICKNAMEN */
+
+.nicknameStar {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+
+/* ADMIN STERN */
+
+.adminStar {
+  filter: none;
+}
+
+
+/* SUPPORTER STERN */
+
+.supporterStar {
+  filter: none;
+}
+
+
+/* Punkte etwas kleiner */
+
+.memberNickname span {
+  font-size: 0.8em;
+  opacity: 0.7;
+  font-weight: normal;
+}
