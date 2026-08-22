@@ -1,771 +1,144 @@
-import { useEffect, useMemo, useState } from "react";
-import { supabase, supabaseConfigError } from "./supabase";
+import React, { useEffect, useMemo, useState } from "react";
+import { supabase } from "./supabaseClient";
+import "./styles.css";
 
-const ADMIN_ROLES = ["ADMIN", "HEAD_ADMIN"];
+const ROLES = ["MEMBER","SUPPORTER","ADMIN","HEAD_ADMIN"];
+const isAdmin = (r) => r === "ADMIN" || r === "HEAD_ADMIN";
+const age = (d) => {
+  if (!d) return null;
+  const b = new Date(d), n = new Date();
+  let a = n.getFullYear()-b.getFullYear();
+  if (n.getMonth()<b.getMonth() || (n.getMonth()===b.getMonth() && n.getDate()<b.getDate())) a--;
+  return a;
+};
+const fmtTime = (s=0) => `${Math.floor(s/3600)} Stunden ${Math.floor((s%3600)/60)} Minuten`;
 
-function isAdmin(role) {
-  return ADMIN_ROLES.includes(role);
+export default function App(){
+  const [user,setUser]=useState(null);
+  const [profile,setProfile]=useState(null);
+  const [members,setMembers]=useState([]);
+  const [news,setNews]=useState([]);
+  const [events,setEvents]=useState([]);
+  const [groups,setGroups]=useState([]);
+  const [history,setHistory]=useState([]);
+  const [page,setPage]=useState("home");
+  const [loading,setLoading]=useState(true);
+  const [msg,setMsg]=useState("");
+
+  const flash=(x)=>{setMsg(x);setTimeout(()=>setMsg(""),3500)};
+
+  async function loadAll(){
+    const {data:{user:u}}=await supabase.auth.getUser();
+    setUser(u||null);
+    if(!u){setLoading(false);return}
+    const [p,m,n,e,g,h]=await Promise.all([
+      supabase.from("profiles").select("*").eq("id",u.id).single(),
+      supabase.from("profiles").select("*").order("nickname"),
+      supabase.from("community_news").select("*").order("created_at",{ascending:false}),
+      supabase.from("events").select("*").order("starts_at"),
+      supabase.from("groups").select("*").order("created_at",{ascending:false}),
+      supabase.from("point_history").select("*").eq("user_id",u.id).order("created_at",{ascending:false})
+    ]);
+    setProfile(p.data||null);setMembers(m.data||[]);setNews(n.data||[]);setEvents(e.data||[]);setGroups(g.data||[]);setHistory(h.data||[]);
+    setLoading(false);
+  }
+
+  useEffect(()=>{loadAll();const {data:{subscription}}=supabase.auth.onAuthStateChange(()=>loadAll());return()=>subscription.unsubscribe()},[]);
+  useEffect(()=>{
+    if(!user) return;
+    const t=setInterval(async()=>{if(document.visibilityState==="visible"){const {error}=await supabase.rpc("record_online_time",{p_seconds:60});if(!error) loadAll()}},60000);
+    return()=>clearInterval(t);
+  },[user?.id]);
+
+  async function login(e){
+    e.preventDefault(); const f=new FormData(e.currentTarget);
+    const {error}=await supabase.auth.signInWithPassword({email:f.get("email"),password:f.get("password")});
+    if(error) return flash(error.message); flash("Angemeldet"); loadAll();
+  }
+
+  async function register(e){
+    e.preventDefault();const f=new FormData(e.currentTarget);
+    const email=f.get("email"), password=f.get("password");
+    const {data,error}=await supabase.auth.signUp({email,password,options:{data:{
+      nickname:f.get("nickname"),first_name:f.get("first_name"),last_name:f.get("last_name"),birth_date:f.get("birth_date")
+    }}});
+    if(error) return flash(error.message);
+    if(data.user && !data.session) flash("Registrierung erstellt. Prüfe gegebenenfalls deine E-Mails zur Bestätigung.");
+    else flash("Registrierung erfolgreich.");
+    e.currentTarget.reset();
+  }
+
+  async function logout(){await supabase.auth.signOut();setProfile(null);setUser(null);setPage("home")}
+
+  async function saveProfile(e){
+    e.preventDefault();const f=new FormData(e.currentTarget);
+    const {error}=await supabase.rpc("update_my_profile",{
+      p_nickname:f.get("nickname"),p_gender:f.get("gender"),p_avatar_url:f.get("avatar_url"),
+      p_bio:f.get("bio"),p_location:f.get("location"),p_interests:f.get("interests"),p_website:f.get("website")
+    });
+    if(error) return flash(error.message);flash("Profil gespeichert");loadAll();
+  }
+
+  async function createNews(e){e.preventDefault();const f=new FormData(e.currentTarget);const {error}=await supabase.from("community_news").insert({title:f.get("title"),content:f.get("content"),created_by:user.id});if(error)return flash(error.message);e.currentTarget.reset();flash("News veröffentlicht");loadAll()}
+  async function createEvent(e){e.preventDefault();const f=new FormData(e.currentTarget);const {error}=await supabase.from("events").insert({title:f.get("title"),description:f.get("description"),location:f.get("location"),starts_at:f.get("starts_at"),created_by:user.id});if(error)return flash(error.message);e.currentTarget.reset();loadAll()}
+  async function createGroup(e){e.preventDefault();const f=new FormData(e.currentTarget);const {error}=await supabase.from("groups").insert({name:f.get("name"),description:f.get("description"),image_url:f.get("image_url"),created_by:user.id});if(error)return flash(error.message);e.currentTarget.reset();loadAll()}
+
+  async function changePoints(e){
+    e.preventDefault();const f=new FormData(e.currentTarget);
+    const {error}=await supabase.rpc("apply_points",{p_user_id:f.get("user_id"),p_community_change:Number(f.get("community")||0),p_purchase_change:Number(f.get("purchase")||0),p_reason:f.get("reason"),p_action_type:"ADMIN_CHANGE"});
+    if(error)return flash(error.message);flash("Punkte geändert");e.currentTarget.reset();loadAll();
+  }
+
+  async function adminSaveMember(e){
+    e.preventDefault();const f=new FormData(e.currentTarget);
+    const {error}=await supabase.rpc("admin_update_member",{p_user_id:f.get("user_id"),p_nickname:f.get("nickname"),p_first_name:f.get("first_name"),p_last_name:f.get("last_name"),p_birth_date:f.get("birth_date"),p_role:f.get("role"),p_account_status:f.get("account_status")});
+    if(error)return flash(error.message);flash("Mitglied gespeichert");loadAll();
+  }
+
+  if(loading) return <div className="center">Lädt Ennstal Connect …</div>;
+  if(!user) return <Auth login={login} register={register} msg={msg}/>;
+  if(profile?.account_status==="SUSPENDED") return <div className="suspended"><h1>Konto gesperrt</h1><p>{profile.suspension_reason||"Dein Konto ist derzeit gesperrt."}</p><button onClick={logout}>Abmelden</button></div>;
+
+  const next = profile?.online_seconds<18000 ? 18000 : 18000+(Math.floor((profile.online_seconds-18000)/72000)+1)*72000;
+  const remaining=Math.max(0,next-(profile?.online_seconds||0));
+  const first=(profile?.online_seconds||0)<18000;
+
+  return <div className="app">
+    <header><div className="brand">ENNSTAL CONNECT</div><nav>
+      <button onClick={()=>setPage("home")}>Startseite</button><button onClick={()=>setPage("members")}>Mitglieder</button><button onClick={()=>setPage("groups")}>Gruppen</button><button onClick={()=>setPage("events")}>Events</button><button onClick={()=>setPage("stats")}>📊 Statistik</button>
+      {isAdmin(profile?.role)&&<button onClick={()=>setPage("admin")}>Admin-Bereich</button>}
+      <button onClick={()=>setPage("profile")}>Mein Bereich</button><button onClick={logout}>Abmelden</button>
+    </nav></header>
+    {msg&&<div className="toast">{msg}</div>}
+    <main>
+      {page==="home"&&<><h1>Neuigkeiten</h1>{isAdmin(profile?.role)&&<form className="panel" onSubmit={createNews}><input name="title" placeholder="Überschrift" required/><textarea name="content" placeholder="Neuigkeit" required/><button>News veröffentlichen</button></form>}{news.map(x=><article className="news" key={x.id}><h2>{x.title}</h2><p>{x.content}</p><small>{new Date(x.created_at).toLocaleString("de-AT")}</small></article>)}</>}
+      {page==="members"&&<><h1>Mitglieder</h1><div className="cards">{members.map(m=><Member key={m.id} m={m}/>)}</div></>}
+      {page==="groups"&&<><h1>Gruppen</h1>{isAdmin(profile?.role)&&<form className="panel" onSubmit={createGroup}><input name="name" placeholder="Gruppenname" required/><textarea name="description" placeholder="Beschreibung"/><input name="image_url" placeholder="Bild-URL (optional)"/><button>Gruppe erstellen</button></form>}<div className="cards">{groups.map(g=><article className="member-card" key={g.id}><h2>{g.name}</h2><p>{g.description}</p></article>)}</div></>}
+      {page==="events"&&<><h1>Events</h1>{isAdmin(profile?.role)&&<form className="panel" onSubmit={createEvent}><input name="title" placeholder="Titel" required/><textarea name="description" placeholder="Beschreibung"/><input name="location" placeholder="Ort"/><input type="datetime-local" name="starts_at" required/><button>Event erstellen</button></form>}{events.map(e=><article className="news" key={e.id}><h2>{e.title}</h2><p>{e.description}</p><b>{e.location||"Ort offen"} · {new Date(e.starts_at).toLocaleString("de-AT")}</b></article>)}</>}
+      {page==="stats"&&<section><h1>Meine Statistik</h1><div className="stats"><div><span>⏱ Onlinezeit</span><strong>{fmtTime(profile?.online_seconds)}</strong></div><div><span>⭐ Community-Punkte</span><strong>{profile?.community_points||0}</strong></div><div><span>🛒 Kaufpunkte</span><strong>{profile?.purchase_points||0}</strong></div></div><article className="news"><h2>Nächste Belohnung</h2><p>Noch {fmtTime(remaining)}</p><b>{first?"+5 Punkte · +10 Kaufpunkte":"+20 Punkte · +40 Kaufpunkte"}</b></article><h2>Meine Punktehistorie</h2>{history.map(h=><article className="history" key={h.id}><div><b>{h.reason}</b><small>{new Date(h.created_at).toLocaleString("de-AT")}</small></div><div className={h.community_points_change<0?"minus":"plus"}>{h.community_points_change>=0?"+":""}{h.community_points_change} P · {h.purchase_points_change>=0?"+":""}{h.purchase_points_change} KP</div></article>)}</section>}
+      {page==="profile"&&<form className="panel" onSubmit={saveProfile}><h1>Profil Einstellungen</h1><input name="nickname" defaultValue={profile?.nickname||""} placeholder="Nickname" required/><div className="locked"><input defaultValue={profile?.first_name||""} disabled/><input defaultValue={profile?.last_name||""} disabled/></div><input type="date" defaultValue={profile?.birth_date||""} disabled/><small>Vorname, Nachname und Geburtsdatum können nach der Registrierung nur durch einen Admin geändert werden.</small><input name="avatar_url" defaultValue={profile?.avatar_url||""} placeholder="Profilbild URL"/><input name="gender" defaultValue={profile?.gender||""} placeholder="Geschlecht"/><textarea name="bio" defaultValue={profile?.bio||""} placeholder="Über mich"/><input name="location" defaultValue={profile?.location||""} placeholder="Wohnort"/><input name="interests" defaultValue={profile?.interests||""} placeholder="Interessen"/><input name="website" defaultValue={profile?.website||""} placeholder="Website"/><button>Speichern</button></form>}
+      {page==="admin"&&isAdmin(profile?.role)&&<section><h1>Admin-Bereich</h1><form className="panel" onSubmit={changePoints}><h2>Punkte verwalten</h2><select name="user_id" required><option value="">Mitglied auswählen</option>{members.map(m=><option value={m.id} key={m.id}>{m.nickname||m.first_name}</option>)}</select><input type="number" name="community" placeholder="+ / - Community-Punkte"/><input type="number" name="purchase" placeholder="+ / - Kaufpunkte"/><textarea name="reason" placeholder="Grund (Pflicht)" required/><button>Änderung speichern</button></form><h2>Mitglieder verwalten</h2>{members.map(m=><form className="admin-member panel" key={m.id} onSubmit={adminSaveMember}><input type="hidden" name="user_id" value={m.id}/><input name="nickname" defaultValue={m.nickname||""} placeholder="Nickname"/><input name="first_name" defaultValue={m.first_name||""} placeholder="Vorname"/><input name="last_name" defaultValue={m.last_name||""} placeholder="Nachname"/><input type="date" name="birth_date" defaultValue={m.birth_date||""}/><select name="role" defaultValue={m.role||"MEMBER"}>{ROLES.filter(r=>profile.role==="HEAD_ADMIN"||r!=="HEAD_ADMIN").map(r=><option key={r}>{r}</option>)}</select><select name="account_status" defaultValue={m.account_status||"ACTIVE"}><option>ACTIVE</option><option>SUSPENDED</option></select><button>Mitglied speichern</button></form>)}</section>}
+    </main>
+  </div>
 }
 
-function getAge(birthDate) {
-  if (!birthDate) return null;
-  const date = new Date(`${birthDate}T00:00:00`);
-  if (Number.isNaN(date.getTime())) return null;
-  const today = new Date();
-  let age = today.getFullYear() - date.getFullYear();
-  const month = today.getMonth() - date.getMonth();
-  if (month < 0 || (month === 0 && today.getDate() < date.getDate())) age -= 1;
-  return age >= 0 ? age : null;
+function Member({m}){
+  const a=age(m.birth_date);
+  const role=m.role||"MEMBER";
+  return <article className={`member-card ${role==="SUPPORTER"?"supporter":isAdmin(role)?"admin":""}`}>
+    <div className="role-star">{isAdmin(role)?"★":role==="SUPPORTER"?"★":""}</div>
+    {m.avatar_url?<img src={m.avatar_url} className="avatar" alt="Profil"/>:<div className="avatar placeholder">👤</div>}
+    <h2>{m.nickname||"Mitglied"}</h2>
+    <p className="full-name">{[m.first_name,m.last_name].filter(Boolean).join(" ")}{a!==null?` (${a})`:""}</p>
+  </article>
 }
 
-function initials(member) {
-  return (
-    member?.nickname?.trim()?.slice(0, 1)?.toUpperCase() ||
-    member?.first_name?.trim()?.slice(0, 1)?.toUpperCase() ||
-    "?"
-  );
-}
-
-function roleClass(role) {
-  if (isAdmin(role)) return "admin";
-  if (role === "SUPPORTER") return "supporter";
-  return "member";
-}
-
-function Avatar({ member, size = "" }) {
-  return (
-    <div className={`avatar ${size}`}>
-      {member?.avatar_url ? (
-        <img src={member.avatar_url} alt={member.nickname || "Profilbild"} />
-      ) : (
-        initials(member)
-      )}
+function Auth({login,register,msg}){
+  const [mode,setMode]=useState("login");
+  return <div className="auth"><h1>ENNSTAL CONNECT</h1>{msg&&<div className="toast">{msg}</div>}
+    <div className="auth-grid">
+      {mode==="login"?<form className="panel" onSubmit={login}><h2>Anmelden</h2><input name="email" type="email" placeholder="E-Mail" required/><input name="password" type="password" placeholder="Passwort" required/><button>Anmelden</button><button type="button" className="link" onClick={()=>setMode("register")}>Noch kein Konto? Registrieren</button></form>:
+      <form className="panel" onSubmit={register}><h2>Registrieren</h2><input name="nickname" placeholder="Nickname" required/><input name="first_name" placeholder="Vorname" required/><input name="last_name" placeholder="Nachname" required/><label>Geburtsdatum *</label><input name="birth_date" type="date" required/><input name="email" type="email" placeholder="E-Mail-Adresse" required/><input name="password" type="password" minLength="6" placeholder="Passwort (mind. 6 Zeichen)" required/><button>Konto erstellen</button><button type="button" className="link" onClick={()=>setMode("login")}>Zur Anmeldung</button></form>}
     </div>
-  );
+  </div>
 }
-
-function RoleStar({ member }) {
-  if (!member || (!isAdmin(member.role) && member.role !== "SUPPORTER")) return null;
-  return (
-    <span
-      className={`role-star ${isAdmin(member.role) ? "red" : "green"}`}
-      title={isAdmin(member.role) ? "Admin" : "Supporter"}
-    >
-      ★
-    </span>
-  );
-}
-
-function Status({ member }) {
-  return (
-    <span className={`status ${member?.is_online ? "online" : "offline"}`}>
-      <i /> {member?.is_online ? "Online" : "Offline"}
-    </span>
-  );
-}
-
-function App() {
-  const [session, setSession] = useState(null);
-  const [profile, setProfile] = useState(null);
-  const [members, setMembers] = useState([]);
-  const [friends, setFriends] = useState([]);
-  const [pending, setPending] = useState([]);
-  const [visitors, setVisitors] = useState([]);
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState("members");
-  const [notice, setNotice] = useState("");
-  const [authOpen, setAuthOpen] = useState(false);
-  const [authMode, setAuthMode] = useState("login");
-  const [profileOpen, setProfileOpen] = useState(false);
-  const [selectedMember, setSelectedMember] = useState(null);
-  const [adminOpen, setAdminOpen] = useState(true);
-  const [loading, setLoading] = useState(true);
-  const [editingOwnProfile, setEditingOwnProfile] = useState(false);
-  const [profileForm, setProfileForm] = useState({});
-
-  const user = session?.user;
-  const admin = isAdmin(profile?.role);
-
-  function showNotice(message) {
-    setNotice(message || "");
-    if (message) window.setTimeout(() => setNotice(""), 5000);
-  }
-
-  async function loadProfile(userId) {
-    if (!userId) return;
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", userId)
-      .maybeSingle();
-    if (error) throw error;
-    setProfile(data || null);
-  }
-
-  async function loadMembers() {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .order("community_points", { ascending: false });
-    if (error) throw error;
-    setMembers(data || []);
-  }
-
-  async function loadFriends(userId) {
-    if (!userId) {
-      setFriends([]);
-      return;
-    }
-    const { data, error } = await supabase
-      .from("friendships")
-      .select("id, requester_id, receiver_id, status")
-      .eq("status", "ACCEPTED")
-      .or(`requester_id.eq.${userId},receiver_id.eq.${userId}`);
-    if (error) throw error;
-
-    const ids = [...new Set((data || []).map((row) =>
-      row.requester_id === userId ? row.receiver_id : row.requester_id
-    ))];
-
-    if (!ids.length) {
-      setFriends([]);
-      return;
-    }
-
-    const { data: friendProfiles, error: profileError } = await supabase
-      .from("profiles")
-      .select("*")
-      .in("id", ids);
-
-    if (profileError) throw profileError;
-    setFriends(friendProfiles || []);
-  }
-
-  async function loadPending() {
-    if (!admin) return;
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("status", "PENDING_ADMIN")
-      .order("created_at", { ascending: true });
-    if (!error) setPending(data || []);
-  }
-
-  async function loadVisitors() {
-    if (!user) return;
-    const { data, error } = await supabase
-      .from("profile_visits")
-      .select("visitor_id, visited_at")
-      .eq("profile_id", user.id)
-      .order("visited_at", { ascending: false })
-      .limit(20);
-
-    if (error || !data?.length) {
-      setVisitors([]);
-      return;
-    }
-
-    const ids = [...new Set(data.map((row) => row.visitor_id).filter(Boolean))];
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("*")
-      .in("id", ids);
-
-    const map = new Map((profiles || []).map((p) => [p.id, p]));
-    setVisitors(data.map((row) => ({ ...map.get(row.visitor_id), visited_at: row.visited_at })).filter(Boolean));
-  }
-
-  async function refreshAll(userId = user?.id) {
-    setLoading(true);
-    try {
-      await Promise.all([loadMembers(), loadProfile(userId), loadFriends(userId)]);
-    } catch (error) {
-      showNotice(error.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    if (!supabase || supabaseConfigError) {
-      setLoading(false);
-      return;
-    }
-
-    let active = true;
-
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!active) return;
-      setSession(session);
-      if (session?.user) await refreshAll(session.user.id);
-      else {
-        await loadMembers().catch((error) => showNotice(error.message));
-        setLoading(false);
-      }
-    });
-
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-      if (nextSession?.user) {
-        window.setTimeout(() => refreshAll(nextSession.user.id), 0);
-      } else {
-        setProfile(null);
-        setFriends([]);
-        setPending([]);
-        setVisitors([]);
-      }
-    });
-
-    return () => {
-      active = false;
-      listener.subscription.unsubscribe();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!user || !profile) return;
-
-    supabase
-      .from("profiles")
-      .update({ is_online: true, last_seen: new Date().toISOString() })
-      .eq("id", user.id)
-      .then(() => {});
-
-    const timer = window.setInterval(() => {
-      supabase
-        .from("profiles")
-        .update({ is_online: true, last_seen: new Date().toISOString() })
-        .eq("id", user.id)
-        .then(() => {});
-    }, 60000);
-
-    return () => window.clearInterval(timer);
-  }, [user?.id, profile?.id]);
-
-  useEffect(() => {
-    if (!admin) {
-      setPending([]);
-      return;
-    }
-    loadPending();
-  }, [admin, members.length]);
-
-  useEffect(() => {
-    loadVisitors();
-  }, [user?.id]);
-
-  const filteredMembers = useMemo(() => {
-    const value = search.trim().toLowerCase();
-    if (!value) return members.filter((m) => m.status !== "REJECTED");
-    return members.filter((m) =>
-      `${m.nickname || ""} ${m.first_name || ""} ${m.last_name || ""}`
-        .toLowerCase()
-        .includes(value)
-    );
-  }, [members, search]);
-
-  async function openMember(member) {
-    setSelectedMember(member);
-    setProfileOpen(true);
-    setEditingOwnProfile(Boolean(user && member?.id === user.id));
-    if (user && member?.id === user.id) {
-      setProfileForm({
-        nickname: member.nickname || "",
-        first_name: member.first_name || "",
-        last_name: member.last_name || "",
-        birth_date: member.birth_date || "",
-        bio: member.bio || "",
-        location: member.location || "",
-        website: member.website || "",
-        interests: member.interests || "",
-      });
-    }
-
-    if (user && member?.id && member.id !== user.id) {
-      await supabase.from("profile_visits").insert({
-        profile_id: member.id,
-        visitor_id: user.id,
-        visited_at: new Date().toISOString(),
-      }).then(() => {});
-    }
-  }
-
-  async function toggleFriend(member) {
-    if (!user) {
-      setAuthMode("login");
-      setAuthOpen(true);
-      return;
-    }
-    if (member.id === user.id) return;
-
-    const existing = friends.find((friend) => friend.id === member.id);
-
-    if (existing) {
-      const { error } = await supabase
-        .from("friendships")
-        .delete()
-        .or(
-          `and(requester_id.eq.${user.id},receiver_id.eq.${member.id}),and(requester_id.eq.${member.id},receiver_id.eq.${user.id})`
-        );
-      if (error) return showNotice(error.message);
-      showNotice("Freundschaft entfernt.");
-    } else {
-      const { data: relation } = await supabase
-        .from("friendships")
-        .select("id,status")
-        .or(
-          `and(requester_id.eq.${user.id},receiver_id.eq.${member.id}),and(requester_id.eq.${member.id},receiver_id.eq.${user.id})`
-        )
-        .maybeSingle();
-
-      if (relation?.status === "PENDING") {
-        return showNotice("Eine Freundschaftsanfrage ist bereits offen.");
-      }
-
-      const { error } = await supabase.from("friendships").insert({
-        requester_id: user.id,
-        receiver_id: member.id,
-        status: "ACCEPTED",
-      });
-      if (error) return showNotice(error.message);
-      showNotice(`${member.nickname} wurde zu deinen Freunden hinzugefügt.`);
-    }
-
-    await refreshAll(user.id);
-  }
-
-  async function updateRole(member, role) {
-    const { error } = await supabase
-      .from("profiles")
-      .update({ role })
-      .eq("id", member.id);
-    if (error) return showNotice(error.message);
-    showNotice("Rolle gespeichert.");
-    await loadMembers();
-  }
-
-  async function changePoints(member) {
-    const value = window.prompt(`Punkte für ${member.nickname}:`, member.community_points || 0);
-    if (value === null) return;
-    const points = Number(value);
-    if (!Number.isFinite(points) || points < 0) {
-      return showNotice("Bitte eine gültige Punktezahl eingeben.");
-    }
-    const { error } = await supabase
-      .from("profiles")
-      .update({ community_points: points })
-      .eq("id", member.id);
-    if (error) return showNotice(error.message);
-    await loadMembers();
-  }
-
-  async function approveMember(memberId, approved) {
-    const { error } = await supabase
-      .from("profiles")
-      .update({ status: approved ? "APPROVED" : "REJECTED" })
-      .eq("id", memberId);
-    if (error) return showNotice(error.message);
-    showNotice(approved ? "Mitglied freigegeben." : "Registrierung abgelehnt.");
-    await Promise.all([loadMembers(), loadPending()]);
-  }
-
-  async function saveOwnProfile(event) {
-    event.preventDefault();
-    if (!user || !profile) return;
-
-    const { error } = await supabase
-      .from("profiles")
-      .update({
-        nickname: String(profileForm.nickname || "").trim(),
-        first_name: String(profileForm.first_name || "").trim(),
-        last_name: String(profileForm.last_name || "").trim(),
-        birth_date: profileForm.birth_date || null,
-        bio: String(profileForm.bio || "").trim(),
-        location: String(profileForm.location || "").trim(),
-        website: String(profileForm.website || "").trim(),
-        interests: String(profileForm.interests || "").trim(),
-      })
-      .eq("id", user.id);
-
-    if (error) return showNotice(error.message);
-
-    await refreshAll(user.id);
-    const { data } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
-    if (data) {
-      setSelectedMember(data);
-      setProfile(data);
-    }
-    setEditingOwnProfile(false);
-    showNotice("Profil gespeichert.");
-  }
-
-  async function signOut() {
-    if (user) {
-      await supabase
-        .from("profiles")
-        .update({ is_online: false, last_seen: new Date().toISOString() })
-        .eq("id", user.id);
-    }
-    const { error } = await supabase.auth.signOut();
-    if (error) return showNotice(error.message);
-    setPage("members");
-  }
-
-  async function submitAuth(event) {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const email = String(form.get("email") || "").trim();
-    const password = String(form.get("password") || "");
-    const nickname = String(form.get("nickname") || "").trim();
-    const first_name = String(form.get("first_name") || "").trim();
-    const last_name = String(form.get("last_name") || "").trim();
-    const birth_date = String(form.get("birth_date") || "").trim();
-
-    if (!email || !password) return showNotice("Bitte E-Mail und Passwort eingeben.");
-
-    if (authMode === "login") {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) return showNotice(error.message);
-      setAuthOpen(false);
-      return;
-    }
-
-    if (!nickname || !first_name || !last_name || !birth_date) {
-      return showNotice("Bitte alle Pflichtfelder inklusive Geburtsdatum ausfüllen.");
-    }
-
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { nickname, first_name, last_name, birth_date },
-      },
-    });
-
-    if (error) return showNotice(error.message);
-
-    if (data.user && !data.session) {
-      showNotice("Registrierung gespeichert. Falls E-Mail-Bestätigung aktiviert ist, bestätige deine E-Mail.");
-    } else {
-      showNotice("Registrierung erfolgreich.");
-      setAuthOpen(false);
-    }
-  }
-
-  if (supabaseConfigError) {
-    return <div className="fatal-error">Supabase-Konfiguration fehlt: {supabaseConfigError}</div>;
-  }
-
-  return (
-    <div className="app-shell">
-      <header className="topbar">
-        <button className="brand" onClick={() => setPage("members")}>
-          <img src="/logo.png" alt="Ennstal Connect" onError={(e) => (e.currentTarget.style.display = "none")} />
-          <span><b>ennstal</b><strong>connect</strong><small>DIE REGIONALE COMMUNITY FÜR ENNSTAL & OBERSTEIERMARK</small></span>
-        </button>
-
-        <nav className="main-nav">
-          <button onClick={() => setPage("start")} className={page === "start" ? "active" : ""}>⌂ <span>Start</span></button>
-          <button onClick={() => setPage("members")} className={page === "members" ? "active" : ""}>♙ <span>Mitglieder</span></button>
-          <button onClick={() => setPage("groups")} className={page === "groups" ? "active" : ""}>♧ <span>Gruppen</span></button>
-          <button onClick={() => setPage("events")} className={page === "events" ? "active" : ""}>▣ <span>Events</span></button>
-        </nav>
-
-        <div className="top-actions">
-          <button className="icon-button" onClick={() => setPage("members")} title="Suche">⌕</button>
-          {user ? (
-            <>
-              <button className="icon-button notification" title="Benachrichtigungen">♧<b>{pending.length || 0}</b></button>
-              <button className="user-button" onClick={() => openMember(profile)}>
-                <Avatar member={profile} size="tiny" />⌄
-              </button>
-            </>
-          ) : (
-            <>
-              <button className="ghost" onClick={() => { setAuthMode("login"); setAuthOpen(true); }}>Anmelden</button>
-              <button className="primary" onClick={() => { setAuthMode("register"); setAuthOpen(true); }}>Registrieren</button>
-            </>
-          )}
-        </div>
-      </header>
-
-      <main className="dashboard">
-        <section className="content-column">
-          {page === "members" && (
-            <>
-              <div className="page-heading">
-                <div>
-                  <h1>Mitglieder</h1>
-                  <p>Entdecke Menschen aus deiner Region und vernetze dich mit ihnen.</p>
-                </div>
-              </div>
-
-              <div className="search-row">
-                <div className="search-box">
-                  <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Mitglieder oder Nickname suchen ..." />
-                  <span>⌕</span>
-                </div>
-                <button className="filter-button">⚱ Filter</button>
-              </div>
-
-              {loading ? <p className="loading">Mitglieder werden geladen …</p> : (
-                <section className="member-grid">
-                  {filteredMembers.map((member) => {
-                    const friend = friends.some((item) => item.id === member.id);
-                    return (
-                      <article className={`member-card ${roleClass(member.role)}`} key={member.id}>
-                        <div className="card-corner">
-                          <RoleStar member={member} />
-                          {user && member.id !== user.id && (
-                            <button
-                              className={`friend-badge ${friend ? "is-friend" : ""}`}
-                              onClick={() => toggleFriend(member)}
-                              title={friend ? "Freundschaft entfernen" : "Zu Freunden hinzufügen"}
-                            >
-                              {friend ? "♣" : "♧"}
-                            </button>
-                          )}
-                        </div>
-
-                        <button className="member-main" onClick={() => openMember(member)}>
-                          <Avatar member={member} />
-                          <h2>{member.nickname || "Mitglied"}{getAge(member.birth_date) !== null ? ` (${getAge(member.birth_date)})` : ""}</h2>
-                          <p>{[member.first_name, member.last_name].filter(Boolean).join(" ") || "Community-Mitglied"}</p>
-                          <strong className="points">{Number(member.community_points || 0).toLocaleString("de-AT")} Punkte</strong>
-                          <Status member={member} />
-                        </button>
-
-                        {admin && member.id !== user.id && (
-                          <div className="card-admin-actions">
-                            <button onClick={() => changePoints(member)}>Punkte</button>
-                            <button onClick={() => updateRole(member, member.role === "SUPPORTER" ? "MEMBER" : "SUPPORTER")}>Supporter</button>
-                            <button onClick={() => updateRole(member, isAdmin(member.role) ? "MEMBER" : "ADMIN")}>Admin</button>
-                          </div>
-                        )}
-                      </article>
-                    );
-                  })}
-                </section>
-              )}
-
-              <section className="legend">
-                <span><RoleStar member={{ role: "ADMIN" }} /> Admins</span>
-                <span><RoleStar member={{ role: "SUPPORTER" }} /> Supporter</span>
-                <span><i className="legend-dot" /> Mitglieder</span>
-                <span><i className="legend-dot online-dot" /> Online</span>
-                <span><i className="legend-dot" /> Offline</span>
-              </section>
-
-              {user && (
-                <section className="friends-panel">
-                  <div className="section-title">
-                    <h2>Deine Freunde ({friends.length})</h2>
-                    <button onClick={() => setSearch("")}>Alle anzeigen →</button>
-                  </div>
-                  <div className="friend-strip">
-                    {friends.length ? friends.map((friend) => (
-                      <button className="friend-tile" key={friend.id} onClick={() => openMember(friend)}>
-                        <Avatar member={friend} size="small" />
-                        <span>{friend.nickname}</span>
-                        <b>♣</b>
-                      </button>
-                    )) : <p>Noch keine Freunde hinzugefügt.</p>}
-                  </div>
-                </section>
-              )}
-
-              {page === "start" && <section className="empty-page"><h2>Willkommen bei Ennstal Connect</h2></section>}
-            </>
-          )}
-
-          {page === "groups" && <section className="empty-page"><h1>Gruppen</h1><p>Deine Gruppenübersicht ist bereit für deine bestehenden Gruppendaten.</p></section>}
-          {page === "events" && <section className="empty-page"><h1>Events</h1><p>Hier können regionale Veranstaltungen angezeigt werden.</p></section>}
-          {page === "start" && <section className="empty-page"><h1>Willkommen bei Ennstal Connect</h1></section>}
-          {page === "privacy" && <section className="empty-page legal-page"><h1>Datenschutz</h1><p>Diese Datenschutzerklärung informiert über die Verarbeitung personenbezogener Daten innerhalb von Ennstal Connect. Personenbezogene Daten werden nur verarbeitet, soweit dies für Registrierung, Profil, Community-Funktionen und den Betrieb der Plattform erforderlich ist.</p><p>Mitglieder können ihre Profildaten im eigenen Profil bearbeiten. Für Auskunfts-, Berichtigungs- oder Löschanfragen kann der Kontaktbereich verwendet werden.</p></section>}
-          {page === "imprint" && <section className="empty-page legal-page"><h1>Impressum</h1><p><strong>Ennstal Connect</strong><br />8700 Leoben</p><p><strong>Verantwortlich für den Inhalt:</strong><br />Marco Egger</p></section>}
-          {page === "about" && <section className="empty-page"><h1>Über uns</h1><p>Ennstal Connect ist die regionale Community für Ennstal und Obersteiermark.</p></section>}
-          {page === "rules" && <section className="empty-page"><h1>Community Regeln</h1><p>Respektvoller Umgang, keine beleidigenden Inhalte und keine missbräuchliche Nutzung der Community.</p></section>}
-          {page === "contact" && <section className="empty-page"><h1>Kontakt</h1><p>Kontaktmöglichkeiten können hier von der Administration ergänzt werden.</p></section>}
-        </section>
-
-        <aside className="right-sidebar">
-          {user && profile && (
-            <section className="side-card my-area">
-              <div className="side-title">
-                <h2>⌂ Mein Bereich</h2>
-              </div>
-              <button onClick={() => openMember(profile)}>◉ Mein Profil</button>
-              <button onClick={() => setPage("members")}>♧ Freunde</button>
-              <button onClick={() => showNotice("Nachrichten können über deine bestehende Nachrichten-Tabelle verbunden werden.")}>✉ Nachrichten</button>
-              <button onClick={loadVisitors}>◌ Besucher ({visitors.length})</button>
-              <button className="logout" onClick={signOut}>↪ Abmelden</button>
-            </section>
-          )}
-
-          {admin && (
-            <section className="side-card admin-area">
-              <div className="side-title">
-                <h2>♜ Admin Bereich</h2>
-                <button className="admin-chip" onClick={() => setAdminOpen(!adminOpen)}>ADMIN</button>
-              </div>
-              <button onClick={() => setAdminOpen(!adminOpen)}>♙ Mitglieder verwalten</button>
-              <button onClick={loadPending}>♧ Freigaben <b>{pending.length}</b></button>
-              <button onClick={() => showNotice("Punkte können direkt über die Mitgliederkarten geändert werden.")}>★ Punkteverlauf</button>
-              <button onClick={() => setPage("members")}>⌕ Profilsuche</button>
-              <button onClick={() => showNotice("Meldungen sind für deine vorhandene Meldungsfunktion reserviert.")}>⚑ Meldungen</button>
-
-              {adminOpen && (
-                <div className="admin-list">
-                  <h3>Offene Registrierungen</h3>
-                  {!pending.length && <p>Keine offenen Registrierungen.</p>}
-                  {pending.map((member) => (
-                    <div className="pending-row" key={member.id}>
-                      <Avatar member={member} size="tiny" />
-                      <span>{member.nickname}</span>
-                      <button onClick={() => approveMember(member.id, true)}>✓</button>
-                      <button onClick={() => approveMember(member.id, false)}>×</button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
-          )}
-
-          <section className="side-card friends-side">
-            <div className="side-title">
-              <h2>♧ Freunde ({friends.length})</h2>
-            </div>
-            {friends.length ? friends.slice(0, 8).map((friend) => (
-              <button className="side-friend" key={friend.id} onClick={() => openMember(friend)}>
-                <Avatar member={friend} size="tiny" />
-                <span>{friend.nickname}<Status member={friend} /></span>
-                <b>▢</b>
-              </button>
-            )) : <p>Deine Freundesliste ist noch leer.</p>}
-          </section>
-
-          {user && (
-            <section className="side-card visitors-side">
-              <div className="side-title"><h2>◌ Besucher</h2></div>
-              {visitors.length ? visitors.slice(0, 6).map((visitor, index) => (
-                <button className="side-friend" key={`${visitor.id}-${index}`} onClick={() => openMember(visitor)}>
-                  <Avatar member={visitor} size="tiny" />
-                  <span>{visitor.nickname}</span>
-                </button>
-              )) : <p>Noch keine Besucher gespeichert.</p>}
-            </section>
-          )}
-        </aside>
-      </main>
-
-      <footer>
-        <button onClick={() => setPage("about")}>ⓘ Über uns</button>
-        <button onClick={() => setPage("rules")}>♢ Community Regeln</button>
-        <button onClick={() => setPage("privacy")}>▣ Datenschutz</button>
-        <button onClick={() => setPage("imprint")}>⚖ Impressum</button>
-        <button onClick={() => setPage("contact")}>✉ Kontakt</button>
-        <p>© 2026 <b>Ennstal Connect</b> – Die Regionale Community für Ennstal & Obersteiermark</p>
-      </footer>
-
-      {notice && <div className="toast">{notice}</div>}
-
-      {authOpen && (
-        <div className="modal-backdrop" onMouseDown={() => setAuthOpen(false)}>
-          <form className="auth-modal" onSubmit={submitAuth} onMouseDown={(e) => e.stopPropagation()}>
-            <button type="button" className="close" onClick={() => setAuthOpen(false)}>×</button>
-            <h2>{authMode === "login" ? "Anmelden" : "Registrieren"}</h2>
-
-            {authMode === "register" && (
-              <div className="two-cols">
-                <input name="first_name" placeholder="Vorname" required />
-                <input name="last_name" placeholder="Nachname" required />
-                <input name="nickname" placeholder="Nickname" required />
-                <input type="date" name="birth_date" aria-label="Geburtsdatum" required />
-              </div>
-            )}
-
-            <input type="email" name="email" placeholder="E-Mail-Adresse" required />
-            <input type="password" name="password" minLength="6" placeholder="Passwort" required />
-            <button className="primary submit" type="submit">
-              {authMode === "login" ? "Jetzt anmelden" : "Konto erstellen"}
-            </button>
-            <button
-              type="button"
-              className="switch-auth"
-              onClick={() => setAuthMode(authMode === "login" ? "register" : "login")}
-            >
-              {authMode === "login" ? "Noch kein Konto? Registrieren" : "Bereits registriert? Anmelden"}
-            </button>
-          </form>
-        </div>
-      )}
-
-      {profileOpen && selectedMember && (
-        <div className="modal-backdrop" onMouseDown={() => setProfileOpen(false)}>
-          <section className="profile-modal" onMouseDown={(e) => e.stopPropagation()}>
-            <button className="close" onClick={() => setProfileOpen(false)}>×</button>
-            <div className={`profile-cover ${roleClass(selectedMember.role)}`}>
-              <Avatar member={selectedMember} />
-              <RoleStar member={selectedMember} />
-            </div>
-            {editingOwnProfile ? (
-              <form className="profile-edit-form" onSubmit={saveOwnProfile}>
-                <h2>Mein Profil bearbeiten</h2>
-                <div className="two-cols">
-                  <input value={profileForm.first_name || ""} onChange={(e) => setProfileForm({ ...profileForm, first_name: e.target.value })} placeholder="Vorname" required />
-                  <input value={profileForm.last_name || ""} onChange={(e) => setProfileForm({ ...profileForm, last_name: e.target.value })} placeholder="Nachname" required />
-                </div>
-                <input value={profileForm.nickname || ""} onChange={(e) => setProfileForm({ ...profileForm, nickname: e.target.value })} placeholder="Nickname" required />
-                <label>Geburtsdatum *</label>
-                <input type="date" value={profileForm.birth_date || ""} onChange={(e) => setProfileForm({ ...profileForm, birth_date: e.target.value })} required />
-                <textarea value={profileForm.bio || ""} onChange={(e) => setProfileForm({ ...profileForm, bio: e.target.value })} placeholder="Über mich" rows="4" />
-                <input value={profileForm.location || ""} onChange={(e) => setProfileForm({ ...profileForm, location: e.target.value })} placeholder="Wohnort" />
-                <input value={profileForm.interests || ""} onChange={(e) => setProfileForm({ ...profileForm, interests: e.target.value })} placeholder="Interessen" />
-                <input value={profileForm.website || ""} onChange={(e) => setProfileForm({ ...profileForm, website: e.target.value })} placeholder="Website / Link" />
-                <button className="primary submit" type="submit">Profil speichern</button>
-                <button type="button" className="switch-auth" onClick={() => setEditingOwnProfile(false)}>Abbrechen</button>
-              </form>
-            ) : (
-              <>
-                <h2>{selectedMember.nickname}{getAge(selectedMember.birth_date) !== null ? ` (${getAge(selectedMember.birth_date)})` : ""}</h2>
-                <p>{[selectedMember.first_name, selectedMember.last_name].filter(Boolean).join(" ")}</p>
-                <strong className="points">{Number(selectedMember.community_points || 0).toLocaleString("de-AT")} Punkte</strong>
-                <Status member={selectedMember} />
-                {selectedMember.id === user?.id && (
-                  <button className="primary submit" onClick={() => {
-                    setEditingOwnProfile(true);
-                    setProfileForm({
-                      nickname: selectedMember.nickname || "",
-                      first_name: selectedMember.first_name || "",
-                      last_name: selectedMember.last_name || "",
-                      birth_date: selectedMember.birth_date || "",
-                      bio: selectedMember.bio || "",
-                      location: selectedMember.location || "",
-                      website: selectedMember.website || "",
-                      interests: selectedMember.interests || "",
-                    });
-                  }}>Profil bearbeiten</button>
-                )}
-              </>
-            )}
-            {user && selectedMember.id !== user.id && (
-              <button className="primary submit" onClick={() => toggleFriend(selectedMember)}>
-                {friends.some((friend) => friend.id === selectedMember.id) ? "♣ Freund entfernen" : "♧ Freund hinzufügen"}
-              </button>
-            )}
-            {admin && selectedMember.id !== user?.id && (
-              <div className="modal-admin-tools">
-                <button onClick={() => changePoints(selectedMember)}>Punkte ändern</button>
-                <button onClick={() => updateRole(selectedMember, "MEMBER")}>Mitglied</button>
-                <button onClick={() => updateRole(selectedMember, "SUPPORTER")}>Supporter</button>
-                <button onClick={() => updateRole(selectedMember, "ADMIN")}>Admin</button>
-              </div>
-            )}
-          </section>
-        </div>
-      )}
-    </div>
-  );
-}
-
-export default App;
