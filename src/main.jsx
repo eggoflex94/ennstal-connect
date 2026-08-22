@@ -1,1821 +1,1516 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { createRoot } from "react-dom/client";
-import { supabase } from "./supabase";
-import "./styles.css";
-
-const FRIEND_LOGO = "/freunde-logo.png";
-
 /* =========================================================
-   HILFSFUNKTIONEN
+   ENNSTAL CONNECT – DARK COMMUNITY DESIGN
 ========================================================= */
 
-function formatDate(value) {
-  if (!value) return "Noch keine Aktivität";
+:root {
+  --bg: #101514;
+  --bg-secondary: #161d1b;
+  --bg-card: #1b2421;
+  --bg-card-hover: #222d29;
+  --bg-input: #111817;
 
-  return new Date(value).toLocaleString("de-AT", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
-}
+  --border: #303d38;
+  --border-light: #42524c;
 
-function getInitials(member) {
-  if (!member) return "?";
+  --text: #eef3f0;
+  --text-secondary: #aab8b1;
+  --text-muted: #78857f;
 
-  return (
-    member.nickname?.charAt(0)?.toUpperCase() ||
-    member.first_name?.charAt(0)?.toUpperCase() ||
-    "?"
-  );
-}
+  --primary: #315f52;
+  --primary-hover: #3d7565;
+  --primary-dark: #1f4238;
 
-function isAdmin(role) {
-  return role === "ADMIN" || role === "HEAD_ADMIN";
-}
+  --gold: #d5a928;
+  --gold-light: #f0c94b;
 
-function roleLabel(role) {
-  switch (role) {
-    case "HEAD_ADMIN":
-      return "Hauptadmin";
+  --admin: #e04747;
+  --admin-dark: #9f2828;
 
-    case "ADMIN":
-      return "Admin";
+  --online: #42c779;
+  --offline: #69746f;
 
-    case "SUPPORTER":
-      return "Supporter";
+  --danger: #d94b4b;
 
-    default:
-      return "Mitglied";
-  }
+  --shadow: 0 10px 35px rgba(0, 0, 0, 0.28);
+  --radius: 18px;
 }
 
 /* =========================================================
-   AVATAR
+   RESET
 ========================================================= */
 
-function Avatar({ member, className = "" }) {
-  return (
-    <div className={`member-avatar ${className}`}>
-      {member?.avatar_url ? (
-        <img
-          src={member.avatar_url}
-          alt={member.nickname || "Profilbild"}
-          style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            borderRadius: "50%",
-          }}
-        />
-      ) : (
-        <span>{getInitials(member)}</span>
-      )}
-    </div>
-  );
+* {
+  box-sizing: border-box;
 }
 
-/* =========================================================
-   ROLLEN
-========================================================= */
-
-function RoleStars({ member }) {
-  if (!member) return null;
-
-  return (
-    <span className="member-badges">
-      {member.role === "HEAD_ADMIN" && (
-        <span className="admin-star" title="Hauptadmin">
-          ★
-        </span>
-      )}
-
-      {member.role === "ADMIN" && (
-        <span className="admin-star" title="Admin">
-          ★
-        </span>
-      )}
-
-      {member.role === "SUPPORTER" && (
-        <span className="supporter-star" title="Supporter">
-          ★
-        </span>
-      )}
-    </span>
-  );
+html {
+  scroll-behavior: smooth;
 }
 
-/* =========================================================
-   LOGIN / REGISTRIERUNG
-========================================================= */
-
-function AuthModal({ mode, onClose, onModeChange }) {
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
-
-  const [form, setForm] = useState({
-    first_name: "",
-    last_name: "",
-    birth_date: "",
-    nickname: "",
-    email: "",
-    password: "",
-  });
-
-  function updateField(key, value) {
-    setForm((old) => ({
-      ...old,
-      [key]: value,
-    }));
-  }
-
-  async function handleSubmit(event) {
-    event.preventDefault();
-
-    setLoading(true);
-    setMessage("");
-
-    try {
-      if (mode === "register") {
-        const { error } = await supabase.auth.signUp({
-          email: form.email.trim(),
-          password: form.password,
-
-          options: {
-            emailRedirectTo: window.location.origin,
-
-            data: {
-              first_name: form.first_name.trim(),
-              last_name: form.last_name.trim(),
-              birth_date: form.birth_date,
-              nickname: form.nickname.trim(),
-            },
-          },
-        });
-
-        if (error) {
-          setMessage(error.message);
-        } else {
-          setMessage(
-            "Registrierung erfolgreich. Bitte bestätige deine E-Mail. Danach muss dein Konto von einem Admin freigegeben werden."
-          );
-        }
-      } else {
-        const { error } =
-          await supabase.auth.signInWithPassword({
-            email: form.email.trim(),
-            password: form.password,
-          });
-
-        if (error) {
-          setMessage(error.message);
-        } else {
-          onClose();
-        }
-      }
-    } catch (error) {
-      setMessage(error.message || "Ein Fehler ist aufgetreten.");
-    }
-
-    setLoading(false);
-  }
-
-  return (
-    <div className="modal-overlay">
-      <form className="modal" onSubmit={handleSubmit}>
-        <button
-          type="button"
-          className="close-button"
-          onClick={onClose}
-        >
-          ×
-        </button>
-
-        <h2>
-          {mode === "login"
-            ? "Anmelden"
-            : "Mitglied werden"}
-        </h2>
-
-        {mode === "register" && (
-          <>
-            <input
-              required
-              placeholder="Vorname"
-              value={form.first_name}
-              onChange={(event) =>
-                updateField(
-                  "first_name",
-                  event.target.value
-                )
-              }
-            />
-
-            <input
-              required
-              placeholder="Nachname"
-              value={form.last_name}
-              onChange={(event) =>
-                updateField(
-                  "last_name",
-                  event.target.value
-                )
-              }
-            />
-
-            <input
-              required
-              type="date"
-              value={form.birth_date}
-              onChange={(event) =>
-                updateField(
-                  "birth_date",
-                  event.target.value
-                )
-              }
-            />
-
-            <input
-              required
-              minLength="3"
-              placeholder="Nickname"
-              value={form.nickname}
-              onChange={(event) =>
-                updateField(
-                  "nickname",
-                  event.target.value
-                )
-              }
-            />
-          </>
-        )}
-
-        <input
-          required
-          type="email"
-          placeholder="E-Mail-Adresse"
-          value={form.email}
-          onChange={(event) =>
-            updateField(
-              "email",
-              event.target.value
-            )
-          }
-        />
-
-        <input
-          required
-          type="password"
-          minLength="6"
-          placeholder="Passwort"
-          value={form.password}
-          onChange={(event) =>
-            updateField(
-              "password",
-              event.target.value
-            )
-          }
-        />
-
-        <button
-          className="primary-button full-button"
-          disabled={loading}
-        >
-          {loading
-            ? "Bitte warten ..."
-            : mode === "login"
-              ? "Anmelden"
-              : "Registrieren"}
-        </button>
-
-        {message && (
-          <p className="auth-message">
-            {message}
-          </p>
-        )}
-
-        <button
-          type="button"
-          className="secondary-button full-button"
-          onClick={() =>
-            onModeChange(
-              mode === "login"
-                ? "register"
-                : "login"
-            )
-          }
-        >
-          {mode === "login"
-            ? "Noch kein Konto? Registrieren"
-            : "Bereits registriert? Anmelden"}
-        </button>
-      </form>
-    </div>
-  );
-}
-
-/* =========================================================
-   APP
-========================================================= */
-
-function App() {
-  const [user, setUser] = useState(null);
-  const [profile, setProfile] = useState(null);
-
-  const [members, setMembers] = useState([]);
-  const [friends, setFriends] = useState([]);
-
-  const [friendRequests, setFriendRequests] =
-    useState([]);
-
-  const [sentRequests, setSentRequests] =
-    useState([]);
-
-  const [search, setSearch] = useState("");
-
-  const [authOpen, setAuthOpen] =
-    useState(false);
-
-  const [authMode, setAuthMode] =
-    useState("login");
-
-  const [selectedProfile, setSelectedProfile] =
-    useState(null);
-
-  const [profileOpen, setProfileOpen] =
-    useState(false);
-
-  const [adminOpen, setAdminOpen] =
-    useState(false);
-
-  const [pendingMembers, setPendingMembers] =
-    useState([]);
-
-  const [notice, setNotice] =
-    useState("");
-
-  /* =======================================================
-     BENACHRICHTIGUNG
-  ======================================================= */
-
-  function showNotice(text) {
-    setNotice(text);
-
-    window.setTimeout(() => {
-      setNotice("");
-    }, 4000);
-  }
-
-  /* =======================================================
-     AUTH
-  ======================================================= */
-
-  useEffect(() => {
-    supabase.auth
-      .getUser()
-      .then(({ data }) => {
-        setUser(data.user || null);
-      });
-
-    const {
-      data: { subscription },
-    } =
-      supabase.auth.onAuthStateChange(
-        (_event, session) => {
-          setUser(session?.user || null);
-        }
-      );
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  /* =======================================================
-     PROFIL LADEN
-  ======================================================= */
-
-  async function loadProfile() {
-    if (!user) {
-      setProfile(null);
-      return;
-    }
-
-    const { data, error } =
-      await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
-
-    if (error) {
-      console.error("Profil Fehler:", error);
-      return;
-    }
-
-    setProfile(data || null);
-  }
-
-  /* =======================================================
-     MITGLIEDER LADEN
-  ======================================================= */
-
-  async function loadMembers() {
-    const { data, error } =
-      await supabase
-        .from("profiles")
-        .select("*")
-        .eq("status", "APPROVED")
-        .order("nickname");
-
-    if (error) {
-      console.error("Mitglieder Fehler:", error);
-      return;
-    }
-
-    setMembers(data || []);
-  }
-
-  /* =======================================================
-     FREUNDE LADEN
-  ======================================================= */
-
-  async function loadFriends() {
-    if (!user) {
-      setFriends([]);
-      setFriendRequests([]);
-      setSentRequests([]);
-      return;
-    }
-
-    const { data, error } =
-      await supabase
-        .from("friendships")
-        .select("*")
-        .or(
-          `requester_id.eq.${user.id},receiver_id.eq.${user.id}`
-        );
-
-    if (error) {
-      console.error("Freunde Fehler:", error);
-      return;
-    }
-
-    const relationships = data || [];
-
-    const accepted =
-      relationships.filter(
-        (item) => item.status === "ACCEPTED"
-      );
-
-    const incoming =
-      relationships.filter(
-        (item) =>
-          item.status === "PENDING" &&
-          item.receiver_id === user.id
-      );
-
-    const outgoing =
-      relationships.filter(
-        (item) =>
-          item.status === "PENDING" &&
-          item.requester_id === user.id
-      );
-
-    const friendIds =
-      accepted.map((item) =>
-        item.requester_id === user.id
-          ? item.receiver_id
-          : item.requester_id
-      );
-
-    let friendProfiles = [];
-
-    if (friendIds.length > 0) {
-      const { data: friendData } =
-        await supabase
-          .from("profiles")
-          .select("*")
-          .in("id", friendIds);
-
-      friendProfiles = friendData || [];
-    }
-
-    const incomingIds =
-      incoming.map(
-        (item) => item.requester_id
-      );
-
-    let requestProfiles = [];
-
-    if (incomingIds.length > 0) {
-      const { data } =
-        await supabase
-          .from("profiles")
-          .select("*")
-          .in("id", incomingIds);
-
-      requestProfiles = data || [];
-    }
-
-    setFriends(friendProfiles);
-
-    setFriendRequests(
-      incoming.map((request) => ({
-        ...request,
-
-        member:
-          requestProfiles.find(
-            (item) =>
-              item.id === request.requester_id
-          ),
-      }))
+body {
+  margin: 0;
+  min-width: 320px;
+
+  font-family:
+    Arial,
+    Helvetica,
+    sans-serif;
+
+  background:
+    radial-gradient(
+      circle at top left,
+      #1c2925 0%,
+      #101514 45%,
+      #0b0f0e 100%
     );
 
-    setSentRequests(outgoing);
-  }
-
-  /* =======================================================
-     ADMIN DATEN
-  ======================================================= */
-
-  async function loadPendingMembers() {
-    if (!profile || !isAdmin(profile.role)) {
-      setPendingMembers([]);
-      return;
-    }
-
-    const { data, error } =
-      await supabase
-        .from("profiles")
-        .select("*")
-        .eq("status", "PENDING_ADMIN")
-        .order("created_at");
-
-    if (error) {
-      console.error(error);
-      return;
-    }
-
-    setPendingMembers(data || []);
-  }
-
-  /* =======================================================
-     DATEN LADEN
-  ======================================================= */
-
-  useEffect(() => {
-    loadProfile();
-    loadMembers();
-    loadFriends();
-  }, [user]);
-
-  useEffect(() => {
-    loadPendingMembers();
-  }, [profile]);
-
-  /* =======================================================
-     ONLINE STATUS
-  ======================================================= */
-
-  useEffect(() => {
-    if (!user) return;
-
-    async function updateOnline() {
-      await supabase
-        .from("profiles")
-        .update({
-          is_online: true,
-          last_seen:
-            new Date().toISOString(),
-        })
-        .eq("id", user.id);
-    }
-
-    updateOnline();
-
-    const interval =
-      window.setInterval(
-        updateOnline,
-        60000
-      );
-
-    return () => {
-      window.clearInterval(interval);
-
-      supabase
-        .from("profiles")
-        .update({
-          is_online: false,
-          last_seen:
-            new Date().toISOString(),
-        })
-        .eq("id", user.id);
-    };
-  }, [user]);
-
-  /* =======================================================
-     PROFIL ÖFFNEN
-  ======================================================= */
-
-  function openProfile(member) {
-    if (!member) return;
-
-    if (!user) {
-      showNotice(
-        "Bitte melde dich zuerst an, um Profile zu öffnen."
-      );
-
-      return;
-    }
-
-    setSelectedProfile(member);
-    setProfileOpen(true);
-  }
-
-  /* =======================================================
-     FREUNDSCHAFT STATUS
-  ======================================================= */
-
-  const friendIds = useMemo(
-    () =>
-      new Set(
-        friends.map(
-          (friend) => friend.id
-        )
-      ),
-    [friends]
-  );
-
-  function getFriendshipStatus(memberId) {
-    if (!user) return null;
-
-    if (friendIds.has(memberId)) {
-      return "FRIEND";
-    }
-
-    const incoming =
-      friendRequests.find(
-        (item) =>
-          item.requester_id === memberId
-      );
-
-    if (incoming) {
-      return "INCOMING";
-    }
-
-    const outgoing =
-      sentRequests.find(
-        (item) =>
-          item.receiver_id === memberId
-      );
-
-    if (outgoing) {
-      return "OUTGOING";
-    }
-
-    return null;
-  }
-
-  /* =======================================================
-     FREUNDSCHAFTSANFRAGE
-  ======================================================= */
-
-  async function sendFriendRequest(member) {
-    if (!user) {
-      showNotice(
-        "Bitte melde dich zuerst an."
-      );
-
-      return;
-    }
-
-    if (member.id === user.id) {
-      return;
-    }
-
-    const { error } =
-      await supabase
-        .from("friendships")
-        .insert({
-          requester_id: user.id,
-          receiver_id: member.id,
-          status: "PENDING",
-        });
-
-    if (error) {
-      showNotice(error.message);
-    } else {
-      showNotice(
-        `Freundschaftsanfrage an ${member.nickname} gesendet.`
-      );
-    }
-
-    loadFriends();
-  }
-
-  async function answerFriendRequest(
-    request,
-    status
-  ) {
-    const { error } =
-      await supabase
-        .from("friendships")
-        .update({
-          status,
-          updated_at:
-            new Date().toISOString(),
-        })
-        .eq("id", request.id);
-
-    if (error) {
-      showNotice(error.message);
-    } else {
-      showNotice(
-        status === "ACCEPTED"
-          ? "Freundschaftsanfrage angenommen."
-          : "Freundschaftsanfrage abgelehnt."
-      );
-    }
-
-    loadFriends();
-  }
-
-  async function removeFriend(member) {
-    if (!user) return;
-
-    const confirmed =
-      window.confirm(
-        `Freundschaft mit ${member.nickname} wirklich entfernen?`
-      );
-
-    if (!confirmed) return;
-
-    const { error } =
-      await supabase
-        .from("friendships")
-        .delete()
-        .or(
-          `and(requester_id.eq.${user.id},receiver_id.eq.${member.id}),and(requester_id.eq.${member.id},receiver_id.eq.${user.id})`
-        );
-
-    if (error) {
-      showNotice(error.message);
-    } else {
-      showNotice(
-        "Freundschaft entfernt."
-      );
-    }
-
-    loadFriends();
-  }
-
-  /* =======================================================
-     ADMIN
-  ======================================================= */
-
-  async function approveMember(memberId) {
-    const { error } =
-      await supabase
-        .from("profiles")
-        .update({
-          status: "APPROVED",
-        })
-        .eq("id", memberId);
-
-    if (error) {
-      showNotice(error.message);
-    } else {
-      showNotice(
-        "Mitglied wurde freigegeben."
-      );
-    }
-
-    loadMembers();
-    loadPendingMembers();
-  }
-
-  async function rejectMember(memberId) {
-    const { error } =
-      await supabase
-        .from("profiles")
-        .update({
-          status: "REJECTED",
-        })
-        .eq("id", memberId);
-
-    if (error) {
-      showNotice(error.message);
-    } else {
-      showNotice(
-        "Registrierung wurde abgelehnt."
-      );
-    }
-
-    loadPendingMembers();
-  }
-
-  /* =======================================================
-     PUNKTE
-  ======================================================= */
-
-  async function changePoints(member) {
-    if (!isAdmin(profile?.role)) {
-      return;
-    }
-
-    const value =
-      window.prompt(
-        "Punkte eingeben. Beispiel: 10 oder -5"
-      );
-
-    if (value === null) return;
-
-    const points = Number(value);
-
-    if (
-      !Number.isFinite(points) ||
-      points === 0
-    ) {
-      showNotice(
-        "Bitte eine gültige Punktezahl eingeben."
-      );
-
-      return;
-    }
-
-    const reason =
-      window.prompt(
-        "Grund für die Punkteänderung:"
-      );
-
-    if (
-      !reason ||
-      reason.trim().length < 3
-    ) {
-      showNotice(
-        "Bitte eine Begründung eingeben."
-      );
-
-      return;
-    }
-
-    const { data: memberData } =
-      await supabase
-        .from("profiles")
-        .select("community_points")
-        .eq("id", member.id)
-        .single();
-
-    if (!memberData) {
-      showNotice(
-        "Mitglied konnte nicht geladen werden."
-      );
-
-      return;
-    }
-
-    const newPoints =
-      Math.max(
-        0,
-        (memberData.community_points || 0) +
-          points
-      );
-
-    const { error } =
-      await supabase
-        .from("profiles")
-        .update({
-          community_points: newPoints,
-        })
-        .eq("id", member.id);
-
-    if (error) {
-      showNotice(error.message);
-    } else {
-      showNotice(
-        `${member.nickname}: ${
-          points > 0 ? "+" : ""
-        }${points} Punkte.`
-      );
-    }
-
-    loadMembers();
-
-    if (
-      selectedProfile?.id === member.id
-    ) {
-      setSelectedProfile({
-        ...selectedProfile,
-        community_points: newPoints,
-      });
-    }
-  }
-
-  /* =======================================================
-     ABMELDEN
-  ======================================================= */
-
-  async function signOut() {
-    if (user) {
-      await supabase
-        .from("profiles")
-        .update({
-          is_online: false,
-          last_seen:
-            new Date().toISOString(),
-        })
-        .eq("id", user.id);
-    }
-
-    await supabase.auth.signOut();
-
-    setProfile(null);
-    setUser(null);
-    setFriends([]);
-
-    showNotice("Du wurdest abgemeldet.");
-  }
-
-  /* =======================================================
-     SUCHE
-  ======================================================= */
-
-  const filteredMembers =
-    useMemo(() => {
-      const value =
-        search.trim().toLowerCase();
-
-      if (!value) {
-        return members;
-      }
-
-      return members.filter(
-        (member) =>
-          `${member.nickname || ""} ${
-            member.first_name || ""
-          } ${member.last_name || ""}`
-            .toLowerCase()
-            .includes(value)
-      );
-    }, [members, search]);
-
-  const onlineFriends =
-    friends.filter(
-      (friend) => friend.is_online
-    );
-
-  const offlineFriends =
-    friends.filter(
-      (friend) => !friend.is_online
-    );
-
-  /* =======================================================
-     RENDER
-  ======================================================= */
-
-  return (
-    <>
-      <header className="site-header">
-        <div className="header-content">
-
-          <div className="logo-area">
-            <img
-              src="/logo.png"
-              alt="Ennstal Connect"
-              className="logo"
-            />
-          </div>
-
-          <nav className="nav-links">
-            <button
-              onClick={() =>
-                document
-                  .getElementById("start")
-                  ?.scrollIntoView({
-                    behavior: "smooth",
-                  })
-              }
-            >
-              Start
-            </button>
-
-            <button
-              onClick={() =>
-                document
-                  .getElementById("mitglieder")
-                  ?.scrollIntoView({
-                    behavior: "smooth",
-                  })
-              }
-            >
-              Mitglieder
-            </button>
-
-            <button
-              onClick={() =>
-                document
-                  .getElementById("freunde")
-                  ?.scrollIntoView({
-                    behavior: "smooth",
-                  })
-              }
-            >
-              Freunde
-            </button>
-          </nav>
-
-          <div className="header-actions">
-            {user ? (
-              <>
-                <button
-                  className="secondary-button"
-                  onClick={() =>
-                    openProfile(profile)
-                  }
-                >
-                  {profile?.nickname ||
-                    "Mein Profil"}
-                </button>
-
-                <button
-                  className="primary-button"
-                  onClick={signOut}
-                >
-                  Abmelden
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  className="secondary-button"
-                  onClick={() => {
-                    setAuthMode("login");
-                    setAuthOpen(true);
-                  }}
-                >
-                  Anmelden
-                </button>
-
-                <button
-                  className="primary-button"
-                  onClick={() => {
-                    setAuthMode("register");
-                    setAuthOpen(true);
-                  }}
-                >
-                  Registrieren
-                </button>
-              </>
-            )}
-          </div>
-
-        </div>
-      </header>
-
-      <main className="site-main">
-
-        <section
-          id="start"
-          className="hero"
-        >
-          <div className="hero-content">
-            <h1>
-              Ennstal Connect
-            </h1>
-
-            <p>
-              Deine regionale Community für
-              Ennstal und Obersteiermark.
-              Entdecke Mitglieder,
-              Freundschaften und die Community.
-            </p>
-
-            {!user && (
-              <button
-                className="primary-button"
-                onClick={() => {
-                  setAuthMode("register");
-                  setAuthOpen(true);
-                }}
-              >
-                Community entdecken
-              </button>
-            )}
-          </div>
-        </section>
-
-        {notice && (
-          <div className="message-popup">
-            {notice}
-          </div>
-        )}
-
-        {profile &&
-          profile.status !== "APPROVED" && (
-            <div className="message-popup">
-              Dein Konto wartet noch auf die
-              Freigabe durch einen Admin.
-            </div>
-          )}
-
-        <div className="page-layout">
-
-          <div className="content-area">
-
-            <section
-              id="mitglieder"
-              className="card"
-            >
-              <h2>
-                Mitglieder entdecken
-              </h2>
-
-              <p>
-                Klicke auf einen Nickname,
-                um das Profil eines Mitglieds
-                zu öffnen.
-              </p>
-
-              <div className="member-search">
-                <input
-                  value={search}
-                  onChange={(event) =>
-                    setSearch(
-                      event.target.value
-                    )
-                  }
-                  placeholder="Mitglieder suchen ..."
-                />
-              </div>
-
-              <div className="members-grid">
-
-                {filteredMembers.map(
-                  (member) => {
-                    const friendship =
-                      getFriendshipStatus(
-                        member.id
-                      );
-
-                    return (
-                      <article
-                        className="member-card"
-                        key={member.id}
-                      >
-                        {friendship ===
-                          "FRIEND" && (
-                          <img
-                            src={FRIEND_LOGO}
-                            alt="Freund"
-                            className="friend-icon"
-                          />
-                        )}
-
-                        <div className="member-top">
-
-                          <Avatar
-                            member={member}
-                          />
-
-                          <div className="member-info">
-
-                            <button
-                              className={
-                                member.role ===
-                                  "ADMIN" ||
-                                member.role ===
-                                  "HEAD_ADMIN"
-                                  ? "nickname nickname-admin"
-                                  : member.nickname_color_owned
-                                    ? "nickname nickname-premium"
-                                    : "nickname nickname-standard"
-                              }
-                              onClick={() =>
-                                openProfile(member)
-                              }
-                            >
-                              {member.nickname}
-                            </button>
-
-                            <RoleStars
-                              member={member}
-                            />
-
-                            <strong>
-                              {member.community_points ||
-                                0}{" "}
-                              Punkte
-                            </strong>
-
-                            <div className="status-line">
-                              <span
-                                className={`status-dot ${
-                                  member.is_online
-                                    ? "online"
-                                    : "offline"
-                                }`}
-                              />
-
-                              <span
-                                className={
-                                  member.is_online
-                                    ? "status-online"
-                                    : "status-offline"
-                                }
-                              >
-                                {member.is_online
-                                  ? "Online"
-                                  : `Zuletzt online: ${formatDate(
-                                      member.last_seen
-                                    )}`}
-                              </span>
-                            </div>
-
-                          </div>
-
-                        </div>
-
-                        {isAdmin(
-                          profile?.role
-                        ) && (
-                          <button
-                            className="secondary-button"
-                            onClick={() =>
-                              changePoints(member)
-                            }
-                          >
-                            Punkte ändern
-                          </button>
-                        )}
-
-                      </article>
-                    );
-                  }
-                )}
-
-              </div>
-
-              {!filteredMembers.length && (
-                <p>
-                  Keine Mitglieder gefunden.
-                </p>
-              )}
-
-            </section>
-
-          </div>
-
-          <aside className="profile-sidebar">
-
-            {user && profile && (
-              <section className="card">
-
-                <div className="profile-header">
-
-                  <Avatar
-                    member={profile}
-                    className="profile-avatar"
-                  />
-
-                  <div>
-                    <h3 className="profile-name">
-                      {profile.nickname}
-                    </h3>
-
-                    <p className="profile-role">
-                      {roleLabel(profile.role)}
-                    </p>
-
-                    <RoleStars
-                      member={profile}
-                    />
-                  </div>
-
-                </div>
-
-                <div className="points-box">
-                  <span className="points-label">
-                    Deine Community-Punkte
-                  </span>
-
-                  <strong className="points-value">
-                    {profile.community_points ||
-                      0}
-                  </strong>
-                </div>
-
-                <button
-                  className="secondary-button full-button"
-                  onClick={() =>
-                    openProfile(profile)
-                  }
-                >
-                  Mein Profil öffnen
-                </button>
-
-              </section>
-            )}
-
-            {user && (
-              <section
-                id="freunde"
-                className="card"
-              >
-
-                <h3>
-                  Freunde online
-                </h3>
-
-                <div className="friends-online-list">
-
-                  {onlineFriends.map(
-                    (friend) => (
-                      <button
-                        key={friend.id}
-                        className="friend-online-item"
-                        onClick={() =>
-                          openProfile(friend)
-                        }
-                      >
-                        <Avatar
-                          member={friend}
-                        />
-
-                        <div>
-                          <strong>
-                            {friend.nickname}
-                          </strong>
-
-                          <RoleStars
-                            member={friend}
-                          />
-
-                          <div>
-                            {friend.community_points ||
-                              0}{" "}
-                            Punkte
-                          </div>
-
-                          <small className="status-online">
-                            ● Online
-                          </small>
-                        </div>
-                      </button>
-                    )
-                  )}
-
-                  {!onlineFriends.length && (
-                    <p>
-                      Momentan ist keiner deiner
-                      Freunde online.
-                    </p>
-                  )}
-
-                </div>
-
-                {offlineFriends.length > 0 && (
-                  <>
-                    <hr />
-
-                    <h4>
-                      Freunde offline
-                    </h4>
-
-                    <div className="friends-online-list">
-
-                      {offlineFriends.map(
-                        (friend) => (
-                          <button
-                            key={friend.id}
-                            className="friend-online-item"
-                            onClick={() =>
-                              openProfile(friend)
-                            }
-                          >
-                            <Avatar
-                              member={friend}
-                            />
-
-                            <div>
-                              <strong>
-                                {friend.nickname}
-                              </strong>
-
-                              <RoleStars
-                                member={friend}
-                              />
-
-                              <div>
-                                {friend.community_points ||
-                                  0}{" "}
-                                Punkte
-                              </div>
-
-                              <small className="status-offline">
-                                Zuletzt online:
-                                <br />
-                                {formatDate(
-                                  friend.last_seen
-                                )}
-                              </small>
-                            </div>
-
-                          </button>
-                        )
-                      )}
-
-                    </div>
-                  </>
-                )}
-
-              </section>
-            )}
-
-            {user &&
-              friendRequests.length > 0 && (
-                <section className="card">
-
-                  <h3>
-                    Freundschaftsanfragen
-                  </h3>
-
-                  {friendRequests.map(
-                    (request) => (
-                      <div
-                        key={request.id}
-                        className="friend-online-item"
-                      >
-                        <Avatar
-                          member={request.member}
-                        />
-
-                        <div>
-                          <strong>
-                            {request.member
-                              ?.nickname}
-                          </strong>
-
-                          <RoleStars
-                            member={request.member}
-                          />
-
-                          <br />
-
-                          <button
-                            className="primary-button"
-                            onClick={() =>
-                              answerFriendRequest(
-                                request,
-                                "ACCEPTED"
-                              )
-                            }
-                          >
-                            Annehmen
-                          </button>
-
-                          <button
-                            className="secondary-button"
-                            onClick={() =>
-                              answerFriendRequest(
-                                request,
-                                "REJECTED"
-                              )
-                            }
-                          >
-                            Ablehnen
-                          </button>
-                        </div>
-                      </div>
-                    )
-                  )}
-
-                </section>
-              )}
-
-            {isAdmin(profile?.role) && (
-              <section className="card admin-section">
-
-                <button
-                  className="primary-button full-button"
-                  onClick={() =>
-                    setAdminOpen(
-                      !adminOpen
-                    )
-                  }
-                >
-                  Admin Tools{" "}
-                  {adminOpen
-                    ? "▲"
-                    : "▼"}
-                </button>
-
-                {adminOpen && (
-                  <>
-                    <h3>
-                      Offene Registrierungen
-                    </h3>
-
-                    {pendingMembers.map(
-                      (member) => (
-                        <div
-                          key={member.id}
-                          className="admin-member-row"
-                        >
-
-                          <div className="admin-member-info">
-
-                            <Avatar
-                              member={member}
-                            />
-
-                            <div>
-                              <strong>
-                                {member.nickname}
-                              </strong>
-
-                              <div>
-                                {member.first_name}{" "}
-                                {member.last_name}
-                              </div>
-                            </div>
-
-                          </div>
-
-                          <div>
-
-                            <button
-                              className="primary-button"
-                              onClick={() =>
-                                approveMember(
-                                  member.id
-                                )
-                              }
-                            >
-                              ✓
-                            </button>
-
-                            <button
-                              className="danger-button"
-                              onClick={() =>
-                                rejectMember(
-                                  member.id
-                                )
-                              }
-                            >
-                              ×
-                            </button>
-
-                          </div>
-
-                        </div>
-                      )
-                    )}
-
-                    {!pendingMembers.length && (
-                      <p>
-                        Keine offenen
-                        Registrierungen.
-                      </p>
-                    )}
-                  </>
-                )}
-
-              </section>
-            )}
-
-          </aside>
-
-        </div>
-
-      </main>
-
-      {/* PROFIL MODAL */}
-
-      {profileOpen &&
-        selectedProfile && (
-          <div className="modal-overlay">
-
-            <div className="modal">
-
-              <button
-                className="close-button"
-                onClick={() =>
-                  setProfileOpen(false)
-                }
-              >
-                ×
-              </button>
-
-              <div className="profile-header">
-
-                <Avatar
-                  member={selectedProfile}
-                  className="profile-avatar"
-                />
-
-                <div>
-
-                  <h2
-                    className={
-                      isAdmin(
-                        selectedProfile.role
-                      )
-                        ? "nickname-admin"
-                        : selectedProfile.nickname_color_owned
-                          ? "nickname-premium"
-                          : "nickname-standard"
-                    }
-                  >
-                    {selectedProfile.nickname}
-                  </h2>
-
-                  <p>
-                    {roleLabel(
-                      selectedProfile.role
-                    )}
-                  </p>
-
-                  <RoleStars
-                    member={selectedProfile}
-                  />
-
-                </div>
-
-              </div>
-
-              <div className="points-box">
-
-                <span className="points-label">
-                  Community-Punkte
-                </span>
-
-                <strong className="points-value">
-                  {selectedProfile.community_points ||
-                    0}
-                </strong>
-
-              </div>
-
-              <p
-                className={
-                  selectedProfile.is_online
-                    ? "status-online"
-                    : "status-offline"
-                }
-              >
-                {selectedProfile.is_online
-                  ? "● Dieses Mitglied ist online"
-                  : `● Zuletzt online: ${formatDate(
-                      selectedProfile.last_seen
-                    )}`}
-              </p>
-
-              {isAdmin(profile?.role) && (
-                <div className="admin-section">
-
-                  <h3>
-                    Admin Informationen
-                  </h3>
-
-                  <p>
-                    <strong>
-                      E-Mail:
-                    </strong>
-
-                    <br />
-
-                    {selectedProfile.email ||
-                      "E-Mail wird über Auth verwaltet"}
-                  </p>
-
-                </div>
-              )}
-
-              {user &&
-                selectedProfile.id !==
-                  user.id && (
-                  <div>
-
-                    {getFriendshipStatus(
-                      selectedProfile.id
-                    ) === "FRIEND" && (
-                      <>
-                        <p>
-                          Ihr seid Freunde.
-                        </p>
-
-                        <button
-                          className="danger-button full-button"
-                          onClick={() =>
-                            removeFriend(
-                              selectedProfile
-                            )
-                          }
-                        >
-                          Freundschaft entfernen
-                        </button>
-                      </>
-                    )}
-
-                    {getFriendshipStatus(
-                      selectedProfile.id
-                    ) === "INCOMING" && (
-                      <p>
-                        Dieses Mitglied hat dir
-                        eine Freundschaftsanfrage
-                        gesendet.
-                      </p>
-                    )}
-
-                    {getFriendshipStatus(
-                      selectedProfile.id
-                    ) === "OUTGOING" && (
-                      <p>
-                        Freundschaftsanfrage wurde
-                        bereits gesendet.
-                      </p>
-                    )}
-
-                    {!getFriendshipStatus(
-                      selectedProfile.id
-                    ) && (
-                      <button
-                        className="primary-button full-button"
-                        onClick={() =>
-                          sendFriendRequest(
-                            selectedProfile
-                          )
-                        }
-                      >
-                        Freundschaftsanfrage senden
-                      </button>
-                    )}
-
-                  </div>
-                )}
-
-              {isAdmin(profile?.role) &&
-                selectedProfile.id !==
-                  user?.id && (
-                  <button
-                    className="secondary-button full-button"
-                    onClick={() =>
-                      changePoints(
-                        selectedProfile
-                      )
-                    }
-                  >
-                    Punkte ändern
-                  </button>
-                )}
-
-            </div>
-
-          </div>
-        )}
-
-      {authOpen && (
-        <AuthModal
-          mode={authMode}
-          onClose={() =>
-            setAuthOpen(false)
-          }
-          onModeChange={setAuthMode}
-        />
-      )}
-
-      <footer className="site-footer">
-
-        <div className="footer-content">
-
-          <div>
-
-            <img
-              src="/logo.png"
-              alt="Ennstal Connect"
-              className="footer-logo"
-            />
-
-            <p>
-              Deine regionale Community für
-              Ennstal und Obersteiermark.
-            </p>
-
-          </div>
-
-        </div>
-
-        <div className="footer-bottom">
-          © {new Date().getFullYear()}{" "}
-          Ennstal Connect
-        </div>
-
-      </footer>
-    </>
-  );
+  color: var(--text);
 }
 
-createRoot(
-  document.getElementById("root")
-).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease,
+    opacity 0.2s ease;
+}
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+
+  background:
+    rgba(16, 21, 20, 0.94);
+
+  backdrop-filter:
+    blur(16px);
+
+  border-bottom:
+    1px solid var(--border);
+
+  box-shadow:
+    0 5px 25px rgba(0, 0, 0, 0.25);
+}
+
+.header-content {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+
+  padding: 10px 22px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 25px;
+}
+
+/* =========================================================
+   LOGO
+========================================================= */
+
+.logo-area {
+  display: flex;
+  align-items: center;
+
+  margin: 0;
+  padding: 0;
+
+  flex-shrink: 0;
+}
+
+.logo {
+  display: block;
+
+  width: auto;
+  height: 92px;
+  max-width: min(34vw, 420px);
+
+  object-fit: contain;
+  object-position: left center;
+
+  filter:
+    drop-shadow(
+      0 4px 10px rgba(0, 0, 0, 0.3)
+    );
+}
+
+/* =========================================================
+   NAVIGATION
+========================================================= */
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 6px;
+
+  flex-wrap: wrap;
+}
+
+.nav-links button {
+  border: 1px solid transparent;
+
+  background: transparent;
+
+  color: var(--text-secondary);
+
+  padding: 10px 15px;
+
+  border-radius: 10px;
+
+  cursor: pointer;
+
+  font-weight: 600;
+}
+
+.nav-links button:hover {
+  color: white;
+
+  background: var(--bg-card);
+
+  border-color: var(--border);
+}
+
+.nav-links button.active {
+  color: white;
+
+  background:
+    linear-gradient(
+      135deg,
+      var(--primary),
+      var(--primary-dark)
+    );
+
+  border-color:
+    var(--primary-hover);
+}
+
+/* =========================================================
+   MAIN LAYOUT
+========================================================= */
+
+.site-main {
+  max-width: 1600px;
+
+  margin: 0 auto;
+
+  padding: 30px;
+}
+
+.page-layout {
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1fr)
+    360px;
+
+  gap: 25px;
+
+  align-items: start;
+}
+
+.content-area {
+  min-width: 0;
+}
+
+/* =========================================================
+   HERO
+========================================================= */
+
+.hero {
+  position: relative;
+
+  min-height: 310px;
+
+  overflow: hidden;
+
+  border-radius: 24px;
+
+  margin-bottom: 28px;
+
+  display: flex;
+  align-items: center;
+
+  border:
+    1px solid var(--border);
+
+  box-shadow:
+    var(--shadow);
+
+  background: #141b19;
+}
+
+.hero::before {
+  content: "";
+
+  position: absolute;
+
+  inset: 0;
+
+  background-image:
+    linear-gradient(
+      90deg,
+      rgba(8, 12, 11, 0.92) 0%,
+      rgba(10, 15, 13, 0.72) 40%,
+      rgba(10, 15, 13, 0.38) 100%
+    ),
+    url("/hero.jpg");
+
+  background-size: cover;
+
+  background-position: center;
+
+  opacity: 0.8;
+
+  filter:
+    brightness(0.7)
+    saturate(0.75);
+
+  transform:
+    scale(1.02);
+}
+
+.hero-content {
+  position: relative;
+
+  z-index: 2;
+
+  max-width: 680px;
+
+  padding: 48px;
+}
+
+.hero h1 {
+  margin: 0 0 15px;
+
+  font-size:
+    clamp(2.2rem, 5vw, 4.2rem);
+
+  line-height: 1.05;
+
+  color: white;
+}
+
+.hero p {
+  margin: 0;
+
+  font-size: 1.1rem;
+
+  line-height: 1.7;
+
+  color: #c4d0ca;
+}
+
+/* =========================================================
+   STANDARD CARDS
+========================================================= */
+
+.card,
+.news-card,
+.post-card,
+.profile-card,
+.stats-card,
+.admin-card,
+.member-card {
+  background:
+    linear-gradient(
+      145deg,
+      #1c2522,
+      #151c1a
+    );
+
+  border:
+    1px solid var(--border);
+
+  border-radius:
+    var(--radius);
+
+  box-shadow:
+    var(--shadow);
+}
+
+.card {
+  padding: 22px;
+}
+
+.card h2,
+.card h3,
+.news-card h2,
+.post-card h2,
+.profile-card h2,
+.stats-card h2,
+.admin-card h2 {
+  margin-top: 0;
+
+  color: white;
+}
+
+/* =========================================================
+   BUTTONS
+========================================================= */
+
+.primary-button {
+  border: 1px solid var(--primary-hover);
+
+  background:
+    linear-gradient(
+      135deg,
+      var(--primary),
+      var(--primary-dark)
+    );
+
+  color: white;
+
+  padding: 11px 18px;
+
+  border-radius: 10px;
+
+  cursor: pointer;
+
+  font-weight: 700;
+}
+
+.primary-button:hover {
+  background:
+    linear-gradient(
+      135deg,
+      var(--primary-hover),
+      var(--primary)
+    );
+
+  transform:
+    translateY(-1px);
+}
+
+.secondary-button {
+  border:
+    1px solid var(--border-light);
+
+  background:
+    var(--bg-card);
+
+  color:
+    var(--text);
+
+  padding:
+    10px 16px;
+
+  border-radius:
+    10px;
+
+  cursor: pointer;
+}
+
+.secondary-button:hover {
+  background:
+    var(--bg-card-hover);
+}
+
+.danger-button {
+  background:
+    #6f2828;
+
+  border:
+    1px solid #a13b3b;
+
+  color:
+    white;
+
+  padding:
+    10px 15px;
+
+  border-radius:
+    10px;
+
+  cursor:
+    pointer;
+}
+
+.full-button {
+  width: 100%;
+}
+
+/* =========================================================
+   FORMULARE
+========================================================= */
+
+input,
+textarea,
+select {
+  width: 100%;
+
+  color: var(--text);
+
+  background:
+    var(--bg-input);
+
+  border:
+    1px solid var(--border);
+
+  border-radius:
+    10px;
+
+  padding:
+    12px 14px;
+
+  margin-bottom:
+    12px;
+
+  outline: none;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-muted);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color:
+    var(--primary-hover);
+
+  box-shadow:
+    0 0 0 3px
+    rgba(61, 117, 101, 0.18);
+}
+
+textarea {
+  resize: vertical;
+  min-height: 110px;
+}
+
+/* =========================================================
+   MITGLIEDER
+========================================================= */
+
+.members-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(auto-fill, minmax(240px, 1fr));
+
+  gap: 18px;
+}
+
+.member-card {
+  position: relative;
+
+  padding: 18px;
+
+  min-height: 135px;
+
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.member-card:hover {
+  transform:
+    translateY(-4px);
+
+  border-color:
+    var(--primary-hover);
+
+  box-shadow:
+    0 15px 40px rgba(0, 0, 0, 0.38);
+}
+
+.member-top {
+  display: flex;
+
+  align-items: center;
+
+  gap: 13px;
+}
+
+.member-avatar {
+  width: 62px;
+  height: 62px;
+
+  flex-shrink: 0;
+
+  border-radius: 50%;
+
+  object-fit: cover;
+
+  background: #2a3531;
+
+  border:
+    3px solid var(--border-light);
+}
+
+.member-info {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 4px;
+}
+
+/* =========================================================
+   NICKNAME
+========================================================= */
+
+.nickname {
+  border: none;
+  padding: 0;
+
+  background: transparent;
+
+  text-align: left;
+
+  font-size: 1.08rem;
+  font-weight: 800;
+
+  cursor: pointer;
+
+  transition:
+    opacity 0.2s ease;
+}
+
+.nickname:hover {
+  opacity: 0.75;
+}
+
+.nickname-standard {
+  color: #9ba39f;
+}
+
+.nickname-premium {
+  color: #ffffff;
+}
+
+.nickname-admin {
+  color: var(--admin);
+}
+
+/* =========================================================
+   ONLINE / OFFLINE
+========================================================= */
+
+.status-line {
+  display: flex;
+
+  align-items: center;
+
+  gap: 7px;
+
+  font-size: 0.82rem;
+}
+
+.status-dot {
+  width: 9px;
+  height: 9px;
+
+  border-radius: 50%;
+
+  flex-shrink: 0;
+}
+
+.status-dot.online {
+  background: var(--online);
+
+  box-shadow:
+    0 0 10px
+    rgba(66, 199, 121, 0.7);
+}
+
+.status-dot.offline {
+  background: var(--offline);
+}
+
+.status-online {
+  color: var(--online);
+}
+
+.status-offline {
+  color: var(--text-muted);
+}
+
+/* =========================================================
+   MITGLIEDER BADGES
+========================================================= */
+
+.member-badges {
+  display: flex;
+
+  align-items: center;
+
+  gap: 7px;
+
+  margin-top: 8px;
+}
+
+.admin-star,
+.supporter-star {
+  font-size: 1rem;
+}
+
+.admin-star {
+  color: var(--admin);
+}
+
+.supporter-star {
+  color: var(--gold);
+}
+
+/* =========================================================
+   FREUNDESYMBOL
+========================================================= */
+
+.friend-icon {
+  width: 28px;
+  height: 28px;
+
+  object-fit: contain;
+
+  position: absolute;
+
+  top: 13px;
+  right: 13px;
+
+  filter:
+    drop-shadow(
+      0 2px 7px rgba(255, 0, 0, 0.35)
+    );
+}
+
+/* =========================================================
+   MITGLIEDER SUCHE
+========================================================= */
+
+.member-search {
+  margin-bottom: 20px;
+
+  position: relative;
+}
+
+.member-search input {
+  margin: 0;
+
+  padding-left: 42px;
+
+  background:
+    #121917;
+}
+
+.member-search::before {
+  content: "⌕";
+
+  position: absolute;
+
+  left: 15px;
+  top: 8px;
+
+  z-index: 2;
+
+  font-size: 1.5rem;
+
+  color: var(--text-muted);
+}
+
+/* =========================================================
+   RECHTE PROFILSEITE
+========================================================= */
+
+.profile-sidebar {
+  position: sticky;
+
+  top: 105px;
+
+  height: fit-content;
+
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 16px;
+}
+
+.profile-sidebar .card {
+  padding: 20px;
+
+  background:
+    linear-gradient(
+      145deg,
+      #1c2522,
+      #141a18
+    );
+}
+
+/* =========================================================
+   EIGENES PROFIL
+========================================================= */
+
+.profile-header {
+  display: flex;
+
+  align-items: center;
+
+  gap: 15px;
+
+  margin-bottom: 18px;
+}
+
+.profile-avatar {
+  width: 76px;
+  height: 76px;
+
+  flex-shrink: 0;
+
+  border-radius: 50%;
+
+  object-fit: cover;
+
+  background: #27312e;
+
+  border:
+    3px solid var(--primary-hover);
+}
+
+.profile-name {
+  margin: 0;
+
+  color: white;
+
+  font-size: 1.25rem;
+}
+
+.profile-role {
+  margin-top: 4px;
+
+  color: var(--text-muted);
+
+  font-size: 0.85rem;
+}
+
+/* =========================================================
+   PUNKTE
+========================================================= */
+
+.points-box {
+  background:
+    linear-gradient(
+      135deg,
+      #25322d,
+      #19211f
+    );
+
+  border:
+    1px solid #40584e;
+
+  border-radius:
+    14px;
+
+  padding:
+    18px;
+
+  margin-top:
+    14px;
+}
+
+.points-label {
+  color: var(--text-secondary);
+
+  font-size: 0.85rem;
+}
+
+.points-value {
+  display: block;
+
+  margin-top: 5px;
+
+  font-size: 2rem;
+
+  font-weight: 900;
+
+  color: var(--gold-light);
+}
+
+.purchase-points {
+  color: var(--gold);
+}
+
+/* =========================================================
+   BLINKENDE BELOHNUNG
+========================================================= */
+
+.reward-ready {
+  animation:
+    rewardBlink 1.2s infinite;
+}
+
+@keyframes rewardBlink {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.35;
+  }
+
+}
+
+/* =========================================================
+   NACHRICHTEN
+========================================================= */
+
+.message-alert {
+  color: var(--gold-light);
+
+  font-weight: 800;
+
+  animation:
+    messageBlink 1s infinite;
+}
+
+@keyframes messageBlink {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.25;
+  }
+
+}
+
+/* =========================================================
+   FREUNDE ONLINE
+========================================================= */
+
+.friends-online-list {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 10px;
+}
+
+.friend-online-item {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: 10px;
+
+  padding: 10px;
+
+  border-radius: 10px;
+
+  background:
+    #151d1a;
+
+  border:
+    1px solid var(--border);
+}
+
+.friend-online-name {
+  font-weight: 700;
+}
+
+/* =========================================================
+   NEWS
+========================================================= */
+
+.news-list,
+.posts-list {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 18px;
+}
+
+.news-card,
+.post-card {
+  padding: 22px;
+}
+
+.news-meta,
+.post-meta {
+  margin-top: 10px;
+
+  color: var(--text-muted);
+
+  font-size: 0.84rem;
+}
+
+/* =========================================================
+   BEITRÄGE
+========================================================= */
+
+.post-author {
+  display: flex;
+
+  align-items: center;
+
+  gap: 10px;
+
+  margin-bottom: 14px;
+}
+
+.post-avatar {
+  width: 44px;
+  height: 44px;
+
+  border-radius: 50%;
+
+  object-fit: cover;
+
+  background: #28332f;
+}
+
+.post-content {
+  line-height: 1.65;
+
+  color: #d8e0dc;
+}
+
+/* =========================================================
+   STATISTIK
+========================================================= */
+
+.stats-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(auto-fit, minmax(180px, 1fr));
+
+  gap: 16px;
+}
+
+.stat-box {
+  padding: 20px;
+
+  border-radius: 15px;
+
+  background:
+    linear-gradient(
+      145deg,
+      #1d2824,
+      #141a18
+    );
+
+  border:
+    1px solid var(--border);
+}
+
+.stat-label {
+  color: var(--text-muted);
+
+  font-size: 0.88rem;
+}
+
+.stat-value {
+  display: block;
+
+  margin-top: 8px;
+
+  font-size: 1.8rem;
+
+  font-weight: 900;
+
+  color: var(--text);
+}
+
+/* =========================================================
+   ADMIN BEREICH
+========================================================= */
+
+.admin-section {
+  margin-top: 25px;
+
+  padding: 24px;
+
+  border-radius: var(--radius);
+
+  background:
+    linear-gradient(
+      145deg,
+      #211b1b,
+      #171515
+    );
+
+  border:
+    1px solid #4c3030;
+}
+
+.admin-section h2 {
+  margin-top: 0;
+
+  color: #f3b1b1;
+}
+
+.admin-tools {
+  display: grid;
+
+  grid-template-columns:
+    repeat(auto-fit, minmax(200px, 1fr));
+
+  gap: 14px;
+}
+
+.admin-tool {
+  padding: 17px;
+
+  border-radius: 13px;
+
+  background:
+    #1a1f1d;
+
+  border:
+    1px solid var(--border);
+}
+
+.admin-tool h3 {
+  margin-top: 0;
+}
+
+/* =========================================================
+   ADMIN DASHBOARD
+========================================================= */
+
+.admin-stats {
+  display: grid;
+
+  grid-template-columns:
+    repeat(3, 1fr);
+
+  gap: 18px;
+
+  margin-bottom: 25px;
+}
+
+.admin-stat-card {
+  padding: 24px;
+
+  background:
+    linear-gradient(
+      145deg,
+      #202925,
+      #161d1a
+    );
+
+  border:
+    1px solid var(--border);
+
+  border-radius: 18px;
+}
+
+.admin-stat-number {
+  display: block;
+
+  margin-top: 12px;
+
+  font-size: 2.5rem;
+
+  font-weight: 900;
+
+  color: var(--text);
+}
+
+/* =========================================================
+   ADMIN MITGLIEDER
+========================================================= */
+
+.admin-members {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 12px;
+}
+
+.admin-member-row {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: 20px;
+
+  padding: 16px;
+
+  background:
+    #171e1b;
+
+  border:
+    1px solid var(--border);
+
+  border-radius: 13px;
+}
+
+.admin-member-info {
+  display: flex;
+
+  align-items: center;
+
+  gap: 13px;
+}
+
+.admin-email {
+  margin-top: 4px;
+
+  color: var(--text-muted);
+
+  font-size: 0.85rem;
+}
+
+/* =========================================================
+   MODAL
+========================================================= */
+
+.modal-overlay {
+  position: fixed;
+
+  inset: 0;
+
+  z-index: 5000;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  padding: 20px;
+
+  background:
+    rgba(0, 0, 0, 0.72);
+
+  backdrop-filter:
+    blur(7px);
+}
+
+.modal {
+  position: relative;
+
+  width:
+    min(520px, 100%);
+
+  max-height: 90vh;
+
+  overflow-y: auto;
+
+  padding: 28px;
+
+  border-radius: 20px;
+
+  background:
+    linear-gradient(
+      145deg,
+      #202925,
+      #151b19
+    );
+
+  border:
+    1px solid var(--border-light);
+
+  box-shadow:
+    0 30px 80px rgba(0, 0, 0, 0.65);
+}
+
+.modal h2 {
+  margin-top: 0;
+
+  color: white;
+}
+
+.close-button {
+  position: absolute;
+
+  top: 10px;
+  right: 15px;
+
+  border: none;
+
+  background: transparent;
+
+  color: var(--text-secondary);
+
+  font-size: 2rem;
+
+  cursor: pointer;
+}
+
+.close-button:hover {
+  color: white;
+}
+
+/* =========================================================
+   POPUP MELDUNGEN
+========================================================= */
+
+.message-popup {
+  position: fixed;
+
+  right: 25px;
+  bottom: 25px;
+
+  z-index: 6000;
+
+  max-width: 360px;
+
+  padding: 16px 20px;
+
+  border-radius: 13px;
+
+  background:
+    #1d2925;
+
+  color: white;
+
+  border:
+    1px solid var(--primary-hover);
+
+  box-shadow:
+    0 15px 45px rgba(0, 0, 0, 0.4);
+
+  animation:
+    popupIn 0.3s ease;
+}
+
+@keyframes popupIn {
+
+  from {
+    opacity: 0;
+
+    transform:
+      translateY(15px);
+  }
+
+  to {
+    opacity: 1;
+
+    transform:
+      translateY(0);
+  }
+
+}
+
+/* =========================================================
+   FOOTER
+========================================================= */
+
+.site-footer {
+  margin-top: 60px;
+
+  background:
+    #0b0f0e;
+
+  border-top:
+    1px solid var(--border);
+}
+
+.footer-content {
+  max-width: 1600px;
+
+  margin: 0 auto;
+
+  padding: 35px 30px;
+
+  display: flex;
+
+  align-items: flex-start;
+
+  justify-content: space-between;
+
+  gap: 30px;
+}
+
+.footer-logo {
+  width: 165px;
+  height: auto;
+
+  margin-bottom: 10px;
+}
+
+.footer-content p {
+  color: var(--text-muted);
+}
+
+.footer-links {
+  display: flex;
+
+  flex-wrap: wrap;
+
+  gap: 10px;
+}
+
+.footer-links button {
+  border: none;
+
+  background: transparent;
+
+  color: var(--text-secondary);
+
+  cursor: pointer;
+
+  padding: 8px;
+}
+
+.footer-links button:hover {
+  color: white;
+}
+
+.footer-bottom {
+  padding: 18px;
+
+  text-align: center;
+
+  color: var(--text-muted);
+
+  border-top:
+    1px solid var(--border);
+}
+
+/* =========================================================
+   SCROLLBAR
+========================================================= */
+
+::-webkit-scrollbar {
+  width: 11px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0d1210;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #303d38;
+
+  border-radius: 20px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #46554f;
+}
+
+/* =========================================================
+   RESPONSIVE – TABLET
+========================================================= */
+
+@media (max-width: 1150px) {
+
+  .page-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-sidebar {
+    position: static;
+
+    display: grid;
+
+    grid-template-columns:
+      repeat(auto-fit, minmax(280px, 1fr));
+  }
+
+  .admin-stats {
+    grid-template-columns: 1fr;
+  }
+
+}
+
+/* =========================================================
+   RESPONSIVE – MOBILE
+========================================================= */
+
+@media (max-width: 750px) {
+
+  .header-content {
+    padding: 10px 15px;
+
+    flex-wrap: wrap;
+  }
+
+  .logo {
+    height: 64px;
+    max-width: 62vw;
+  }
+
+  .nav-links {
+    width: 100%;
+
+    justify-content: flex-start;
+
+    flex-wrap: nowrap;
+
+    overflow-x: auto;
+
+    padding-bottom: 3px;
+  }
+
+  .nav-links button {
+    white-space: nowrap;
+  }
+
+  .site-main {
+    padding: 15px;
+  }
+
+  .hero {
+    min-height: 280px;
+  }
+
+  .hero-content {
+    padding: 32px 24px;
+  }
+
+  .hero h1 {
+    font-size: 2.3rem;
+  }
+
+  .members-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-sidebar {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-member-row {
+    align-items: flex-start;
+
+    flex-direction: column;
+  }
+
+  .footer-content {
+    padding: 30px 20px;
+
+    flex-direction: column;
+  }
+
+  .message-popup {
+    left: 15px;
+    right: 15px;
+    bottom: 15px;
+
+    max-width: none;
+  }
+
+}
