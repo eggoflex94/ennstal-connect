@@ -1,63 +1,70 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { supabase } from "./supabase";
 import "./styles.css";
 
-/* =========================================================
-   ENNSTAL CONNECT
-   Community – Main Component
-========================================================= */
+const logo = "/logo.png";
+
+function getInitials(profile) {
+  const name =
+    profile?.nickname ||
+    `${profile?.first_name || ""} ${profile?.last_name || ""}`.trim();
+
+  return name ? name.slice(0, 2).toUpperCase() : "EC";
+}
+
+function displayName(profile) {
+  if (!profile) return "Mitglied";
+
+  return (
+    profile.nickname ||
+    `${profile.first_name || ""} ${profile.last_name || ""}`.trim() ||
+    "Mitglied"
+  );
+}
 
 function App() {
-  const [user, setUser] = useState(null);
+  const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
-  const [profiles, setProfiles] = useState([]);
-  const [posts, setPosts] = useState([]);
-  const [marketplaceItems, setMarketplaceItems] = useState([]);
-  const [notifications, setNotifications] = useState([]);
-  const [friendRequests, setFriendRequests] = useState([]);
-  const [messages, setMessages] = useState([]);
-  const [onlineUsers, setOnlineUsers] = useState([]);
+  const [page, setPage] = useState("start");
 
-  const [activePage, setActivePage] = useState("home");
-  const [authMode, setAuthMode] = useState(null);
-  const [selectedMember, setSelectedMember] = useState(null);
-  const [selectedChat, setSelectedChat] = useState(null);
+  const [posts, setPosts] = useState([]);
+  const [members, setMembers] = useState([]);
+  const [marketplace, setMarketplace] = useState([]);
+  const [messages, setMessages] = useState([]);
 
   const [loading, setLoading] = useState(true);
-  const [notice, setNotice] = useState("");
+  const [authMode, setAuthMode] = useState(null);
+  const [message, setMessage] = useState("");
 
-  const [postContent, setPostContent] = useState("");
-  const [marketForm, setMarketForm] = useState({
-    title: "",
-    description: "",
-    price: ""
-  });
+  const [newPost, setNewPost] = useState("");
+  const [marketTitle, setMarketTitle] = useState("");
+  const [marketDescription, setMarketDescription] = useState("");
+  const [marketPrice, setMarketPrice] = useState("");
 
-  const [authForm, setAuthForm] = useState({
+  const [profileForm, setProfileForm] = useState({
     first_name: "",
     last_name: "",
     nickname: "",
-    birth_date: "",
-    email: "",
-    password: ""
+    bio: "",
   });
 
-  /* =========================================================
-     START
-  ========================================================= */
+  const isAdmin =
+    profile?.role === "admin" || profile?.role === "hauptadmin";
+
+  const isMainAdmin = profile?.role === "hauptadmin";
 
   useEffect(() => {
     loadSession();
 
     const {
-      data: { subscription }
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setUser(session.user);
-        loadAll(session.user);
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession);
+
+      if (newSession?.user) {
+        loadProfile(newSession.user.id);
       } else {
-        setUser(null);
         setProfile(null);
       }
     });
@@ -65,1772 +72,1229 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
+  useEffect(() => {
+    if (session?.user) {
+      loadCommunityData();
+    }
+  }, [session]);
+
   async function loadSession() {
     setLoading(true);
 
     const {
-      data: { session }
+      data: { session },
     } = await supabase.auth.getSession();
 
+    setSession(session);
+
     if (session?.user) {
-      setUser(session.user);
-      await loadAll(session.user);
+      await loadProfile(session.user.id);
+      await loadCommunityData();
     }
 
     setLoading(false);
   }
 
-  async function loadAll(currentUser) {
+  async function loadProfile(userId) {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .single();
+
+    if (!error && data) {
+      setProfile(data);
+
+      setProfileForm({
+        first_name: data.first_name || "",
+        last_name: data.last_name || "",
+        nickname: data.nickname || "",
+        bio: data.bio || "",
+      });
+    }
+  }
+
+  async function loadCommunityData() {
     await Promise.all([
-      loadProfile(currentUser),
-      loadProfiles(),
       loadPosts(),
+      loadMembers(),
       loadMarketplace(),
-      loadNotifications(currentUser),
-      loadFriendRequests(currentUser),
-      loadMessages(currentUser),
-      loadOnlineUsers()
+      loadMessages(),
     ]);
   }
 
-  /* =========================================================
-     PROFILE
-  ========================================================= */
-
-  async function loadProfile(currentUser = user) {
-    if (!currentUser) return;
-
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", currentUser.id)
-      .single();
-
-    if (error) {
-      console.log("Profil konnte nicht geladen werden:", error.message);
-      return;
-    }
-
-    setProfile(data);
-
-    /* Online-Status aktualisieren */
-    try {
-      await supabase
-        .from("online_sessions")
-        .upsert({
-          user_id: currentUser.id,
-          last_seen: new Date().toISOString()
-        });
-    } catch (error) {
-      console.log("Online Status:", error.message);
-    }
-  }
-
-  async function loadProfiles() {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (!error) {
-      setProfiles(data || []);
-    }
-  }
-
-  async function updateProfile(updates) {
-    if (!user) return;
-
-    const { error } = await supabase
-      .from("profiles")
-      .update(updates)
-      .eq("id", user.id);
-
-    if (error) {
-      showNotice(error.message);
-      return;
-    }
-
-    showNotice("Profil erfolgreich gespeichert.");
-    await loadProfile();
-    await loadProfiles();
-  }
-
-  /* =========================================================
-     POSTS / COMMUNITY
-  ========================================================= */
-
   async function loadPosts() {
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("posts")
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (!error) {
-      setPosts(data || []);
-    }
+    if (data) setPosts(data);
   }
 
-  async function createPost(e) {
-    e.preventDefault();
+  async function loadMembers() {
+    const { data } = await supabase
+      .from("profiles")
+      .select("*")
+      .order("created_at", { ascending: false });
 
-    if (!user) {
-      setAuthMode("login");
-      return;
-    }
-
-    if (!postContent.trim()) return;
-
-    const { error } = await supabase
-      .from("posts")
-      .insert({
-        author_id: user.id,
-        content: postContent.trim()
-      });
-
-    if (error) {
-      showNotice(error.message);
-      return;
-    }
-
-    setPostContent("");
-    showNotice("Dein Beitrag wurde veröffentlicht.");
-    await loadPosts();
+    if (data) setMembers(data);
   }
-
-  /* =========================================================
-     MARKTPLATZ
-  ========================================================= */
 
   async function loadMarketplace() {
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("marketplace_items")
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (!error) {
-      setMarketplaceItems(data || []);
-    }
+    if (data) setMarketplace(data);
   }
 
-  async function createMarketplaceItem(e) {
-    e.preventDefault();
+  async function loadMessages() {
+    if (!session?.user) return;
 
-    if (!user) {
-      setAuthMode("login");
-      return;
-    }
+    const { data } = await supabase
+      .from("messages")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(20);
 
-    if (!marketForm.title.trim()) return;
+    if (data) setMessages(data);
+  }
 
-    const { error } = await supabase
-      .from("marketplace_items")
-      .insert({
-        seller_id: user.id,
-        title: marketForm.title,
-        description: marketForm.description,
-        price: marketForm.price
-      });
+  async function createPost() {
+    if (!newPost.trim()) return;
 
-    if (error) {
-      showNotice(error.message);
-      return;
-    }
-
-    setMarketForm({
-      title: "",
-      description: "",
-      price: ""
+    const { error } = await supabase.from("posts").insert({
+      author_id: session.user.id,
+      content: newPost.trim(),
     });
 
-    showNotice("Dein Angebot wurde veröffentlicht.");
-    await loadMarketplace();
-  }
-
-  /* =========================================================
-     FREUNDE
-  ========================================================= */
-
-  async function loadFriendRequests(currentUser = user) {
-    if (!currentUser) return;
-
-    const { data, error } = await supabase
-      .from("friend_requests")
-      .select("*")
-      .eq("receiver_id", currentUser.id)
-      .eq("status", "pending")
-      .order("created_at", { ascending: false });
-
-    if (!error) {
-      setFriendRequests(data || []);
-    }
-  }
-
-  async function sendFriendRequest(receiverId) {
-    if (!user) {
-      setAuthMode("login");
+    if (error) {
+      setMessage(error.message);
       return;
     }
 
+    setNewPost("");
+    await loadPosts();
+    setMessage("Dein Beitrag wurde veröffentlicht.");
+  }
+
+  async function createMarketplaceItem() {
+    if (!marketTitle.trim()) return;
+
     const { error } = await supabase
-      .from("friend_requests")
+      .from("marketplace_items")
       .insert({
-        sender_id: user.id,
-        receiver_id: receiverId,
-        status: "pending"
+        author_id: session.user.id,
+        title: marketTitle,
+        description: marketDescription,
+        price: marketPrice,
       });
 
     if (error) {
-      showNotice(error.message);
+      setMessage(error.message);
       return;
     }
 
-    showNotice("Freundschaftsanfrage wurde gesendet.");
+    setMarketTitle("");
+    setMarketDescription("");
+    setMarketPrice("");
+
+    await loadMarketplace();
+
+    setMessage("Dein Angebot wurde im Marketplace veröffentlicht.");
   }
 
-  async function answerFriendRequest(request, accepted) {
+  async function saveProfile() {
+    if (!profile) return;
+
     const { error } = await supabase
-      .from("friend_requests")
+      .from("profiles")
       .update({
-        status: accepted ? "accepted" : "rejected"
+        first_name: profileForm.first_name,
+        last_name: profileForm.last_name,
+        nickname: profileForm.nickname,
+        bio: profileForm.bio,
+        updated_at: new Date().toISOString(),
       })
-      .eq("id", request.id);
+      .eq("id", profile.id);
 
-    if (!error) {
-      showNotice(
-        accepted
-          ? "Freundschaftsanfrage angenommen."
-          : "Freundschaftsanfrage abgelehnt."
-      );
-
-      await loadFriendRequests();
+    if (error) {
+      setMessage(error.message);
+      return;
     }
+
+    await loadProfile(profile.id);
+    await loadMembers();
+
+    setMessage("Dein Profil wurde gespeichert.");
   }
 
-  /* =========================================================
-     NACHRICHTEN
-  ========================================================= */
-
-  async function loadMessages(currentUser = user) {
-    if (!currentUser) return;
-
-    const { data, error } = await supabase
-      .from("messages")
-      .select("*")
-      .or(
-        `sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`
-      )
-      .order("created_at", { ascending: true });
-
-    if (!error) {
-      setMessages(data || []);
-    }
-  }
-
-  async function sendMessage(receiverId, content) {
-    if (!content.trim() || !user) return;
-
-    const { error } = await supabase
-      .from("messages")
-      .insert({
-        sender_id: user.id,
-        receiver_id: receiverId,
-        content: content.trim()
-      });
-
-    if (!error) {
-      await loadMessages();
-    } else {
-      showNotice(error.message);
-    }
-  }
-
-  /* =========================================================
-     ONLINE
-  ========================================================= */
-
-  async function loadOnlineUsers() {
-    const { data, error } = await supabase
-      .from("online_sessions")
-      .select("*")
-      .order("last_seen", { ascending: false });
-
-    if (!error) {
-      setOnlineUsers(data || []);
-    }
-  }
-
-  /* =========================================================
-     BENACHRICHTIGUNGEN
-  ========================================================= */
-
-  async function loadNotifications(currentUser = user) {
-    if (!currentUser) return;
-
-    const { data, error } = await supabase
-      .from("notifications")
-      .select("*")
-      .eq("user_id", currentUser.id)
-      .order("created_at", { ascending: false });
-
-    if (!error) {
-      setNotifications(data || []);
-    }
-  }
-
-  /* =========================================================
-     ADMIN
-  ========================================================= */
-
-  function isAdmin() {
-    return (
-      profile?.role === "admin" ||
-      profile?.role === "mainadmin" ||
-      profile?.role === "superadmin"
-    );
-  }
-
-  function isMainAdmin() {
-    return (
-      profile?.role === "mainadmin" ||
-      profile?.role === "superadmin"
-    );
-  }
-
-  async function approveMember(memberId) {
+  async function approveMember(member) {
     const { error } = await supabase
       .from("profiles")
       .update({
         approved: true,
-        status: "approved"
+        status: "approved",
       })
-      .eq("id", memberId);
+      .eq("id", member.id);
 
     if (error) {
-      showNotice(error.message);
+      setMessage(error.message);
       return;
     }
 
-    showNotice("Mitglied wurde freigegeben.");
-    await loadProfiles();
+    await loadMembers();
+    setMessage(`${displayName(member)} wurde freigegeben.`);
   }
 
-  async function rejectMember(memberId) {
+  async function rejectMember(member) {
     const { error } = await supabase
       .from("profiles")
       .update({
         approved: false,
-        status: "rejected"
+        status: "rejected",
       })
-      .eq("id", memberId);
+      .eq("id", member.id);
 
     if (error) {
-      showNotice(error.message);
+      setMessage(error.message);
       return;
     }
 
-    showNotice("Anfrage wurde abgelehnt.");
-    await loadProfiles();
+    await loadMembers();
   }
 
-  /* =========================================================
-     AUTH
-  ========================================================= */
-
-  function changeAuthField(name, value) {
-    setAuthForm((old) => ({
-      ...old,
-      [name]: value
-    }));
-  }
-
-  async function register(e) {
-    e.preventDefault();
-
-    const { data, error } = await supabase.auth.signUp({
-      email: authForm.email,
-      password: authForm.password,
-      options: {
-        emailRedirectTo: window.location.origin,
-        data: {
-          first_name: authForm.first_name,
-          last_name: authForm.last_name,
-          nickname: authForm.nickname,
-          birth_date: authForm.birth_date
-        }
-      }
-    });
-
-    if (error) {
-      showNotice(error.message);
-      return;
-    }
-
-    /*
-      Profil auf "wartet auf Freigabe".
-      Falls dein Trigger in Supabase das Profil bereits erstellt,
-      wird upsert verwendet.
-    */
-
-    if (data?.user) {
-      await supabase
-        .from("profiles")
-        .upsert({
-          id: data.user.id,
-          first_name: authForm.first_name,
-          last_name: authForm.last_name,
-          nickname: authForm.nickname,
-          birth_date: authForm.birth_date,
-          email: authForm.email,
-          approved: false,
-          status: "pending",
-          role: "member"
-        });
-    }
-
-    showNotice(
-      "Registrierung erfolgreich. Dein Konto muss jetzt von einem Admin freigegeben werden."
-    );
-
-    setAuthMode(null);
-  }
-
-  async function login(e) {
-    e.preventDefault();
-
-    const { error } = await supabase.auth.signInWithPassword({
-      email: authForm.email,
-      password: authForm.password
-    });
-
-    if (error) {
-      showNotice(error.message);
-      return;
-    }
-
-    setAuthMode(null);
-  }
-
-  async function logout() {
+  async function signOut() {
     await supabase.auth.signOut();
-    setActivePage("home");
+    setPage("start");
   }
 
-  /* =========================================================
-     HILFE
-  ========================================================= */
+  const pendingMembers = useMemo(
+    () =>
+      members.filter(
+        (member) =>
+          member.approved === false ||
+          member.status === "pending" ||
+          member.status === null
+      ),
+    [members]
+  );
 
-  function showNotice(text) {
-    setNotice(text);
-
-    window.setTimeout(() => {
-      setNotice("");
-    }, 5000);
-  }
-
-  function getProfileName(id) {
-    const person = profiles.find((item) => item.id === id);
-
-    if (!person) return "Mitglied";
-
-    return (
-      person.nickname ||
-      `${person.first_name || ""} ${person.last_name || ""}`.trim() ||
-      "Mitglied"
-    );
-  }
-
-  function getMemberStatus(member) {
-    if (member.role === "mainadmin" || member.role === "superadmin") {
-      return "⭐ Hauptadmin";
-    }
-
-    if (member.role === "admin") {
-      return "⭐ Admin";
-    }
-
-    if (member.role === "supporter") {
-      return "★ Supporter";
-    }
-
-    return "Mitglied";
-  }
-
-  function isApproved() {
-    if (!profile) return false;
-
-    return (
-      profile.approved === true ||
-      profile.status === "approved" ||
-      isAdmin()
-    );
-  }
-
-  /* =========================================================
-     LOADING
-  ========================================================= */
+  const approvedMembers = useMemo(
+    () =>
+      members.filter(
+        (member) =>
+          member.approved === true ||
+          member.status === "approved"
+      ),
+    [members]
+  );
 
   if (loading) {
     return (
-      <div className="loadingScreen">
-        <img src="/logo.png" alt="Ennstal Connect" />
-        <h1>Ennstal Connect</h1>
-        <p>Community wird geladen ...</p>
+      <div className="loading-screen">
+        <div className="loading-logo">
+          <img src={logo} alt="Ennstal Connect" />
+        </div>
+        <p>Ennstal Connect wird geladen ...</p>
       </div>
     );
   }
 
-  /* =========================================================
-     WARTET AUF FREIGABE
-  ========================================================= */
-
-  if (user && profile && !isApproved()) {
+  if (!session) {
     return (
-      <div className="loadingScreen">
-        <img src="/logo.png" alt="Ennstal Connect" />
-        <h1>Deine Registrierung ist eingegangen</h1>
-
-        <p className="pendingText">
-          Willkommen bei Ennstal Connect, {profile.nickname || profile.first_name}.
-          Dein Konto wartet noch auf die Freigabe durch einen Administrator.
-        </p>
-
-        <button className="primaryButton" onClick={logout}>
-          Abmelden
-        </button>
-      </div>
+      <PublicHome
+        authMode={authMode}
+        setAuthMode={setAuthMode}
+        message={message}
+        setMessage={setMessage}
+      />
     );
   }
 
-  /* =========================================================
-     HAUPTSEITE
-  ========================================================= */
+  if (
+    profile &&
+    profile.approved !== true &&
+    profile.status !== "approved" &&
+    !isAdmin
+  ) {
+    return (
+      <div className="pending-page">
+        <img src={logo} alt="Ennstal Connect" className="pending-logo" />
+
+        <div className="pending-card">
+          <span className="eyebrow">ENNSTAL CONNECT</span>
+
+          <h1>Dein Konto wartet auf Freigabe.</h1>
+
+          <p>
+            Willkommen {displayName(profile)}. Deine Registrierung war
+            erfolgreich. Ein Administrator muss dein Konto noch freigeben.
+          </p>
+
+          <p className="muted">
+            Danach kannst du alle Funktionen der Community nutzen.
+          </p>
+
+          <button className="secondary-button" onClick={signOut}>
+            Abmelden
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <>
+    <div className="app-shell">
       <header className="topbar">
-        <button
-          className="brand"
-          onClick={() => setActivePage("home")}
-        >
-          <img src="/logo.png" alt="Ennstal Connect Logo" />
+        <button className="brand" onClick={() => setPage("start")}>
+          <img src={logo} alt="Ennstal Connect Logo" className="brand-logo" />
           <span>Ennstal Connect</span>
         </button>
 
-        <nav className="mainNav">
+        <nav className="main-nav">
           <button
-            className={activePage === "home" ? "active" : ""}
-            onClick={() => setActivePage("home")}
+            className={page === "start" ? "active" : ""}
+            onClick={() => setPage("start")}
           >
             Start
           </button>
 
           <button
-            className={activePage === "news" ? "active" : ""}
-            onClick={() => setActivePage("news")}
+            className={page === "news" ? "active" : ""}
+            onClick={() => setPage("news")}
           >
             News
           </button>
 
           <button
-            className={activePage === "marketplace" ? "active" : ""}
-            onClick={() => setActivePage("marketplace")}
+            className={page === "marketplace" ? "active" : ""}
+            onClick={() => setPage("marketplace")}
           >
             Marktplatz
           </button>
 
           <button
-            className={activePage === "messages" ? "active" : ""}
-            onClick={() => setActivePage("messages")}
+            className={page === "messages" ? "active" : ""}
+            onClick={() => setPage("messages")}
           >
             Nachrichten
           </button>
 
           <button
-            className={activePage === "members" ? "active" : ""}
-            onClick={() => setActivePage("members")}
+            className={page === "profile" ? "active" : ""}
+            onClick={() => setPage("profile")}
           >
-            Mitglieder
+            Profil
           </button>
         </nav>
-
-        <div className="topActions">
-          {user ? (
-            <button
-              className="profileTopButton"
-              onClick={() => setActivePage("profile")}
-            >
-              {profile?.nickname || profile?.first_name || "Profil"}
-            </button>
-          ) : (
-            <>
-              <button onClick={() => setAuthMode("login")}>
-                Anmelden
-              </button>
-
-              <button
-                className="primaryButton smallButton"
-                onClick={() => setAuthMode("register")}
-              >
-                Registrieren
-              </button>
-            </>
-          )}
-        </div>
       </header>
 
-      {notice && (
-        <div className="notice">
-          {notice}
-        </div>
-      )}
-
-      <main className="appLayout">
-
-        {/* =====================================================
-            HAUPTINHALT
-        ====================================================== */}
-
-        <section className="mainContent">
-
-          {activePage === "home" && (
-            <>
-              <section className="hero">
-                <div className="heroContent">
-                  <span className="eyebrow">
-                    DEINE REGION. DEINE COMMUNITY.
-                  </span>
-
-                  <h1>
-                    Willkommen bei
-                    <br />
-                    Ennstal Connect
-                  </h1>
-
-                  <p>
-                    Verbinde dich mit Menschen aus deiner Region.
-                    Entdecke Neuigkeiten, tausche dich aus,
-                    finde neue Freunde und spannende Angebote.
-                  </p>
-
-                  <button
-                    className="primaryButton"
-                    onClick={() => {
-                      if (user) {
-                        setActivePage("news");
-                      } else {
-                        setAuthMode("register");
-                      }
-                    }}
-                  >
-                    Community entdecken →
-                  </button>
-                </div>
-              </section>
-
-              <section className="section">
-                <h2>Das Ennstal verbindet.</h2>
-
-                <div className="featureGrid">
-                  <div className="featureCard">
-                    <div className="featureIcon">👥</div>
-                    <h3>Menschen kennenlernen</h3>
-                    <p>
-                      Entdecke Mitglieder aus deiner Region und
-                      verbinde dich miteinander.
-                    </p>
-                  </div>
-
-                  <div className="featureCard">
-                    <div className="featureIcon">💬</div>
-                    <h3>Austauschen</h3>
-                    <p>
-                      Teile Beiträge, schreibe Nachrichten und bleibe
-                      mit deiner Community verbunden.
-                    </p>
-                  </div>
-
-                  <div className="featureCard">
-                    <div className="featureIcon">🏔️</div>
-                    <h3>Regional entdecken</h3>
-                    <p>
-                      Entdecke Neuigkeiten, Angebote und Menschen
-                      aus dem Ennstal.
-                    </p>
-                  </div>
-                </div>
-              </section>
-            </>
+      <main className="community-layout">
+        <section className="main-content">
+          {message && (
+            <div className="success-message">
+              {message}
+              <button onClick={() => setMessage("")}>×</button>
+            </div>
           )}
 
-          {/* =====================================================
-              NEWS / COMMUNITY POSTS
-          ====================================================== */}
-
-          {activePage === "news" && (
-            <section className="section">
-              <div className="sectionHeader">
-                <div>
-                  <span className="eyebrow">COMMUNITY</span>
-                  <h1>Neuigkeiten</h1>
-                  <p>Was gibt es Neues in deiner Community?</p>
-                </div>
-              </div>
-
-              {user && (
-                <form className="postComposer" onSubmit={createPost}>
-                  <textarea
-                    value={postContent}
-                    onChange={(e) => setPostContent(e.target.value)}
-                    placeholder="Was möchtest du mit der Community teilen?"
-                  />
-
-                  <button className="primaryButton">
-                    Beitrag veröffentlichen
-                  </button>
-                </form>
-              )}
-
-              <div className="postList">
-                {posts.length === 0 && (
-                  <div className="emptyState">
-                    Noch keine Beiträge vorhanden.
-                  </div>
-                )}
-
-                {posts.map((post) => (
-                  <article className="postCard" key={post.id}>
-                    <div className="postAuthor">
-                      <div className="avatar">
-                        {getProfileName(post.author_id).charAt(0)}
-                      </div>
-
-                      <div>
-                        <strong>
-                          {getProfileName(post.author_id)}
-                        </strong>
-
-                        <span>
-                          {post.created_at
-                            ? new Date(post.created_at).toLocaleString("de-AT")
-                            : ""}
-                        </span>
-                      </div>
-                    </div>
-
-                    <p className="postText">
-                      {post.content}
-                    </p>
-                  </article>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* =====================================================
-              MARKTPLATZ
-          ====================================================== */}
-
-          {activePage === "marketplace" && (
-            <section className="section">
-              <span className="eyebrow">REGIONAL</span>
-              <h1>Marktplatz</h1>
-
-              <p>
-                Angebote und Dinge aus der Community.
-              </p>
-
-              {user && (
-                <form
-                  className="marketForm"
-                  onSubmit={createMarketplaceItem}
-                >
-                  <input
-                    placeholder="Titel deines Angebots"
-                    value={marketForm.title}
-                    onChange={(e) =>
-                      setMarketForm({
-                        ...marketForm,
-                        title: e.target.value
-                      })
-                    }
-                  />
-
-                  <textarea
-                    placeholder="Beschreibung"
-                    value={marketForm.description}
-                    onChange={(e) =>
-                      setMarketForm({
-                        ...marketForm,
-                        description: e.target.value
-                      })
-                    }
-                  />
-
-                  <input
-                    placeholder="Preis, z. B. 20 €"
-                    value={marketForm.price}
-                    onChange={(e) =>
-                      setMarketForm({
-                        ...marketForm,
-                        price: e.target.value
-                      })
-                    }
-                  />
-
-                  <button className="primaryButton">
-                    Angebot veröffentlichen
-                  </button>
-                </form>
-              )}
-
-              <div className="marketGrid">
-                {marketplaceItems.map((item) => (
-                  <article className="marketCard" key={item.id}>
-                    <div className="marketImage">
-                      🏔️
-                    </div>
-
-                    <h3>{item.title}</h3>
-
-                    <p>
-                      {item.description}
-                    </p>
-
-                    <div className="marketFooter">
-                      <strong>
-                        {item.price || "Preis auf Anfrage"}
-                      </strong>
-
-                      <span>
-                        {getProfileName(item.seller_id)}
-                      </span>
-                    </div>
-
-                    {user &&
-                      user.id !== item.seller_id && (
-                        <button
-                          className="secondaryButton"
-                          onClick={() => {
-                            setSelectedChat(item.seller_id);
-                            setActivePage("messages");
-                          }}
-                        >
-                          Nachricht schreiben
-                        </button>
-                      )}
-                  </article>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* =====================================================
-              MITGLIEDER
-          ====================================================== */}
-
-          {activePage === "members" && (
-            <section className="section">
-              <span className="eyebrow">COMMUNITY</span>
-              <h1>Mitglieder</h1>
-
-              <div className="memberGrid">
-                {profiles
-                  .filter(
-                    (member) =>
-                      member.approved === true ||
-                      member.status === "approved" ||
-                      member.role === "admin" ||
-                      member.role === "mainadmin" ||
-                      member.role === "superadmin"
-                  )
-                  .map((member) => (
-                    <article
-                      className="memberCard"
-                      key={member.id}
-                    >
-                      <div className="memberAvatar">
-                        {member.nickname?.charAt(0) ||
-                          member.first_name?.charAt(0) ||
-                          "M"}
-                      </div>
-
-                      <h3>
-                        {member.nickname ||
-                          `${member.first_name || ""} ${
-                            member.last_name || ""
-                          }`}
-                      </h3>
-
-                      <span
-                        className={
-                          member.role === "admin" ||
-                          member.role === "mainadmin" ||
-                          member.role === "superadmin"
-                            ? "role adminRole"
-                            : "role"
-                        }
-                      >
-                        {getMemberStatus(member)}
-                      </span>
-
-                      <p>
-                        {member.bio ||
-                          "Mitglied der Ennstal Connect Community."}
-                      </p>
-
-                      {user &&
-                        user.id !== member.id && (
-                          <div className="memberActions">
-                            <button
-                              className="secondaryButton"
-                              onClick={() =>
-                                setSelectedMember(member)
-                              }
-                            >
-                              Profil
-                            </button>
-
-                            <button
-                              className="secondaryButton"
-                              onClick={() =>
-                                sendFriendRequest(member.id)
-                              }
-                            >
-                              Freund hinzufügen
-                            </button>
-                          </div>
-                        )}
-                    </article>
-                  ))}
-              </div>
-            </section>
-          )}
-
-          {/* =====================================================
-              NACHRICHTEN
-          ====================================================== */}
-
-          {activePage === "messages" && (
-            <MessagesPage
-              user={user}
-              profiles={profiles}
-              messages={messages}
-              selectedChat={selectedChat}
-              setSelectedChat={setSelectedChat}
-              sendMessage={sendMessage}
-              getProfileName={getProfileName}
+          {page === "start" && (
+            <StartPage
+              profile={profile}
+              setPage={setPage}
+              posts={posts}
+              members={approvedMembers}
             />
           )}
 
-          {/* =====================================================
-              PROFIL
-          ====================================================== */}
+          {page === "news" && (
+            <NewsPage
+              newPost={newPost}
+              setNewPost={setNewPost}
+              createPost={createPost}
+              posts={posts}
+              members={members}
+              currentUser={session.user}
+            />
+          )}
 
-          {activePage === "profile" && user && profile && (
+          {page === "marketplace" && (
+            <MarketplacePage
+              marketplace={marketplace}
+              marketTitle={marketTitle}
+              setMarketTitle={setMarketTitle}
+              marketDescription={marketDescription}
+              setMarketDescription={setMarketDescription}
+              marketPrice={marketPrice}
+              setMarketPrice={setMarketPrice}
+              createMarketplaceItem={createMarketplaceItem}
+              members={members}
+            />
+          )}
+
+          {page === "messages" && (
+            <MessagesPage messages={messages} />
+          )}
+
+          {page === "profile" && (
             <ProfilePage
               profile={profile}
-              updateProfile={updateProfile}
+              profileForm={profileForm}
+              setProfileForm={setProfileForm}
+              saveProfile={saveProfile}
             />
           )}
 
-          {/* =====================================================
-              ADMIN
-          ====================================================== */}
-
-          {activePage === "admin" && isAdmin() && (
+          {page === "admin" && isAdmin && (
             <AdminPage
-              profiles={profiles}
+              pendingMembers={pendingMembers}
+              approvedMembers={approvedMembers}
               approveMember={approveMember}
               rejectMember={rejectMember}
-              isMainAdmin={isMainAdmin()}
+              isMainAdmin={isMainAdmin}
             />
           )}
-
         </section>
 
-        {/* =====================================================
-            RECHTER MEIN BEREICH
-        ====================================================== */}
-
-        <aside className="rightSidebar">
-
-          {!user ? (
-            <div className="sidebarCard">
-              <h3>Willkommen</h3>
-              <p>
-                Melde dich an und werde Teil der Community.
-              </p>
-
-              <button
-                className="primaryButton fullButton"
-                onClick={() => setAuthMode("login")}
-              >
-                Anmelden
-              </button>
-
-              <button
-                className="secondaryButton fullButton"
-                onClick={() => setAuthMode("register")}
-              >
-                Registrieren
-              </button>
+        <aside className="right-sidebar">
+          <div className="sidebar-profile">
+            <div className="avatar large">
+              {getInitials(profile)}
             </div>
-          ) : (
-            <>
-              <div className="sidebarCard userCard">
-                <div className="userCardTop">
-                  <div className="bigAvatar">
-                    {profile?.nickname?.charAt(0) ||
-                      profile?.first_name?.charAt(0) ||
-                      "M"}
+
+            <div>
+              <strong>{displayName(profile)}</strong>
+
+              <div className="role-line">
+                <span className="online-dot"></span>
+
+                {profile?.role === "hauptadmin" && (
+                  <span className="role-badge main-admin">
+                    ★ Hauptadmin
+                  </span>
+                )}
+
+                {profile?.role === "admin" && (
+                  <span className="role-badge admin">
+                    ★ Admin
+                  </span>
+                )}
+
+                {profile?.role === "supporter" && (
+                  <span className="role-badge supporter">
+                    ★ Unterstützer
+                  </span>
+                )}
+
+                {!profile?.role && (
+                  <span className="role-badge member">
+                    Mitglied
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="sidebar-card">
+            <div className="sidebar-title">
+              <h3>Online</h3>
+              <span>{approvedMembers.length}</span>
+            </div>
+
+            <div className="online-list">
+              {approvedMembers.slice(0, 8).map((member) => (
+                <button
+                  key={member.id}
+                  className="online-member"
+                  onClick={() => setPage("profile")}
+                >
+                  <div className="avatar small">
+                    {getInitials(member)}
                   </div>
 
                   <div>
-                    <h3>
-                      {profile?.nickname ||
-                        profile?.first_name}
-                    </h3>
+                    <strong>{displayName(member)}</strong>
 
-                    <span className="onlineLabel">
-                      ● Online
-                    </span>
+                    <small>
+                      {member.role === "hauptadmin"
+                        ? "★ Hauptadmin"
+                        : member.role === "admin"
+                        ? "★ Admin"
+                        : member.role === "supporter"
+                        ? "★ Unterstützer"
+                        : "Mitglied"}
+                    </small>
                   </div>
-                </div>
 
-                <button
-                  className="secondaryButton fullButton"
-                  onClick={() => setActivePage("profile")}
-                >
-                  Mein Profil bearbeiten
+                  <span className="online-dot"></span>
                 </button>
-              </div>
+              ))}
 
-              <div className="sidebarCard">
-                <h3>Mein Bereich</h3>
+              {approvedMembers.length === 0 && (
+                <p className="empty-text">
+                  Noch keine Mitglieder sichtbar.
+                </p>
+              )}
+            </div>
+          </div>
 
-                <button
-                  className="sideLink"
-                  onClick={() => setActivePage("members")}
-                >
-                  👥 Mitglieder
-                </button>
+          <div className="sidebar-card">
+            <div className="sidebar-title">
+              <h3>Mein Bereich</h3>
+            </div>
 
-                <button
-                  className="sideLink"
-                  onClick={() => setActivePage("messages")}
-                >
-                  💬 Nachrichten
-                </button>
+            <div className="sidebar-menu">
+              <button onClick={() => setPage("profile")}>
+                👤 Mein Profil
+              </button>
 
-                <button
-                  className="sideLink"
-                  onClick={() => setActivePage("profile")}
-                >
-                  👤 Mein Profil
-                </button>
+              <button onClick={() => setPage("messages")}>
+                💬 Nachrichten
+              </button>
 
-                <button
-                  className="sideLink"
-                  onClick={() => setActivePage("notifications")}
-                >
-                  🔔 Benachrichtigungen
-                  {notifications.length > 0 && (
-                    <span className="countBadge">
-                      {notifications.length}
+              <button onClick={() => setPage("news")}>
+                📰 Meine Community
+              </button>
+
+              <button onClick={() => setPage("marketplace")}>
+                🛍️ Meine Angebote
+              </button>
+
+              {isAdmin && (
+                <button onClick={() => setPage("admin")}>
+                  🛠️ Admin Tools
+                  {pendingMembers.length > 0 && (
+                    <span className="notification-badge">
+                      {pendingMembers.length}
                     </span>
                   )}
                 </button>
-              </div>
-
-              <div className="sidebarCard">
-                <h3>Freundschaftsanfragen</h3>
-
-                {friendRequests.length === 0 && (
-                  <p className="smallText">
-                    Keine offenen Anfragen.
-                  </p>
-                )}
-
-                {friendRequests.map((request) => (
-                  <div
-                    className="friendRequest"
-                    key={request.id}
-                  >
-                    <strong>
-                      {getProfileName(request.sender_id)}
-                    </strong>
-
-                    <div>
-                      <button
-                        className="acceptButton"
-                        onClick={() =>
-                          answerFriendRequest(request, true)
-                        }
-                      >
-                        ✓
-                      </button>
-
-                      <button
-                        className="rejectButton"
-                        onClick={() =>
-                          answerFriendRequest(request, false)
-                        }
-                      >
-                        ×
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="sidebarCard">
-                <h3>Online</h3>
-
-                {onlineUsers.slice(0, 8).map((online) => (
-                  <div
-                    className="onlineUser"
-                    key={online.user_id || online.id}
-                  >
-                    <span className="onlineDot" />
-
-                    {getProfileName(online.user_id)}
-                  </div>
-                ))}
-
-                {onlineUsers.length === 0 && (
-                  <p className="smallText">
-                    Derzeit keine weiteren Mitglieder online.
-                  </p>
-                )}
-              </div>
-
-              {isAdmin() && (
-                <div className="sidebarCard adminBox">
-                  <h3>⭐ Admin Tools</h3>
-
-                  <button
-                    className="sideLink"
-                    onClick={() => setActivePage("admin")}
-                  >
-                    Mitglieder verwalten
-                  </button>
-
-                  <button
-                    className="sideLink"
-                    onClick={() => setActivePage("admin")}
-                  >
-                    Freigaben
-                  </button>
-                </div>
               )}
 
-              <div className="sidebarCard">
-                <button
-                  className="logoutButton"
-                  onClick={logout}
-                >
-                  Abmelden
-                </button>
-              </div>
-            </>
-          )}
+              <button className="logout-button" onClick={signOut}>
+                ↪ Abmelden
+              </button>
+            </div>
+          </div>
         </aside>
       </main>
 
-      {/* =====================================================
-          FOOTER
-      ====================================================== */}
+      <footer>
+        <span>© {new Date().getFullYear()} Ennstal Connect</span>
 
-      <footer className="footer">
         <div>
-          <strong>Ennstal Connect</strong>
-          <span>Deine Region. Deine Community.</span>
-        </div>
-
-        <div className="footerLinks">
-          <button onClick={() => setActivePage("rules")}>
-            Community-Regeln
-          </button>
-
-          <button onClick={() => setActivePage("privacy")}>
-            Datenschutz
-          </button>
-
-          <button onClick={() => setActivePage("imprint")}>
-            Impressum
-          </button>
+          <button>Impressum</button>
+          <button>Datenschutz</button>
+          <button>Community-Regeln</button>
         </div>
       </footer>
+    </div>
+  );
+}
 
-      {/* =====================================================
-          AUTH MODAL
-      ====================================================== */}
+function PublicHome({ authMode, setAuthMode, message, setMessage }) {
+  return (
+    <div className="public-home">
+      <header className="topbar public-bar">
+        <div className="brand">
+          <img src={logo} alt="Ennstal Connect Logo" className="brand-logo" />
+          <span>Ennstal Connect</span>
+        </div>
+
+        <div className="public-actions">
+          <button
+            className="secondary-button"
+            onClick={() => setAuthMode("login")}
+          >
+            Anmelden
+          </button>
+
+          <button
+            className="primary-button"
+            onClick={() => setAuthMode("register")}
+          >
+            Mitglied werden
+          </button>
+        </div>
+      </header>
+
+      <main className="public-main">
+        <section className="public-hero">
+          <span className="eyebrow">DEINE REGION. DEINE COMMUNITY.</span>
+
+          <h1>
+            Willkommen bei
+            <br />
+            Ennstal Connect
+          </h1>
+
+          <p>
+            Verbinde dich mit Menschen aus deiner Region.
+            Entdecke Neuigkeiten, tausche dich aus und finde spannende Angebote.
+          </p>
+
+          <button
+            className="primary-button large-button"
+            onClick={() => setAuthMode("register")}
+          >
+            Community entdecken →
+          </button>
+
+          <div className="hero-info">
+            <div className="hero-icon">🏔️</div>
+
+            <div>
+              <h2>Das Ennstal verbindet.</h2>
+              <p>
+                Menschen, Neuigkeiten, Veranstaltungen und lokale Angebote
+                an einem Ort.
+              </p>
+            </div>
+          </div>
+        </section>
+      </main>
 
       {authMode && (
         <AuthModal
           mode={authMode}
           setMode={setAuthMode}
-          form={authForm}
-          changeField={changeAuthField}
-          login={login}
-          register={register}
-          close={() => setAuthMode(null)}
+          onClose={() => setAuthMode(null)}
+          setMessage={setMessage}
         />
       )}
 
-      {/* =====================================================
-          MEMBER MODAL
-      ====================================================== */}
-
-      {selectedMember && (
-        <div
-          className="modalOverlay"
-          onClick={() => setSelectedMember(null)}
-        >
-          <div
-            className="modal memberModal"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              className="closeButton"
-              onClick={() => setSelectedMember(null)}
-            >
-              ×
-            </button>
-
-            <div className="profilePreviewAvatar">
-              {selectedMember.nickname?.charAt(0) ||
-                selectedMember.first_name?.charAt(0) ||
-                "M"}
-            </div>
-
-            <h2>
-              {selectedMember.nickname ||
-                `${selectedMember.first_name || ""} ${
-                  selectedMember.last_name || ""
-                }`}
-            </h2>
-
-            <span className="role">
-              {getMemberStatus(selectedMember)}
-            </span>
-
-            <p>
-              {selectedMember.bio ||
-                "Dieses Mitglied hat noch keine Beschreibung hinzugefügt."}
-            </p>
-
-            {user && user.id !== selectedMember.id && (
-              <>
-                <button
-                  className="primaryButton fullButton"
-                  onClick={() =>
-                    sendFriendRequest(selectedMember.id)
-                  }
-                >
-                  Freundschaftsanfrage senden
-                </button>
-
-                <button
-                  className="secondaryButton fullButton"
-                  onClick={() => {
-                    setSelectedChat(selectedMember.id);
-                    setSelectedMember(null);
-                    setActivePage("messages");
-                  }}
-                >
-                  Nachricht schreiben
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* =====================================================
-          SIMPLE INFO PAGES
-      ====================================================== */}
-
-      {activePage === "rules" && (
-        <InfoModal
-          title="Community-Regeln"
-          close={() => setActivePage("home")}
-        >
-          <p>1. Begegne anderen Mitgliedern respektvoll.</p>
-          <p>2. Keine Beleidigungen, Diskriminierung oder Belästigung.</p>
-          <p>3. Respektiere die Privatsphäre anderer Mitglieder.</p>
-          <p>4. Keine illegalen Inhalte.</p>
-          <p>5. Admin-Entscheidungen dienen dem Schutz der Community.</p>
-        </InfoModal>
-      )}
-
-      {activePage === "privacy" && (
-        <InfoModal
-          title="Datenschutz"
-          close={() => setActivePage("home")}
-        >
-          <p>
-            Ennstal Connect verarbeitet Daten, die für die
-            Registrierung und Nutzung der Community notwendig sind.
-          </p>
-
-          <p>
-            Die technische Verarbeitung erfolgt über die für die
-            Plattform verwendeten Dienste wie Supabase und Vercel.
-          </p>
-
-          <p>
-            Mitglieder können ihr Profil innerhalb der Community
-            bearbeiten.
-          </p>
-        </InfoModal>
-      )}
-
-      {activePage === "imprint" && (
-        <InfoModal
-          title="Impressum"
-          close={() => setActivePage("home")}
-        >
-          <p>
-            Hier kannst du deine vollständigen Impressumsdaten
-            eintragen.
-          </p>
-        </InfoModal>
-      )}
-    </>
+      {message && <div className="floating-message">{message}</div>}
+    </div>
   );
 }
 
+function AuthModal({ mode, setMode, onClose, setMessage }) {
+  const [loading, setLoading] = useState(false);
 
-/* =========================================================
-   AUTH MODAL
-========================================================= */
+  const [form, setForm] = useState({
+    first_name: "",
+    last_name: "",
+    birth_date: "",
+    nickname: "",
+    email: "",
+    password: "",
+  });
 
-function AuthModal({
-  mode,
-  setMode,
-  form,
-  changeField,
-  login,
-  register,
-  close
-}) {
-  const isRegister = mode === "register";
+  function update(key, value) {
+    setForm((current) => ({
+      ...current,
+      [key]: value,
+    }));
+  }
+
+  async function submit(e) {
+    e.preventDefault();
+
+    setLoading(true);
+
+    if (mode === "register") {
+      const { error } = await supabase.auth.signUp({
+        email: form.email,
+        password: form.password,
+        options: {
+          emailRedirectTo: window.location.origin,
+          data: {
+            first_name: form.first_name,
+            last_name: form.last_name,
+            birth_date: form.birth_date,
+            nickname: form.nickname,
+          },
+        },
+      });
+
+      setLoading(false);
+
+      if (error) {
+        setMessage(error.message);
+        return;
+      }
+
+      setMessage(
+        "Registrierung erfolgreich. Nach der Bestätigung und Freigabe durch einen Administrator kannst du die Community nutzen."
+      );
+
+      onClose();
+      return;
+    }
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email: form.email,
+      password: form.password,
+    });
+
+    setLoading(false);
+
+    if (error) {
+      setMessage(error.message);
+    } else {
+      onClose();
+    }
+  }
 
   return (
-    <div className="modalOverlay">
-      <div className="modal authModal">
-        <button className="closeButton" onClick={close}>
+    <div className="modal-backdrop">
+      <div className="auth-modal">
+        <button className="close-button" onClick={onClose}>
           ×
         </button>
 
+        <span className="eyebrow">ENNSTAL CONNECT</span>
+
         <h2>
-          {isRegister
-            ? "Bei Ennstal Connect registrieren"
-            : "Willkommen zurück"}
+          {mode === "login"
+            ? "Willkommen zurück"
+            : "Werde Teil der Community"}
         </h2>
 
-        <form onSubmit={isRegister ? register : login}>
-          {isRegister && (
+        <form onSubmit={submit}>
+          {mode === "register" && (
             <>
-              <input
-                placeholder="Vorname"
-                value={form.first_name}
-                onChange={(e) =>
-                  changeField("first_name", e.target.value)
-                }
-                required
-              />
+              <div className="form-grid">
+                <label>
+                  Vorname
+                  <input
+                    required
+                    value={form.first_name}
+                    onChange={(e) =>
+                      update("first_name", e.target.value)
+                    }
+                  />
+                </label>
 
-              <input
-                placeholder="Nachname"
-                value={form.last_name}
-                onChange={(e) =>
-                  changeField("last_name", e.target.value)
-                }
-                required
-              />
+                <label>
+                  Nachname
+                  <input
+                    required
+                    value={form.last_name}
+                    onChange={(e) =>
+                      update("last_name", e.target.value)
+                    }
+                  />
+                </label>
+              </div>
 
-              <input
-                placeholder="Nickname"
-                value={form.nickname}
-                onChange={(e) =>
-                  changeField("nickname", e.target.value)
-                }
-                required
-              />
+              <label>
+                Spitzname
+                <input
+                  value={form.nickname}
+                  onChange={(e) =>
+                    update("nickname", e.target.value)
+                  }
+                />
+              </label>
 
-              <label>Geburtsdatum</label>
-
-              <input
-                type="date"
-                value={form.birth_date}
-                onChange={(e) =>
-                  changeField("birth_date", e.target.value)
-                }
-              />
+              <label>
+                Geburtsdatum
+                <input
+                  type="date"
+                  value={form.birth_date}
+                  onChange={(e) =>
+                    update("birth_date", e.target.value)
+                  }
+                />
+              </label>
             </>
           )}
 
-          <input
-            type="email"
-            placeholder="E-Mail-Adresse"
-            value={form.email}
-            onChange={(e) =>
-              changeField("email", e.target.value)
-            }
-            required
-          />
+          <label>
+            E-Mail
+            <input
+              type="email"
+              required
+              value={form.email}
+              onChange={(e) => update("email", e.target.value)}
+            />
+          </label>
 
-          <input
-            type="password"
-            placeholder="Passwort"
-            value={form.password}
-            onChange={(e) =>
-              changeField("password", e.target.value)
-            }
-            required
-          />
+          <label>
+            Passwort
+            <input
+              type="password"
+              required
+              minLength="6"
+              value={form.password}
+              onChange={(e) => update("password", e.target.value)}
+            />
+          </label>
 
-          <button className="primaryButton fullButton">
-            {isRegister
-              ? "Registrierung beantragen"
-              : "Anmelden"}
+          <button
+            className="primary-button full-width"
+            disabled={loading}
+          >
+            {loading
+              ? "Bitte warten ..."
+              : mode === "login"
+              ? "Anmelden"
+              : "Registrieren"}
           </button>
         </form>
 
-        <div className="authSwitch">
-          {isRegister ? (
-            <>
-              Bereits Mitglied?
-              <button onClick={() => setMode("login")}>
-                Jetzt anmelden
-              </button>
-            </>
-          ) : (
-            <>
-              Noch nicht registriert?
-              <button onClick={() => setMode("register")}>
-                Mitglied werden
-              </button>
-            </>
-          )}
-        </div>
+        <button
+          className="switch-auth"
+          onClick={() =>
+            setMode(mode === "login" ? "register" : "login")
+          }
+        >
+          {mode === "login"
+            ? "Noch kein Konto? Jetzt registrieren"
+            : "Bereits Mitglied? Jetzt anmelden"}
+        </button>
       </div>
     </div>
   );
 }
 
-
-/* =========================================================
-   PROFILE PAGE
-========================================================= */
-
-function ProfilePage({ profile, updateProfile }) {
-  const [form, setForm] = useState({
-    nickname: profile.nickname || "",
-    first_name: profile.first_name || "",
-    last_name: profile.last_name || "",
-    bio: profile.bio || "",
-    location: profile.location || ""
-  });
-
-  function change(name, value) {
-    setForm({
-      ...form,
-      [name]: value
-    });
-  }
-
-  function submit(e) {
-    e.preventDefault();
-    updateProfile(form);
-  }
-
+function StartPage({ profile, setPage, posts, members }) {
   return (
-    <section className="section profilePage">
-      <span className="eyebrow">MEIN BEREICH</span>
-      <h1>Mein Profil</h1>
+    <>
+      <section className="welcome-card">
+        <span className="eyebrow">WILLKOMMEN ZURÜCK</span>
 
-      <form className="profileForm" onSubmit={submit}>
-        <div className="formGrid">
-          <div>
-            <label>Vorname</label>
-            <input
-              value={form.first_name}
-              onChange={(e) =>
-                change("first_name", e.target.value)
-              }
-            />
-          </div>
+        <h1>Hallo, {displayName(profile)} 👋</h1>
 
-          <div>
-            <label>Nachname</label>
-            <input
-              value={form.last_name}
-              onChange={(e) =>
-                change("last_name", e.target.value)
-              }
-            />
-          </div>
+        <p>
+          Schön, dass du wieder bei Ennstal Connect bist.
+          Entdecke, was in deiner Community passiert.
+        </p>
+
+        <div className="action-row">
+          <button
+            className="primary-button"
+            onClick={() => setPage("news")}
+          >
+            Beiträge entdecken
+          </button>
+
+          <button
+            className="secondary-button"
+            onClick={() => setPage("marketplace")}
+          >
+            Zum Marktplatz
+          </button>
+        </div>
+      </section>
+
+      <section className="section-grid">
+        <div className="stat-card">
+          <span>👥</span>
+          <strong>{members.length}</strong>
+          <p>Mitglieder</p>
         </div>
 
-        <label>Nickname</label>
+        <div className="stat-card">
+          <span>📰</span>
+          <strong>{posts.length}</strong>
+          <p>Beiträge</p>
+        </div>
 
-        <input
-          value={form.nickname}
-          onChange={(e) =>
-            change("nickname", e.target.value)
-          }
-        />
+        <div className="stat-card">
+          <span>💬</span>
+          <strong>Community</strong>
+          <p>Bleib verbunden</p>
+        </div>
+      </section>
 
-        <label>Wohnort / Region</label>
+      <section className="content-card">
+        <div className="section-header">
+          <h2>Neu in der Community</h2>
 
-        <input
-          value={form.location}
-          onChange={(e) =>
-            change("location", e.target.value)
-          }
-        />
+          <button onClick={() => setPage("news")}>
+            Alle Beiträge →
+          </button>
+        </div>
 
-        <label>Über mich</label>
+        {posts.slice(0, 3).map((post) => (
+          <div className="mini-post" key={post.id}>
+            <div className="avatar small">EC</div>
+
+            <div>
+              <strong>Community Mitglied</strong>
+              <p>{post.content}</p>
+            </div>
+          </div>
+        ))}
+
+        {posts.length === 0 && (
+          <p className="empty-text">
+            Noch keine Beiträge vorhanden. Starte die Community!
+          </p>
+        )}
+      </section>
+    </>
+  );
+}
+
+function NewsPage({
+  newPost,
+  setNewPost,
+  createPost,
+  posts,
+  members,
+}) {
+  return (
+    <>
+      <div className="page-heading">
+        <span className="eyebrow">COMMUNITY</span>
+        <h1>News & Beiträge</h1>
+        <p>Teile, was gerade im Ennstal passiert.</p>
+      </div>
+
+      <div className="editor-card">
+        <h3>Was möchtest du teilen?</h3>
 
         <textarea
-          value={form.bio}
-          onChange={(e) =>
-            change("bio", e.target.value)
-          }
-          placeholder="Erzähl der Community etwas über dich ..."
+          placeholder="Schreibe etwas für die Community ..."
+          value={newPost}
+          onChange={(e) => setNewPost(e.target.value)}
         />
 
-        <button className="primaryButton">
-          Profil speichern
-        </button>
-      </form>
-    </section>
+        <div className="editor-actions">
+          <button
+            className="primary-button"
+            onClick={createPost}
+          >
+            Beitrag veröffentlichen
+          </button>
+        </div>
+      </div>
+
+      <div className="posts">
+        {posts.map((post) => {
+          const author = members.find(
+            (member) => member.id === post.author_id
+          );
+
+          return (
+            <article className="post-card" key={post.id}>
+              <div className="post-header">
+                <div className="avatar">
+                  {getInitials(author)}
+                </div>
+
+                <div>
+                  <strong>{displayName(author)}</strong>
+                  <small>
+                    {new Date(post.created_at).toLocaleString("de-AT")}
+                  </small>
+                </div>
+              </div>
+
+              <p className="post-text">{post.content}</p>
+            </article>
+          );
+        })}
+
+        {posts.length === 0 && (
+          <div className="empty-state">
+            Noch keine Beiträge. Sei der Erste!
+          </div>
+        )}
+      </div>
+    </>
   );
 }
 
-
-/* =========================================================
-   MESSAGES
-========================================================= */
-
-function MessagesPage({
-  user,
-  profiles,
-  messages,
-  selectedChat,
-  setSelectedChat,
-  sendMessage,
-  getProfileName
+function MarketplacePage({
+  marketplace,
+  marketTitle,
+  setMarketTitle,
+  marketDescription,
+  setMarketDescription,
+  marketPrice,
+  setMarketPrice,
+  createMarketplaceItem,
+  members,
 }) {
-  const [text, setText] = useState("");
+  return (
+    <>
+      <div className="page-heading">
+        <span className="eyebrow">REGIONAL</span>
+        <h1>Marktplatz</h1>
+        <p>Kaufen, verkaufen und tauschen – direkt in der Community.</p>
+      </div>
 
-  const chats = profiles.filter(
-    (profile) => profile.id !== user?.id
+      <div className="editor-card">
+        <h3>Neues Angebot erstellen</h3>
+
+        <input
+          placeholder="Titel"
+          value={marketTitle}
+          onChange={(e) => setMarketTitle(e.target.value)}
+        />
+
+        <textarea
+          placeholder="Beschreibung"
+          value={marketDescription}
+          onChange={(e) =>
+            setMarketDescription(e.target.value)
+          }
+        />
+
+        <input
+          placeholder="Preis, z. B. 50 €"
+          value={marketPrice}
+          onChange={(e) => setMarketPrice(e.target.value)}
+        />
+
+        <button
+          className="primary-button"
+          onClick={createMarketplaceItem}
+        >
+          Angebot veröffentlichen
+        </button>
+      </div>
+
+      <div className="market-grid">
+        {marketplace.map((item) => {
+          const author = members.find(
+            (member) => member.id === item.author_id
+          );
+
+          return (
+            <article className="market-card" key={item.id}>
+              <div className="market-image">🏔️</div>
+
+              <div className="market-content">
+                <span className="price">{item.price || "Preis auf Anfrage"}</span>
+
+                <h3>{item.title}</h3>
+
+                <p>{item.description}</p>
+
+                <small>
+                  Angebot von {displayName(author)}
+                </small>
+              </div>
+            </article>
+          );
+        })}
+
+        {marketplace.length === 0 && (
+          <div className="empty-state">
+            Noch keine Angebote vorhanden.
+          </div>
+        )}
+      </div>
+    </>
   );
+}
 
-  const currentMessages = selectedChat
-    ? messages.filter(
-        (message) =>
-          (message.sender_id === user.id &&
-            message.receiver_id === selectedChat) ||
-          (message.receiver_id === user.id &&
-            message.sender_id === selectedChat)
-      )
-    : [];
+function MessagesPage({ messages }) {
+  return (
+    <>
+      <div className="page-heading">
+        <span className="eyebrow">KONTAKT</span>
+        <h1>Nachrichten</h1>
+        <p>Bleib mit deinen Freunden und Community-Mitgliedern verbunden.</p>
+      </div>
 
-  function submit(e) {
-    e.preventDefault();
+      <div className="content-card">
+        {messages.map((message) => (
+          <div className="message-row" key={message.id}>
+            <div className="avatar small">EC</div>
 
-    if (!selectedChat) return;
+            <div>
+              <strong>Nachricht</strong>
+              <p>{message.content}</p>
+            </div>
+          </div>
+        ))}
 
-    sendMessage(selectedChat, text);
-    setText("");
+        {messages.length === 0 && (
+          <div className="empty-state">
+            Noch keine Nachrichten vorhanden.
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+function ProfilePage({
+  profile,
+  profileForm,
+  setProfileForm,
+  saveProfile,
+}) {
+  function update(key, value) {
+    setProfileForm((current) => ({
+      ...current,
+      [key]: value,
+    }));
   }
 
   return (
-    <section className="section messagesPage">
-      <span className="eyebrow">COMMUNITY</span>
-      <h1>Nachrichten</h1>
+    <>
+      <div className="page-heading">
+        <span className="eyebrow">MEIN BEREICH</span>
+        <h1>Mein Profil</h1>
+        <p>Hier kannst du dein persönliches Profil bearbeiten.</p>
+      </div>
 
-      <div className="messagesLayout">
+      <div className="profile-editor">
+        <div className="profile-preview">
+          <div className="avatar profile-avatar">
+            {getInitials(profileForm)}
+          </div>
 
-        <aside className="chatList">
-          {chats.map((person) => (
-            <button
-              key={person.id}
-              className={
-                selectedChat === person.id
-                  ? "chatPerson activeChat"
-                  : "chatPerson"
+          <h2>
+            {profileForm.nickname ||
+              `${profileForm.first_name} ${profileForm.last_name}`}
+          </h2>
+
+          <div className="role-badge member">
+            {profile?.role || "Mitglied"}
+          </div>
+        </div>
+
+        <div className="profile-form">
+          <div className="form-grid">
+            <label>
+              Vorname
+              <input
+                value={profileForm.first_name}
+                onChange={(e) =>
+                  update("first_name", e.target.value)
+                }
+              />
+            </label>
+
+            <label>
+              Nachname
+              <input
+                value={profileForm.last_name}
+                onChange={(e) =>
+                  update("last_name", e.target.value)
+                }
+              />
+            </label>
+          </div>
+
+          <label>
+            Spitzname
+            <input
+              value={profileForm.nickname}
+              onChange={(e) =>
+                update("nickname", e.target.value)
               }
-              onClick={() => setSelectedChat(person.id)}
-            >
-              <div className="smallAvatar">
-                {getProfileName(person.id).charAt(0)}
-              </div>
+            />
+          </label>
 
-              <span>
-                {getProfileName(person.id)}
-              </span>
-            </button>
-          ))}
-        </aside>
+          <label>
+            Über mich
+            <textarea
+              value={profileForm.bio}
+              onChange={(e) => update("bio", e.target.value)}
+              placeholder="Erzähl der Community etwas über dich ..."
+            />
+          </label>
 
-        <div className="chatWindow">
-          {!selectedChat ? (
-            <div className="emptyState">
-              Wähle ein Mitglied aus, um eine Unterhaltung zu starten.
-            </div>
-          ) : (
-            <>
-              <div className="chatHeader">
-                <strong>
-                  {getProfileName(selectedChat)}
-                </strong>
-              </div>
-
-              <div className="messageArea">
-                {currentMessages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={
-                      message.sender_id === user.id
-                        ? "message ownMessage"
-                        : "message"
-                    }
-                  >
-                    {message.content}
-                  </div>
-                ))}
-              </div>
-
-              <form
-                className="messageForm"
-                onSubmit={submit}
-              >
-                <input
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  placeholder="Nachricht schreiben ..."
-                />
-
-                <button className="primaryButton">
-                  Senden
-                </button>
-              </form>
-            </>
-          )}
+          <button
+            className="primary-button"
+            onClick={saveProfile}
+          >
+            Änderungen speichern
+          </button>
         </div>
       </div>
-    </section>
+    </>
   );
 }
 
-
-/* =========================================================
-   ADMIN
-========================================================= */
-
 function AdminPage({
-  profiles,
+  pendingMembers,
+  approvedMembers,
   approveMember,
   rejectMember,
-  isMainAdmin
+  isMainAdmin,
 }) {
-  const pendingMembers = profiles.filter(
-    (member) =>
-      member.approved !== true &&
-      member.status !== "approved"
-  );
-
   return (
-    <section className="section">
-      <span className="eyebrow">VERWALTUNG</span>
-      <h1>⭐ Admin Bereich</h1>
+    <>
+      <div className="page-heading">
+        <span className="eyebrow">VERWALTUNG</span>
+        <h1>Admin Tools</h1>
 
-      <div className="adminPanel">
-        <h2>Offene Registrierungen</h2>
+        <p>
+          Mitglieder freigeben und deine Community verwalten.
+        </p>
+      </div>
 
-        {pendingMembers.length === 0 && (
-          <div className="emptyState">
-            Keine offenen Registrierungen.
-          </div>
-        )}
+      <section className="admin-section">
+        <div className="section-header">
+          <h2>
+            Registrierungen zur Freigabe
+            <span className="notification-badge">
+              {pendingMembers.length}
+            </span>
+          </h2>
+        </div>
 
         {pendingMembers.map((member) => (
-          <div
-            className="adminMember"
-            key={member.id}
-          >
-            <div>
-              <strong>
-                {member.nickname ||
-                  `${member.first_name || ""} ${
-                    member.last_name || ""
-                  }`}
-              </strong>
-
-              <span>{member.email}</span>
+          <div className="admin-member" key={member.id}>
+            <div className="avatar">
+              {getInitials(member)}
             </div>
 
-            <div className="adminActions">
+            <div className="admin-member-info">
+              <strong>{displayName(member)}</strong>
+
+              <small>
+                {member.email || "Neue Registrierung"}
+              </small>
+            </div>
+
+            <div className="admin-actions">
               <button
-                className="acceptButton large"
-                onClick={() => approveMember(member.id)}
+                className="primary-button small-button"
+                onClick={() => approveMember(member)}
               >
                 Freigeben
               </button>
 
               <button
-                className="rejectButton large"
-                onClick={() => rejectMember(member.id)}
+                className="danger-button small-button"
+                onClick={() => rejectMember(member)}
               >
                 Ablehnen
               </button>
             </div>
           </div>
         ))}
-      </div>
 
-      {isMainAdmin && (
-        <div className="adminPanel">
-          <h2>⭐ Hauptadmin</h2>
+        {pendingMembers.length === 0 && (
+          <div className="empty-state">
+            Aktuell warten keine neuen Mitglieder auf Freigabe.
+          </div>
+        )}
+      </section>
 
-          <p>
-            Du hast Zugriff auf die erweiterten Verwaltungsfunktionen
-            deiner Community.
-          </p>
+      <section className="admin-section">
+        <h2>Community Übersicht</h2>
+
+        <div className="section-grid">
+          <div className="stat-card">
+            <strong>{approvedMembers.length}</strong>
+            <p>Freigegebene Mitglieder</p>
+          </div>
+
+          {isMainAdmin && (
+            <div className="stat-card">
+              <strong>★</strong>
+              <p>Hauptadmin Zugriff aktiv</p>
+            </div>
+          )}
         </div>
-      )}
-    </section>
+      </section>
+    </>
   );
 }
-
-
-/* =========================================================
-   INFO MODAL
-========================================================= */
-
-function InfoModal({ title, children, close }) {
-  return (
-    <div className="modalOverlay">
-      <div className="modal infoModal">
-        <button className="closeButton" onClick={close}>
-          ×
-        </button>
-
-        <h2>{title}</h2>
-
-        <div className="infoContent">
-          {children}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 
 createRoot(document.getElementById("root")).render(<App />);
