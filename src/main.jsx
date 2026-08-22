@@ -1,426 +1,1821 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { supabase, supabaseConfigError } from "./supabase";
+import { supabase } from "./supabase";
 import "./styles.css";
 
-const LOGO = "/logo.png";
+const FRIEND_LOGO = "/freunde-logo.png";
 
-const isApproved = (p) => p?.status === "APPROVED";
-const isAdminRole = (role) => ["ADMIN", "HEAD_ADMIN"].includes(role);
+/* =========================================================
+   HILFSFUNKTIONEN
+========================================================= */
 
-function nameOf(p) {
-  if (!p) return "Mitglied";
-  return p.nickname || `${p.first_name || ""} ${p.last_name || ""}`.trim() || "Mitglied";
+function formatDate(value) {
+  if (!value) return "Noch keine Aktivität";
+
+  return new Date(value).toLocaleString("de-AT", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
 }
-function initials(p) {
-  return nameOf(p).slice(0, 2).toUpperCase();
+
+function getInitials(member) {
+  if (!member) return "?";
+
+  return (
+    member.nickname?.charAt(0)?.toUpperCase() ||
+    member.first_name?.charAt(0)?.toUpperCase() ||
+    "?"
+  );
 }
-function RoleStar({ role }) {
-  if (role === "HEAD_ADMIN" || role === "ADMIN") {
-    return <img src="/Admin-star.png" alt="" className="role-star" />;
+
+function isAdmin(role) {
+  return role === "ADMIN" || role === "HEAD_ADMIN";
+}
+
+function roleLabel(role) {
+  switch (role) {
+    case "HEAD_ADMIN":
+      return "Hauptadmin";
+
+    case "ADMIN":
+      return "Admin";
+
+    case "SUPPORTER":
+      return "Supporter";
+
+    default:
+      return "Mitglied";
   }
-  if (role === "SUPPORTER") {
-    return <img src="/supporter-star.png" alt="" className="role-star" />;
-  }
-  return null;
 }
+
+/* =========================================================
+   AVATAR
+========================================================= */
 
 function Avatar({ member, className = "" }) {
-  const src = member?.avatar_url || "/no.pic.png";
-  return <div className={`avatar ${className}`}>
-    <img
-      src={src}
-      alt={member?.nickname || "Profilbild"}
-      onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "/no.pic.png"; }}
-    />
-  </div>;
+  return (
+    <div className={`member-avatar ${className}`}>
+      {member?.avatar_url ? (
+        <img
+          src={member.avatar_url}
+          alt={member.nickname || "Profilbild"}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            borderRadius: "50%",
+          }}
+        />
+      ) : (
+        <span>{getInitials(member)}</span>
+      )}
+    </div>
+  );
 }
 
-function AuthModal({ mode, setMode, onClose, notice }) {
-  const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({
-    first_name:"", last_name:"", birth_date:"", nickname:"", email:"", password:""
-  });
-  const set = (key, value) => setForm((x) => ({...x, [key]:value}));
+/* =========================================================
+   ROLLEN
+========================================================= */
 
-  async function submit(e) {
-    e.preventDefault();
+function RoleStars({ member }) {
+  if (!member) return null;
+
+  return (
+    <span className="member-badges">
+      {member.role === "HEAD_ADMIN" && (
+        <span className="admin-star" title="Hauptadmin">
+          ★
+        </span>
+      )}
+
+      {member.role === "ADMIN" && (
+        <span className="admin-star" title="Admin">
+          ★
+        </span>
+      )}
+
+      {member.role === "SUPPORTER" && (
+        <span className="supporter-star" title="Supporter">
+          ★
+        </span>
+      )}
+    </span>
+  );
+}
+
+/* =========================================================
+   LOGIN / REGISTRIERUNG
+========================================================= */
+
+function AuthModal({ mode, onClose, onModeChange }) {
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+
+  const [form, setForm] = useState({
+    first_name: "",
+    last_name: "",
+    birth_date: "",
+    nickname: "",
+    email: "",
+    password: "",
+  });
+
+  function updateField(key, value) {
+    setForm((old) => ({
+      ...old,
+      [key]: value,
+    }));
+  }
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+
     setLoading(true);
-    if (mode === "register") {
-      const { error } = await supabase.auth.signUp({
-        email: form.email,
-        password: form.password,
-        options: {
-          emailRedirectTo: window.location.origin,
-          data: {
-            first_name: form.first_name,
-            last_name: form.last_name,
-            birth_date: form.birth_date,
-            nickname: form.nickname
-          }
+    setMessage("");
+
+    try {
+      if (mode === "register") {
+        const { error } = await supabase.auth.signUp({
+          email: form.email.trim(),
+          password: form.password,
+
+          options: {
+            emailRedirectTo: window.location.origin,
+
+            data: {
+              first_name: form.first_name.trim(),
+              last_name: form.last_name.trim(),
+              birth_date: form.birth_date,
+              nickname: form.nickname.trim(),
+            },
+          },
+        });
+
+        if (error) {
+          setMessage(error.message);
+        } else {
+          setMessage(
+            "Registrierung erfolgreich. Bitte bestätige deine E-Mail. Danach muss dein Konto von einem Admin freigegeben werden."
+          );
         }
-      });
-      notice(error ? error.message : "Registrierung erfolgreich. Bitte bestätige deine E-Mail. Danach wartet dein Konto auf die Freigabe durch einen Admin.");
-      if (!error) onClose();
-    } else {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: form.email, password: form.password
-      });
-      notice(error ? error.message : "Erfolgreich angemeldet.");
-      if (!error) onClose();
+      } else {
+        const { error } =
+          await supabase.auth.signInWithPassword({
+            email: form.email.trim(),
+            password: form.password,
+          });
+
+        if (error) {
+          setMessage(error.message);
+        } else {
+          onClose();
+        }
+      }
+    } catch (error) {
+      setMessage(error.message || "Ein Fehler ist aufgetreten.");
     }
+
     setLoading(false);
   }
 
-  return <div className="modal-backdrop">
-    <form className="auth-modal" onSubmit={submit}>
-      <button type="button" className="icon-close" onClick={onClose}>×</button>
-      <span className="eyebrow">ENNSTAL CONNECT</span>
-      <h2>{mode === "login" ? "Willkommen zurück" : "Werde Teil der Community"}</h2>
+  return (
+    <div className="modal-overlay">
+      <form className="modal" onSubmit={handleSubmit}>
+        <button
+          type="button"
+          className="close-button"
+          onClick={onClose}
+        >
+          ×
+        </button>
 
-      {mode === "register" && <>
-        <div className="form-grid">
-          <label>Vorname<input required value={form.first_name} onChange={e=>set("first_name",e.target.value)} /></label>
-          <label>Nachname<input required value={form.last_name} onChange={e=>set("last_name",e.target.value)} /></label>
-        </div>
-        <label>Spitzname<input required minLength="3" value={form.nickname} onChange={e=>set("nickname",e.target.value)} /></label>
-        <label>Geburtsdatum<input type="date" value={form.birth_date} onChange={e=>set("birth_date",e.target.value)} /></label>
-      </>}
+        <h2>
+          {mode === "login"
+            ? "Anmelden"
+            : "Mitglied werden"}
+        </h2>
 
-      <label>E-Mail<input required type="email" value={form.email} onChange={e=>set("email",e.target.value)} /></label>
-      <label>Passwort<input required minLength="8" type="password" value={form.password} onChange={e=>set("password",e.target.value)} /></label>
+        {mode === "register" && (
+          <>
+            <input
+              required
+              placeholder="Vorname"
+              value={form.first_name}
+              onChange={(event) =>
+                updateField(
+                  "first_name",
+                  event.target.value
+                )
+              }
+            />
 
-      <button className="primary-button full" disabled={loading}>
-        {loading ? "Bitte warten ..." : mode === "login" ? "Anmelden" : "Registrieren"}
-      </button>
-      <button type="button" className="link-button" onClick={()=>setMode(mode==="login"?"register":"login")}>
-        {mode === "login" ? "Noch kein Konto? Jetzt registrieren" : "Bereits Mitglied? Jetzt anmelden"}
-      </button>
-    </form>
-  </div>;
+            <input
+              required
+              placeholder="Nachname"
+              value={form.last_name}
+              onChange={(event) =>
+                updateField(
+                  "last_name",
+                  event.target.value
+                )
+              }
+            />
+
+            <input
+              required
+              type="date"
+              value={form.birth_date}
+              onChange={(event) =>
+                updateField(
+                  "birth_date",
+                  event.target.value
+                )
+              }
+            />
+
+            <input
+              required
+              minLength="3"
+              placeholder="Nickname"
+              value={form.nickname}
+              onChange={(event) =>
+                updateField(
+                  "nickname",
+                  event.target.value
+                )
+              }
+            />
+          </>
+        )}
+
+        <input
+          required
+          type="email"
+          placeholder="E-Mail-Adresse"
+          value={form.email}
+          onChange={(event) =>
+            updateField(
+              "email",
+              event.target.value
+            )
+          }
+        />
+
+        <input
+          required
+          type="password"
+          minLength="6"
+          placeholder="Passwort"
+          value={form.password}
+          onChange={(event) =>
+            updateField(
+              "password",
+              event.target.value
+            )
+          }
+        />
+
+        <button
+          className="primary-button full-button"
+          disabled={loading}
+        >
+          {loading
+            ? "Bitte warten ..."
+            : mode === "login"
+              ? "Anmelden"
+              : "Registrieren"}
+        </button>
+
+        {message && (
+          <p className="auth-message">
+            {message}
+          </p>
+        )}
+
+        <button
+          type="button"
+          className="secondary-button full-button"
+          onClick={() =>
+            onModeChange(
+              mode === "login"
+                ? "register"
+                : "login"
+            )
+          }
+        >
+          {mode === "login"
+            ? "Noch kein Konto? Registrieren"
+            : "Bereits registriert? Anmelden"}
+        </button>
+      </form>
+    </div>
+  );
 }
 
-function PublicHome({ openAuth }) {
-  return <div className="public-home">
-    <header className="topbar">
-      <div className="brand"><img src={LOGO} alt="Ennstal Connect" /><span>Ennstal Connect</span></div>
-      <div className="header-actions">
-        <button className="secondary-button" onClick={()=>openAuth("login")}>Anmelden</button>
-        <button className="primary-button" onClick={()=>openAuth("register")}>Mitglied werden</button>
-      </div>
-    </header>
-    <main className="public-main">
-      <section className="public-hero">
-        <span className="eyebrow">DEINE REGION. DEINE COMMUNITY.</span>
-        <h1>Willkommen bei<br />Ennstal Connect</h1>
-        <p>Verbinde dich mit Menschen aus deiner Region. Entdecke Neuigkeiten, tausche dich aus und finde spannende Angebote.</p>
-        <button className="primary-button large" onClick={()=>openAuth("register")}>Community entdecken →</button>
-        <div className="hero-info"><div className="hero-icon">🏔️</div><div><h2>Das Ennstal verbindet.</h2><p>Menschen, Neuigkeiten, Veranstaltungen und lokale Angebote an einem Ort.</p></div></div>
-      </section>
-    </main>
-  </div>;
-}
+/* =========================================================
+   APP
+========================================================= */
 
 function App() {
-  if (supabaseConfigError) {
-    return <div className="loading-screen"><div className="pending-card"><img src={LOGO} alt="Ennstal Connect" className="pending-logo"/><span className="eyebrow dark">ENNSTAL CONNECT</span><h1>Verbindung wird eingerichtet</h1><p>{supabaseConfigError}</p><p>Bitte in Vercel für dieses Projekt <b>VITE_SUPABASE_URL</b> und <b>VITE_SUPABASE_ANON_KEY</b> hinterlegen und danach neu deployen.</p></div></div>;
-  }
-  const [session, setSession] = useState(null);
+  const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
+
   const [members, setMembers] = useState([]);
-  const [posts, setPosts] = useState([]);
-  const [market, setMarket] = useState([]);
-  const [messages, setMessages] = useState([]);
   const [friends, setFriends] = useState([]);
-  const [pending, setPending] = useState([]);
-  const [page, setPage] = useState("start");
-  const [authMode, setAuthMode] = useState(null);
-  const [notice, setNotice] = useState("");
-  const [loading, setLoading] = useState(true);
+
+  const [friendRequests, setFriendRequests] =
+    useState([]);
+
+  const [sentRequests, setSentRequests] =
+    useState([]);
+
   const [search, setSearch] = useState("");
-  const [newPost, setNewPost] = useState("");
-  const [marketForm, setMarketForm] = useState({title:"",description:"",price:""});
-  const [profileForm, setProfileForm] = useState({first_name:"",last_name:"",nickname:"",bio:"",avatar_url:""});
 
-  const user = session?.user || null;
-  const isAdmin = isAdminRole(profile?.role);
-  const isHead = profile?.role === "HEAD_ADMIN";
-  const approvedMembers = useMemo(()=>members.filter(isApproved),[members]);
-  const onlineMembers = useMemo(()=>approvedMembers.filter(m=>m.is_online),[approvedMembers]);
-  const filteredMembers = useMemo(()=>approvedMembers.filter(m=>nameOf(m).toLowerCase().includes(search.toLowerCase())),[approvedMembers,search]);
+  const [authOpen, setAuthOpen] =
+    useState(false);
 
-  function show(text) {
+  const [authMode, setAuthMode] =
+    useState("login");
+
+  const [selectedProfile, setSelectedProfile] =
+    useState(null);
+
+  const [profileOpen, setProfileOpen] =
+    useState(false);
+
+  const [adminOpen, setAdminOpen] =
+    useState(false);
+
+  const [pendingMembers, setPendingMembers] =
+    useState([]);
+
+  const [notice, setNotice] =
+    useState("");
+
+  /* =======================================================
+     BENACHRICHTIGUNG
+  ======================================================= */
+
+  function showNotice(text) {
     setNotice(text);
-    window.clearTimeout(window.__ecNoticeTimer);
-    window.__ecNoticeTimer = window.setTimeout(()=>setNotice(""),5000);
+
+    window.setTimeout(() => {
+      setNotice("");
+    }, 4000);
   }
 
-  async function loadProfile(id) {
-    const {data,error} = await supabase.from("profiles").select("*").eq("id",id).single();
-    if (error) { show(error.message); return null; }
-    setProfile(data);
-    setProfileForm({
-      first_name:data.first_name || "", last_name:data.last_name || "",
-      nickname:data.nickname || "", bio:data.bio || "", avatar_url:data.avatar_url || ""
-    });
-    return data;
+  /* =======================================================
+     AUTH
+  ======================================================= */
+
+  useEffect(() => {
+    supabase.auth
+      .getUser()
+      .then(({ data }) => {
+        setUser(data.user || null);
+      });
+
+    const {
+      data: { subscription },
+    } =
+      supabase.auth.onAuthStateChange(
+        (_event, session) => {
+          setUser(session?.user || null);
+        }
+      );
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  /* =======================================================
+     PROFIL LADEN
+  ======================================================= */
+
+  async function loadProfile() {
+    if (!user) {
+      setProfile(null);
+      return;
+    }
+
+    const { data, error } =
+      await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+
+    if (error) {
+      console.error("Profil Fehler:", error);
+      return;
+    }
+
+    setProfile(data || null);
   }
 
-  async function loadAll(currentProfile) {
-    const [{data: m, error: me}, {data: p}, {data: mk}] = await Promise.all([
-      supabase.from("profiles").select("*").order("nickname"),
-      supabase.from("posts").select("*").order("created_at",{ascending:false}),
-      supabase.from("marketplace_items").select("*").order("created_at",{ascending:false})
-    ]);
-    if (me) show(me.message);
-    setMembers(m || []); setPosts(p || []); setMarket(mk || []);
+  /* =======================================================
+     MITGLIEDER LADEN
+  ======================================================= */
 
-    if (currentProfile && isAdminRole(currentProfile.role)) {
-      const {data} = await supabase.from("profiles").select("*").eq("status","PENDING_ADMIN").order("created_at");
-      setPending(data || []);
-    } else setPending([]);
+  async function loadMembers() {
+    const { data, error } =
+      await supabase
+        .from("profiles")
+        .select("*")
+        .eq("status", "APPROVED")
+        .order("nickname");
 
-    if (user) {
-      const {data} = await supabase.from("messages").select("*").order("created_at",{ascending:false}).limit(50);
-      setMessages(data || []);
-      const {data: fr} = await supabase.from("friend_requests").select("*").or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`);
-      setFriends(fr || []);
+    if (error) {
+      console.error("Mitglieder Fehler:", error);
+      return;
+    }
+
+    setMembers(data || []);
+  }
+
+  /* =======================================================
+     FREUNDE LADEN
+  ======================================================= */
+
+  async function loadFriends() {
+    if (!user) {
+      setFriends([]);
+      setFriendRequests([]);
+      setSentRequests([]);
+      return;
+    }
+
+    const { data, error } =
+      await supabase
+        .from("friendships")
+        .select("*")
+        .or(
+          `requester_id.eq.${user.id},receiver_id.eq.${user.id}`
+        );
+
+    if (error) {
+      console.error("Freunde Fehler:", error);
+      return;
+    }
+
+    const relationships = data || [];
+
+    const accepted =
+      relationships.filter(
+        (item) => item.status === "ACCEPTED"
+      );
+
+    const incoming =
+      relationships.filter(
+        (item) =>
+          item.status === "PENDING" &&
+          item.receiver_id === user.id
+      );
+
+    const outgoing =
+      relationships.filter(
+        (item) =>
+          item.status === "PENDING" &&
+          item.requester_id === user.id
+      );
+
+    const friendIds =
+      accepted.map((item) =>
+        item.requester_id === user.id
+          ? item.receiver_id
+          : item.requester_id
+      );
+
+    let friendProfiles = [];
+
+    if (friendIds.length > 0) {
+      const { data: friendData } =
+        await supabase
+          .from("profiles")
+          .select("*")
+          .in("id", friendIds);
+
+      friendProfiles = friendData || [];
+    }
+
+    const incomingIds =
+      incoming.map(
+        (item) => item.requester_id
+      );
+
+    let requestProfiles = [];
+
+    if (incomingIds.length > 0) {
+      const { data } =
+        await supabase
+          .from("profiles")
+          .select("*")
+          .in("id", incomingIds);
+
+      requestProfiles = data || [];
+    }
+
+    setFriends(friendProfiles);
+
+    setFriendRequests(
+      incoming.map((request) => ({
+        ...request,
+
+        member:
+          requestProfiles.find(
+            (item) =>
+              item.id === request.requester_id
+          ),
+      }))
+    );
+
+    setSentRequests(outgoing);
+  }
+
+  /* =======================================================
+     ADMIN DATEN
+  ======================================================= */
+
+  async function loadPendingMembers() {
+    if (!profile || !isAdmin(profile.role)) {
+      setPendingMembers([]);
+      return;
+    }
+
+    const { data, error } =
+      await supabase
+        .from("profiles")
+        .select("*")
+        .eq("status", "PENDING_ADMIN")
+        .order("created_at");
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    setPendingMembers(data || []);
+  }
+
+  /* =======================================================
+     DATEN LADEN
+  ======================================================= */
+
+  useEffect(() => {
+    loadProfile();
+    loadMembers();
+    loadFriends();
+  }, [user]);
+
+  useEffect(() => {
+    loadPendingMembers();
+  }, [profile]);
+
+  /* =======================================================
+     ONLINE STATUS
+  ======================================================= */
+
+  useEffect(() => {
+    if (!user) return;
+
+    async function updateOnline() {
+      await supabase
+        .from("profiles")
+        .update({
+          is_online: true,
+          last_seen:
+            new Date().toISOString(),
+        })
+        .eq("id", user.id);
+    }
+
+    updateOnline();
+
+    const interval =
+      window.setInterval(
+        updateOnline,
+        60000
+      );
+
+    return () => {
+      window.clearInterval(interval);
+
+      supabase
+        .from("profiles")
+        .update({
+          is_online: false,
+          last_seen:
+            new Date().toISOString(),
+        })
+        .eq("id", user.id);
+    };
+  }, [user]);
+
+  /* =======================================================
+     PROFIL ÖFFNEN
+  ======================================================= */
+
+  function openProfile(member) {
+    if (!member) return;
+
+    if (!user) {
+      showNotice(
+        "Bitte melde dich zuerst an, um Profile zu öffnen."
+      );
+
+      return;
+    }
+
+    setSelectedProfile(member);
+    setProfileOpen(true);
+  }
+
+  /* =======================================================
+     FREUNDSCHAFT STATUS
+  ======================================================= */
+
+  const friendIds = useMemo(
+    () =>
+      new Set(
+        friends.map(
+          (friend) => friend.id
+        )
+      ),
+    [friends]
+  );
+
+  function getFriendshipStatus(memberId) {
+    if (!user) return null;
+
+    if (friendIds.has(memberId)) {
+      return "FRIEND";
+    }
+
+    const incoming =
+      friendRequests.find(
+        (item) =>
+          item.requester_id === memberId
+      );
+
+    if (incoming) {
+      return "INCOMING";
+    }
+
+    const outgoing =
+      sentRequests.find(
+        (item) =>
+          item.receiver_id === memberId
+      );
+
+    if (outgoing) {
+      return "OUTGOING";
+    }
+
+    return null;
+  }
+
+  /* =======================================================
+     FREUNDSCHAFTSANFRAGE
+  ======================================================= */
+
+  async function sendFriendRequest(member) {
+    if (!user) {
+      showNotice(
+        "Bitte melde dich zuerst an."
+      );
+
+      return;
+    }
+
+    if (member.id === user.id) {
+      return;
+    }
+
+    const { error } =
+      await supabase
+        .from("friendships")
+        .insert({
+          requester_id: user.id,
+          receiver_id: member.id,
+          status: "PENDING",
+        });
+
+    if (error) {
+      showNotice(error.message);
+    } else {
+      showNotice(
+        `Freundschaftsanfrage an ${member.nickname} gesendet.`
+      );
+    }
+
+    loadFriends();
+  }
+
+  async function answerFriendRequest(
+    request,
+    status
+  ) {
+    const { error } =
+      await supabase
+        .from("friendships")
+        .update({
+          status,
+          updated_at:
+            new Date().toISOString(),
+        })
+        .eq("id", request.id);
+
+    if (error) {
+      showNotice(error.message);
+    } else {
+      showNotice(
+        status === "ACCEPTED"
+          ? "Freundschaftsanfrage angenommen."
+          : "Freundschaftsanfrage abgelehnt."
+      );
+    }
+
+    loadFriends();
+  }
+
+  async function removeFriend(member) {
+    if (!user) return;
+
+    const confirmed =
+      window.confirm(
+        `Freundschaft mit ${member.nickname} wirklich entfernen?`
+      );
+
+    if (!confirmed) return;
+
+    const { error } =
+      await supabase
+        .from("friendships")
+        .delete()
+        .or(
+          `and(requester_id.eq.${user.id},receiver_id.eq.${member.id}),and(requester_id.eq.${member.id},receiver_id.eq.${user.id})`
+        );
+
+    if (error) {
+      showNotice(error.message);
+    } else {
+      showNotice(
+        "Freundschaft entfernt."
+      );
+    }
+
+    loadFriends();
+  }
+
+  /* =======================================================
+     ADMIN
+  ======================================================= */
+
+  async function approveMember(memberId) {
+    const { error } =
+      await supabase
+        .from("profiles")
+        .update({
+          status: "APPROVED",
+        })
+        .eq("id", memberId);
+
+    if (error) {
+      showNotice(error.message);
+    } else {
+      showNotice(
+        "Mitglied wurde freigegeben."
+      );
+    }
+
+    loadMembers();
+    loadPendingMembers();
+  }
+
+  async function rejectMember(memberId) {
+    const { error } =
+      await supabase
+        .from("profiles")
+        .update({
+          status: "REJECTED",
+        })
+        .eq("id", memberId);
+
+    if (error) {
+      showNotice(error.message);
+    } else {
+      showNotice(
+        "Registrierung wurde abgelehnt."
+      );
+    }
+
+    loadPendingMembers();
+  }
+
+  /* =======================================================
+     PUNKTE
+  ======================================================= */
+
+  async function changePoints(member) {
+    if (!isAdmin(profile?.role)) {
+      return;
+    }
+
+    const value =
+      window.prompt(
+        "Punkte eingeben. Beispiel: 10 oder -5"
+      );
+
+    if (value === null) return;
+
+    const points = Number(value);
+
+    if (
+      !Number.isFinite(points) ||
+      points === 0
+    ) {
+      showNotice(
+        "Bitte eine gültige Punktezahl eingeben."
+      );
+
+      return;
+    }
+
+    const reason =
+      window.prompt(
+        "Grund für die Punkteänderung:"
+      );
+
+    if (
+      !reason ||
+      reason.trim().length < 3
+    ) {
+      showNotice(
+        "Bitte eine Begründung eingeben."
+      );
+
+      return;
+    }
+
+    const { data: memberData } =
+      await supabase
+        .from("profiles")
+        .select("community_points")
+        .eq("id", member.id)
+        .single();
+
+    if (!memberData) {
+      showNotice(
+        "Mitglied konnte nicht geladen werden."
+      );
+
+      return;
+    }
+
+    const newPoints =
+      Math.max(
+        0,
+        (memberData.community_points || 0) +
+          points
+      );
+
+    const { error } =
+      await supabase
+        .from("profiles")
+        .update({
+          community_points: newPoints,
+        })
+        .eq("id", member.id);
+
+    if (error) {
+      showNotice(error.message);
+    } else {
+      showNotice(
+        `${member.nickname}: ${
+          points > 0 ? "+" : ""
+        }${points} Punkte.`
+      );
+    }
+
+    loadMembers();
+
+    if (
+      selectedProfile?.id === member.id
+    ) {
+      setSelectedProfile({
+        ...selectedProfile,
+        community_points: newPoints,
+      });
     }
   }
 
-  useEffect(()=>{
-    let alive = true;
-    (async()=>{
-      const {data:{session}} = await supabase.auth.getSession();
-      if (!alive) return;
-      setSession(session);
-      let p = null;
-      if (session?.user) {
-        p = await loadProfile(session.user.id);
-        await loadAll(p);
-        if (p) {
-          await supabase.from("profiles").update({is_online:true,last_seen:new Date().toISOString()}).eq("id",p.id);
-        }
-      }
-      if (alive) setLoading(false);
-    })();
-
-    const {data:{subscription}} = supabase.auth.onAuthStateChange(async(_event,newSession)=>{
-      setSession(newSession);
-      if (!newSession?.user) { setProfile(null); setPage("start"); return; }
-      const p = await loadProfile(newSession.user.id);
-      await loadAll(p);
-    });
-    return ()=>{alive=false; subscription.unsubscribe();};
-  },[]);
-
-  useEffect(()=>{
-    if (!user || !profile) return;
-    const t = window.setInterval(async()=>{
-      await supabase.from("profiles").update({is_online:true,last_seen:new Date().toISOString()}).eq("id",user.id);
-      await loadAll(profile);
-    },60000);
-    return ()=>window.clearInterval(t);
-  },[user?.id,profile?.role]);
+  /* =======================================================
+     ABMELDEN
+  ======================================================= */
 
   async function signOut() {
-    if (user) await supabase.from("profiles").update({is_online:false,last_seen:new Date().toISOString()}).eq("id",user.id);
+    if (user) {
+      await supabase
+        .from("profiles")
+        .update({
+          is_online: false,
+          last_seen:
+            new Date().toISOString(),
+        })
+        .eq("id", user.id);
+    }
+
     await supabase.auth.signOut();
-    setSession(null); setProfile(null);
+
+    setProfile(null);
+    setUser(null);
+    setFriends([]);
+
+    showNotice("Du wurdest abgemeldet.");
   }
 
-  async function createPost() {
-    if (!newPost.trim()) return;
-    const {error}=await supabase.from("posts").insert({author_id:user.id,content:newPost.trim()});
-    if (error) return show(error.message);
-    setNewPost(""); show("Beitrag veröffentlicht."); await loadAll(profile);
-  }
+  /* =======================================================
+     SUCHE
+  ======================================================= */
 
-  async function createMarketItem() {
-    if (!marketForm.title.trim()) return show("Bitte einen Titel eingeben.");
-    const {error}=await supabase.from("marketplace_items").insert({
-      author_id:user.id,title:marketForm.title.trim(),
-      description:marketForm.description.trim(),price:marketForm.price.trim()
-    });
-    if(error) return show(error.message);
-    setMarketForm({title:"",description:"",price:""}); show("Angebot veröffentlicht."); await loadAll(profile);
-  }
+  const filteredMembers =
+    useMemo(() => {
+      const value =
+        search.trim().toLowerCase();
 
-  async function uploadProfileImage(file) {
-    if (!file) return;
-    if (!file.type.startsWith("image/")) return show("Bitte wähle eine gültige Bilddatei.");
-    if (file.size > 5 * 1024 * 1024) return show("Das Profilbild darf maximal 5 MB groß sein.");
+      if (!value) {
+        return members;
+      }
 
-    const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
-    const path = `${user.id}/avatar.${ext}`;
+      return members.filter(
+        (member) =>
+          `${member.nickname || ""} ${
+            member.first_name || ""
+          } ${member.last_name || ""}`
+            .toLowerCase()
+            .includes(value)
+      );
+    }, [members, search]);
 
-    const { error: uploadError } = await supabase.storage
-      .from("avatars")
-      .upload(path, file, { upsert: true, contentType: file.type, cacheControl: "3600" });
+  const onlineFriends =
+    friends.filter(
+      (friend) => friend.is_online
+    );
 
-    if (uploadError) return show("Profilbild konnte nicht hochgeladen werden: " + uploadError.message);
+  const offlineFriends =
+    friends.filter(
+      (friend) => !friend.is_online
+    );
 
-    const { data: publicData } = supabase.storage.from("avatars").getPublicUrl(path);
-    const avatarUrl = `${publicData.publicUrl}?v=${Date.now()}`;
+  /* =======================================================
+     RENDER
+  ======================================================= */
 
-    const { error: profileError } = await supabase
-      .from("profiles")
-      .update({ avatar_url: avatarUrl, updated_at: new Date().toISOString() })
-      .eq("id", user.id);
+  return (
+    <>
+      <header className="site-header">
+        <div className="header-content">
 
-    if (profileError) return show(profileError.message);
-
-    setProfileForm((x) => ({ ...x, avatar_url: avatarUrl }));
-    await loadProfile(user.id);
-    await loadAll(profile);
-    show("Profilbild erfolgreich aktualisiert.");
-  }
-
-  async function removeProfileImage() {
-    const { error } = await supabase
-      .from("profiles")
-      .update({ avatar_url: null, updated_at: new Date().toISOString() })
-      .eq("id", user.id);
-    if (error) return show(error.message);
-    setProfileForm((x) => ({ ...x, avatar_url: "" }));
-    await loadProfile(user.id);
-    await loadAll(profile);
-    show("Profilbild entfernt. Das Standardbild wird wieder angezeigt.");
-  }
-
-  async function saveProfile() {
-    const {error}=await supabase.from("profiles").update({
-      first_name:profileForm.first_name.trim(),last_name:profileForm.last_name.trim(),
-      nickname:profileForm.nickname.trim(),bio:profileForm.bio.trim(),
-      avatar_url:profileForm.avatar_url || null,
-      updated_at:new Date().toISOString()
-    }).eq("id",user.id);
-    if(error) return show(error.message);
-    await loadProfile(user.id); await loadAll(profile); show("Profil gespeichert.");
-  }
-
-  async function setStatus(memberId,status) {
-    const {error}=await supabase.rpc("set_account_status",{target_user:memberId,new_status:status,note:""});
-    if(error) return show(error.message);
-    show(status==="APPROVED" ? "Mitglied freigegeben." : "Registrierung abgelehnt.");
-    await loadAll(profile);
-  }
-
-  async function changePoints(member) {
-    const delta=Number(window.prompt("Punkte eingeben, z. B. 5 oder -3:"));
-    if(!Number.isFinite(delta) || delta===0) return;
-    const reason=window.prompt("Begründung (Pflicht):");
-    if(!reason || reason.trim().length<3) return show("Eine Begründung ist erforderlich.");
-    const {error}=await supabase.rpc("admin_change_points",{
-      target_user:member.id,delta,
-      change_kind:delta>0?"PLUS":"MINUS",reason_text:reason.trim()
-    });
-    if(error) return show(error.message);
-    show("Punkte erfolgreich geändert."); await loadAll(profile);
-  }
-
-  async function sendFriendRequest(memberId) {
-    if(memberId===user.id) return;
-    const {error}=await supabase.from("friend_requests").insert({sender_id:user.id,receiver_id:memberId,status:"PENDING"});
-    show(error ? error.message : "Freundschaftsanfrage gesendet.");
-  }
-
-  if(loading) return <div className="loading-screen"><img src={LOGO} alt="" /><p>Ennstal Connect wird geladen ...</p></div>;
-
-  if(!user) return <>
-    <PublicHome openAuth={setAuthMode} />
-    {authMode && <AuthModal mode={authMode} setMode={setAuthMode} onClose={()=>setAuthMode(null)} notice={show}/>}
-    {notice && <div className="notice">{notice}</div>}
-  </>;
-
-  if(profile && !isApproved(profile) && !isAdmin) return <div className="pending-page">
-    <img src={LOGO} alt="Ennstal Connect" className="pending-logo"/>
-    <div className="pending-card"><span className="eyebrow">ENNSTAL CONNECT</span>
-      <h1>Dein Konto wartet auf Freigabe.</h1>
-      <p>Willkommen {nameOf(profile)}. Ein Admin muss deine Registrierung noch freigeben.</p>
-      <button className="secondary-button" onClick={signOut}>Abmelden</button>
-    </div>
-  </div>;
-
-  const nav = (key,label)=> <button className={page===key?"active":""} onClick={()=>setPage(key)}>{label}</button>;
-
-  return <div className="app-shell">
-    <header className="topbar">
-      <button className="brand brand-button" onClick={()=>setPage("start")}><img src={LOGO} alt=""/><span>Ennstal Connect</span></button>
-      <nav className="main-nav">
-        {nav("start","Start")}{nav("news","News")}{nav("members","Mitglieder")}
-        {nav("marketplace","Marktplatz")}{nav("messages","Nachrichten")}
-      </nav>
-      <button className="profile-nav" onClick={()=>setPage("profile")}>{nameOf(profile)}</button>
-    </header>
-
-    {notice && <div className="notice">{notice}<button onClick={()=>setNotice("")}>×</button></div>}
-
-    <main className="community-layout">
-      <section className="main-content">
-        {page==="start" && <Start profile={profile} posts={posts} members={approvedMembers} setPage={setPage}/>}
-        {page==="news" && <News posts={posts} members={members} value={newPost} setValue={setNewPost} create={createPost}/>}
-        {page==="members" && <Members members={filteredMembers} search={search} setSearch={setSearch} user={user} isAdmin={isAdmin} changePoints={changePoints} addFriend={sendFriendRequest}/>}
-        {page==="marketplace" && <Marketplace items={market} members={members} form={marketForm} setForm={setMarketForm} create={createMarketItem}/>}
-        {page==="messages" && <Messages messages={messages}/>}
-        {page==="profile" && <Profile profile={profile} form={profileForm} setForm={setProfileForm} save={saveProfile} upload={uploadProfileImage} removeImage={removeProfileImage}/>} 
-        {page==="admin" && isAdmin && <Admin pending={pending} approved={approvedMembers} setStatus={setStatus} changePoints={changePoints} isHead={isHead}/>} 
-      </section>
-
-      <aside className="right-sidebar">
-        <div className="sidebar-profile">
-          <Avatar member={profile} className="large" />
-          <div><strong>{nameOf(profile)}</strong><RoleStar role={profile?.role} /></div>
-        </div>
-        <div className="sidebar-card">
-          <div className="sidebar-title"><h3>Online</h3><span>{onlineMembers.length}</span></div>
-          {onlineMembers.slice(0,8).map(m=><div className="online-member" key={m.id}><Avatar member={m} className="tiny" /><span>{nameOf(m)}</span><i className="online-dot"/></div>)}
-          {!onlineMembers.length && <p className="empty-text">Gerade niemand online.</p>}
-        </div>
-        <div className="sidebar-card">
-          <div className="sidebar-title"><h3>Mein Bereich</h3></div>
-          <div className="sidebar-menu">
-            <button onClick={()=>setPage("profile")}>👤 Mein Profil</button>
-            <button onClick={()=>setPage("members")}>👥 Freunde & Mitglieder <span>{friends.length||""}</span></button>
-            <button onClick={()=>setPage("messages")}>💬 Nachrichten</button>
-            <button onClick={()=>setPage("marketplace")}>🛍️ Meine Angebote</button>
-            {isAdmin && <button onClick={()=>setPage("admin")}>🛠️ Admin Tools {pending.length>0&&<span>{pending.length}</span>}</button>}
-            <button className="logout-button" onClick={signOut}>↪ Abmelden</button>
+          <div className="logo-area">
+            <img
+              src="/logo.png"
+              alt="Ennstal Connect"
+              className="logo"
+            />
           </div>
+
+          <nav className="nav-links">
+            <button
+              onClick={() =>
+                document
+                  .getElementById("start")
+                  ?.scrollIntoView({
+                    behavior: "smooth",
+                  })
+              }
+            >
+              Start
+            </button>
+
+            <button
+              onClick={() =>
+                document
+                  .getElementById("mitglieder")
+                  ?.scrollIntoView({
+                    behavior: "smooth",
+                  })
+              }
+            >
+              Mitglieder
+            </button>
+
+            <button
+              onClick={() =>
+                document
+                  .getElementById("freunde")
+                  ?.scrollIntoView({
+                    behavior: "smooth",
+                  })
+              }
+            >
+              Freunde
+            </button>
+          </nav>
+
+          <div className="header-actions">
+            {user ? (
+              <>
+                <button
+                  className="secondary-button"
+                  onClick={() =>
+                    openProfile(profile)
+                  }
+                >
+                  {profile?.nickname ||
+                    "Mein Profil"}
+                </button>
+
+                <button
+                  className="primary-button"
+                  onClick={signOut}
+                >
+                  Abmelden
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  className="secondary-button"
+                  onClick={() => {
+                    setAuthMode("login");
+                    setAuthOpen(true);
+                  }}
+                >
+                  Anmelden
+                </button>
+
+                <button
+                  className="primary-button"
+                  onClick={() => {
+                    setAuthMode("register");
+                    setAuthOpen(true);
+                  }}
+                >
+                  Registrieren
+                </button>
+              </>
+            )}
+          </div>
+
         </div>
-      </aside>
-    </main>
+      </header>
 
-    <footer><span>© {new Date().getFullYear()} Ennstal Connect</span><div><button>Impressum</button><button>Datenschutz</button><button>Community-Regeln</button></div></footer>
-  </div>;
+      <main className="site-main">
+
+        <section
+          id="start"
+          className="hero"
+        >
+          <div className="hero-content">
+            <h1>
+              Ennstal Connect
+            </h1>
+
+            <p>
+              Deine regionale Community für
+              Ennstal und Obersteiermark.
+              Entdecke Mitglieder,
+              Freundschaften und die Community.
+            </p>
+
+            {!user && (
+              <button
+                className="primary-button"
+                onClick={() => {
+                  setAuthMode("register");
+                  setAuthOpen(true);
+                }}
+              >
+                Community entdecken
+              </button>
+            )}
+          </div>
+        </section>
+
+        {notice && (
+          <div className="message-popup">
+            {notice}
+          </div>
+        )}
+
+        {profile &&
+          profile.status !== "APPROVED" && (
+            <div className="message-popup">
+              Dein Konto wartet noch auf die
+              Freigabe durch einen Admin.
+            </div>
+          )}
+
+        <div className="page-layout">
+
+          <div className="content-area">
+
+            <section
+              id="mitglieder"
+              className="card"
+            >
+              <h2>
+                Mitglieder entdecken
+              </h2>
+
+              <p>
+                Klicke auf einen Nickname,
+                um das Profil eines Mitglieds
+                zu öffnen.
+              </p>
+
+              <div className="member-search">
+                <input
+                  value={search}
+                  onChange={(event) =>
+                    setSearch(
+                      event.target.value
+                    )
+                  }
+                  placeholder="Mitglieder suchen ..."
+                />
+              </div>
+
+              <div className="members-grid">
+
+                {filteredMembers.map(
+                  (member) => {
+                    const friendship =
+                      getFriendshipStatus(
+                        member.id
+                      );
+
+                    return (
+                      <article
+                        className="member-card"
+                        key={member.id}
+                      >
+                        {friendship ===
+                          "FRIEND" && (
+                          <img
+                            src={FRIEND_LOGO}
+                            alt="Freund"
+                            className="friend-icon"
+                          />
+                        )}
+
+                        <div className="member-top">
+
+                          <Avatar
+                            member={member}
+                          />
+
+                          <div className="member-info">
+
+                            <button
+                              className={
+                                member.role ===
+                                  "ADMIN" ||
+                                member.role ===
+                                  "HEAD_ADMIN"
+                                  ? "nickname nickname-admin"
+                                  : member.nickname_color_owned
+                                    ? "nickname nickname-premium"
+                                    : "nickname nickname-standard"
+                              }
+                              onClick={() =>
+                                openProfile(member)
+                              }
+                            >
+                              {member.nickname}
+                            </button>
+
+                            <RoleStars
+                              member={member}
+                            />
+
+                            <strong>
+                              {member.community_points ||
+                                0}{" "}
+                              Punkte
+                            </strong>
+
+                            <div className="status-line">
+                              <span
+                                className={`status-dot ${
+                                  member.is_online
+                                    ? "online"
+                                    : "offline"
+                                }`}
+                              />
+
+                              <span
+                                className={
+                                  member.is_online
+                                    ? "status-online"
+                                    : "status-offline"
+                                }
+                              >
+                                {member.is_online
+                                  ? "Online"
+                                  : `Zuletzt online: ${formatDate(
+                                      member.last_seen
+                                    )}`}
+                              </span>
+                            </div>
+
+                          </div>
+
+                        </div>
+
+                        {isAdmin(
+                          profile?.role
+                        ) && (
+                          <button
+                            className="secondary-button"
+                            onClick={() =>
+                              changePoints(member)
+                            }
+                          >
+                            Punkte ändern
+                          </button>
+                        )}
+
+                      </article>
+                    );
+                  }
+                )}
+
+              </div>
+
+              {!filteredMembers.length && (
+                <p>
+                  Keine Mitglieder gefunden.
+                </p>
+              )}
+
+            </section>
+
+          </div>
+
+          <aside className="profile-sidebar">
+
+            {user && profile && (
+              <section className="card">
+
+                <div className="profile-header">
+
+                  <Avatar
+                    member={profile}
+                    className="profile-avatar"
+                  />
+
+                  <div>
+                    <h3 className="profile-name">
+                      {profile.nickname}
+                    </h3>
+
+                    <p className="profile-role">
+                      {roleLabel(profile.role)}
+                    </p>
+
+                    <RoleStars
+                      member={profile}
+                    />
+                  </div>
+
+                </div>
+
+                <div className="points-box">
+                  <span className="points-label">
+                    Deine Community-Punkte
+                  </span>
+
+                  <strong className="points-value">
+                    {profile.community_points ||
+                      0}
+                  </strong>
+                </div>
+
+                <button
+                  className="secondary-button full-button"
+                  onClick={() =>
+                    openProfile(profile)
+                  }
+                >
+                  Mein Profil öffnen
+                </button>
+
+              </section>
+            )}
+
+            {user && (
+              <section
+                id="freunde"
+                className="card"
+              >
+
+                <h3>
+                  Freunde online
+                </h3>
+
+                <div className="friends-online-list">
+
+                  {onlineFriends.map(
+                    (friend) => (
+                      <button
+                        key={friend.id}
+                        className="friend-online-item"
+                        onClick={() =>
+                          openProfile(friend)
+                        }
+                      >
+                        <Avatar
+                          member={friend}
+                        />
+
+                        <div>
+                          <strong>
+                            {friend.nickname}
+                          </strong>
+
+                          <RoleStars
+                            member={friend}
+                          />
+
+                          <div>
+                            {friend.community_points ||
+                              0}{" "}
+                            Punkte
+                          </div>
+
+                          <small className="status-online">
+                            ● Online
+                          </small>
+                        </div>
+                      </button>
+                    )
+                  )}
+
+                  {!onlineFriends.length && (
+                    <p>
+                      Momentan ist keiner deiner
+                      Freunde online.
+                    </p>
+                  )}
+
+                </div>
+
+                {offlineFriends.length > 0 && (
+                  <>
+                    <hr />
+
+                    <h4>
+                      Freunde offline
+                    </h4>
+
+                    <div className="friends-online-list">
+
+                      {offlineFriends.map(
+                        (friend) => (
+                          <button
+                            key={friend.id}
+                            className="friend-online-item"
+                            onClick={() =>
+                              openProfile(friend)
+                            }
+                          >
+                            <Avatar
+                              member={friend}
+                            />
+
+                            <div>
+                              <strong>
+                                {friend.nickname}
+                              </strong>
+
+                              <RoleStars
+                                member={friend}
+                              />
+
+                              <div>
+                                {friend.community_points ||
+                                  0}{" "}
+                                Punkte
+                              </div>
+
+                              <small className="status-offline">
+                                Zuletzt online:
+                                <br />
+                                {formatDate(
+                                  friend.last_seen
+                                )}
+                              </small>
+                            </div>
+
+                          </button>
+                        )
+                      )}
+
+                    </div>
+                  </>
+                )}
+
+              </section>
+            )}
+
+            {user &&
+              friendRequests.length > 0 && (
+                <section className="card">
+
+                  <h3>
+                    Freundschaftsanfragen
+                  </h3>
+
+                  {friendRequests.map(
+                    (request) => (
+                      <div
+                        key={request.id}
+                        className="friend-online-item"
+                      >
+                        <Avatar
+                          member={request.member}
+                        />
+
+                        <div>
+                          <strong>
+                            {request.member
+                              ?.nickname}
+                          </strong>
+
+                          <RoleStars
+                            member={request.member}
+                          />
+
+                          <br />
+
+                          <button
+                            className="primary-button"
+                            onClick={() =>
+                              answerFriendRequest(
+                                request,
+                                "ACCEPTED"
+                              )
+                            }
+                          >
+                            Annehmen
+                          </button>
+
+                          <button
+                            className="secondary-button"
+                            onClick={() =>
+                              answerFriendRequest(
+                                request,
+                                "REJECTED"
+                              )
+                            }
+                          >
+                            Ablehnen
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  )}
+
+                </section>
+              )}
+
+            {isAdmin(profile?.role) && (
+              <section className="card admin-section">
+
+                <button
+                  className="primary-button full-button"
+                  onClick={() =>
+                    setAdminOpen(
+                      !adminOpen
+                    )
+                  }
+                >
+                  Admin Tools{" "}
+                  {adminOpen
+                    ? "▲"
+                    : "▼"}
+                </button>
+
+                {adminOpen && (
+                  <>
+                    <h3>
+                      Offene Registrierungen
+                    </h3>
+
+                    {pendingMembers.map(
+                      (member) => (
+                        <div
+                          key={member.id}
+                          className="admin-member-row"
+                        >
+
+                          <div className="admin-member-info">
+
+                            <Avatar
+                              member={member}
+                            />
+
+                            <div>
+                              <strong>
+                                {member.nickname}
+                              </strong>
+
+                              <div>
+                                {member.first_name}{" "}
+                                {member.last_name}
+                              </div>
+                            </div>
+
+                          </div>
+
+                          <div>
+
+                            <button
+                              className="primary-button"
+                              onClick={() =>
+                                approveMember(
+                                  member.id
+                                )
+                              }
+                            >
+                              ✓
+                            </button>
+
+                            <button
+                              className="danger-button"
+                              onClick={() =>
+                                rejectMember(
+                                  member.id
+                                )
+                              }
+                            >
+                              ×
+                            </button>
+
+                          </div>
+
+                        </div>
+                      )
+                    )}
+
+                    {!pendingMembers.length && (
+                      <p>
+                        Keine offenen
+                        Registrierungen.
+                      </p>
+                    )}
+                  </>
+                )}
+
+              </section>
+            )}
+
+          </aside>
+
+        </div>
+
+      </main>
+
+      {/* PROFIL MODAL */}
+
+      {profileOpen &&
+        selectedProfile && (
+          <div className="modal-overlay">
+
+            <div className="modal">
+
+              <button
+                className="close-button"
+                onClick={() =>
+                  setProfileOpen(false)
+                }
+              >
+                ×
+              </button>
+
+              <div className="profile-header">
+
+                <Avatar
+                  member={selectedProfile}
+                  className="profile-avatar"
+                />
+
+                <div>
+
+                  <h2
+                    className={
+                      isAdmin(
+                        selectedProfile.role
+                      )
+                        ? "nickname-admin"
+                        : selectedProfile.nickname_color_owned
+                          ? "nickname-premium"
+                          : "nickname-standard"
+                    }
+                  >
+                    {selectedProfile.nickname}
+                  </h2>
+
+                  <p>
+                    {roleLabel(
+                      selectedProfile.role
+                    )}
+                  </p>
+
+                  <RoleStars
+                    member={selectedProfile}
+                  />
+
+                </div>
+
+              </div>
+
+              <div className="points-box">
+
+                <span className="points-label">
+                  Community-Punkte
+                </span>
+
+                <strong className="points-value">
+                  {selectedProfile.community_points ||
+                    0}
+                </strong>
+
+              </div>
+
+              <p
+                className={
+                  selectedProfile.is_online
+                    ? "status-online"
+                    : "status-offline"
+                }
+              >
+                {selectedProfile.is_online
+                  ? "● Dieses Mitglied ist online"
+                  : `● Zuletzt online: ${formatDate(
+                      selectedProfile.last_seen
+                    )}`}
+              </p>
+
+              {isAdmin(profile?.role) && (
+                <div className="admin-section">
+
+                  <h3>
+                    Admin Informationen
+                  </h3>
+
+                  <p>
+                    <strong>
+                      E-Mail:
+                    </strong>
+
+                    <br />
+
+                    {selectedProfile.email ||
+                      "E-Mail wird über Auth verwaltet"}
+                  </p>
+
+                </div>
+              )}
+
+              {user &&
+                selectedProfile.id !==
+                  user.id && (
+                  <div>
+
+                    {getFriendshipStatus(
+                      selectedProfile.id
+                    ) === "FRIEND" && (
+                      <>
+                        <p>
+                          Ihr seid Freunde.
+                        </p>
+
+                        <button
+                          className="danger-button full-button"
+                          onClick={() =>
+                            removeFriend(
+                              selectedProfile
+                            )
+                          }
+                        >
+                          Freundschaft entfernen
+                        </button>
+                      </>
+                    )}
+
+                    {getFriendshipStatus(
+                      selectedProfile.id
+                    ) === "INCOMING" && (
+                      <p>
+                        Dieses Mitglied hat dir
+                        eine Freundschaftsanfrage
+                        gesendet.
+                      </p>
+                    )}
+
+                    {getFriendshipStatus(
+                      selectedProfile.id
+                    ) === "OUTGOING" && (
+                      <p>
+                        Freundschaftsanfrage wurde
+                        bereits gesendet.
+                      </p>
+                    )}
+
+                    {!getFriendshipStatus(
+                      selectedProfile.id
+                    ) && (
+                      <button
+                        className="primary-button full-button"
+                        onClick={() =>
+                          sendFriendRequest(
+                            selectedProfile
+                          )
+                        }
+                      >
+                        Freundschaftsanfrage senden
+                      </button>
+                    )}
+
+                  </div>
+                )}
+
+              {isAdmin(profile?.role) &&
+                selectedProfile.id !==
+                  user?.id && (
+                  <button
+                    className="secondary-button full-button"
+                    onClick={() =>
+                      changePoints(
+                        selectedProfile
+                      )
+                    }
+                  >
+                    Punkte ändern
+                  </button>
+                )}
+
+            </div>
+
+          </div>
+        )}
+
+      {authOpen && (
+        <AuthModal
+          mode={authMode}
+          onClose={() =>
+            setAuthOpen(false)
+          }
+          onModeChange={setAuthMode}
+        />
+      )}
+
+      <footer className="site-footer">
+
+        <div className="footer-content">
+
+          <div>
+
+            <img
+              src="/logo.png"
+              alt="Ennstal Connect"
+              className="footer-logo"
+            />
+
+            <p>
+              Deine regionale Community für
+              Ennstal und Obersteiermark.
+            </p>
+
+          </div>
+
+        </div>
+
+        <div className="footer-bottom">
+          © {new Date().getFullYear()}{" "}
+          Ennstal Connect
+        </div>
+
+      </footer>
+    </>
+  );
 }
 
-function Start({profile,posts,members,setPage}) {
-  return <><section className="welcome-card"><span className="eyebrow">WILLKOMMEN ZURÜCK</span><h1>Hallo, {nameOf(profile)} 👋</h1><p>Schön, dass du wieder bei Ennstal Connect bist. Entdecke, was in deiner Community passiert.</p><div className="action-row"><button className="primary-button" onClick={()=>setPage("news")}>Beiträge entdecken</button><button className="secondary-button" onClick={()=>setPage("marketplace")}>Zum Marktplatz</button></div></section>
-  <div className="stats"><div><b>{members.length}</b><span>Mitglieder</span></div><div><b>{posts.length}</b><span>Beiträge</span></div><div><b>∞</b><span>Verbunden</span></div></div>
-  <section className="content-card"><div className="section-header"><h2>Neu in der Community</h2><button onClick={()=>setPage("news")}>Alle Beiträge →</button></div>{posts.slice(0,3).map(p=>{const a=members.find(m=>m.id===p.author_id);return <article className="mini-post" key={p.id}><Avatar member={a} className="tiny"/><div><strong className="name-with-star">{nameOf(a)} <RoleStar role={a?.role}/></strong><p>{p.content}</p></div></article>})}{!posts.length&&<p className="empty-text">Noch keine Beiträge vorhanden.</p>}</section></>;
-}
-
-function News({posts,members,value,setValue,create}) {
-  return <><div className="page-heading"><span className="eyebrow dark">COMMUNITY</span><h1>News & Beiträge</h1><p>Teile, was gerade im Ennstal passiert.</p></div>
-  <div className="editor-card"><textarea value={value} onChange={e=>setValue(e.target.value)} placeholder="Schreibe etwas für die Community ..."/><button className="primary-button" onClick={create}>Beitrag veröffentlichen</button></div>
-  <div className="posts">{posts.map(p=>{const a=members.find(m=>m.id===p.author_id);return <article className="post-card" key={p.id}><div className="post-header"><Avatar member={a} className="tiny"/><div><strong className="name-with-star">{nameOf(a)} <RoleStar role={a?.role}/></strong><small>{p.created_at?new Date(p.created_at).toLocaleString("de-AT"):""}</small></div></div><p>{p.content}</p></article>})}{!posts.length&&<div className="empty-state">Noch keine Beiträge. Sei der Erste!</div>}</div></>;
-}
-
-function Members({members,search,setSearch,user,isAdmin,changePoints,addFriend}) {
-  return <><div className="page-heading"><span className="eyebrow dark">COMMUNITY</span><h1>Mitglieder</h1><p>Menschen aus deiner Region kennenlernen und verbinden.</p></div><input className="search-input" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Mitglieder suchen ..."/>
-  <div className="member-grid">{members.map(m=><article className="member-card" key={m.id}><div className="member-top"><Avatar member={m} />{m.role!=="MEMBER"&&<RoleStar role={m.role} />}</div><h3>{nameOf(m)}</h3><p>{m.bio||"Mitglied der Ennstal Community"}</p><small className={m.is_online?"online":"offline"}>{m.is_online?"● Online":"● Offline"}</small><div className="member-actions">{m.id!==user.id&&<button className="secondary-button" onClick={()=>addFriend(m.id)}>Freund hinzufügen</button>}{isAdmin&&<button className="small-button" onClick={()=>changePoints(m)}>Punkte</button>}</div></article>)}</div></>;
-}
-
-function Marketplace({items,members,form,setForm,create}) {
- const set=(k,v)=>setForm(x=>({...x,[k]:v}));
- return <><div className="page-heading"><span className="eyebrow dark">REGIONAL</span><h1>Marktplatz</h1><p>Kaufen, verkaufen und tauschen – direkt in der Community.</p></div><div className="editor-card"><input placeholder="Titel" value={form.title} onChange={e=>set("title",e.target.value)}/><textarea placeholder="Beschreibung" value={form.description} onChange={e=>set("description",e.target.value)}/><input placeholder="Preis, z. B. 50 €" value={form.price} onChange={e=>set("price",e.target.value)}/><button className="primary-button" onClick={create}>Angebot veröffentlichen</button></div><div className="market-grid">{items.map(i=>{const a=members.find(m=>m.id===i.author_id);return <article className="market-card" key={i.id}><div className="market-image">🏔️</div><div><span className="price">{i.price||"Preis auf Anfrage"}</span><h3>{i.title}</h3><p>{i.description}</p><small>Angebot von {nameOf(a)}</small></div></article>})}{!items.length&&<div className="empty-state">Noch keine Angebote vorhanden.</div>}</div></>;
-}
-
-function Messages({messages}) { return <><div className="page-heading"><span className="eyebrow dark">KONTAKT</span><h1>Nachrichten</h1><p>Bleib mit deinen Freunden und Community-Mitgliedern verbunden.</p></div><div className="content-card">{messages.map(m=><div className="message-row" key={m.id}><div className="avatar tiny">EC</div><div><strong>Nachricht</strong><p>{m.content||m.content_text||""}</p></div></div>)}{!messages.length&&<div className="empty-state">Noch keine Nachrichten vorhanden.</div>}</div></>; }
-
-function Profile({profile,form,setForm,save}) { const set=(k,v)=>setForm(x=>({...x,[k]:v})); return <><div className="page-heading"><span className="eyebrow dark">MEIN BEREICH</span><h1>Mein Profil</h1><p>Hier kannst du dein persönliches Profil bearbeiten.</p></div><div className="profile-editor"><div className="profile-preview"><div className="avatar profile-avatar">{initials(form)}</div><h2>{form.nickname||`${form.first_name} ${form.last_name}`}</h2><span className="role-badge">{""}</span></div><div className="profile-form"><div className="form-grid"><label>Vorname<input value={form.first_name} onChange={e=>set("first_name",e.target.value)}/></label><label>Nachname<input value={form.last_name} onChange={e=>set("last_name",e.target.value)}/></label></div><label>Spitzname<input value={form.nickname} onChange={e=>set("nickname",e.target.value)}/></label><label>Über mich<textarea value={form.bio} onChange={e=>set("bio",e.target.value)}/></label><button className="primary-button" onClick={save}>Änderungen speichern</button></div></div></>; }
-
-function Admin({pending,approved,setStatus,changePoints,isHead}) { return <><div className="page-heading"><span className="eyebrow dark">VERWALTUNG</span><h1>Admin Tools</h1><p>Mitglieder freigeben und die Community verwalten.</p></div><section className="admin-section"><h2>Registrierungen zur Freigabe <span className="notification-badge">{pending.length}</span></h2>{pending.map(m=><div className="admin-member" key={m.id}><Avatar member={m} className="tiny" /><div><strong>{nameOf(m)}</strong><small>{m.created_at?new Date(m.created_at).toLocaleString("de-AT"):""}</small></div><div className="admin-actions"><button className="primary-button small-button" onClick={()=>setStatus(m.id,"APPROVED")}>Freigeben</button><button className="danger-button small-button" onClick={()=>setStatus(m.id,"REJECTED")}>Ablehnen</button></div></div>)}{!pending.length&&<div className="empty-state">Keine offenen Registrierungen.</div>}</section><section className="admin-section"><h2>Freigegebene Mitglieder</h2><div className="admin-list">{approved.map(m=><div className="admin-member" key={m.id}><span>{nameOf(m)} · {m.community_points||0} Punkte</span><button className="small-button" onClick={()=>changePoints(m)}>Punkte ändern</button></div>)}</div>{isHead&&<p className="admin-note">★ Admin-Zugriff aktiv.</p>}</section></>; }
-
-createRoot(document.getElementById("root")).render(<App />);
+createRoot(
+  document.getElementById("root")
+).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
