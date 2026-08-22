@@ -74,7 +74,7 @@ function Avatar({ member, className = "" }) {
 }
 
 /* =========================================================
-   ROLLEN STERNE
+   ROLLEN
 ========================================================= */
 
 function RoleStars({ member }) {
@@ -83,28 +83,19 @@ function RoleStars({ member }) {
   return (
     <span className="member-badges">
       {member.role === "HEAD_ADMIN" && (
-        <span
-          className="admin-star"
-          title="Hauptadmin"
-        >
+        <span className="admin-star" title="Hauptadmin">
           ★
         </span>
       )}
 
       {member.role === "ADMIN" && (
-        <span
-          className="admin-star"
-          title="Admin"
-        >
+        <span className="admin-star" title="Admin">
           ★
         </span>
       )}
 
       {member.role === "SUPPORTER" && (
-        <span
-          className="supporter-star"
-          title="Supporter"
-        >
+        <span className="supporter-star" title="Supporter">
           ★
         </span>
       )}
@@ -113,29 +104,21 @@ function RoleStars({ member }) {
 }
 
 /* =========================================================
-   ANMELDEN / REGISTRIEREN
+   LOGIN / REGISTRIERUNG
 ========================================================= */
 
-function AuthModal({
-  mode,
-  onClose,
-  onModeChange,
-}) {
-  const [loading, setLoading] =
-    useState(false);
+function AuthModal({ mode, onClose, onModeChange }) {
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
 
-  const [message, setMessage] =
-    useState("");
-
-  const [form, setForm] =
-    useState({
-      first_name: "",
-      last_name: "",
-      birth_date: "",
-      nickname: "",
-      email: "",
-      password: "",
-    });
+  const [form, setForm] = useState({
+    first_name: "",
+    last_name: "",
+    birth_date: "",
+    nickname: "",
+    email: "",
+    password: "",
+  });
 
   function updateField(key, value) {
     setForm((old) => ({
@@ -150,51 +133,46 @@ function AuthModal({
     setLoading(true);
     setMessage("");
 
-    if (mode === "register") {
-      const { error } =
-        await supabase.auth.signUp({
+    try {
+      if (mode === "register") {
+        const { error } = await supabase.auth.signUp({
           email: form.email.trim(),
           password: form.password,
 
           options: {
-            emailRedirectTo:
-              window.location.origin,
+            emailRedirectTo: window.location.origin,
 
             data: {
-              first_name:
-                form.first_name.trim(),
-
-              last_name:
-                form.last_name.trim(),
-
-              birth_date:
-                form.birth_date,
-
-              nickname:
-                form.nickname.trim(),
+              first_name: form.first_name.trim(),
+              last_name: form.last_name.trim(),
+              birth_date: form.birth_date,
+              nickname: form.nickname.trim(),
             },
           },
         });
 
-      if (error) {
-        setMessage(error.message);
+        if (error) {
+          setMessage(error.message);
+        } else {
+          setMessage(
+            "Registrierung erfolgreich. Bitte bestätige deine E-Mail. Danach muss dein Konto von einem Admin freigegeben werden."
+          );
+        }
       } else {
-        setMessage(
-          "Registrierung erfolgreich. Bitte bestätige deine E-Mail. Anschließend muss dein Konto von einem Admin freigegeben werden."
-        );
-      }
-    } else {
-      const { error } =
-        await supabase.auth.signInWithPassword({
-          email: form.email.trim(),
-          password: form.password,
-        });
+        const { error } =
+          await supabase.auth.signInWithPassword({
+            email: form.email.trim(),
+            password: form.password,
+          });
 
-      if (error) {
-        setMessage(error.message);
-      } else {
-        onClose();
+        if (error) {
+          setMessage(error.message);
+        } else {
+          onClose();
+        }
       }
+    } catch (error) {
+      setMessage(error.message || "Ein Fehler ist aufgetreten.");
     }
 
     setLoading(false);
@@ -202,10 +180,7 @@ function AuthModal({
 
   return (
     <div className="modal-overlay">
-      <form
-        className="modal"
-        onSubmit={handleSubmit}
-      >
+      <form className="modal" onSubmit={handleSubmit}>
         <button
           type="button"
           className="close-button"
@@ -342,17 +317,11 @@ function AuthModal({
 ========================================================= */
 
 function App() {
-  const [user, setUser] =
-    useState(null);
+  const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
 
-  const [profile, setProfile] =
-    useState(null);
-
-  const [members, setMembers] =
-    useState([]);
-
-  const [friends, setFriends] =
-    useState([]);
+  const [members, setMembers] = useState([]);
+  const [friends, setFriends] = useState([]);
 
   const [friendRequests, setFriendRequests] =
     useState([]);
@@ -360,8 +329,7 @@ function App() {
   const [sentRequests, setSentRequests] =
     useState([]);
 
-  const [search, setSearch] =
-    useState("");
+  const [search, setSearch] = useState("");
 
   const [authOpen, setAuthOpen] =
     useState(false);
@@ -397,7 +365,7 @@ function App() {
   }
 
   /* =======================================================
-     USER LADEN
+     AUTH
   ======================================================= */
 
   useEffect(() => {
@@ -416,8 +384,7 @@ function App() {
         }
       );
 
-    return () =>
-      subscription.unsubscribe();
+    return () => subscription.unsubscribe();
   }, []);
 
   /* =======================================================
@@ -430,12 +397,17 @@ function App() {
       return;
     }
 
-    const { data } =
+    const { data, error } =
       await supabase
         .from("profiles")
         .select("*")
         .eq("id", user.id)
         .single();
+
+    if (error) {
+      console.error("Profil Fehler:", error);
+      return;
+    }
 
     setProfile(data || null);
   }
@@ -453,7 +425,7 @@ function App() {
         .order("nickname");
 
     if (error) {
-      console.error(error);
+      console.error("Mitglieder Fehler:", error);
       return;
     }
 
@@ -481,7 +453,7 @@ function App() {
         );
 
     if (error) {
-      console.error(error);
+      console.error("Freunde Fehler:", error);
       return;
     }
 
@@ -489,8 +461,7 @@ function App() {
 
     const accepted =
       relationships.filter(
-        (item) =>
-          item.status === "ACCEPTED"
+        (item) => item.status === "ACCEPTED"
       );
 
     const incoming =
@@ -523,14 +494,12 @@ function App() {
           .select("*")
           .in("id", friendIds);
 
-      friendProfiles =
-        friendData || [];
+      friendProfiles = friendData || [];
     }
 
     const incomingIds =
       incoming.map(
-        (item) =>
-          item.requester_id
+        (item) => item.requester_id
       );
 
     let requestProfiles = [];
@@ -542,8 +511,7 @@ function App() {
           .select("*")
           .in("id", incomingIds);
 
-      requestProfiles =
-        data || [];
+      requestProfiles = data || [];
     }
 
     setFriends(friendProfiles);
@@ -551,11 +519,11 @@ function App() {
     setFriendRequests(
       incoming.map((request) => ({
         ...request,
+
         member:
           requestProfiles.find(
             (item) =>
-              item.id ===
-              request.requester_id
+              item.id === request.requester_id
           ),
       }))
     );
@@ -573,15 +541,17 @@ function App() {
       return;
     }
 
-    const { data } =
+    const { data, error } =
       await supabase
         .from("profiles")
         .select("*")
-        .eq(
-          "status",
-          "PENDING_ADMIN"
-        )
+        .eq("status", "PENDING_ADMIN")
         .order("created_at");
+
+    if (error) {
+      console.error(error);
+      return;
+    }
 
     setPendingMembers(data || []);
   }
@@ -645,10 +615,13 @@ function App() {
   ======================================================= */
 
   function openProfile(member) {
+    if (!member) return;
+
     if (!user) {
       showNotice(
-        "Als Gast kannst du keine Profile öffnen."
+        "Bitte melde dich zuerst an, um Profile zu öffnen."
       );
+
       return;
     }
 
@@ -660,16 +633,15 @@ function App() {
      FREUNDSCHAFT STATUS
   ======================================================= */
 
-  const friendIds =
-    useMemo(
-      () =>
-        new Set(
-          friends.map(
-            (friend) => friend.id
-          )
-        ),
-      [friends]
-    );
+  const friendIds = useMemo(
+    () =>
+      new Set(
+        friends.map(
+          (friend) => friend.id
+        )
+      ),
+    [friends]
+  );
 
   function getFriendshipStatus(memberId) {
     if (!user) return null;
@@ -702,7 +674,7 @@ function App() {
   }
 
   /* =======================================================
-     FREUNDSCHAFTSANFRAGE SENDEN
+     FREUNDSCHAFTSANFRAGE
   ======================================================= */
 
   async function sendFriendRequest(member) {
@@ -738,10 +710,6 @@ function App() {
     loadFriends();
   }
 
-  /* =======================================================
-     FREUNDSCHAFT ANNEHMEN / ABLEHNEN
-  ======================================================= */
-
   async function answerFriendRequest(
     request,
     status
@@ -768,10 +736,6 @@ function App() {
 
     loadFriends();
   }
-
-  /* =======================================================
-     FREUND ENTFERNEN
-  ======================================================= */
 
   async function removeFriend(member) {
     if (!user) return;
@@ -803,12 +767,10 @@ function App() {
   }
 
   /* =======================================================
-     ADMIN FREIGABE
+     ADMIN
   ======================================================= */
 
-  async function approveMember(
-    memberId
-  ) {
+  async function approveMember(memberId) {
     const { error } =
       await supabase
         .from("profiles")
@@ -829,9 +791,7 @@ function App() {
     loadPendingMembers();
   }
 
-  async function rejectMember(
-    memberId
-  ) {
+  async function rejectMember(memberId) {
     const { error } =
       await supabase
         .from("profiles")
@@ -852,7 +812,7 @@ function App() {
   }
 
   /* =======================================================
-     PUNKTE ÄNDERN
+     PUNKTE
   ======================================================= */
 
   async function changePoints(member) {
@@ -867,8 +827,7 @@ function App() {
 
     if (value === null) return;
 
-    const points =
-      Number(value);
+    const points = Number(value);
 
     if (
       !Number.isFinite(points) ||
@@ -923,8 +882,7 @@ function App() {
       await supabase
         .from("profiles")
         .update({
-          community_points:
-            newPoints,
+          community_points: newPoints,
         })
         .eq("id", member.id);
 
@@ -932,20 +890,20 @@ function App() {
       showNotice(error.message);
     } else {
       showNotice(
-        `${member.nickname}: ${points > 0 ? "+" : ""}${points} Punkte.`
+        `${member.nickname}: ${
+          points > 0 ? "+" : ""
+        }${points} Punkte.`
       );
     }
 
     loadMembers();
 
     if (
-      selectedProfile?.id ===
-      member.id
+      selectedProfile?.id === member.id
     ) {
       setSelectedProfile({
         ...selectedProfile,
-        community_points:
-          newPoints,
+        community_points: newPoints,
       });
     }
   }
@@ -971,6 +929,8 @@ function App() {
     setProfile(null);
     setUser(null);
     setFriends([]);
+
+    showNotice("Du wurdest abgemeldet.");
   }
 
   /* =======================================================
@@ -1065,7 +1025,7 @@ function App() {
             </button>
           </nav>
 
-          <div>
+          <div className="header-actions">
             {user ? (
               <>
                 <button
@@ -1077,8 +1037,6 @@ function App() {
                   {profile?.nickname ||
                     "Mein Profil"}
                 </button>
-
-                {" "}
 
                 <button
                   className="primary-button"
@@ -1098,8 +1056,6 @@ function App() {
                 >
                   Anmelden
                 </button>
-
-                {" "}
 
                 <button
                   className="primary-button"
@@ -1129,11 +1085,23 @@ function App() {
             </h1>
 
             <p>
-              Deine regionale Community
-              für Ennstal und Obersteiermark.
+              Deine regionale Community für
+              Ennstal und Obersteiermark.
               Entdecke Mitglieder,
               Freundschaften und die Community.
             </p>
+
+            {!user && (
+              <button
+                className="primary-button"
+                onClick={() => {
+                  setAuthMode("register");
+                  setAuthOpen(true);
+                }}
+              >
+                Community entdecken
+              </button>
+            )}
           </div>
         </section>
 
@@ -1142,6 +1110,14 @@ function App() {
             {notice}
           </div>
         )}
+
+        {profile &&
+          profile.status !== "APPROVED" && (
+            <div className="message-popup">
+              Dein Konto wartet noch auf die
+              Freigabe durch einen Admin.
+            </div>
+          )}
 
         <div className="page-layout">
 
@@ -1187,7 +1163,6 @@ function App() {
                         className="member-card"
                         key={member.id}
                       >
-
                         {friendship ===
                           "FRIEND" && (
                           <img
@@ -1217,9 +1192,7 @@ function App() {
                                     : "nickname nickname-standard"
                               }
                               onClick={() =>
-                                openProfile(
-                                  member
-                                )
+                                openProfile(member)
                               }
                             >
                               {member.nickname}
@@ -1236,7 +1209,6 @@ function App() {
                             </strong>
 
                             <div className="status-line">
-
                               <span
                                 className={`status-dot ${
                                   member.is_online
@@ -1258,7 +1230,6 @@ function App() {
                                       member.last_seen
                                     )}`}
                               </span>
-
                             </div>
 
                           </div>
@@ -1271,9 +1242,7 @@ function App() {
                           <button
                             className="secondary-button"
                             onClick={() =>
-                              changePoints(
-                                member
-                              )
+                              changePoints(member)
                             }
                           >
                             Punkte ändern
@@ -1315,9 +1284,7 @@ function App() {
                     </h3>
 
                     <p className="profile-role">
-                      {roleLabel(
-                        profile.role
-                      )}
+                      {roleLabel(profile.role)}
                     </p>
 
                     <RoleStars
@@ -1328,7 +1295,6 @@ function App() {
                 </div>
 
                 <div className="points-box">
-
                   <span className="points-label">
                     Deine Community-Punkte
                   </span>
@@ -1337,7 +1303,6 @@ function App() {
                     {profile.community_points ||
                       0}
                   </strong>
-
                 </div>
 
                 <button
@@ -1359,16 +1324,6 @@ function App() {
               >
 
                 <h3>
-                  <img
-                    src={FRIEND_LOGO}
-                    alt=""
-                    style={{
-                      width: "25px",
-                      verticalAlign: "middle",
-                      marginRight: "8px",
-                    }}
-                  />
-
                   Freunde online
                 </h3>
 
@@ -1380,29 +1335,15 @@ function App() {
                         key={friend.id}
                         className="friend-online-item"
                         onClick={() =>
-                          openProfile(
-                            friend
-                          )
+                          openProfile(friend)
                         }
                       >
-
                         <Avatar
                           member={friend}
                         />
 
                         <div>
-
-                          <strong
-                            className={
-                              isAdmin(
-                                friend.role
-                              )
-                                ? "nickname-admin"
-                                : friend.nickname_color_owned
-                                  ? "nickname-premium"
-                                  : "nickname-standard"
-                            }
-                          >
+                          <strong>
                             {friend.nickname}
                           </strong>
 
@@ -1419,17 +1360,15 @@ function App() {
                           <small className="status-online">
                             ● Online
                           </small>
-
                         </div>
-
                       </button>
                     )
                   )}
 
                   {!onlineFriends.length && (
                     <p>
-                      Momentan ist keiner
-                      deiner Freunde online.
+                      Momentan ist keiner deiner
+                      Freunde online.
                     </p>
                   )}
 
@@ -1451,18 +1390,14 @@ function App() {
                             key={friend.id}
                             className="friend-online-item"
                             onClick={() =>
-                              openProfile(
-                                friend
-                              )
+                              openProfile(friend)
                             }
                           >
-
                             <Avatar
                               member={friend}
                             />
 
                             <div>
-
                               <strong>
                                 {friend.nickname}
                               </strong>
@@ -1484,7 +1419,6 @@ function App() {
                                   friend.last_seen
                                 )}
                               </small>
-
                             </div>
 
                           </button>
@@ -1512,26 +1446,18 @@ function App() {
                         key={request.id}
                         className="friend-online-item"
                       >
-
                         <Avatar
-                          member={
-                            request.member
-                          }
+                          member={request.member}
                         />
 
                         <div>
-
                           <strong>
-                            {
-                              request.member
-                                ?.nickname
-                            }
+                            {request.member
+                              ?.nickname}
                           </strong>
 
                           <RoleStars
-                            member={
-                              request.member
-                            }
+                            member={request.member}
                           />
 
                           <br />
@@ -1559,9 +1485,7 @@ function App() {
                           >
                             Ablehnen
                           </button>
-
                         </div>
-
                       </div>
                     )
                   )}
@@ -1602,28 +1526,18 @@ function App() {
                           <div className="admin-member-info">
 
                             <Avatar
-                              member={
-                                member
-                              }
+                              member={member}
                             />
 
                             <div>
-
                               <strong>
-                                {
-                                  member.nickname
-                                }
+                                {member.nickname}
                               </strong>
 
                               <div>
-                                {
-                                  member.first_name
-                                }{" "}
-                                {
-                                  member.last_name
-                                }
+                                {member.first_name}{" "}
+                                {member.last_name}
                               </div>
-
                             </div>
 
                           </div>
@@ -1664,7 +1578,6 @@ function App() {
                         Registrierungen.
                       </p>
                     )}
-
                   </>
                 )}
 
@@ -1697,9 +1610,7 @@ function App() {
               <div className="profile-header">
 
                 <Avatar
-                  member={
-                    selectedProfile
-                  }
+                  member={selectedProfile}
                   className="profile-avatar"
                 />
 
@@ -1716,9 +1627,7 @@ function App() {
                           : "nickname-standard"
                     }
                   >
-                    {
-                      selectedProfile.nickname
-                    }
+                    {selectedProfile.nickname}
                   </h2>
 
                   <p>
@@ -1728,9 +1637,7 @@ function App() {
                   </p>
 
                   <RoleStars
-                    member={
-                      selectedProfile
-                    }
+                    member={selectedProfile}
                   />
 
                 </div>
@@ -1764,8 +1671,6 @@ function App() {
                     )}`}
               </p>
 
-              {/* E-MAIL NUR FÜR ADMINS */}
-
               {isAdmin(profile?.role) && (
                 <div className="admin-section">
 
@@ -1777,6 +1682,7 @@ function App() {
                     <strong>
                       E-Mail:
                     </strong>
+
                     <br />
 
                     {selectedProfile.email ||
@@ -1785,8 +1691,6 @@ function App() {
 
                 </div>
               )}
-
-              {/* FREUNDSCHAFT */}
 
               {user &&
                 selectedProfile.id !==
@@ -1798,18 +1702,6 @@ function App() {
                     ) === "FRIEND" && (
                       <>
                         <p>
-                          <img
-                            src={FRIEND_LOGO}
-                            alt="Freund"
-                            style={{
-                              width: "30px",
-                              verticalAlign:
-                                "middle",
-                              marginRight:
-                                "8px",
-                            }}
-                          />
-
                           Ihr seid Freunde.
                         </p>
 
@@ -1840,8 +1732,8 @@ function App() {
                       selectedProfile.id
                     ) === "OUTGOING" && (
                       <p>
-                        Freundschaftsanfrage
-                        wurde bereits gesendet.
+                        Freundschaftsanfrage wurde
+                        bereits gesendet.
                       </p>
                     )}
 
@@ -1856,20 +1748,7 @@ function App() {
                           )
                         }
                       >
-                        <img
-                          src={FRIEND_LOGO}
-                          alt=""
-                          style={{
-                            width: "23px",
-                            verticalAlign:
-                              "middle",
-                            marginRight:
-                              "8px",
-                          }}
-                        />
-
-                        Freundschaftsanfrage
-                        senden
+                        Freundschaftsanfrage senden
                       </button>
                     )}
 
@@ -1919,8 +1798,8 @@ function App() {
             />
 
             <p>
-              Deine regionale Community
-              für Ennstal und Obersteiermark.
+              Deine regionale Community für
+              Ennstal und Obersteiermark.
             </p>
 
           </div>
@@ -1933,7 +1812,6 @@ function App() {
         </div>
 
       </footer>
-
     </>
   );
 }
