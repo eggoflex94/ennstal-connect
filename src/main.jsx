@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { supabase } from "./supabase";
+import { supabase, supabaseConfigError } from "./supabase";
 import "./styles.css";
 
 const LOGO = "/logo.png";
@@ -108,6 +108,9 @@ function PublicHome({ openAuth }) {
 }
 
 function App() {
+  if (supabaseConfigError) {
+    return <div className="loading-screen"><div className="pending-card"><img src={LOGO} alt="Ennstal Connect" className="pending-logo"/><span className="eyebrow dark">ENNSTAL CONNECT</span><h1>Verbindung wird eingerichtet</h1><p>{supabaseConfigError}</p><p>Bitte in Vercel für dieses Projekt <b>VITE_SUPABASE_URL</b> und <b>VITE_SUPABASE_ANON_KEY</b> hinterlegen und danach neu deployen.</p></div></div>;
+  }
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
   const [members, setMembers] = useState([]);
@@ -303,8 +306,8 @@ function App() {
         {page==="members" && <Members members={filteredMembers} search={search} setSearch={setSearch} user={user} isAdmin={isAdmin} changePoints={changePoints} addFriend={sendFriendRequest}/>}
         {page==="marketplace" && <Marketplace items={market} members={members} form={marketForm} setForm={setMarketForm} create={createMarketItem}/>}
         {page==="messages" && <Messages messages={messages}/>}
-        {page==="profile" && <Profile profile={profile} form={profileForm} setForm={setProfileForm} save={saveProfile}/>}
-        {page==="admin" && isAdmin && <Admin pending={pending} approved={approvedMembers} setStatus={setStatus} changePoints={changePoints} isHead={isHead}/>}
+        {page==="profile" && <Profile profile={profile} form={profileForm} setForm={setProfileForm} save={saveProfile}/>} 
+        {page==="admin" && isAdmin && <Admin pending={pending} approved={approvedMembers} setStatus={setStatus} changePoints={changePoints} isHead={isHead}/>} 
       </section>
 
       <aside className="right-sidebar">
