@@ -5,7 +5,7 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export const supabaseConfigError =
   !supabaseUrl || !supabaseAnonKey
-    ? "Die Supabase-Umgebungsvariablen fehlen in diesem Vercel-Deployment."
+    ? "Die Supabase-Umgebungsvariablen fehlen in diesem Deployment."
     : "";
 
 export const supabase = supabaseConfigError
