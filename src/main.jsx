@@ -1,369 +1,2083 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { createRoot } from "react-dom/client";
-import { supabase, supabaseConfigError } from "./supabase";
+import ReactDOM from "react-dom/client";
 import "./styles.css";
 
-const LOGO = "/logo.png";
+const ADMIN_EMAIL = "eggermarco@gmx.net";
+const BLACK_NICKNAME_PRICE = 100;
+const DEFAULT_AVATAR = "/no.pic.png";
 
-const isApproved = (p) => p?.status === "APPROVED";
-const isAdminRole = (role) => ["ADMIN", "HEAD_ADMIN"].includes(role);
+const starterNews = [
+  {
+    id: 1,
+    title: "Willkommen bei Ennstal Connect",
+    content:
+      "Die regionale Community für Ennstal und Obersteiermark ist online.",
+    category: "Community",
+    date: new Date().toLocaleDateString("de-AT"),
+    author: "Ennstal Connect",
+  },
+];
 
-function nameOf(p) {
-  if (!p) return "Mitglied";
-  return p.nickname || `${p.first_name || ""} ${p.last_name || ""}`.trim() || "Mitglied";
-}
-function initials(p) {
-  return nameOf(p).slice(0, 2).toUpperCase();
-}
-function roleLabel(role) {
-  if (role === "HEAD_ADMIN") return "★ Hauptadmin";
-  if (role === "ADMIN") return "★ Admin";
-  if (role === "SUPPORTER") return "★ Unterstützer";
-  return "Mitglied";
-}
-
-function AuthModal({ mode, setMode, onClose, notice }) {
-  const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({
-    first_name:"", last_name:"", birth_date:"", nickname:"", email:"", password:""
-  });
-  const set = (key, value) => setForm((x) => ({...x, [key]:value}));
-
-  async function submit(e) {
-    e.preventDefault();
-    setLoading(true);
-    if (mode === "register") {
-      const { error } = await supabase.auth.signUp({
-        email: form.email,
-        password: form.password,
-        options: {
-          emailRedirectTo: window.location.origin,
-          data: {
-            first_name: form.first_name,
-            last_name: form.last_name,
-            birth_date: form.birth_date,
-            nickname: form.nickname
-          }
-        }
-      });
-      notice(error ? error.message : "Registrierung erfolgreich. Bitte bestätige deine E-Mail. Danach wartet dein Konto auf die Freigabe durch einen Admin.");
-      if (!error) onClose();
-    } else {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: form.email, password: form.password
-      });
-      notice(error ? error.message : "Erfolgreich angemeldet.");
-      if (!error) onClose();
-    }
-    setLoading(false);
-  }
-
-  return <div className="modal-backdrop">
-    <form className="auth-modal" onSubmit={submit}>
-      <button type="button" className="icon-close" onClick={onClose}>×</button>
-      <span className="eyebrow">ENNSTAL CONNECT</span>
-      <h2>{mode === "login" ? "Willkommen zurück" : "Werde Teil der Community"}</h2>
-
-      {mode === "register" && <>
-        <div className="form-grid">
-          <label>Vorname<input required value={form.first_name} onChange={e=>set("first_name",e.target.value)} /></label>
-          <label>Nachname<input required value={form.last_name} onChange={e=>set("last_name",e.target.value)} /></label>
-        </div>
-        <label>Spitzname<input required minLength="3" value={form.nickname} onChange={e=>set("nickname",e.target.value)} /></label>
-        <label>Geburtsdatum<input type="date" value={form.birth_date} onChange={e=>set("birth_date",e.target.value)} /></label>
-      </>}
-
-      <label>E-Mail<input required type="email" value={form.email} onChange={e=>set("email",e.target.value)} /></label>
-      <label>Passwort<input required minLength="8" type="password" value={form.password} onChange={e=>set("password",e.target.value)} /></label>
-
-      <button className="primary-button full" disabled={loading}>
-        {loading ? "Bitte warten ..." : mode === "login" ? "Anmelden" : "Registrieren"}
-      </button>
-      <button type="button" className="link-button" onClick={()=>setMode(mode==="login"?"register":"login")}>
-        {mode === "login" ? "Noch kein Konto? Jetzt registrieren" : "Bereits Mitglied? Jetzt anmelden"}
-      </button>
-    </form>
-  </div>;
-}
-
-function PublicHome({ openAuth }) {
-  return <div className="public-home">
-    <header className="topbar">
-      <div className="brand"><img src={LOGO} alt="Ennstal Connect" /><span>Ennstal Connect</span></div>
-      <div className="header-actions">
-        <button className="secondary-button" onClick={()=>openAuth("login")}>Anmelden</button>
-        <button className="primary-button" onClick={()=>openAuth("register")}>Mitglied werden</button>
-      </div>
-    </header>
-    <main className="public-main">
-      <section className="public-hero">
-        <span className="eyebrow">DEINE REGION. DEINE COMMUNITY.</span>
-        <h1>Willkommen bei<br />Ennstal Connect</h1>
-        <p>Verbinde dich mit Menschen aus deiner Region. Entdecke Neuigkeiten, tausche dich aus und finde spannende Angebote.</p>
-        <button className="primary-button large" onClick={()=>openAuth("register")}>Community entdecken →</button>
-        <div className="hero-info"><div className="hero-icon">🏔️</div><div><h2>Das Ennstal verbindet.</h2><p>Menschen, Neuigkeiten, Veranstaltungen und lokale Angebote an einem Ort.</p></div></div>
-      </section>
-    </main>
-  </div>;
-}
+const starterPosts = [
+  {
+    id: 1,
+    userId: "system",
+    name: "Ennstal Connect",
+    role: "admin",
+    text: "Willkommen in unserer Community! Wir freuen uns, dass du dabei bist.",
+    date: new Date().toLocaleString("de-AT"),
+    avatar: "",
+  },
+];
 
 function App() {
-  if (supabaseConfigError) {
-    return <div className="loading-screen"><div className="pending-card"><img src={LOGO} alt="Ennstal Connect" className="pending-logo"/><span className="eyebrow dark">ENNSTAL CONNECT</span><h1>Verbindung wird eingerichtet</h1><p>{supabaseConfigError}</p><p>Bitte in Vercel für dieses Projekt <b>VITE_SUPABASE_URL</b> und <b>VITE_SUPABASE_ANON_KEY</b> hinterlegen und danach neu deployen.</p></div></div>;
-  }
-  const [session, setSession] = useState(null);
-  const [profile, setProfile] = useState(null);
-  const [members, setMembers] = useState([]);
+  const [activePage, setActivePage] = useState("home");
+  const [user, setUser] = useState(null);
+  const [users, setUsers] = useState([]);
+  const [news, setNews] = useState([]);
   const [posts, setPosts] = useState([]);
-  const [market, setMarket] = useState([]);
-  const [messages, setMessages] = useState([]);
-  const [friends, setFriends] = useState([]);
-  const [pending, setPending] = useState([]);
-  const [page, setPage] = useState("start");
-  const [authMode, setAuthMode] = useState(null);
-  const [notice, setNotice] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [newPost, setNewPost] = useState("");
-  const [marketForm, setMarketForm] = useState({title:"",description:"",price:""});
-  const [profileForm, setProfileForm] = useState({first_name:"",last_name:"",nickname:"",bio:""});
 
-  const user = session?.user || null;
-  const isAdmin = isAdminRole(profile?.role);
-  const isHead = profile?.role === "HEAD_ADMIN";
-  const approvedMembers = useMemo(()=>members.filter(isApproved),[members]);
-  const onlineMembers = useMemo(()=>approvedMembers.filter(m=>m.is_online),[approvedMembers]);
-  const filteredMembers = useMemo(()=>approvedMembers.filter(m=>nameOf(m).toLowerCase().includes(search.toLowerCase())),[approvedMembers,search]);
+  const [selectedProfile, setSelectedProfile] = useState(null);
+  const [memberSearch, setMemberSearch] = useState("");
 
-  function show(text) {
-    setNotice(text);
-    window.clearTimeout(window.__ecNoticeTimer);
-    window.__ecNoticeTimer = window.setTimeout(()=>setNotice(""),5000);
+  const [loginOpen, setLoginOpen] = useState(false);
+  const [registerOpen, setRegisterOpen] = useState(false);
+
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [nickname, setNickname] = useState("");
+  const [birthDate, setBirthDate] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const [postText, setPostText] = useState("");
+  const [newsTitle, setNewsTitle] = useState("");
+  const [newsContent, setNewsContent] = useState("");
+  const [newsCategory, setNewsCategory] = useState("Allgemein");
+
+  const [profileForm, setProfileForm] = useState({
+    bio: "",
+    location: "",
+    interests: "",
+    avatar: "",
+  });
+
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    const savedUsers = localStorage.getItem("ennstal_users");
+    const savedUser = localStorage.getItem("ennstal_current_user");
+    const savedNews = localStorage.getItem("ennstal_news");
+    const savedPosts = localStorage.getItem("ennstal_posts");
+
+    let loadedUsers = [];
+
+    if (savedUsers) {
+      try {
+        loadedUsers = JSON.parse(savedUsers).map((member) => ({
+          ...member,
+          firstName: member.firstName || "",
+          lastName: member.lastName || "",
+          birthDate: member.birthDate || "",
+          nickname: member.nickname || "",
+          email: member.email || "",
+          role: member.role || "member",
+          status: member.status || "approved",
+          isOnline: member.isOnline || false,
+          lastOnline: member.lastOnline || member.createdAt || "",
+          avatar: member.avatar || "",
+          bio: member.bio || "",
+          location: member.location || "",
+          interests: member.interests || "",
+          communityPoints: Number(member.communityPoints || 0),
+          buyPoints: Number(member.buyPoints || 0),
+          hasBlackNickname: Boolean(member.hasBlackNickname),
+          profileVisits: Number(member.profileVisits || 0),
+        }));
+
+        setUsers(loadedUsers);
+      } catch {
+        localStorage.removeItem("ennstal_users");
+      }
+    }
+
+    if (savedUser) {
+      try {
+        const currentUser = JSON.parse(savedUser);
+
+        const updatedUser = {
+          ...currentUser,
+          isOnline: true,
+          lastOnline: new Date().toLocaleString("de-AT"),
+        };
+
+        setUser(updatedUser);
+
+        const updatedUsers = loadedUsers.map((member) =>
+          member.id === updatedUser.id
+            ? { ...member, ...updatedUser }
+            : member
+        );
+
+        setUsers(updatedUsers);
+
+        localStorage.setItem(
+          "ennstal_users",
+          JSON.stringify(updatedUsers)
+        );
+
+        localStorage.setItem(
+          "ennstal_current_user",
+          JSON.stringify(updatedUser)
+        );
+      } catch {
+        localStorage.removeItem("ennstal_current_user");
+      }
+    }
+
+    if (savedNews) {
+      try {
+        setNews(JSON.parse(savedNews));
+      } catch {
+        setNews(starterNews);
+      }
+    } else {
+      setNews(starterNews);
+      localStorage.setItem(
+        "ennstal_news",
+        JSON.stringify(starterNews)
+      );
+    }
+
+    if (savedPosts) {
+      try {
+        setPosts(JSON.parse(savedPosts));
+      } catch {
+        setPosts(starterPosts);
+      }
+    } else {
+      setPosts(starterPosts);
+      localStorage.setItem(
+        "ennstal_posts",
+        JSON.stringify(starterPosts)
+      );
+    }
+  }, []);
+
+  function saveUsers(newUsers) {
+    setUsers(newUsers);
+
+    localStorage.setItem(
+      "ennstal_users",
+      JSON.stringify(newUsers)
+    );
   }
 
-  async function loadProfile(id) {
-    const {data,error} = await supabase.from("profiles").select("*").eq("id",id).single();
-    if (error) { show(error.message); return null; }
-    setProfile(data);
-    setProfileForm({
-      first_name:data.first_name || "", last_name:data.last_name || "",
-      nickname:data.nickname || "", bio:data.bio || ""
-    });
-    return data;
+  function saveNews(newNews) {
+    setNews(newNews);
+
+    localStorage.setItem(
+      "ennstal_news",
+      JSON.stringify(newNews)
+    );
   }
 
-  async function loadAll(currentProfile) {
-    const [{data: m, error: me}, {data: p}, {data: mk}] = await Promise.all([
-      supabase.from("profiles").select("*").order("nickname"),
-      supabase.from("posts").select("*").order("created_at",{ascending:false}),
-      supabase.from("marketplace_items").select("*").order("created_at",{ascending:false})
-    ]);
-    if (me) show(me.message);
-    setMembers(m || []); setPosts(p || []); setMarket(mk || []);
+  function savePosts(newPosts) {
+    setPosts(newPosts);
 
-    if (currentProfile && isAdminRole(currentProfile.role)) {
-      const {data} = await supabase.from("profiles").select("*").eq("status","PENDING_ADMIN").order("created_at");
-      setPending(data || []);
-    } else setPending([]);
+    localStorage.setItem(
+      "ennstal_posts",
+      JSON.stringify(newPosts)
+    );
+  }
 
-    if (user) {
-      const {data} = await supabase.from("messages").select("*").order("created_at",{ascending:false}).limit(50);
-      setMessages(data || []);
-      const {data: fr} = await supabase.from("friend_requests").select("*").or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`);
-      setFriends(fr || []);
+  function showMessage(text) {
+    setMessage(text);
+
+    window.setTimeout(() => {
+      setMessage("");
+    }, 3500);
+  }
+
+  function clearAuthFields() {
+    setFirstName("");
+    setLastName("");
+    setNickname("");
+    setBirthDate("");
+    setEmail("");
+    setPassword("");
+  }
+
+  function getAvatar(member) {
+    return member?.avatar?.trim()
+      ? member.avatar
+      : DEFAULT_AVATAR;
+  }
+
+  function getNicknameColor(member) {
+    if (member.role === "admin") {
+      return "#d62828";
+    }
+
+    if (member.hasBlackNickname) {
+      return "#111111";
+    }
+
+    return "#343434";
+  }
+
+  function roleName(role) {
+    if (role === "admin") return "Administrator";
+    if (role === "supporter") return "Unterstützer";
+
+    return "Mitglied";
+  }
+
+  function renderStar(role) {
+    if (role === "admin") {
+      return (
+        <img
+          src="/Admin-star.png"
+          alt="Admin"
+          className="role-star"
+        />
+      );
+    }
+
+    if (role === "supporter") {
+      return (
+        <img
+          src="/supporter-star.png"
+          alt="Unterstützer"
+          className="role-star"
+        />
+      );
+    }
+
+    return null;
+  }
+
+  function register() {
+    if (
+      !firstName.trim() ||
+      !lastName.trim() ||
+      !nickname.trim() ||
+      !birthDate ||
+      !email.trim() ||
+      !password.trim()
+    ) {
+      showMessage(
+        "Bitte Vorname, Nachname, Nickname, Geburtsdatum, E-Mail und Passwort ausfüllen."
+      );
+      return;
+    }
+
+    const emailExists = users.some(
+      (existingUser) =>
+        existingUser.email.toLowerCase() ===
+        email.trim().toLowerCase()
+    );
+
+    if (emailExists) {
+      showMessage(
+        "Diese E-Mail-Adresse ist bereits registriert."
+      );
+      return;
+    }
+
+    const nicknameExists = users.some(
+      (existingUser) =>
+        existingUser.nickname.toLowerCase() ===
+        nickname.trim().toLowerCase()
+    );
+
+    if (nicknameExists) {
+      showMessage(
+        "Dieser Nickname ist bereits vergeben."
+      );
+      return;
+    }
+
+    const isMainAdmin =
+      email.trim().toLowerCase() ===
+      ADMIN_EMAIL.toLowerCase();
+
+    const newUser = {
+      id: Date.now(),
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      nickname: nickname.trim(),
+      birthDate,
+      email: email.trim().toLowerCase(),
+      password,
+      role: isMainAdmin ? "admin" : "member",
+      status: isMainAdmin ? "approved" : "pending",
+      createdAt: new Date().toLocaleDateString("de-AT"),
+      isOnline: isMainAdmin,
+      lastOnline: new Date().toLocaleString("de-AT"),
+
+      avatar: "",
+      bio: "",
+      location: "",
+      interests: "",
+
+      communityPoints: 0,
+      buyPoints: 0,
+      hasBlackNickname: false,
+      profileVisits: 0,
+    };
+
+    const updatedUsers = [...users, newUser];
+
+    saveUsers(updatedUsers);
+
+    clearAuthFields();
+    setRegisterOpen(false);
+
+    if (isMainAdmin) {
+      setUser(newUser);
+
+      localStorage.setItem(
+        "ennstal_current_user",
+        JSON.stringify(newUser)
+      );
+
+      showMessage(
+        "Hauptadmin erfolgreich erstellt."
+      );
+    } else {
+      showMessage(
+        "Registrierung erfolgreich. Ein Admin muss dein Konto noch freigeben."
+      );
     }
   }
 
-  useEffect(()=>{
-    let alive = true;
-    (async()=>{
-      const {data:{session}} = await supabase.auth.getSession();
-      if (!alive) return;
-      setSession(session);
-      let p = null;
-      if (session?.user) {
-        p = await loadProfile(session.user.id);
-        await loadAll(p);
-        if (p) {
-          await supabase.from("profiles").update({is_online:true,last_seen:new Date().toISOString()}).eq("id",p.id);
-        }
+  function login() {
+    if (!email.trim() || !password.trim()) {
+      showMessage(
+        "Bitte E-Mail und Passwort eingeben."
+      );
+      return;
+    }
+
+    const foundUser = users.find(
+      (member) =>
+        member.email.toLowerCase() ===
+          email.trim().toLowerCase() &&
+        member.password === password
+    );
+
+    if (!foundUser) {
+      showMessage(
+        "E-Mail-Adresse oder Passwort ist falsch."
+      );
+      return;
+    }
+
+    if (foundUser.status !== "approved") {
+      showMessage(
+        "Dein Konto wurde noch nicht von einem Admin freigegeben."
+      );
+      return;
+    }
+
+    const updatedUser = {
+      ...foundUser,
+      isOnline: true,
+      lastOnline: new Date().toLocaleString("de-AT"),
+    };
+
+    const updatedUsers = users.map((member) =>
+      member.id === updatedUser.id
+        ? updatedUser
+        : member
+    );
+
+    saveUsers(updatedUsers);
+
+    setUser(updatedUser);
+
+    localStorage.setItem(
+      "ennstal_current_user",
+      JSON.stringify(updatedUser)
+    );
+
+    clearAuthFields();
+    setLoginOpen(false);
+
+    showMessage(
+      `Willkommen zurück, ${updatedUser.nickname}!`
+    );
+  }
+
+  function logout() {
+    if (!user) return;
+
+    const now = new Date().toLocaleString("de-AT");
+
+    const updatedUsers = users.map((member) =>
+      member.id === user.id
+        ? {
+            ...member,
+            isOnline: false,
+            lastOnline: now,
+          }
+        : member
+    );
+
+    saveUsers(updatedUsers);
+
+    localStorage.removeItem(
+      "ennstal_current_user"
+    );
+
+    setUser(null);
+    setSelectedProfile(null);
+    setActivePage("home");
+
+    showMessage("Du wurdest abgemeldet.");
+  }
+
+  function openProfile(member) {
+    if (!user) {
+      showMessage(
+        "Bitte melde dich an, um Mitgliederprofile zu öffnen."
+      );
+      return;
+    }
+
+    let profileToOpen = member;
+
+    if (member.id !== user.id) {
+      const updatedUsers = users.map((existingMember) =>
+        existingMember.id === member.id
+          ? {
+              ...existingMember,
+              profileVisits:
+                Number(
+                  existingMember.profileVisits || 0
+                ) + 1,
+            }
+          : existingMember
+      );
+
+      saveUsers(updatedUsers);
+
+      profileToOpen = updatedUsers.find(
+        (existingMember) =>
+          existingMember.id === member.id
+      );
+    }
+
+    setSelectedProfile(profileToOpen);
+
+    if (member.id === user.id) {
+      setProfileForm({
+        bio: profileToOpen.bio || "",
+        location: profileToOpen.location || "",
+        interests: profileToOpen.interests || "",
+        avatar: profileToOpen.avatar || "",
+      });
+    }
+
+    setActivePage("profile");
+  }
+
+  function openOwnProfile() {
+    if (!user) return;
+
+    setSelectedProfile(user);
+
+    setProfileForm({
+      bio: user.bio || "",
+      location: user.location || "",
+      interests: user.interests || "",
+      avatar: user.avatar || "",
+    });
+
+    setActivePage("profile");
+  }
+
+  function handleAvatarUpload(event) {
+    const file = event.target.files?.[0];
+
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      showMessage(
+        "Bitte wähle eine gültige Bilddatei."
+      );
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      setProfileForm((current) => ({
+        ...current,
+        avatar: reader.result,
+      }));
+    };
+
+    reader.readAsDataURL(file);
+  }
+
+  function removeAvatar() {
+    setProfileForm((current) => ({
+      ...current,
+      avatar: "",
+    }));
+
+    showMessage(
+      "Profilbild entfernt. Nach dem Speichern wird wieder das Standardbild verwendet."
+    );
+  }
+
+  function saveProfile() {
+    if (!user) return;
+
+    const updatedUser = {
+      ...user,
+      bio: profileForm.bio,
+      location: profileForm.location,
+      interests: profileForm.interests,
+      avatar: profileForm.avatar || "",
+    };
+
+    const updatedUsers = users.map((member) =>
+      member.id === user.id
+        ? updatedUser
+        : member
+    );
+
+    saveUsers(updatedUsers);
+
+    setUser(updatedUser);
+
+    localStorage.setItem(
+      "ennstal_current_user",
+      JSON.stringify(updatedUser)
+    );
+
+    setSelectedProfile(updatedUser);
+
+    showMessage("Profil gespeichert.");
+  }
+
+  function createPost() {
+    if (!user) {
+      showMessage(
+        "Bitte melde dich an, um Beiträge zu erstellen."
+      );
+      return;
+    }
+
+    if (!postText.trim()) {
+      showMessage(
+        "Bitte schreibe einen Beitrag."
+      );
+      return;
+    }
+
+    const newPost = {
+      id: Date.now(),
+      userId: user.id,
+      name: user.nickname,
+      role: user.role,
+      hasBlackNickname: user.hasBlackNickname,
+      avatar: user.avatar || "",
+      text: postText.trim(),
+      date: new Date().toLocaleString("de-AT"),
+    };
+
+    savePosts([newPost, ...posts]);
+
+    setPostText("");
+
+    showMessage(
+      "Beitrag veröffentlicht."
+    );
+  }
+
+  function deletePost(id) {
+    savePosts(
+      posts.filter(
+        (post) => post.id !== id
+      )
+    );
+
+    showMessage("Beitrag gelöscht.");
+  }
+
+  function createNews() {
+    if (user?.role !== "admin") return;
+
+    if (
+      !newsTitle.trim() ||
+      !newsContent.trim()
+    ) {
+      showMessage(
+        "Bitte Titel und Inhalt eingeben."
+      );
+      return;
+    }
+
+    const newNews = {
+      id: Date.now(),
+      title: newsTitle.trim(),
+      content: newsContent.trim(),
+      category: newsCategory,
+      date: new Date().toLocaleDateString("de-AT"),
+      author: user.nickname,
+    };
+
+    saveNews([newNews, ...news]);
+
+    setNewsTitle("");
+    setNewsContent("");
+
+    showMessage("News veröffentlicht.");
+  }
+
+  function deleteNews(id) {
+    saveNews(
+      news.filter(
+        (newsItem) =>
+          newsItem.id !== id
+      )
+    );
+
+    showMessage("News gelöscht.");
+  }
+
+  function approveUser(id) {
+    const updatedUsers = users.map((member) =>
+      member.id === id
+        ? {
+            ...member,
+            status: "approved",
+          }
+        : member
+    );
+
+    saveUsers(updatedUsers);
+
+    showMessage("Mitglied freigegeben.");
+  }
+
+  function rejectUser(id) {
+    const updatedUsers = users.map((member) =>
+      member.id === id
+        ? {
+            ...member,
+            status: "rejected",
+            isOnline: false,
+          }
+        : member
+    );
+
+    saveUsers(updatedUsers);
+
+    showMessage("Registrierung abgelehnt.");
+  }
+
+  function toggleSupporter(id) {
+    const updatedUsers = users.map((member) => {
+      if (member.id !== id) return member;
+
+      if (member.role === "admin") {
+        return member;
       }
-      if (alive) setLoading(false);
-    })();
 
-    const {data:{subscription}} = supabase.auth.onAuthStateChange(async(_event,newSession)=>{
-      setSession(newSession);
-      if (!newSession?.user) { setProfile(null); setPage("start"); return; }
-      const p = await loadProfile(newSession.user.id);
-      await loadAll(p);
+      return {
+        ...member,
+        role:
+          member.role === "supporter"
+            ? "member"
+            : "supporter",
+      };
     });
-    return ()=>{alive=false; subscription.unsubscribe();};
-  },[]);
 
-  useEffect(()=>{
-    if (!user || !profile) return;
-    const t = window.setInterval(async()=>{
-      await supabase.from("profiles").update({is_online:true,last_seen:new Date().toISOString()}).eq("id",user.id);
-      await loadAll(profile);
-    },60000);
-    return ()=>window.clearInterval(t);
-  },[user?.id,profile?.role]);
+    saveUsers(updatedUsers);
 
-  async function signOut() {
-    if (user) await supabase.from("profiles").update({is_online:false,last_seen:new Date().toISOString()}).eq("id",user.id);
-    await supabase.auth.signOut();
-    setSession(null); setProfile(null);
+    showMessage(
+      "Unterstützerstatus geändert."
+    );
   }
 
-  async function createPost() {
-    if (!newPost.trim()) return;
-    const {error}=await supabase.from("posts").insert({author_id:user.id,content:newPost.trim()});
-    if (error) return show(error.message);
-    setNewPost(""); show("Beitrag veröffentlicht."); await loadAll(profile);
+  function changePoints(id, type, value) {
+    const amount = Number(value);
+
+    if (Number.isNaN(amount)) {
+      showMessage("Bitte eine gültige Zahl eingeben.");
+      return;
+    }
+
+    const updatedUsers = users.map((member) =>
+      member.id === id
+        ? {
+            ...member,
+            communityPoints:
+              type === "community"
+                ? amount
+                : member.communityPoints,
+            buyPoints:
+              type === "buy"
+                ? amount
+                : member.buyPoints,
+          }
+        : member
+    );
+
+    saveUsers(updatedUsers);
+
+    if (user?.id === id) {
+      const updatedCurrentUser =
+        updatedUsers.find(
+          (member) => member.id === id
+        );
+
+      setUser(updatedCurrentUser);
+
+      localStorage.setItem(
+        "ennstal_current_user",
+        JSON.stringify(updatedCurrentUser)
+      );
+    }
+
+    showMessage("Punkte aktualisiert.");
   }
 
-  async function createMarketItem() {
-    if (!marketForm.title.trim()) return show("Bitte einen Titel eingeben.");
-    const {error}=await supabase.from("marketplace_items").insert({
-      author_id:user.id,title:marketForm.title.trim(),
-      description:marketForm.description.trim(),price:marketForm.price.trim()
-    });
-    if(error) return show(error.message);
-    setMarketForm({title:"",description:"",price:""}); show("Angebot veröffentlicht."); await loadAll(profile);
+  function buyBlackNickname() {
+    if (!user) {
+      showMessage(
+        "Bitte melde dich an."
+      );
+      return;
+    }
+
+    if (user.role === "admin") {
+      showMessage(
+        "Als Admin bleibt dein Nickname rot."
+      );
+      return;
+    }
+
+    if (user.hasBlackNickname) {
+      showMessage(
+        "Du besitzt bereits den schwarzen Nickname."
+      );
+      return;
+    }
+
+    if (
+      Number(user.buyPoints || 0) <
+      BLACK_NICKNAME_PRICE
+    ) {
+      showMessage(
+        `Du benötigst ${BLACK_NICKNAME_PRICE} Kaufpunkte.`
+      );
+      return;
+    }
+
+    const updatedUser = {
+      ...user,
+      buyPoints:
+        Number(user.buyPoints) -
+        BLACK_NICKNAME_PRICE,
+      hasBlackNickname: true,
+    };
+
+    const updatedUsers = users.map((member) =>
+      member.id === user.id
+        ? updatedUser
+        : member
+    );
+
+    saveUsers(updatedUsers);
+
+    setUser(updatedUser);
+
+    localStorage.setItem(
+      "ennstal_current_user",
+      JSON.stringify(updatedUser)
+    );
+
+    showMessage(
+      "Schwarze Nickname-Farbe erfolgreich gekauft!"
+    );
   }
 
-  async function saveProfile() {
-    const {error}=await supabase.from("profiles").update({
-      first_name:profileForm.first_name.trim(),last_name:profileForm.last_name.trim(),
-      nickname:profileForm.nickname.trim(),bio:profileForm.bio.trim(),
-      updated_at:new Date().toISOString()
-    }).eq("id",user.id);
-    if(error) return show(error.message);
-    await loadProfile(user.id); await loadAll(profile); show("Profil gespeichert.");
+  const approvedUsers = useMemo(
+    () =>
+      users.filter(
+        (member) =>
+          member.status === "approved"
+      ),
+    [users]
+  );
+
+  const onlineUsers = useMemo(
+    () =>
+      approvedUsers.filter(
+        (member) => member.isOnline
+      ),
+    [approvedUsers]
+  );
+
+  const filteredUsers = useMemo(() => {
+    const search =
+      memberSearch.toLowerCase().trim();
+
+    if (!search) return approvedUsers;
+
+    return approvedUsers.filter((member) =>
+      [
+        member.nickname,
+        member.firstName,
+        member.lastName,
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(search)
+    );
+  }, [approvedUsers, memberSearch]);
+
+  function Nickname({
+    member,
+    clickable = true,
+  }) {
+    const canOpen =
+      Boolean(user) && clickable;
+
+    return (
+      <span
+        className={
+          canOpen
+            ? "clickable-nickname"
+            : "nickname"
+        }
+        style={{
+          color: getNicknameColor(member),
+        }}
+        onClick={() => {
+          if (canOpen) {
+            openProfile(member);
+          }
+        }}
+      >
+        {member.nickname}
+        {renderStar(member.role)}
+      </span>
+    );
   }
 
-  async function setStatus(memberId,status) {
-    const {error}=await supabase.rpc("set_account_status",{target_user:memberId,new_status:status,note:""});
-    if(error) return show(error.message);
-    show(status==="APPROVED" ? "Mitglied freigegeben." : "Registrierung abgelehnt.");
-    await loadAll(profile);
-  }
+  function MemberCard({ member, adminMode = false }) {
+    return (
+      <article
+        className={`member-card ${member.role}`}
+      >
+        <div
+          className="member-card-top"
+          onClick={() => {
+            if (!adminMode) {
+              openProfile(member);
+            }
+          }}
+        >
+          <div className="avatar-wrap">
+            <img
+              src={getAvatar(member)}
+              alt={member.nickname}
+              className="member-avatar"
+              onError={(event) => {
+                event.currentTarget.src =
+                  DEFAULT_AVATAR;
+              }}
+            />
 
-  async function changePoints(member) {
-    const delta=Number(window.prompt("Punkte eingeben, z. B. 5 oder -3:"));
-    if(!Number.isFinite(delta) || delta===0) return;
-    const reason=window.prompt("Begründung (Pflicht):");
-    if(!reason || reason.trim().length<3) return show("Eine Begründung ist erforderlich.");
-    const {error}=await supabase.rpc("admin_change_points",{
-      target_user:member.id,delta,
-      change_kind:delta>0?"PLUS":"MINUS",reason_text:reason.trim()
-    });
-    if(error) return show(error.message);
-    show("Punkte erfolgreich geändert."); await loadAll(profile);
-  }
+            <span
+              className={`status-dot ${
+                member.isOnline
+                  ? "online-dot"
+                  : "offline-dot"
+              }`}
+            />
+          </div>
 
-  async function sendFriendRequest(memberId) {
-    if(memberId===user.id) return;
-    const {error}=await supabase.from("friend_requests").insert({sender_id:user.id,receiver_id:memberId,status:"PENDING"});
-    show(error ? error.message : "Freundschaftsanfrage gesendet.");
-  }
+          <div className="member-info">
+            <h3>
+              <Nickname member={member} />
+            </h3>
 
-  if(loading) return <div className="loading-screen"><img src={LOGO} alt="" /><p>Ennstal Connect wird geladen ...</p></div>;
+            <p className="member-real-name">
+              {member.firstName}{" "}
+              {member.lastName}
+            </p>
 
-  if(!user) return <>
-    <PublicHome openAuth={setAuthMode} />
-    {authMode && <AuthModal mode={authMode} setMode={setAuthMode} onClose={()=>setAuthMode(null)} notice={show}/>}
-    {notice && <div className="notice">{notice}</div>}
-  </>;
+            <p>
+              {roleName(member.role)}
+            </p>
 
-  if(profile && !isApproved(profile) && !isAdmin) return <div className="pending-page">
-    <img src={LOGO} alt="Ennstal Connect" className="pending-logo"/>
-    <div className="pending-card"><span className="eyebrow">ENNSTAL CONNECT</span>
-      <h1>Dein Konto wartet auf Freigabe.</h1>
-      <p>Willkommen {nameOf(profile)}. Ein Admin muss deine Registrierung noch freigeben.</p>
-      <button className="secondary-button" onClick={signOut}>Abmelden</button>
-    </div>
-  </div>;
+            <div className="member-points">
+              <span>
+                ⭐ {member.communityPoints || 0}
+              </span>
 
-  const nav = (key,label)=> <button className={page===key?"active":""} onClick={()=>setPage(key)}>{label}</button>;
+              <span>
+                🛒 {member.buyPoints || 0}
+              </span>
+            </div>
 
-  return <div className="app-shell">
-    <header className="topbar">
-      <button className="brand brand-button" onClick={()=>setPage("start")}><img src={LOGO} alt=""/><span>Ennstal Connect</span></button>
-      <nav className="main-nav">
-        {nav("start","Start")}{nav("news","News")}{nav("members","Mitglieder")}
-        {nav("marketplace","Marktplatz")}{nav("messages","Nachrichten")}
-      </nav>
-      <button className="profile-nav" onClick={()=>setPage("profile")}>{nameOf(profile)}</button>
-    </header>
-
-    {notice && <div className="notice">{notice}<button onClick={()=>setNotice("")}>×</button></div>}
-
-    <main className="community-layout">
-      <section className="main-content">
-        {page==="start" && <Start profile={profile} posts={posts} members={approvedMembers} setPage={setPage}/>}
-        {page==="news" && <News posts={posts} members={members} value={newPost} setValue={setNewPost} create={createPost}/>}
-        {page==="members" && <Members members={filteredMembers} search={search} setSearch={setSearch} user={user} isAdmin={isAdmin} changePoints={changePoints} addFriend={sendFriendRequest}/>}
-        {page==="marketplace" && <Marketplace items={market} members={members} form={marketForm} setForm={setMarketForm} create={createMarketItem}/>}
-        {page==="messages" && <Messages messages={messages}/>}
-        {page==="profile" && <Profile profile={profile} form={profileForm} setForm={setProfileForm} save={saveProfile}/>} 
-        {page==="admin" && isAdmin && <Admin pending={pending} approved={approvedMembers} setStatus={setStatus} changePoints={changePoints} isHead={isHead}/>} 
-      </section>
-
-      <aside className="right-sidebar">
-        <div className="sidebar-profile">
-          <div className="avatar large">{initials(profile)}</div>
-          <div><strong>{nameOf(profile)}</strong><small className="role-text">{roleLabel(profile?.role)}</small></div>
-        </div>
-        <div className="sidebar-card">
-          <div className="sidebar-title"><h3>Online</h3><span>{onlineMembers.length}</span></div>
-          {onlineMembers.slice(0,8).map(m=><div className="online-member" key={m.id}><div className="avatar tiny">{initials(m)}</div><span>{nameOf(m)}</span><i className="online-dot"/></div>)}
-          {!onlineMembers.length && <p className="empty-text">Gerade niemand online.</p>}
-        </div>
-        <div className="sidebar-card">
-          <div className="sidebar-title"><h3>Mein Bereich</h3></div>
-          <div className="sidebar-menu">
-            <button onClick={()=>setPage("profile")}>👤 Mein Profil</button>
-            <button onClick={()=>setPage("members")}>👥 Freunde & Mitglieder <span>{friends.length||""}</span></button>
-            <button onClick={()=>setPage("messages")}>💬 Nachrichten</button>
-            <button onClick={()=>setPage("marketplace")}>🛍️ Meine Angebote</button>
-            {isAdmin && <button onClick={()=>setPage("admin")}>🛠️ Admin Tools {pending.length>0&&<span>{pending.length}</span>}</button>}
-            <button className="logout-button" onClick={signOut}>↪ Abmelden</button>
+            {member.isOnline ? (
+              <span className="online-status">
+                🟢 Online
+              </span>
+            ) : (
+              <span className="offline-status">
+                ⚪ Zuletzt online:{" "}
+                {member.lastOnline ||
+                  "nicht verfügbar"}
+              </span>
+            )}
           </div>
         </div>
-      </aside>
-    </main>
+      </article>
+    );
+  }
 
-    <footer><span>© {new Date().getFullYear()} Ennstal Connect</span><div><button>Impressum</button><button>Datenschutz</button><button>Community-Regeln</button></div></footer>
-  </div>;
+  return (
+    <div className="app">
+      <header className="site-header">
+        <div className="header-container">
+          <button
+            className="brand"
+            onClick={() =>
+              setActivePage("home")
+            }
+          >
+            <img
+              src="/logo.png"
+              alt="Ennstal Connect"
+              className="logo"
+            />
+          </button>
+
+          <nav className="main-nav">
+            <button
+              className={
+                activePage === "home"
+                  ? "nav-link active"
+                  : "nav-link"
+              }
+              onClick={() =>
+                setActivePage("home")
+              }
+            >
+              Startseite
+            </button>
+
+            <button
+              className={
+                activePage === "news"
+                  ? "nav-link active"
+                  : "nav-link"
+              }
+              onClick={() =>
+                setActivePage("news")
+              }
+            >
+              News
+            </button>
+
+            <button
+              className={
+                activePage === "community"
+                  ? "nav-link active"
+                  : "nav-link"
+              }
+              onClick={() =>
+                setActivePage("community")
+              }
+            >
+              Community
+            </button>
+
+            <button
+              className={
+                activePage === "members"
+                  ? "nav-link active"
+                  : "nav-link"
+              }
+              onClick={() =>
+                setActivePage("members")
+              }
+            >
+              Mitglieder
+            </button>
+
+            {user && (
+              <button
+                className={
+                  activePage === "market"
+                    ? "nav-link active"
+                    : "nav-link"
+                }
+                onClick={() =>
+                  setActivePage("market")
+                }
+              >
+                Marktplatz
+              </button>
+            )}
+          </nav>
+
+          <div className="header-user">
+            {!user ? (
+              <>
+                <button
+                  className="login-button"
+                  onClick={() =>
+                    setLoginOpen(true)
+                  }
+                >
+                  Anmelden
+                </button>
+
+                <button
+                  className="register-button"
+                  onClick={() =>
+                    setRegisterOpen(true)
+                  }
+                >
+                  Mitglied werden
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  className="user-badge"
+                  onClick={openOwnProfile}
+                >
+                  <Nickname
+                    member={user}
+                    clickable={false}
+                  />
+                </button>
+
+                <button
+                  className="logout-button"
+                  onClick={logout}
+                >
+                  Abmelden
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {message && (
+        <div className="toast">
+          {message}
+        </div>
+      )}
+
+      <main>
+        {activePage === "home" && (
+          <>
+            <section className="hero">
+              <div className="hero-overlay">
+                <div className="hero-content">
+                  <p className="eyebrow">
+                    DEINE REGION. DEINE COMMUNITY.
+                  </p>
+
+                  <h1>
+                    Willkommen bei
+                    <span>
+                      Ennstal Connect
+                    </span>
+                  </h1>
+
+                  <p>
+                    Verbinde dich mit Menschen aus
+                    deiner Region. Entdecke
+                    Neuigkeiten, tausche dich aus
+                    und finde spannende Angebote.
+                  </p>
+
+                  <button
+                    className="hero-button"
+                    onClick={() =>
+                      setActivePage("members")
+                    }
+                  >
+                    Community entdecken →
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            <section className="section">
+              <div className="section-heading">
+                <div>
+                  <p className="eyebrow">
+                    LIVE
+                  </p>
+
+                  <h2>
+                    Gerade online
+                  </h2>
+                </div>
+
+                <span className="online-counter">
+                  {onlineUsers.length} online
+                </span>
+              </div>
+
+              <div className="members-grid">
+                {onlineUsers.length === 0 ? (
+                  <p className="empty-state">
+                    Derzeit ist kein Mitglied online.
+                  </p>
+                ) : (
+                  onlineUsers.map((member) => (
+                    <MemberCard
+                      key={member.id}
+                      member={member}
+                    />
+                  ))
+                )}
+              </div>
+            </section>
+          </>
+        )}
+
+        {activePage === "news" && (
+          <section className="section page-section">
+            <div className="page-title">
+              <p className="eyebrow">
+                ENNSTAL CONNECT
+              </p>
+
+              <h1>
+                News & Neuigkeiten
+              </h1>
+            </div>
+
+            {user?.role === "admin" && (
+              <div className="admin-news-form">
+                <h2>
+                  Neue News veröffentlichen
+                </h2>
+
+                <input
+                  placeholder="Titel der News"
+                  value={newsTitle}
+                  onChange={(event) =>
+                    setNewsTitle(
+                      event.target.value
+                    )
+                  }
+                />
+
+                <select
+                  value={newsCategory}
+                  onChange={(event) =>
+                    setNewsCategory(
+                      event.target.value
+                    )
+                  }
+                >
+                  <option>Allgemein</option>
+                  <option>Veranstaltung</option>
+                  <option>Wichtig</option>
+                  <option>Community</option>
+                </select>
+
+                <textarea
+                  placeholder="Was möchtest du veröffentlichen?"
+                  value={newsContent}
+                  onChange={(event) =>
+                    setNewsContent(
+                      event.target.value
+                    )
+                  }
+                />
+
+                <button
+                  className="primary-button"
+                  onClick={createNews}
+                >
+                  News veröffentlichen
+                </button>
+              </div>
+            )}
+
+            <div className="news-list">
+              {news.map((newsItem) => (
+                <article
+                  className="large-news-card"
+                  key={newsItem.id}
+                >
+                  <div className="news-card-top">
+                    <div className="news-category">
+                      {newsItem.category}
+                    </div>
+
+                    {user?.role === "admin" && (
+                      <button
+                        className="delete-button"
+                        onClick={() =>
+                          deleteNews(
+                            newsItem.id
+                          )
+                        }
+                      >
+                        Löschen
+                      </button>
+                    )}
+                  </div>
+
+                  <h2>{newsItem.title}</h2>
+
+                  <p>
+                    {newsItem.content}
+                  </p>
+
+                  <div className="card-footer">
+                    <span>
+                      {newsItem.date}
+                    </span>
+
+                    <span>
+                      von {newsItem.author}
+                    </span>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {activePage === "community" && (
+          <section className="section page-section">
+            <div className="page-title">
+              <p className="eyebrow">
+                COMMUNITY
+              </p>
+
+              <h1>
+                Austausch mit der Region
+              </h1>
+            </div>
+
+            {!user ? (
+              <div className="restricted-box">
+                <h2>
+                  Community-Bereich
+                </h2>
+
+                <p>
+                  Bitte melde dich an, um Beiträge
+                  zu erstellen und Profile zu öffnen.
+                </p>
+
+                <button
+                  className="primary-button"
+                  onClick={() =>
+                    setLoginOpen(true)
+                  }
+                >
+                  Jetzt anmelden
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="create-post">
+                  <h2>
+                    Neuen Beitrag erstellen
+                  </h2>
+
+                  <textarea
+                    placeholder="Was möchtest du mit der Community teilen?"
+                    value={postText}
+                    onChange={(event) =>
+                      setPostText(
+                        event.target.value
+                      )
+                    }
+                  />
+
+                  <button
+                    className="primary-button"
+                    onClick={createPost}
+                  >
+                    Beitrag veröffentlichen
+                  </button>
+                </div>
+
+                <div className="posts-list">
+                  {posts.map((post) => (
+                    <article
+                      className="post-card"
+                      key={post.id}
+                    >
+                      <div className="post-header">
+                        <img
+                          className="post-avatar"
+                          src={
+                            post.avatar ||
+                            DEFAULT_AVATAR
+                          }
+                          alt={post.name}
+                        />
+
+                        <div className="post-user-info">
+                          <strong>
+                            {post.name}
+                            {renderStar(post.role)}
+                          </strong>
+
+                          <span>
+                            {roleName(post.role)} ·{" "}
+                            {post.date}
+                          </span>
+                        </div>
+
+                        {user &&
+                          (user.role === "admin" ||
+                            user.id ===
+                              post.userId) && (
+                            <button
+                              className="delete-button"
+                              onClick={() =>
+                                deletePost(
+                                  post.id
+                                )
+                              }
+                            >
+                              Löschen
+                            </button>
+                          )}
+                      </div>
+
+                      <p className="post-text">
+                        {post.text}
+                      </p>
+                    </article>
+                  ))}
+                </div>
+              </>
+            )}
+          </section>
+        )}
+
+        {activePage === "members" && (
+          <section className="section page-section">
+            <div className="page-title">
+              <p className="eyebrow">
+                COMMUNITY
+              </p>
+
+              <h1>
+                Mitglieder
+              </h1>
+
+              <p>
+                Finde Menschen aus deiner Region.
+              </p>
+            </div>
+
+            <div className="member-search">
+              <input
+                type="text"
+                placeholder="Vorname, Nachname oder Nickname suchen..."
+                value={memberSearch}
+                onChange={(event) =>
+                  setMemberSearch(
+                    event.target.value
+                  )
+                }
+              />
+
+              <span>
+                {filteredUsers.length} Mitglieder
+              </span>
+            </div>
+
+            <div className="members-grid">
+              {(user
+                ? filteredUsers
+                : filteredUsers.filter(
+                    (member) =>
+                      member.isOnline
+                  )
+              ).map((member) => (
+                <MemberCard
+                  key={member.id}
+                  member={member}
+                />
+              ))}
+            </div>
+
+            {user?.role === "admin" && (
+              <section className="admin-member-management">
+                <div className="section-heading">
+                  <div>
+                    <p className="eyebrow">
+                      VERWALTUNG
+                    </p>
+
+                    <h2>
+                      Mitglieder verwalten
+                    </h2>
+                  </div>
+                </div>
+
+                <div className="admin-members-grid">
+                  {users.map((member) => (
+                    <article
+                      className={`member-card admin-management-card ${member.role}`}
+                      key={member.id}
+                    >
+                      <div className="member-card-top">
+                        <div className="avatar-wrap">
+                          <img
+                            src={getAvatar(member)}
+                            alt={member.nickname}
+                            className="member-avatar"
+                          />
+                        </div>
+
+                        <div className="member-info">
+                          <h3>
+                            <Nickname
+                              member={member}
+                            />
+                          </h3>
+
+                          <p>
+                            {member.firstName}{" "}
+                            {member.lastName}
+                          </p>
+
+                          <p>
+                            Status: {member.status}
+                          </p>
+
+                          <p>
+                            Profilbesuche:{" "}
+                            {member.profileVisits ||
+                              0}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="admin-card-actions">
+                        {member.status ===
+                          "pending" && (
+                          <>
+                            <button
+                              className="approve-button"
+                              onClick={() =>
+                                approveUser(
+                                  member.id
+                                )
+                              }
+                            >
+                              Freigeben
+                            </button>
+
+                            <button
+                              className="reject-button"
+                              onClick={() =>
+                                rejectUser(
+                                  member.id
+                                )
+                              }
+                            >
+                              Ablehnen
+                            </button>
+                          </>
+                        )}
+
+                        {member.role !==
+                          "admin" && (
+                          <button
+                            className="supporter-button"
+                            onClick={() =>
+                              toggleSupporter(
+                                member.id
+                              )
+                            }
+                          >
+                            {member.role ===
+                            "supporter"
+                              ? "Unterstützer entfernen"
+                              : "Als Unterstützer markieren"}
+                          </button>
+                        )}
+
+                        <button
+                          onClick={() => {
+                            const value =
+                              prompt(
+                                "Neue Community-Punkte:",
+                                member.communityPoints ||
+                                  0
+                              );
+
+                            if (value !== null) {
+                              changePoints(
+                                member.id,
+                                "community",
+                                value
+                              );
+                            }
+                          }}
+                        >
+                          Community-Punkte
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            const value =
+                              prompt(
+                                "Neue Kaufpunkte:",
+                                member.buyPoints ||
+                                  0
+                              );
+
+                            if (value !== null) {
+                              changePoints(
+                                member.id,
+                                "buy",
+                                value
+                              );
+                            }
+                          }}
+                        >
+                          Kaufpunkte
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            )}
+          </section>
+        )}
+
+        {activePage === "profile" &&
+          selectedProfile && (
+            <section className="section page-section profile-page">
+              <button
+                className="back-button"
+                onClick={() =>
+                  setActivePage("members")
+                }
+              >
+                ← Zurück
+              </button>
+
+              <div
+                className={`profile-card ${selectedProfile.role}`}
+              >
+                <div className="profile-header">
+                  <div className="profile-avatar">
+                    <img
+                      src={getAvatar(
+                        selectedProfile
+                      )}
+                      alt={
+                        selectedProfile.nickname
+                      }
+                    />
+                  </div>
+
+                  <div>
+                    <h1>
+                      <Nickname
+                        member={
+                          selectedProfile
+                        }
+                        clickable={false}
+                      />
+                    </h1>
+
+                    <p>
+                      {roleName(
+                        selectedProfile.role
+                      )}
+                    </p>
+
+                    <div className="profile-points">
+                      <span>
+                        ⭐ Community-Punkte:{" "}
+                        {selectedProfile.communityPoints ||
+                          0}
+                      </span>
+
+                      <span>
+                        🛒 Kaufpunkte:{" "}
+                        {selectedProfile.buyPoints ||
+                          0}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="profile-content">
+                  <div className="profile-info-box">
+                    <h3>
+                      Name
+                    </h3>
+
+                    <p>
+                      {selectedProfile.firstName}{" "}
+                      {selectedProfile.lastName}
+                    </p>
+                  </div>
+
+                  {selectedProfile.bio && (
+                    <div className="profile-info-box">
+                      <h3>
+                        Über mich
+                      </h3>
+
+                      <p>
+                        {selectedProfile.bio}
+                      </p>
+                    </div>
+                  )}
+
+                  {selectedProfile.location && (
+                    <div className="profile-info-box">
+                      <h3>
+                        Wohnort / Region
+                      </h3>
+
+                      <p>
+                        {selectedProfile.location}
+                      </p>
+                    </div>
+                  )}
+
+                  {selectedProfile.interests && (
+                    <div className="profile-info-box">
+                      <h3>
+                        Interessen
+                      </h3>
+
+                      <p>
+                        {selectedProfile.interests}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="profile-info-box">
+                    <h3>
+                      Mitglied seit
+                    </h3>
+
+                    <p>
+                      {selectedProfile.createdAt}
+                    </p>
+                  </div>
+
+                  <div className="profile-info-box">
+                    <h3>
+                      Profilbesuche
+                    </h3>
+
+                    <p>
+                      {selectedProfile.profileVisits ||
+                        0}
+                    </p>
+                  </div>
+
+                  {user?.role === "admin" && (
+                    <div className="admin-private-info">
+                      <h3>
+                        🔒 Admin-Informationen
+                      </h3>
+
+                      <p>
+                        <strong>
+                          E-Mail-Adresse:
+                        </strong>
+
+                        <br />
+
+                        {selectedProfile.email}
+                      </p>
+
+                      <p>
+                        <strong>
+                          Geburtsdatum:
+                        </strong>
+
+                        <br />
+
+                        {selectedProfile.birthDate ||
+                          "Nicht vorhanden"}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {user?.id ===
+                  selectedProfile.id && (
+                  <div className="profile-editor">
+                    <h2>
+                      Mein Profil bearbeiten
+                    </h2>
+
+                    <label>
+                      Profilbild
+                    </label>
+
+                    <div className="profile-image-preview">
+                      <img
+                        src={
+                          profileForm.avatar ||
+                          DEFAULT_AVATAR
+                        }
+                        alt="Vorschau"
+                      />
+                    </div>
+
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={
+                        handleAvatarUpload
+                      }
+                    />
+
+                    <button
+                      type="button"
+                      className="delete-button"
+                      onClick={removeAvatar}
+                    >
+                      Profilbild löschen
+                    </button>
+
+                    <p className="small-text">
+                      Wenn du dein Profilbild löschst,
+                      wird automatisch wieder dein
+                      Standardbild angezeigt.
+                    </p>
+
+                    <label>
+                      Über mich
+                    </label>
+
+                    <textarea
+                      value={profileForm.bio}
+                      onChange={(event) =>
+                        setProfileForm({
+                          ...profileForm,
+                          bio:
+                            event.target.value,
+                        })
+                      }
+                    />
+
+                    <label>
+                      Wohnort / Region
+                    </label>
+
+                    <input
+                      value={
+                        profileForm.location
+                      }
+                      onChange={(event) =>
+                        setProfileForm({
+                          ...profileForm,
+                          location:
+                            event.target.value,
+                        })
+                      }
+                    />
+
+                    <label>
+                      Interessen
+                    </label>
+
+                    <input
+                      value={
+                        profileForm.interests
+                      }
+                      onChange={(event) =>
+                        setProfileForm({
+                          ...profileForm,
+                          interests:
+                            event.target.value,
+                        })
+                      }
+                    />
+
+                    <button
+                      className="primary-button"
+                      onClick={saveProfile}
+                    >
+                      Profil speichern
+                    </button>
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+
+        {activePage === "market" &&
+          user && (
+            <section className="section page-section">
+              <div className="page-title">
+                <p className="eyebrow">
+                  MARKTPLATZ
+                </p>
+
+                <h1>
+                  Persönliche Extras
+                </h1>
+
+                <p>
+                  Verfügbare Kaufpunkte:{" "}
+                  <strong>
+                    {user.buyPoints || 0}
+                  </strong>
+                </p>
+              </div>
+
+              <div className="market-grid">
+                <article className="market-card">
+                  <div className="market-icon">
+                    🎨
+                  </div>
+
+                  <h2>
+                    Schwarzer Nickname
+                  </h2>
+
+                  <p>
+                    Dein Nickname wird dauerhaft
+                    schwarz angezeigt.
+                  </p>
+
+                  <strong className="market-price">
+                    {BLACK_NICKNAME_PRICE} Kaufpunkte
+                  </strong>
+
+                  {user.role === "admin" ? (
+                    <div className="owned-item">
+                      Admins haben alle Extras.
+                    </div>
+                  ) : user.hasBlackNickname ? (
+                    <div className="owned-item">
+                      Bereits gekauft ✓
+                    </div>
+                  ) : (
+                    <button
+                      className="primary-button"
+                      onClick={
+                        buyBlackNickname
+                      }
+                    >
+                      Kaufen
+                    </button>
+                  )}
+                </article>
+              </div>
+            </section>
+          )}
+      </main>
+
+      <footer className="site-footer">
+        <div className="footer-content">
+          <div>
+            <img
+              src="/logo.png"
+              alt="Ennstal Connect"
+              className="footer-logo"
+            />
+
+            <p>
+              Die regionale Community für
+              Ennstal und Obersteiermark.
+            </p>
+          </div>
+        </div>
+
+        <div className="footer-bottom">
+          © {new Date().getFullYear()} Ennstal Connect
+        </div>
+      </footer>
+
+      {loginOpen && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <button
+              className="close-button"
+              onClick={() =>
+                setLoginOpen(false)
+              }
+            >
+              ×
+            </button>
+
+            <h2>
+              Anmelden
+            </h2>
+
+            <input
+              type="email"
+              placeholder="E-Mail-Adresse"
+              value={email}
+              onChange={(event) =>
+                setEmail(
+                  event.target.value
+                )
+              }
+            />
+
+            <input
+              type="password"
+              placeholder="Passwort"
+              value={password}
+              onChange={(event) =>
+                setPassword(
+                  event.target.value
+                )
+              }
+            />
+
+            <button
+              className="primary-button full-button"
+              onClick={login}
+            >
+              Anmelden
+            </button>
+          </div>
+        </div>
+      )}
+
+      {registerOpen && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <button
+              className="close-button"
+              onClick={() =>
+                setRegisterOpen(false)
+              }
+            >
+              ×
+            </button>
+
+            <h2>
+              Mitglied werden
+            </h2>
+
+            <input
+              type="text"
+              placeholder="Vorname *"
+              value={firstName}
+              required
+              onChange={(event) =>
+                setFirstName(
+                  event.target.value
+                )
+              }
+            />
+
+            <input
+              type="text"
+              placeholder="Nachname *"
+              value={lastName}
+              required
+              onChange={(event) =>
+                setLastName(
+                  event.target.value
+                )
+              }
+            />
+
+            <input
+              type="text"
+              placeholder="Nickname *"
+              value={nickname}
+              required
+              onChange={(event) =>
+                setNickname(
+                  event.target.value
+                )
+              }
+            />
+
+            <label className="date-label">
+              Geburtsdatum *
+            </label>
+
+            <input
+              type="date"
+              value={birthDate}
+              required
+              onChange={(event) =>
+                setBirthDate(
+                  event.target.value
+                )
+              }
+            />
+
+            <input
+              type="email"
+              placeholder="E-Mail-Adresse *"
+              value={email}
+              required
+              onChange={(event) =>
+                setEmail(
+                  event.target.value
+                )
+              }
+            />
+
+            <input
+              type="password"
+              placeholder="Passwort *"
+              value={password}
+              required
+              onChange={(event) =>
+                setPassword(
+                  event.target.value
+                )
+              }
+            />
+
+            <button
+              className="primary-button full-button"
+              onClick={register}
+            >
+              Konto erstellen
+            </button>
+
+            <p className="small-text">
+              * Pflichtfelder. Neue Mitglieder
+              müssen zuerst von einem Admin
+              freigegeben werden.
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
-function Start({profile,posts,members,setPage}) {
-  return <><section className="welcome-card"><span className="eyebrow">WILLKOMMEN ZURÜCK</span><h1>Hallo, {nameOf(profile)} 👋</h1><p>Schön, dass du wieder bei Ennstal Connect bist. Entdecke, was in deiner Community passiert.</p><div className="action-row"><button className="primary-button" onClick={()=>setPage("news")}>Beiträge entdecken</button><button className="secondary-button" onClick={()=>setPage("marketplace")}>Zum Marktplatz</button></div></section>
-  <div className="stats"><div><b>{members.length}</b><span>Mitglieder</span></div><div><b>{posts.length}</b><span>Beiträge</span></div><div><b>∞</b><span>Verbunden</span></div></div>
-  <section className="content-card"><div className="section-header"><h2>Neu in der Community</h2><button onClick={()=>setPage("news")}>Alle Beiträge →</button></div>{posts.slice(0,3).map(p=><article className="mini-post" key={p.id}><div className="avatar tiny">EC</div><div><strong>Community Mitglied</strong><p>{p.content}</p></div></article>)}{!posts.length&&<p className="empty-text">Noch keine Beiträge vorhanden.</p>}</section></>;
-}
-
-function News({posts,members,value,setValue,create}) {
-  return <><div className="page-heading"><span className="eyebrow dark">COMMUNITY</span><h1>News & Beiträge</h1><p>Teile, was gerade im Ennstal passiert.</p></div>
-  <div className="editor-card"><textarea value={value} onChange={e=>setValue(e.target.value)} placeholder="Schreibe etwas für die Community ..."/><button className="primary-button" onClick={create}>Beitrag veröffentlichen</button></div>
-  <div className="posts">{posts.map(p=>{const a=members.find(m=>m.id===p.author_id);return <article className="post-card" key={p.id}><div className="post-header"><div className="avatar tiny">{initials(a)}</div><div><strong>{nameOf(a)}</strong><small>{p.created_at?new Date(p.created_at).toLocaleString("de-AT"):""}</small></div></div><p>{p.content}</p></article>})}{!posts.length&&<div className="empty-state">Noch keine Beiträge. Sei der Erste!</div>}</div></>;
-}
-
-function Members({members,search,setSearch,user,isAdmin,changePoints,addFriend}) {
-  return <><div className="page-heading"><span className="eyebrow dark">COMMUNITY</span><h1>Mitglieder</h1><p>Menschen aus deiner Region kennenlernen und verbinden.</p></div><input className="search-input" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Mitglieder suchen ..."/>
-  <div className="member-grid">{members.map(m=><article className="member-card" key={m.id}><div className="member-top"><div className="avatar">{initials(m)}</div>{m.role!=="MEMBER"&&<span className="role-badge">{roleLabel(m.role)}</span>}</div><h3>{nameOf(m)}</h3><p>{m.bio||"Mitglied der Ennstal Community"}</p><small className={m.is_online?"online":"offline"}>{m.is_online?"● Online":"● Offline"}</small><div className="member-actions">{m.id!==user.id&&<button className="secondary-button" onClick={()=>addFriend(m.id)}>Freund hinzufügen</button>}{isAdmin&&<button className="small-button" onClick={()=>changePoints(m)}>Punkte</button>}</div></article>)}</div></>;
-}
-
-function Marketplace({items,members,form,setForm,create}) {
- const set=(k,v)=>setForm(x=>({...x,[k]:v}));
- return <><div className="page-heading"><span className="eyebrow dark">REGIONAL</span><h1>Marktplatz</h1><p>Kaufen, verkaufen und tauschen – direkt in der Community.</p></div><div className="editor-card"><input placeholder="Titel" value={form.title} onChange={e=>set("title",e.target.value)}/><textarea placeholder="Beschreibung" value={form.description} onChange={e=>set("description",e.target.value)}/><input placeholder="Preis, z. B. 50 €" value={form.price} onChange={e=>set("price",e.target.value)}/><button className="primary-button" onClick={create}>Angebot veröffentlichen</button></div><div className="market-grid">{items.map(i=>{const a=members.find(m=>m.id===i.author_id);return <article className="market-card" key={i.id}><div className="market-image">🏔️</div><div><span className="price">{i.price||"Preis auf Anfrage"}</span><h3>{i.title}</h3><p>{i.description}</p><small>Angebot von {nameOf(a)}</small></div></article>})}{!items.length&&<div className="empty-state">Noch keine Angebote vorhanden.</div>}</div></>;
-}
-
-function Messages({messages}) { return <><div className="page-heading"><span className="eyebrow dark">KONTAKT</span><h1>Nachrichten</h1><p>Bleib mit deinen Freunden und Community-Mitgliedern verbunden.</p></div><div className="content-card">{messages.map(m=><div className="message-row" key={m.id}><div className="avatar tiny">EC</div><div><strong>Nachricht</strong><p>{m.content||m.content_text||""}</p></div></div>)}{!messages.length&&<div className="empty-state">Noch keine Nachrichten vorhanden.</div>}</div></>; }
-
-function Profile({profile,form,setForm,save}) { const set=(k,v)=>setForm(x=>({...x,[k]:v})); return <><div className="page-heading"><span className="eyebrow dark">MEIN BEREICH</span><h1>Mein Profil</h1><p>Hier kannst du dein persönliches Profil bearbeiten.</p></div><div className="profile-editor"><div className="profile-preview"><div className="avatar profile-avatar">{initials(form)}</div><h2>{form.nickname||`${form.first_name} ${form.last_name}`}</h2><span className="role-badge">{roleLabel(profile.role)}</span></div><div className="profile-form"><div className="form-grid"><label>Vorname<input value={form.first_name} onChange={e=>set("first_name",e.target.value)}/></label><label>Nachname<input value={form.last_name} onChange={e=>set("last_name",e.target.value)}/></label></div><label>Spitzname<input value={form.nickname} onChange={e=>set("nickname",e.target.value)}/></label><label>Über mich<textarea value={form.bio} onChange={e=>set("bio",e.target.value)}/></label><button className="primary-button" onClick={save}>Änderungen speichern</button></div></div></>; }
-
-function Admin({pending,approved,setStatus,changePoints,isHead}) { return <><div className="page-heading"><span className="eyebrow dark">VERWALTUNG</span><h1>Admin Tools</h1><p>Mitglieder freigeben und die Community verwalten.</p></div><section className="admin-section"><h2>Registrierungen zur Freigabe <span className="notification-badge">{pending.length}</span></h2>{pending.map(m=><div className="admin-member" key={m.id}><div className="avatar tiny">{initials(m)}</div><div><strong>{nameOf(m)}</strong><small>{m.created_at?new Date(m.created_at).toLocaleString("de-AT"):""}</small></div><div className="admin-actions"><button className="primary-button small-button" onClick={()=>setStatus(m.id,"APPROVED")}>Freigeben</button><button className="danger-button small-button" onClick={()=>setStatus(m.id,"REJECTED")}>Ablehnen</button></div></div>)}{!pending.length&&<div className="empty-state">Keine offenen Registrierungen.</div>}</section><section className="admin-section"><h2>Freigegebene Mitglieder</h2><div className="admin-list">{approved.map(m=><div className="admin-member" key={m.id}><span>{nameOf(m)} · {m.community_points||0} Punkte</span><button className="small-button" onClick={()=>changePoints(m)}>Punkte ändern</button></div>)}</div>{isHead&&<p className="admin-note">★ Hauptadmin-Zugriff aktiv.</p>}</section></>; }
-
-createRoot(document.getElementById("root")).render(<App />);
+ReactDOM.createRoot(
+  document.getElementById("root")
+).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
