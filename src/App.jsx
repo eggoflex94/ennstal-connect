@@ -422,8 +422,7 @@ function App() {
 
     setLoading(false);
   }
-
-  useEffect(() => {
+useEffect(() => {
   if (!profile || !supabase) return;
 
   async function setOnline() {
@@ -451,77 +450,43 @@ function App() {
 
   return () => {
     window.clearInterval(interval);
-
-    supabase.rpc(
-      "update_online_status",
-      {
-        online_status: false
-      }
-    );
   };
 }, [profile?.id]);
+saveprofile {
+  if (!user || !supabase) return;
 
-    const interval =
-      window.setInterval(() => {
-        supabase
-          .from("profiles")
-          .update({
-            is_online: true,
-            last_seen:
-              new Date().toISOString()
-          })
-          .eq("id", profile.id);
-      }, 60000);
-
-    return () => {
-      window.clearInterval(interval);
-    };
-  }, [profile?.id]);
-
-  async function signOut() {
-  if (!user) return;
-
-  const { error: onlineError } =
-    await supabase.rpc(
-      "update_online_status",
-      {
-        online_status: false
-      }
-    );
-
-  if (onlineError) {
-    console.error(
-      onlineError.message
-    );
-  }
-
-  const { error } =
-    await supabase.auth.signOut();
-
-  if (error) {
-    showNotice(error.message);
-    return;
-  }
-
-  setProfile(null);
-  setSession(null);
-  setPage("start");
-
-  await loadMembers();
-
-  showNotice(
-    "Du wurdest abgemeldet."
+  await supabase.rpc(
+    "update_online_status",
+    {
+      online_status: false
+    }
   );
+const { error } =
+  await supabase.auth.signOut();
+
+if (error) {
+  showNotice(error.message);
+  return;
 }
 
-  async function saveProfile(event) {
-    event.preventDefault();
+setProfile(null);
+setSession(null);
+setPage("start");
 
-    if (!profile) return;
+showNotice(
+  "Du wurdest abgemeldet."
+);
+}
 
-    const { error } =
-      await supabase
-        .from("profiles")
+
+async function saveProfile(event) {
+  event.preventDefault();
+
+  if (!profile) return;
+
+  const { error } =
+    await supabase
+      .from("profiles")
         .update({
           nickname:
             profileForm.nickname.trim(),
