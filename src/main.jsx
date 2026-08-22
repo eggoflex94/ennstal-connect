@@ -1,20 +1,495 @@
-import React,{useEffect,useMemo,useState}from'react';import ReactDOM from'react-dom/client';import'./styles.css';
-const ADMIN_EMAIL='eggermarco@gmx.net',AV='/no.pic.png';const seedPosts=[{id:1,userId:'system',name:'Ennstal Connect',role:'admin',text:'Willkommen in unserer Community! Wir freuen uns, dass du dabei bist.',date:'Heute'}];
-function App(){const[page,setPage]=useState('home'),[user,setUser]=useState(null),[users,setUsers]=useState([]),[posts,setPosts]=useState([]),[auth,setAuth]=useState(''),[msg,setMsg]=useState(''),[search,setSearch]=useState(''),[profile,setProfile]=useState(null),[form,setForm]=useState({firstName:'',lastName:'',nickname:'',birthDate:'',email:'',password:''}),[edit,setEdit]=useState({bio:'',location:'',interests:'',avatar:''}),[post,setPost]=useState('');
-useEffect(()=>{try{const us=JSON.parse(localStorage.getItem('ennstal_users')||'[]'),cu=JSON.parse(localStorage.getItem('ennstal_current_user')||'null');setUsers(us);setPosts(JSON.parse(localStorage.getItem('ennstal_posts')||'null')||seedPosts);if(cu){setUser(cu);setUsers(us.map(x=>x.id===cu.id?{...x,isOnline:true}:x))}}catch{setPosts(seedPosts)}},[]);useEffect(()=>{localStorage.setItem('ennstal_users',JSON.stringify(users))},[users]);useEffect(()=>{localStorage.setItem('ennstal_posts',JSON.stringify(posts))},[posts]);const say=t=>{setMsg(t);setTimeout(()=>setMsg(''),3500)};const avatar=x=>x?.avatar?.trim()?x.avatar:AV;const role=r=>r==='admin'?'Administrator':r==='supporter'?'Supporter':'Mitglied';const star=r=>r==='admin'?<img className="star" src="/Admin-star.png" alt="Admin"/>:r==='supporter'?<img className="star" src="/supporter-star.png" alt="Supporter"/>:null;const sync=u=>{setUser(u);localStorage.setItem('ennstal_current_user',JSON.stringify(u));setUsers(a=>a.map(x=>x.id===u.id?u:x))};
-function register(){const{firstName,lastName,nickname,birthDate,email,password}=form;if(!firstName.trim()||!lastName.trim()||!nickname.trim()||!birthDate||!email.trim()||!password.trim())return say('Bitte alle Pflichtfelder ausfüllen.');if(users.some(x=>x.email.toLowerCase()===email.trim().toLowerCase()))return say('Diese E-Mail ist bereits registriert.');if(users.some(x=>x.nickname.toLowerCase()===nickname.trim().toLowerCase()))return say('Dieser Nickname ist bereits vergeben.');const admin=email.trim().toLowerCase()===ADMIN_EMAIL;const u={id:Date.now(),firstName:firstName.trim(),lastName:lastName.trim(),nickname:nickname.trim(),birthDate,email:email.trim().toLowerCase(),password,role:admin?'admin':'member',status:admin?'approved':'pending',avatar:'',bio:'',location:'',interests:'',communityPoints:0,buyPoints:0,profileVisits:0,isOnline:admin,lastOnline:new Date().toLocaleString('de-AT')};setUsers(a=>[...a,u]);setForm({firstName:'',lastName:'',nickname:'',birthDate:'',email:'',password:''});setAuth('');if(admin){sync(u);say('Hauptadmin erfolgreich erstellt.')}else say('Registrierung erfolgreich. Ein Admin muss dein Konto freigeben.')}
-function login(){const u=users.find(x=>x.email===form.email.trim().toLowerCase()&&x.password===form.password);if(!u)return say('E-Mail oder Passwort ist falsch.');if(u.status!=='approved')return say('Dein Konto wurde noch nicht freigegeben.');const n={...u,isOnline:true,lastOnline:new Date().toLocaleString('de-AT')};sync(n);setAuth('');setForm({firstName:'',lastName:'',nickname:'',birthDate:'',email:'',password:''});say('Willkommen zurück, '+n.nickname+'!')}
-function logout(){if(user)setUsers(a=>a.map(x=>x.id===user.id?{...x,isOnline:false,lastOnline:new Date().toLocaleString('de-AT')}:x));localStorage.removeItem('ennstal_current_user');setUser(null);setPage('home');say('Du wurdest abgemeldet.')}
-function openProfile(m){if(!user)return say('Bitte zuerst anmelden.');let p=m;if(m.id!==user.id){const nu=users.map(x=>x.id===m.id?{...x,profileVisits:(x.profileVisits||0)+1}:x);setUsers(nu);p=nu.find(x=>x.id===m.id)}setProfile(p);setEdit({bio:p.bio||'',location:p.location||'',interests:p.interests||'',avatar:p.avatar||''});setPage('profile')}
-function upload(e){const f=e.target.files?.[0];if(!f||!f.type.startsWith('image/'))return;if(f.size>2*1024*1024)return say('Bitte ein Bild unter 2 MB wählen.');const r=new FileReader();r.onload=()=>setEdit(x=>({...x,avatar:r.result}));r.readAsDataURL(f)}function saveProfile(){const u={...user,bio:edit.bio,location:edit.location,interests:edit.interests,avatar:edit.avatar||''};sync(u);setProfile(u);say('Profil gespeichert.')}function addPost(){if(!user)return say('Bitte zuerst anmelden.');if(!post.trim())return;setPosts(a=>[{id:Date.now(),userId:user.id,name:user.nickname,role:user.role,avatar:user.avatar||'',text:post.trim(),date:new Date().toLocaleString('de-AT')},...a]);setPost('')}
-function approve(id){setUsers(a=>a.map(x=>x.id===id?{...x,status:'approved'}:x));say('Mitglied freigegeben.')}function changeRole(id,r){setUsers(a=>a.map(x=>x.id===id?{...x,role:r,status:'approved'}:x));say('Rolle geändert.')}const approved=users.filter(x=>x.status==='approved'),online=approved.filter(x=>x.isOnline),filtered=approved.filter(x=>(x.nickname+x.firstName+x.lastName).toLowerCase().includes(search.toLowerCase()));
-const Header=()=> <header className="topbar"><button className="brand" onClick={()=>setPage('home')}><img src="/logo.png" alt="Ennstal Connect"/></button><nav className="nav">{[['home','Start'],['community','Community'],['members','Mitglieder'],['feed','Beiträge']].map(([a,b])=><button key={a} className={page===a?'active':''} onClick={()=>setPage(a)}>{b}</button>)}</nav><div className="actions">{user?<><button className="secondary" onClick={()=>openProfile(user)}>{user.nickname}{star(user.role)}</button><button className="primary" onClick={logout}>Abmelden</button></>:<><button className="secondary" onClick={()=>setAuth('login')}>Anmelden</button><button className="primary" onClick={()=>setAuth('register')}>Mitglied werden</button></>}</div></header>;
-function Home(){return <><section className="hero"><div className="hero-inner"><span className="eyebrow">DEINE REGION. DEINE COMMUNITY.</span><h1>Willkommen bei<br/>Ennstal Connect</h1><p>Verbinde dich mit Menschen aus deiner Region. Entdecke Neuigkeiten, tausche dich aus und finde spannende Angebote.</p><button className="primary" onClick={()=>setPage('community')}>Community entdecken →</button></div></section></>}
-function Community(){return <main className="page"><div className="pagehead"><span className="eyebrow" style={{color:'#5d8068'}}>DAS ENNSTAL VERBINDET.</span><h1>Deine Community</h1><p>Menschen, Beiträge und Neuigkeiten an einem Ort.</p></div><div className="grid"><div><section className="card"><div className="stats"><div className="stat"><b>{approved.length}</b><span>Mitglieder</span></div><div className="stat"><b>{online.length}</b><span>Gerade online</span></div><div className="stat"><b>{posts.length}</b><span>Beiträge</span></div></div></section><section className="card"><h2>Neueste Beiträge</h2>{posts.slice(0,5).map(p=><article className="post" key={p.id}><div className="post-head"><img className="small-avatar" src={avatar(p)} alt=""/><div><b>{p.name}{star(p.role)}</b><div className="muted">{p.date}</div></div></div><p>{p.text}</p></article>)}</section></div><aside className="sidebar"><section className="card"><h3>Gerade online</h3>{online.length?online.slice(0,8).map(m=><div className="online-row" key={m.id}><i className="dot"/><span>{m.nickname}{star(m.role)}</span></div>):<p className="muted">Derzeit ist kein Mitglied online.</p>}</section><section className="card"><h3>Dein Konto</h3>{user?<><p><b>{user.nickname}</b>{star(user.role)}</p><p className="muted">{user.communityPoints||0} Community-Punkte<br/>{user.buyPoints||0} Kaufpunkte</p><button className="secondary" onClick={()=>openProfile(user)}>Profil öffnen</button></>:<button className="primary" onClick={()=>setAuth('login')}>Jetzt anmelden</button>}</section></aside></div></main>}
-function Members(){return <main className="page"><div className="pagehead"><h1>Mitglieder</h1><p>Entdecke die Menschen in deiner regionalen Community.</p></div><input className="search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Mitglieder suchen..."/><div className="members-grid">{filtered.map(m=><article className={'member-card '+m.role} key={m.id}><img className="member-avatar" src={avatar(m)} alt={m.nickname}/><h3>{m.nickname}{star(m.role)}</h3><div className="realname">{m.firstName} {m.lastName}</div><div className="role">{role(m.role)}</div><p className="muted">{m.location||'Ennstal & Obersteiermark'}</p><div className="points"><span>⭐ {m.communityPoints||0} Punkte</span><span>🛒 {m.buyPoints||0} Kaufpunkte</span></div><p className={m.isOnline?'online':'offline'}>{m.isOnline?'● Online':'○ Offline'}</p><button className="secondary" onClick={()=>openProfile(m)}>Profil ansehen</button></article>)}</div>{!filtered.length&&<div className="empty">Keine Mitglieder gefunden.</div>}</main>}
-function Feed(){return <main className="page"><div className="pagehead"><h1>Beiträge</h1><p>Was gibt es Neues in der Community?</p></div>{user&&<section className="card form"><textarea value={post} onChange={e=>setPost(e.target.value)} placeholder="Was möchtest du mit der Community teilen?"/><button className="primary" onClick={addPost}>Beitrag veröffentlichen</button></section>}<section className="card">{posts.map(p=><article className="post" key={p.id}><div className="post-head"><img className="small-avatar" src={avatar(p)} alt=""/><div><b>{p.name}{star(p.role)}</b><div className="muted">{p.date}</div></div></div><p>{p.text}</p></article>)}</section></main>}
-function Profile(){if(!profile)return <Community/>;const own=user?.id===profile.id;return <main className="page"><button className="linkbtn" onClick={()=>setPage('members')}>← Zurück</button><div className="card profile"><div className="profile-side"><img className="profile-avatar" src={avatar(own?{...profile,avatar:edit.avatar}:profile)} alt="Profil"/><h2>{profile.nickname}{star(profile.role)}</h2><p className="muted">{role(profile.role)}</p><div className="points"><span>⭐ {profile.communityPoints||0}</span><span>🛒 {profile.buyPoints||0}</span></div><p className="muted">👁 {profile.profileVisits||0} Profilbesuche</p>{own&&<div className="avatar-actions"><label className="secondary">Foto wählen<input type="file" accept="image/*" hidden onChange={upload}/></label><button className="danger" onClick={()=>setEdit(x=>({...x,avatar:''}))}>Foto löschen</button></div>}</div><div>{own?<div className="form"><h2>Mein Profil</h2><label>Über mich<textarea value={edit.bio} onChange={e=>setEdit(x=>({...x,bio:e.target.value}))}/></label><label>Wohnort<input value={edit.location} onChange={e=>setEdit(x=>({...x,location:e.target.value}))}/></label><label>Interessen<input value={edit.interests} onChange={e=>setEdit(x=>({...x,interests:e.target.value}))}/></label><button className="primary" onClick={saveProfile}>Profil speichern</button></div>:<><h2>{profile.firstName} {profile.lastName}</h2><p><b>Wohnort:</b> {profile.location||'Nicht angegeben'}</p><p><b>Interessen:</b> {profile.interests||'Nicht angegeben'}</p><p>{profile.bio||'Dieses Mitglied hat noch keine Beschreibung hinterlegt.'}</p></>}</div></div></main>}
-function Admin(){if(user?.role!=='admin')return null;return <main className="page"><div className="pagehead"><h1>Administration</h1></div><section className="card"><h2>Mitglieder verwalten</h2>{users.map(m=><div className="admin-row" key={m.id}><img className="small-avatar" src={avatar(m)} alt=""/><div><b>{m.nickname}{star(m.role)}</b><small className="muted">{m.firstName} {m.lastName} · {m.email} · {m.status}</small></div><div className="admin-actions">{m.status==='pending'&&<button className="primary" onClick={()=>approve(m.id)}>Freigeben</button>}<button className="secondary" onClick={()=>changeRole(m.id,'supporter')}>Supporter</button><button className="danger" onClick={()=>changeRole(m.id,'admin')}>Admin</button></div></div>)}</section></main>}
-function Auth(){const reg=auth==='register';return <div className="modalbg"><div className="modal"><button className="close" onClick={()=>setAuth('')}>×</button><h2>{reg?'Mitglied werden':'Anmelden'}</h2><div className="form">{reg&&<div className="form-grid"><label>Vorname *<input value={form.firstName} onChange={e=>setForm({...form,firstName:e.target.value})}/></label><label>Nachname *<input value={form.lastName} onChange={e=>setForm({...form,lastName:e.target.value})}/></label></div>}{reg&&<><label>Nickname *<input value={form.nickname} onChange={e=>setForm({...form,nickname:e.target.value})}/></label><label>Geburtsdatum *<input type="date" value={form.birthDate} onChange={e=>setForm({...form,birthDate:e.target.value})}/></label></>}<label>E-Mail *<input type="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})}/></label><label>Passwort *<input type="password" value={form.password} onChange={e=>setForm({...form,password:e.target.value})}/></label><button className="primary" onClick={reg?register:login}>{reg?'Registrieren':'Anmelden'}</button><button className="linkbtn" onClick={()=>setAuth(reg?'login':'register')}>{reg?'Schon Mitglied? Anmelden':'Noch kein Mitglied? Jetzt registrieren'}</button></div></div></div>}
-return <div className="app"><Header/>{user?.role==='admin'&&<div style={{textAlign:'center',padding:'8px',background:'#fff8dc'}}><button className="linkbtn" onClick={()=>setPage('admin')}>⚙ Administration öffnen</button></div>}{msg&&<div className="notice">{msg}</div>}{page==='home'?<Home/>:page==='community'?<Community/>:page==='members'?<Members/>:page==='feed'?<Feed/>:page==='profile'?<Profile/>:<Admin/>}<footer className="footer"><span>© 2026 Ennstal Connect</span><span>Die regionale Community für Ennstal & Obersteiermark</span></footer>{auth&&<Auth/>}</div>}
-ReactDOM.createRoot(document.getElementById('root')).render(<React.StrictMode><App/></React.StrictMode>);
+import React, { useEffect, useMemo, useState } from "react";
+import { createRoot } from "react-dom/client";
+import { supabase, supabaseConfigError } from "./supabase";
+import "./styles.css";
+
+const LOGO = "/logo.png";
+const ADMIN_STAR = "/Admin-star.png";
+const SUPPORTER_STAR = "/supporter-star.png";
+const NO_PIC = "/no.pic.png";
+
+const isApproved = (p) => p?.status === "APPROVED";
+const isAdminRole = (role) => ["ADMIN", "HEAD_ADMIN"].includes(role);
+
+function nameOf(p) {
+  if (!p) return "Mitglied";
+  return p.nickname || `${p.first_name || ""} ${p.last_name || ""}`.trim() || "Mitglied";
+}
+function initials(p) {
+  return nameOf(p).slice(0, 2).toUpperCase();
+}
+
+function avatarOf(p) {
+  return p?.avatar_url || NO_PIC;
+}
+function roleLabel(role) {
+  if (role === "HEAD_ADMIN") return "Hauptadmin";
+  if (role === "ADMIN") return "Admin";
+  if (role === "SUPPORTER") return "Unterstützer";
+  return "Mitglied";
+}
+function RoleBadge({ role }) {
+  if (role === "HEAD_ADMIN" || role === "ADMIN") return <span className="role-badge admin-badge"><img src={ADMIN_STAR} alt="Admin Stern" />{roleLabel(role)}</span>;
+  if (role === "SUPPORTER") return <span className="role-badge supporter-badge"><img src={SUPPORTER_STAR} alt="Supporter Stern" />Unterstützer</span>;
+  return <span className="role-badge member-badge">Mitglied</span>;
+}
+function NameWithRole({ member }) {
+  return <span className="name-with-role">{nameOf(member)}{(member?.role==="HEAD_ADMIN"||member?.role==="ADMIN")&&<img className="name-star" src={ADMIN_STAR} alt="Admin Stern" />}{member?.role==="SUPPORTER"&&<img className="name-star" src={SUPPORTER_STAR} alt="Supporter Stern" />}</span>;
+}
+
+function AuthModal({ mode, setMode, onClose, notice }) {
+  const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState({
+    first_name:"", last_name:"", birth_date:"", nickname:"", email:"", password:""
+  });
+  const set = (key, value) => setForm((x) => ({...x, [key]:value}));
+
+  async function submit(e) {
+    e.preventDefault();
+    setLoading(true);
+    if (mode === "register") {
+      const { error } = await supabase.auth.signUp({
+        email: form.email,
+        password: form.password,
+        options: {
+          emailRedirectTo: window.location.origin,
+          data: {
+            first_name: form.first_name,
+            last_name: form.last_name,
+            birth_date: form.birth_date,
+            nickname: form.nickname
+          }
+        }
+      });
+      notice(error ? error.message : "Registrierung erfolgreich. Bitte bestätige deine E-Mail. Danach wartet dein Konto auf die Freigabe durch einen Admin.");
+      if (!error) onClose();
+    } else {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: form.email, password: form.password
+      });
+      notice(error ? error.message : "Erfolgreich angemeldet.");
+      if (!error) onClose();
+    }
+    setLoading(false);
+  }
+
+  return <div className="modal-backdrop">
+    <form className="auth-modal" onSubmit={submit}>
+      <button type="button" className="icon-close" onClick={onClose}>×</button>
+      <span className="eyebrow">ENNSTAL CONNECT</span>
+      <h2>{mode === "login" ? "Willkommen zurück" : "Werde Teil der Community"}</h2>
+
+      {mode === "register" && <>
+        <div className="form-grid">
+          <label>Vorname<input required value={form.first_name} onChange={e=>set("first_name",e.target.value)} /></label>
+          <label>Nachname<input required value={form.last_name} onChange={e=>set("last_name",e.target.value)} /></label>
+        </div>
+        <label>Spitzname<input required minLength="3" value={form.nickname} onChange={e=>set("nickname",e.target.value)} /></label>
+        <label>Geburtsdatum<input required type="date" value={form.birth_date} onChange={e=>set("birth_date",e.target.value)} /></label>
+      </>}
+
+      <label>E-Mail<input required type="email" value={form.email} onChange={e=>set("email",e.target.value)} /></label>
+      <label>Passwort<input required minLength="8" type="password" value={form.password} onChange={e=>set("password",e.target.value)} /></label>
+
+      <button className="primary-button full" disabled={loading}>
+        {loading ? "Bitte warten ..." : mode === "login" ? "Anmelden" : "Registrieren"}
+      </button>
+      <button type="button" className="link-button" onClick={()=>setMode(mode==="login"?"register":"login")}>
+        {mode === "login" ? "Noch kein Konto? Jetzt registrieren" : "Bereits Mitglied? Jetzt anmelden"}
+      </button>
+    </form>
+  </div>;
+}
+
+function PublicHome({ openAuth }) {
+  return <div className="public-home">
+    <header className="topbar">
+      <div className="brand logo-only"><img src={LOGO} alt="Ennstal Connect" /></div>
+      <div className="header-actions">
+        <button className="secondary-button" onClick={()=>openAuth("login")}>Anmelden</button>
+        <button className="primary-button" onClick={()=>openAuth("register")}>Mitglied werden</button>
+      </div>
+    </header>
+    <main className="public-main">
+      <section className="public-hero">
+        <span className="eyebrow">DEINE REGION. DEINE COMMUNITY.</span>
+        <h1>Willkommen bei<br />Ennstal Connect</h1>
+        <p>Verbinde dich mit Menschen aus deiner Region. Entdecke Neuigkeiten, tausche dich aus und finde spannende Angebote.</p>
+        <button className="primary-button large" onClick={()=>openAuth("register")}>Community entdecken →</button>
+        <div className="hero-info"><div className="hero-icon">🏔️</div><div><h2>Das Ennstal verbindet.</h2><p>Menschen, Neuigkeiten, Veranstaltungen und lokale Angebote an einem Ort.</p></div></div>
+      </section>
+    </main>
+  </div>;
+}
+
+function App() {
+  if (supabaseConfigError) {
+    return <div className="loading-screen"><div className="pending-card"><img src={LOGO} alt="Ennstal Connect" className="pending-logo"/><span className="eyebrow dark">ENNSTAL CONNECT</span><h1>Verbindung wird eingerichtet</h1><p>{supabaseConfigError}</p><p>Bitte in Vercel für dieses Projekt <b>VITE_SUPABASE_URL</b> und <b>VITE_SUPABASE_ANON_KEY</b> hinterlegen und danach neu deployen.</p></div></div>;
+  }
+  const [session, setSession] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [members, setMembers] = useState([]);
+  const [posts, setPosts] = useState([]);
+  const [market, setMarket] = useState([]);
+  const [messages, setMessages] = useState([]);
+  const [friends, setFriends] = useState([]);
+  const [pending, setPending] = useState([]);
+  const [page, setPage] = useState("start");
+  const [authMode, setAuthMode] = useState(null);
+  const [notice, setNotice] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [newPost, setNewPost] = useState("");
+  const [marketForm, setMarketForm] = useState({title:"",description:"",price:""});
+  const [profileForm, setProfileForm] = useState({first_name:"",last_name:"",nickname:"",birth_date:"",email:"",bio:""});
+
+  const user = session?.user || null;
+  const isAdmin = isAdminRole(profile?.role);
+  const isHead = profile?.role === "HEAD_ADMIN";
+  const approvedMembers = useMemo(()=>members.filter(isApproved),[members]);
+  const onlineMembers = useMemo(()=>approvedMembers.filter(m=>m.is_online),[approvedMembers]);
+  const filteredMembers = useMemo(()=>approvedMembers.filter(m=>nameOf(m).toLowerCase().includes(search.toLowerCase())),[approvedMembers,search]);
+
+  function show(text) {
+    setNotice(text);
+    window.clearTimeout(window.__ecNoticeTimer);
+    window.__ecNoticeTimer = window.setTimeout(()=>setNotice(""),5000);
+  }
+
+  async function loadProfile(id) {
+    const {data,error} = await supabase.from("profiles").select("*").eq("id",id).single();
+    if (error) { show(error.message); return null; }
+    setProfile(data);
+    setProfileForm({
+      first_name:data.first_name || "", last_name:data.last_name || "",
+      nickname:data.nickname || "", birth_date:data.birth_date || "", email:user?.email || "", bio:data.bio || ""
+    });
+    return data;
+  }
+
+  async function loadAll(currentProfile) {
+    const [{data: m, error: me}, {data: p}, {data: mk}] = await Promise.all([
+      supabase.from("profiles").select("*").order("nickname"),
+      supabase.from("posts").select("*").order("created_at",{ascending:false}),
+      supabase.from("marketplace_items").select("*").order("created_at",{ascending:false})
+    ]);
+    if (me) show(me.message);
+    setMembers(m || []); setPosts(p || []); setMarket(mk || []);
+
+    if (currentProfile && isAdminRole(currentProfile.role)) {
+      const {data} = await supabase.from("profiles").select("*").eq("status","PENDING_ADMIN").order("created_at");
+      setPending(data || []);
+    } else setPending([]);
+
+    if (user) {
+      const {data} = await supabase.from("messages").select("*").order("created_at",{ascending:false}).limit(50);
+      setMessages(data || []);
+      const {data: fr} = await supabase.from("friend_requests").select("*").or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`);
+      setFriends(fr || []);
+    }
+  }
+
+  useEffect(()=>{
+    let alive = true;
+    (async()=>{
+      const {data:{session}} = await supabase.auth.getSession();
+      if (!alive) return;
+      setSession(session);
+      let p = null;
+      if (session?.user) {
+        p = await loadProfile(session.user.id);
+        await loadAll(p);
+        if (p) {
+          await supabase.from("profiles").update({is_online:true,last_seen:new Date().toISOString()}).eq("id",p.id);
+        }
+      }
+      if (alive) setLoading(false);
+    })();
+
+    const {data:{subscription}} = supabase.auth.onAuthStateChange(async(_event,newSession)=>{
+      setSession(newSession);
+      if (!newSession?.user) { setProfile(null); setPage("start"); return; }
+      const p = await loadProfile(newSession.user.id);
+      await loadAll(p);
+    });
+    return ()=>{alive=false; subscription.unsubscribe();};
+  },[]);
+
+  useEffect(()=>{
+    if (!user || !profile) return;
+    const t = window.setInterval(async()=>{
+      await supabase.from("profiles").update({is_online:true,last_seen:new Date().toISOString()}).eq("id",user.id);
+      await loadAll(profile);
+    },60000);
+    return ()=>window.clearInterval(t);
+  },[user?.id,profile?.role]);
+
+  async function signOut() {
+    if (user) await supabase.from("profiles").update({is_online:false,last_seen:new Date().toISOString()}).eq("id",user.id);
+    await supabase.auth.signOut();
+    setSession(null); setProfile(null);
+  }
+
+  async function createPost() {
+    if (!newPost.trim()) return;
+    const {error}=await supabase.from("posts").insert({author_id:user.id,content:newPost.trim()});
+    if (error) return show(error.message);
+    setNewPost(""); show("Beitrag veröffentlicht."); await loadAll(profile);
+  }
+
+  async function createMarketItem() {
+    if (!marketForm.title.trim()) return show("Bitte einen Titel eingeben.");
+    const {error}=await supabase.from("marketplace_items").insert({
+      author_id:user.id,title:marketForm.title.trim(),
+      description:marketForm.description.trim(),price:marketForm.price.trim()
+    });
+    if(error) return show(error.message);
+    setMarketForm({title:"",description:"",price:""}); show("Angebot veröffentlicht."); await loadAll(profile);
+  }
+
+  async function uploadProfileImage(file) {
+    if (!file || !user) return;
+    if (!file.type.startsWith("image/")) return show("Bitte wähle eine Bilddatei aus.");
+    if (file.size > 5 * 1024 * 1024) return show("Das Profilbild darf maximal 5 MB groß sein.");
+
+    const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+    const path = `${user.id}/profile.${ext}`;
+
+    const { data: oldFiles } = await supabase.storage.from("profile-images").list(user.id);
+    if (oldFiles?.length) {
+      await supabase.storage.from("profile-images").remove(oldFiles.map(f => `${user.id}/${f.name}`));
+    }
+
+    const { error: uploadError } = await supabase.storage
+      .from("profile-images")
+      .upload(path, file, { upsert: true, contentType: file.type });
+
+    if (uploadError) return show(uploadError.message);
+
+    const { data: publicData } = supabase.storage.from("profile-images").getPublicUrl(path);
+    const avatar_url = `${publicData.publicUrl}?v=${Date.now()}`;
+
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .update({ avatar_url, updated_at: new Date().toISOString() })
+      .eq("id", user.id);
+
+    if (profileError) return show(profileError.message);
+
+    await loadProfile(user.id);
+    await loadAll(profile);
+    show("Profilbild erfolgreich gespeichert.");
+  }
+
+  async function removeProfileImage() {
+    if (!user) return;
+    const { data: oldFiles, error: listError } = await supabase.storage
+      .from("profile-images")
+      .list(user.id);
+
+    if (listError) return show(listError.message);
+
+    if (oldFiles?.length) {
+      const { error: removeError } = await supabase.storage
+        .from("profile-images")
+        .remove(oldFiles.map(f => `${user.id}/${f.name}`));
+      if (removeError) return show(removeError.message);
+    }
+
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .update({ avatar_url: null, updated_at: new Date().toISOString() })
+      .eq("id", user.id);
+
+    if (profileError) return show(profileError.message);
+
+    await loadProfile(user.id);
+    await loadAll(profile);
+    show("Profilbild entfernt. Dein Standardbild wird wieder angezeigt.");
+  }
+
+  async function saveProfile() {
+    if(!profileForm.first_name.trim() || !profileForm.last_name.trim() || !profileForm.nickname.trim()) return show("Vorname, Nachname und Nickname sind Pflichtfelder.");
+    const {error}=await supabase.from("profiles").update({
+      first_name:profileForm.first_name.trim(),last_name:profileForm.last_name.trim(),
+      nickname:profileForm.nickname.trim(),bio:profileForm.bio.trim(),
+      updated_at:new Date().toISOString()
+    }).eq("id",user.id);
+    if(error) return show(error.message);
+    await loadProfile(user.id); await loadAll(profile); show("Profil gespeichert.");
+  }
+
+  async function setStatus(memberId,status) {
+    const {error}=await supabase.rpc("set_account_status",{target_user:memberId,new_status:status,note:""});
+    if(error) return show(error.message);
+    show(status==="APPROVED" ? "Mitglied freigegeben." : "Registrierung abgelehnt.");
+    await loadAll(profile);
+  }
+
+  async function changePoints(member) {
+    const delta=Number(window.prompt("Punkte eingeben, z. B. 5 oder -3:"));
+    if(!Number.isFinite(delta) || delta===0) return;
+    const reason=window.prompt("Begründung (Pflicht):");
+    if(!reason || reason.trim().length<3) return show("Eine Begründung ist erforderlich.");
+    const {error}=await supabase.rpc("admin_change_points",{
+      target_user:member.id,delta,
+      change_kind:delta>0?"PLUS":"MINUS",reason_text:reason.trim()
+    });
+    if(error) return show(error.message);
+    show("Punkte erfolgreich geändert."); await loadAll(profile);
+  }
+
+  async function changePurchasePoints(member) {
+    const delta=Number(window.prompt("Kaufpunkte eingeben, z. B. 10 oder -5:"));
+    if(!Number.isFinite(delta) || delta===0) return;
+    const reason=window.prompt("Begründung (Pflicht):");
+    if(!reason || reason.trim().length<3) return show("Eine Begründung ist erforderlich.");
+    const {error}=await supabase.rpc("admin_change_purchase_points",{
+      target_user:member.id,delta,
+      change_kind:delta>0?"PLUS":"MINUS",reason_text:reason.trim()
+    });
+    if(error) return show(error.message);
+    show("Kaufpunkte erfolgreich geändert."); await loadAll(profile);
+  }
+
+  async function visitProfile(memberId) {
+    if(!memberId || memberId===user.id) return;
+    const {error}=await supabase.rpc("record_profile_visit",{target_user:memberId});
+    if(error) return show(error.message);
+    await loadAll(profile);
+    show("Profilbesuch gezählt.");
+  }
+
+  async function sendFriendRequest(memberId) {
+    if(memberId===user.id) return;
+    const {error}=await supabase.from("friend_requests").insert({sender_id:user.id,receiver_id:memberId,status:"PENDING"});
+    show(error ? error.message : "Freundschaftsanfrage gesendet.");
+  }
+
+  if(loading) return <div className="loading-screen"><img src={LOGO} alt="" /><p>Ennstal Connect wird geladen ...</p></div>;
+
+  if(!user) return <>
+    <PublicHome openAuth={setAuthMode} />
+    {authMode && <AuthModal mode={authMode} setMode={setAuthMode} onClose={()=>setAuthMode(null)} notice={show}/>}
+    {notice && <div className="notice">{notice}</div>}
+  </>;
+
+  if(profile && !isApproved(profile) && !isAdmin) return <div className="pending-page">
+    <img src={LOGO} alt="Ennstal Connect" className="pending-logo"/>
+    <div className="pending-card"><span className="eyebrow">ENNSTAL CONNECT</span>
+      <h1>Dein Konto wartet auf Freigabe.</h1>
+      <p>Willkommen {nameOf(profile)}. Ein Admin muss deine Registrierung noch freigeben.</p>
+      <button className="secondary-button" onClick={signOut}>Abmelden</button>
+    </div>
+  </div>;
+
+  const nav = (key,label)=> <button className={page===key?"active":""} onClick={()=>setPage(key)}>{label}</button>;
+
+  return <div className="app-shell">
+    <header className="topbar">
+      <button className="brand brand-button logo-only" onClick={()=>setPage("start")}><img src={LOGO} alt="Ennstal Connect"/></button>
+      <nav className="main-nav">
+        {nav("start","Start")}{nav("news","News")}{nav("members","Mitglieder")}
+        {nav("marketplace","Marktplatz")}{nav("messages","Nachrichten")}
+      </nav>
+      <button className="profile-nav" onClick={()=>setPage("profile")}>{nameOf(profile)}</button>
+    </header>
+
+    {notice && <div className="notice">{notice}<button onClick={()=>setNotice("")}>×</button></div>}
+
+    <main className="community-layout">
+      <section className="main-content">
+        {page==="start" && <Start profile={profile} posts={posts} members={approvedMembers} setPage={setPage}/>}
+        {page==="news" && <News posts={posts} members={members} value={newPost} setValue={setNewPost} create={createPost}/>}
+        {page==="members" && <Members members={filteredMembers} search={search} setSearch={setSearch} user={user} isAdmin={isAdmin} changePoints={changePoints} changePurchasePoints={changePurchasePoints} addFriend={sendFriendRequest} visitProfile={visitProfile}/>}
+        {page==="marketplace" && <Marketplace items={market} members={members} form={marketForm} setForm={setMarketForm} create={createMarketItem}/>}
+        {page==="messages" && <Messages messages={messages}/>}
+        {page==="profile" && <Profile profile={profile} form={profileForm} setForm={setProfileForm} save={saveProfile} uploadImage={uploadProfileImage} removeImage={removeProfileImage}/>} 
+        {page==="admin" && isAdmin && <Admin pending={pending} approved={approvedMembers} setStatus={setStatus} changePoints={changePoints} changePurchasePoints={changePurchasePoints} isHead={isHead}/>} 
+      </section>
+
+      <aside className="right-sidebar">
+        <div className="sidebar-profile">
+          <img className="avatar large avatar-image" src={avatarOf(profile)} alt="Mein Profilbild" onError={e=>{e.currentTarget.src=NO_PIC}}/>
+          <div><strong><NameWithRole member={profile}/></strong><small className="role-text"><RoleBadge role={profile?.role}/></small></div>
+        </div>
+        <div className="sidebar-card">
+          <div className="sidebar-title"><h3>Online</h3><span>{onlineMembers.length}</span></div>
+          {onlineMembers.slice(0,8).map(m=><div className="online-member" key={m.id}><img className="avatar tiny avatar-image" src={avatarOf(m)} alt="" onError={e=>{e.currentTarget.src=NO_PIC}}/><span>{nameOf(m)}</span><i className="online-dot"/></div>)}
+          {!onlineMembers.length && <p className="empty-text">Gerade niemand online.</p>}
+        </div>
+        <div className="sidebar-card">
+          <div className="sidebar-title"><h3>Mein Bereich</h3></div>
+          <div className="sidebar-menu">
+            <button onClick={()=>setPage("profile")}>👤 Mein Profil</button>
+            <button onClick={()=>setPage("members")}>👥 Freunde & Mitglieder <span>{friends.length||""}</span></button>
+            <button onClick={()=>setPage("messages")}>💬 Nachrichten</button>
+            <button onClick={()=>setPage("marketplace")}>🛍️ Meine Angebote</button>
+            {isAdmin && <button onClick={()=>setPage("admin")}>🛠️ Admin Tools {pending.length>0&&<span>{pending.length}</span>}</button>}
+            <button className="logout-button" onClick={signOut}>↪ Abmelden</button>
+          </div>
+        </div>
+      </aside>
+    </main>
+
+    <footer><span>© {new Date().getFullYear()} Ennstal Connect</span><div><button>Impressum</button><button>Datenschutz</button><button>Community-Regeln</button></div></footer>
+  </div>;
+}
+
+function Start({profile,posts,members,setPage}) {
+  return <><section className="welcome-card"><span className="eyebrow">WILLKOMMEN ZURÜCK</span><h1>Hallo, {nameOf(profile)} 👋</h1><p>Schön, dass du wieder bei Ennstal Connect bist. Entdecke, was in deiner Community passiert.</p><div className="action-row"><button className="primary-button" onClick={()=>setPage("news")}>Beiträge entdecken</button><button className="secondary-button" onClick={()=>setPage("marketplace")}>Zum Marktplatz</button></div></section>
+  <div className="stats"><div><b>{members.length}</b><span>Mitglieder</span></div><div><b>{posts.length}</b><span>Beiträge</span></div><div><b>∞</b><span>Verbunden</span></div></div>
+  <section className="content-card"><div className="section-header"><h2>Neu in der Community</h2><button onClick={()=>setPage("news")}>Alle Beiträge →</button></div>{posts.slice(0,3).map(p=><article className="mini-post" key={p.id}><div className="avatar tiny">EC</div><div><strong>Community Mitglied</strong><p>{p.content}</p></div></article>)}{!posts.length&&<p className="empty-text">Noch keine Beiträge vorhanden.</p>}</section></>;
+}
+
+function News({posts,members,value,setValue,create}) {
+  return <><div className="page-heading"><span className="eyebrow dark">COMMUNITY</span><h1>News & Beiträge</h1><p>Teile, was gerade im Ennstal passiert.</p></div>
+  <div className="editor-card"><textarea value={value} onChange={e=>setValue(e.target.value)} placeholder="Schreibe etwas für die Community ..."/><button className="primary-button" onClick={create}>Beitrag veröffentlichen</button></div>
+  <div className="posts">{posts.map(p=>{const a=members.find(m=>m.id===p.author_id);return <article className="post-card" key={p.id}><div className="post-header"><img className="avatar tiny avatar-image" src={avatarOf(a)} alt="" onError={e=>{e.currentTarget.src=NO_PIC}}/><div><strong>{nameOf(a)}</strong><small>{p.created_at?new Date(p.created_at).toLocaleString("de-AT"):""}</small></div></div><p>{p.content}</p></article>})}{!posts.length&&<div className="empty-state">Noch keine Beiträge. Sei der Erste!</div>}</div></>;
+}
+
+function Members({members,search,setSearch,user,isAdmin,changePoints,changePurchasePoints,addFriend,visitProfile}) {
+  return <><div className="page-heading"><span className="eyebrow dark">COMMUNITY</span><h1>Mitglieder</h1><p>Menschen aus deiner Region kennenlernen und verbinden.</p></div>
+  <input className="search-input" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Mitglieder suchen ..."/>
+  <div className="member-grid">{members.map(m=>{
+    const cardClass=`member-card ${m.role==="SUPPORTER"?"supporter-card":""} ${(m.role==="ADMIN"||m.role==="HEAD_ADMIN")?"admin-card":""}`;
+    return <article className={cardClass} key={m.id}>
+      <div className="member-top"><img className="avatar member-avatar-img" src={avatarOf(m)} alt={`${nameOf(m)} Profilbild`} onError={e=>{e.currentTarget.src=NO_PIC}}/><RoleBadge role={m.role}/></div>
+      <h3><NameWithRole member={m}/></h3>
+      <p>{m.bio||"Mitglied der Ennstal Community"}</p>
+      <div className="member-meta"><span>👁 {m.profile_visits||0} Profilbesuche</span><span>⭐ {m.community_points||0} Punkte</span><span>🛒 {m.purchase_points||0} Kaufpunkte</span></div>
+      <small className={m.is_online?"online":"offline"}>{m.is_online?"● Online":"● Offline"}</small>
+      <div className="member-actions">
+        {m.id!==user.id&&<><button className="secondary-button" onClick={()=>visitProfile(m.id)}>Profil besuchen</button><button className="secondary-button" onClick={()=>addFriend(m.id)}>Freund hinzufügen</button></>}
+        {isAdmin&&<><button className="small-button" onClick={()=>changePoints(m)}>Punkte</button><button className="small-button" onClick={()=>changePurchasePoints(m)}>Kaufpunkte</button></>}
+      </div>
+    </article>;
+  })}</div></>;
+}
+
+function Marketplace({items,members,form,setForm,create}) {
+ const set=(k,v)=>setForm(x=>({...x,[k]:v}));
+ return <><div className="page-heading"><span className="eyebrow dark">REGIONAL</span><h1>Marktplatz</h1><p>Kaufen, verkaufen und tauschen – direkt in der Community.</p></div><div className="editor-card"><input placeholder="Titel" value={form.title} onChange={e=>set("title",e.target.value)}/><textarea placeholder="Beschreibung" value={form.description} onChange={e=>set("description",e.target.value)}/><input placeholder="Preis, z. B. 50 €" value={form.price} onChange={e=>set("price",e.target.value)}/><button className="primary-button" onClick={create}>Angebot veröffentlichen</button></div><div className="market-grid">{items.map(i=>{const a=members.find(m=>m.id===i.author_id);return <article className="market-card" key={i.id}><div className="market-image">🏔️</div><div><span className="price">{i.price||"Preis auf Anfrage"}</span><h3>{i.title}</h3><p>{i.description}</p><small>Angebot von {nameOf(a)}</small></div></article>})}{!items.length&&<div className="empty-state">Noch keine Angebote vorhanden.</div>}</div></>;
+}
+
+function Messages({messages}) { return <><div className="page-heading"><span className="eyebrow dark">KONTAKT</span><h1>Nachrichten</h1><p>Bleib mit deinen Freunden und Community-Mitgliedern verbunden.</p></div><div className="content-card">{messages.map(m=><div className="message-row" key={m.id}><div className="avatar tiny">EC</div><div><strong>Nachricht</strong><p>{m.content||m.content_text||""}</p></div></div>)}{!messages.length&&<div className="empty-state">Noch keine Nachrichten vorhanden.</div>}</div></>; }
+
+function Profile({profile,form,setForm,save,uploadImage,removeImage}) {
+ const set=(k,v)=>setForm(x=>({...x,[k]:v}));
+ return <><div className="page-heading"><span className="eyebrow dark">MEIN BEREICH</span><h1>Mein Profil</h1><p>Hier kannst du dein persönliches Profil bearbeiten.</p></div>
+ <div className="profile-editor"><div className="profile-preview">
+ <img className="avatar profile-avatar profile-avatar-image" src={avatarOf(profile)} alt="Mein Profilbild" onError={e=>{e.currentTarget.src=NO_PIC}}/>
+ <div className="profile-image-actions">
+   <label className="secondary-button image-upload-button">Profilbild auswählen<input type="file" accept="image/*" onChange={e=>{const file=e.target.files?.[0]; if(file) uploadImage(file); e.target.value=""}}/></label>
+   {profile.avatar_url && <button type="button" className="danger-button image-delete-button" onClick={removeImage}>Profilbild löschen</button>}
+ </div><h2><NameWithRole member={{...profile,nickname:form.nickname}}/></h2><RoleBadge role={profile.role}/><div className="profile-stats"><span>👁 {profile.profile_visits||0}<small>Profilbesuche</small></span><span>⭐ {profile.community_points||0}<small>Punkte</small></span><span>🛒 {profile.purchase_points||0}<small>Kaufpunkte</small></span></div></div>
+ <div className="profile-form"><div className="form-grid"><label>Vorname<input required value={form.first_name} onChange={e=>set("first_name",e.target.value)}/></label><label>Nachname<input required value={form.last_name} onChange={e=>set("last_name",e.target.value)}/></label></div><label>Nickname<input required minLength="3" value={form.nickname} onChange={e=>set("nickname",e.target.value)}/></label><label>Geburtsdatum<input required type="date" value={form.birth_date} disabled/></label><label>E-Mail<input required type="email" value={form.email} disabled/></label><label>Über mich<textarea value={form.bio} onChange={e=>set("bio",e.target.value)}/></label><button className="primary-button" onClick={save}>Änderungen speichern</button></div></div></>;
+}
+
+function Admin({pending,approved,setStatus,changePoints,changePurchasePoints,isHead}) {
+ return <><div className="page-heading"><span className="eyebrow dark">VERWALTUNG</span><h1>Admin Tools</h1><p>Mitglieder freigeben, Punkte und Kaufpunkte verwalten.</p></div>
+ <section className="admin-section"><h2>Registrierungen zur Freigabe <span className="notification-badge">{pending.length}</span></h2>{pending.map(m=><div className="admin-member" key={m.id}><img className="avatar tiny avatar-image" src={avatarOf(m)} alt="" onError={e=>{e.currentTarget.src=NO_PIC}}/><div><strong><NameWithRole member={m}/></strong><small>{m.created_at?new Date(m.created_at).toLocaleString("de-AT"):""}</small></div><div className="admin-actions"><button className="primary-button small-button" onClick={()=>setStatus(m.id,"APPROVED")}>Freigeben</button><button className="danger-button small-button" onClick={()=>setStatus(m.id,"REJECTED")}>Ablehnen</button></div></div>)}{!pending.length&&<div className="empty-state">Keine offenen Registrierungen.</div>}</section>
+ <section className="admin-section"><h2>Freigegebene Mitglieder</h2><div className="admin-list">{approved.map(m=><div className={`admin-member ${m.role==="SUPPORTER"?"supporter-row":""} ${(m.role==="ADMIN"||m.role==="HEAD_ADMIN")?"admin-row":""}`} key={m.id}><div><strong><NameWithRole member={m}/></strong><small>👁 {m.profile_visits||0} Profilbesuche · ⭐ {m.community_points||0} Punkte · 🛒 {m.purchase_points||0} Kaufpunkte</small></div><div className="admin-actions"><button className="small-button" onClick={()=>changePoints(m)}>Punkte ändern</button><button className="small-button" onClick={()=>changePurchasePoints(m)}>Kaufpunkte ändern</button></div></div>)}</div>{isHead&&<p className="admin-note">Hauptadmin-Zugriff aktiv.</p>}</section></>;
+}
+
+createRoot(document.getElementById("root")).render(<App />);
