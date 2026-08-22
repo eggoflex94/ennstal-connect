@@ -1,242 +1,1472 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { supabase } from "./supabase";
 import "./styles.css";
 
-/* =====================================================
+/* =========================================================
    ENNSTAL CONNECT
-===================================================== */
+   Community – Main Component
+========================================================= */
 
-const ROLE_LABELS = {
-  member: "Mitglied",
-  supporter: "Unterstützer",
-  admin: "Admin",
-  mainadmin: "Hauptadmin",
-};
+function App() {
+  const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [profiles, setProfiles] = useState([]);
+  const [posts, setPosts] = useState([]);
+  const [marketplaceItems, setMarketplaceItems] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [friendRequests, setFriendRequests] = useState([]);
+  const [messages, setMessages] = useState([]);
+  const [onlineUsers, setOnlineUsers] = useState([]);
 
-function getRole(profile) {
-  return profile?.role || "member";
-}
+  const [activePage, setActivePage] = useState("home");
+  const [authMode, setAuthMode] = useState(null);
+  const [selectedMember, setSelectedMember] = useState(null);
+  const [selectedChat, setSelectedChat] = useState(null);
 
-function RoleBadge({ profile }) {
-  const role = getRole(profile);
+  const [loading, setLoading] = useState(true);
+  const [notice, setNotice] = useState("");
 
-  const stars =
-    role === "mainadmin"
-      ? "★★★"
-      : role === "admin"
-      ? "★★"
-      : role === "supporter"
-      ? "★"
-      : "";
+  const [postContent, setPostContent] = useState("");
+  const [marketForm, setMarketForm] = useState({
+    title: "",
+    description: "",
+    price: ""
+  });
 
-  return (
-    <span className={`roleBadge role-${role}`}>
-      {stars && <span className="roleStars">{stars}</span>}
-      {ROLE_LABELS[role] || "Mitglied"}
-    </span>
-  );
-}
-
-function Avatar({ profile, size = "normal" }) {
-  const name =
-    profile?.nickname ||
-    profile?.first_name ||
-    profile?.email ||
-    "?";
-
-  if (profile?.avatar_url) {
-    return (
-      <img
-        className={`avatar ${size}`}
-        src={profile.avatar_url}
-        alt={name}
-      />
-    );
-  }
-
-  return (
-    <div className={`avatar avatarFallback ${size}`}>
-      {name.charAt(0).toUpperCase()}
-    </div>
-  );
-}
-
-/* =====================================================
-   AUTH
-===================================================== */
-
-function Auth({ onSuccess }) {
-  const [mode, setMode] = useState("login");
-  const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const [form, setForm] = useState({
+  const [authForm, setAuthForm] = useState({
     first_name: "",
     last_name: "",
     nickname: "",
+    birth_date: "",
     email: "",
-    password: "",
+    password: ""
   });
 
-  function updateField(field, value) {
-    setForm((old) => ({
-      ...old,
-      [field]: value,
-    }));
-  }
+  /* =========================================================
+     START
+  ========================================================= */
 
-  async function submit(e) {
-    e.preventDefault();
+  useEffect(() => {
+    loadSession();
 
-    setLoading(true);
-    setMessage("");
-
-    try {
-      if (mode === "register") {
-        if (
-          !form.first_name ||
-          !form.last_name ||
-          !form.nickname ||
-          !form.email ||
-          !form.password
-        ) {
-          setMessage("Bitte alle Felder ausfüllen.");
-          setLoading(false);
-          return;
-        }
-
-        const { data, error } = await supabase.auth.signUp({
-          email: form.email,
-          password: form.password,
-          options: {
-            emailRedirectTo: window.location.origin,
-            data: {
-              first_name: form.first_name,
-              last_name: form.last_name,
-              nickname: form.nickname,
-            },
-          },
-        });
-
-        if (error) {
-          setMessage(error.message);
-          setLoading(false);
-          return;
-        }
-
-        if (data?.user) {
-          /*
-             Das Profil wird hier zusätzlich erstellt,
-             falls kein Trigger in Supabase vorhanden ist.
-          */
-
-          await supabase.from("profiles").upsert(
-            {
-              id: data.user.id,
-              auth_id: data.user.id,
-              first_name: form.first_name,
-              last_name: form.last_name,
-              nickname: form.nickname,
-              email: form.email,
-              role: "member",
-              approved: false,
-            },
-            {
-              onConflict: "id",
-            }
-          );
-        }
-
-        setMessage(
-          "Registrierung erfolgreich. Dein Konto wartet jetzt auf die Freigabe durch einen Administrator."
-        );
-
-        setMode("login");
+    const {
+      data: { subscription }
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUser(session.user);
+        loadAll(session.user);
       } else {
-        const { data, error } =
-          await supabase.auth.signInWithPassword({
-            email: form.email,
-            password: form.password,
-          });
-
-        if (error) {
-          setMessage(error.message);
-          setLoading(false);
-          return;
-        }
-
-        if (data?.user) {
-          onSuccess(data.user);
-        }
+        setUser(null);
+        setProfile(null);
       }
-    } catch (error) {
-      console.error(error);
-      setMessage("Es ist ein Fehler aufgetreten.");
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  async function loadSession() {
+    setLoading(true);
+
+    const {
+      data: { session }
+    } = await supabase.auth.getSession();
+
+    if (session?.user) {
+      setUser(session.user);
+      await loadAll(session.user);
     }
 
     setLoading(false);
   }
 
-  return (
-    <div className="authPage">
-      <div className="authCard">
-        <div className="authLogo">
-          <img src="/logo.png" alt="Ennstal Connect" />
-        </div>
+  async function loadAll(currentUser) {
+    await Promise.all([
+      loadProfile(currentUser),
+      loadProfiles(),
+      loadPosts(),
+      loadMarketplace(),
+      loadNotifications(currentUser),
+      loadFriendRequests(currentUser),
+      loadMessages(currentUser),
+      loadOnlineUsers()
+    ]);
+  }
 
+  /* =========================================================
+     PROFILE
+  ========================================================= */
+
+  async function loadProfile(currentUser = user) {
+    if (!currentUser) return;
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", currentUser.id)
+      .single();
+
+    if (error) {
+      console.log("Profil konnte nicht geladen werden:", error.message);
+      return;
+    }
+
+    setProfile(data);
+
+    /* Online-Status aktualisieren */
+    try {
+      await supabase
+        .from("online_sessions")
+        .upsert({
+          user_id: currentUser.id,
+          last_seen: new Date().toISOString()
+        });
+    } catch (error) {
+      console.log("Online Status:", error.message);
+    }
+  }
+
+  async function loadProfiles() {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (!error) {
+      setProfiles(data || []);
+    }
+  }
+
+  async function updateProfile(updates) {
+    if (!user) return;
+
+    const { error } = await supabase
+      .from("profiles")
+      .update(updates)
+      .eq("id", user.id);
+
+    if (error) {
+      showNotice(error.message);
+      return;
+    }
+
+    showNotice("Profil erfolgreich gespeichert.");
+    await loadProfile();
+    await loadProfiles();
+  }
+
+  /* =========================================================
+     POSTS / COMMUNITY
+  ========================================================= */
+
+  async function loadPosts() {
+    const { data, error } = await supabase
+      .from("posts")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (!error) {
+      setPosts(data || []);
+    }
+  }
+
+  async function createPost(e) {
+    e.preventDefault();
+
+    if (!user) {
+      setAuthMode("login");
+      return;
+    }
+
+    if (!postContent.trim()) return;
+
+    const { error } = await supabase
+      .from("posts")
+      .insert({
+        author_id: user.id,
+        content: postContent.trim()
+      });
+
+    if (error) {
+      showNotice(error.message);
+      return;
+    }
+
+    setPostContent("");
+    showNotice("Dein Beitrag wurde veröffentlicht.");
+    await loadPosts();
+  }
+
+  /* =========================================================
+     MARKTPLATZ
+  ========================================================= */
+
+  async function loadMarketplace() {
+    const { data, error } = await supabase
+      .from("marketplace_items")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (!error) {
+      setMarketplaceItems(data || []);
+    }
+  }
+
+  async function createMarketplaceItem(e) {
+    e.preventDefault();
+
+    if (!user) {
+      setAuthMode("login");
+      return;
+    }
+
+    if (!marketForm.title.trim()) return;
+
+    const { error } = await supabase
+      .from("marketplace_items")
+      .insert({
+        seller_id: user.id,
+        title: marketForm.title,
+        description: marketForm.description,
+        price: marketForm.price
+      });
+
+    if (error) {
+      showNotice(error.message);
+      return;
+    }
+
+    setMarketForm({
+      title: "",
+      description: "",
+      price: ""
+    });
+
+    showNotice("Dein Angebot wurde veröffentlicht.");
+    await loadMarketplace();
+  }
+
+  /* =========================================================
+     FREUNDE
+  ========================================================= */
+
+  async function loadFriendRequests(currentUser = user) {
+    if (!currentUser) return;
+
+    const { data, error } = await supabase
+      .from("friend_requests")
+      .select("*")
+      .eq("receiver_id", currentUser.id)
+      .eq("status", "pending")
+      .order("created_at", { ascending: false });
+
+    if (!error) {
+      setFriendRequests(data || []);
+    }
+  }
+
+  async function sendFriendRequest(receiverId) {
+    if (!user) {
+      setAuthMode("login");
+      return;
+    }
+
+    const { error } = await supabase
+      .from("friend_requests")
+      .insert({
+        sender_id: user.id,
+        receiver_id: receiverId,
+        status: "pending"
+      });
+
+    if (error) {
+      showNotice(error.message);
+      return;
+    }
+
+    showNotice("Freundschaftsanfrage wurde gesendet.");
+  }
+
+  async function answerFriendRequest(request, accepted) {
+    const { error } = await supabase
+      .from("friend_requests")
+      .update({
+        status: accepted ? "accepted" : "rejected"
+      })
+      .eq("id", request.id);
+
+    if (!error) {
+      showNotice(
+        accepted
+          ? "Freundschaftsanfrage angenommen."
+          : "Freundschaftsanfrage abgelehnt."
+      );
+
+      await loadFriendRequests();
+    }
+  }
+
+  /* =========================================================
+     NACHRICHTEN
+  ========================================================= */
+
+  async function loadMessages(currentUser = user) {
+    if (!currentUser) return;
+
+    const { data, error } = await supabase
+      .from("messages")
+      .select("*")
+      .or(
+        `sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`
+      )
+      .order("created_at", { ascending: true });
+
+    if (!error) {
+      setMessages(data || []);
+    }
+  }
+
+  async function sendMessage(receiverId, content) {
+    if (!content.trim() || !user) return;
+
+    const { error } = await supabase
+      .from("messages")
+      .insert({
+        sender_id: user.id,
+        receiver_id: receiverId,
+        content: content.trim()
+      });
+
+    if (!error) {
+      await loadMessages();
+    } else {
+      showNotice(error.message);
+    }
+  }
+
+  /* =========================================================
+     ONLINE
+  ========================================================= */
+
+  async function loadOnlineUsers() {
+    const { data, error } = await supabase
+      .from("online_sessions")
+      .select("*")
+      .order("last_seen", { ascending: false });
+
+    if (!error) {
+      setOnlineUsers(data || []);
+    }
+  }
+
+  /* =========================================================
+     BENACHRICHTIGUNGEN
+  ========================================================= */
+
+  async function loadNotifications(currentUser = user) {
+    if (!currentUser) return;
+
+    const { data, error } = await supabase
+      .from("notifications")
+      .select("*")
+      .eq("user_id", currentUser.id)
+      .order("created_at", { ascending: false });
+
+    if (!error) {
+      setNotifications(data || []);
+    }
+  }
+
+  /* =========================================================
+     ADMIN
+  ========================================================= */
+
+  function isAdmin() {
+    return (
+      profile?.role === "admin" ||
+      profile?.role === "mainadmin" ||
+      profile?.role === "superadmin"
+    );
+  }
+
+  function isMainAdmin() {
+    return (
+      profile?.role === "mainadmin" ||
+      profile?.role === "superadmin"
+    );
+  }
+
+  async function approveMember(memberId) {
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        approved: true,
+        status: "approved"
+      })
+      .eq("id", memberId);
+
+    if (error) {
+      showNotice(error.message);
+      return;
+    }
+
+    showNotice("Mitglied wurde freigegeben.");
+    await loadProfiles();
+  }
+
+  async function rejectMember(memberId) {
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        approved: false,
+        status: "rejected"
+      })
+      .eq("id", memberId);
+
+    if (error) {
+      showNotice(error.message);
+      return;
+    }
+
+    showNotice("Anfrage wurde abgelehnt.");
+    await loadProfiles();
+  }
+
+  /* =========================================================
+     AUTH
+  ========================================================= */
+
+  function changeAuthField(name, value) {
+    setAuthForm((old) => ({
+      ...old,
+      [name]: value
+    }));
+  }
+
+  async function register(e) {
+    e.preventDefault();
+
+    const { data, error } = await supabase.auth.signUp({
+      email: authForm.email,
+      password: authForm.password,
+      options: {
+        emailRedirectTo: window.location.origin,
+        data: {
+          first_name: authForm.first_name,
+          last_name: authForm.last_name,
+          nickname: authForm.nickname,
+          birth_date: authForm.birth_date
+        }
+      }
+    });
+
+    if (error) {
+      showNotice(error.message);
+      return;
+    }
+
+    /*
+      Profil auf "wartet auf Freigabe".
+      Falls dein Trigger in Supabase das Profil bereits erstellt,
+      wird upsert verwendet.
+    */
+
+    if (data?.user) {
+      await supabase
+        .from("profiles")
+        .upsert({
+          id: data.user.id,
+          first_name: authForm.first_name,
+          last_name: authForm.last_name,
+          nickname: authForm.nickname,
+          birth_date: authForm.birth_date,
+          email: authForm.email,
+          approved: false,
+          status: "pending",
+          role: "member"
+        });
+    }
+
+    showNotice(
+      "Registrierung erfolgreich. Dein Konto muss jetzt von einem Admin freigegeben werden."
+    );
+
+    setAuthMode(null);
+  }
+
+  async function login(e) {
+    e.preventDefault();
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email: authForm.email,
+      password: authForm.password
+    });
+
+    if (error) {
+      showNotice(error.message);
+      return;
+    }
+
+    setAuthMode(null);
+  }
+
+  async function logout() {
+    await supabase.auth.signOut();
+    setActivePage("home");
+  }
+
+  /* =========================================================
+     HILFE
+  ========================================================= */
+
+  function showNotice(text) {
+    setNotice(text);
+
+    window.setTimeout(() => {
+      setNotice("");
+    }, 5000);
+  }
+
+  function getProfileName(id) {
+    const person = profiles.find((item) => item.id === id);
+
+    if (!person) return "Mitglied";
+
+    return (
+      person.nickname ||
+      `${person.first_name || ""} ${person.last_name || ""}`.trim() ||
+      "Mitglied"
+    );
+  }
+
+  function getMemberStatus(member) {
+    if (member.role === "mainadmin" || member.role === "superadmin") {
+      return "⭐ Hauptadmin";
+    }
+
+    if (member.role === "admin") {
+      return "⭐ Admin";
+    }
+
+    if (member.role === "supporter") {
+      return "★ Supporter";
+    }
+
+    return "Mitglied";
+  }
+
+  function isApproved() {
+    if (!profile) return false;
+
+    return (
+      profile.approved === true ||
+      profile.status === "approved" ||
+      isAdmin()
+    );
+  }
+
+  /* =========================================================
+     LOADING
+  ========================================================= */
+
+  if (loading) {
+    return (
+      <div className="loadingScreen">
+        <img src="/logo.png" alt="Ennstal Connect" />
         <h1>Ennstal Connect</h1>
+        <p>Community wird geladen ...</p>
+      </div>
+    );
+  }
 
-        <p className="muted">
-          Menschen aus der Region verbinden.
+  /* =========================================================
+     WARTET AUF FREIGABE
+  ========================================================= */
+
+  if (user && profile && !isApproved()) {
+    return (
+      <div className="loadingScreen">
+        <img src="/logo.png" alt="Ennstal Connect" />
+        <h1>Deine Registrierung ist eingegangen</h1>
+
+        <p className="pendingText">
+          Willkommen bei Ennstal Connect, {profile.nickname || profile.first_name}.
+          Dein Konto wartet noch auf die Freigabe durch einen Administrator.
         </p>
 
-        <div className="authTabs">
+        <button className="primaryButton" onClick={logout}>
+          Abmelden
+        </button>
+      </div>
+    );
+  }
+
+  /* =========================================================
+     HAUPTSEITE
+  ========================================================= */
+
+  return (
+    <>
+      <header className="topbar">
+        <button
+          className="brand"
+          onClick={() => setActivePage("home")}
+        >
+          <img src="/logo.png" alt="Ennstal Connect Logo" />
+          <span>Ennstal Connect</span>
+        </button>
+
+        <nav className="mainNav">
           <button
-            className={mode === "login" ? "active" : ""}
-            onClick={() => {
-              setMode("login");
-              setMessage("");
-            }}
+            className={activePage === "home" ? "active" : ""}
+            onClick={() => setActivePage("home")}
           >
-            Anmelden
+            Start
           </button>
 
           <button
-            className={mode === "register" ? "active" : ""}
-            onClick={() => {
-              setMode("register");
-              setMessage("");
-            }}
+            className={activePage === "news" ? "active" : ""}
+            onClick={() => setActivePage("news")}
           >
-            Registrieren
+            News
           </button>
+
+          <button
+            className={activePage === "marketplace" ? "active" : ""}
+            onClick={() => setActivePage("marketplace")}
+          >
+            Marktplatz
+          </button>
+
+          <button
+            className={activePage === "messages" ? "active" : ""}
+            onClick={() => setActivePage("messages")}
+          >
+            Nachrichten
+          </button>
+
+          <button
+            className={activePage === "members" ? "active" : ""}
+            onClick={() => setActivePage("members")}
+          >
+            Mitglieder
+          </button>
+        </nav>
+
+        <div className="topActions">
+          {user ? (
+            <button
+              className="profileTopButton"
+              onClick={() => setActivePage("profile")}
+            >
+              {profile?.nickname || profile?.first_name || "Profil"}
+            </button>
+          ) : (
+            <>
+              <button onClick={() => setAuthMode("login")}>
+                Anmelden
+              </button>
+
+              <button
+                className="primaryButton smallButton"
+                onClick={() => setAuthMode("register")}
+              >
+                Registrieren
+              </button>
+            </>
+          )}
+        </div>
+      </header>
+
+      {notice && (
+        <div className="notice">
+          {notice}
+        </div>
+      )}
+
+      <main className="appLayout">
+
+        {/* =====================================================
+            HAUPTINHALT
+        ====================================================== */}
+
+        <section className="mainContent">
+
+          {activePage === "home" && (
+            <>
+              <section className="hero">
+                <div className="heroContent">
+                  <span className="eyebrow">
+                    DEINE REGION. DEINE COMMUNITY.
+                  </span>
+
+                  <h1>
+                    Willkommen bei
+                    <br />
+                    Ennstal Connect
+                  </h1>
+
+                  <p>
+                    Verbinde dich mit Menschen aus deiner Region.
+                    Entdecke Neuigkeiten, tausche dich aus,
+                    finde neue Freunde und spannende Angebote.
+                  </p>
+
+                  <button
+                    className="primaryButton"
+                    onClick={() => {
+                      if (user) {
+                        setActivePage("news");
+                      } else {
+                        setAuthMode("register");
+                      }
+                    }}
+                  >
+                    Community entdecken →
+                  </button>
+                </div>
+              </section>
+
+              <section className="section">
+                <h2>Das Ennstal verbindet.</h2>
+
+                <div className="featureGrid">
+                  <div className="featureCard">
+                    <div className="featureIcon">👥</div>
+                    <h3>Menschen kennenlernen</h3>
+                    <p>
+                      Entdecke Mitglieder aus deiner Region und
+                      verbinde dich miteinander.
+                    </p>
+                  </div>
+
+                  <div className="featureCard">
+                    <div className="featureIcon">💬</div>
+                    <h3>Austauschen</h3>
+                    <p>
+                      Teile Beiträge, schreibe Nachrichten und bleibe
+                      mit deiner Community verbunden.
+                    </p>
+                  </div>
+
+                  <div className="featureCard">
+                    <div className="featureIcon">🏔️</div>
+                    <h3>Regional entdecken</h3>
+                    <p>
+                      Entdecke Neuigkeiten, Angebote und Menschen
+                      aus dem Ennstal.
+                    </p>
+                  </div>
+                </div>
+              </section>
+            </>
+          )}
+
+          {/* =====================================================
+              NEWS / COMMUNITY POSTS
+          ====================================================== */}
+
+          {activePage === "news" && (
+            <section className="section">
+              <div className="sectionHeader">
+                <div>
+                  <span className="eyebrow">COMMUNITY</span>
+                  <h1>Neuigkeiten</h1>
+                  <p>Was gibt es Neues in deiner Community?</p>
+                </div>
+              </div>
+
+              {user && (
+                <form className="postComposer" onSubmit={createPost}>
+                  <textarea
+                    value={postContent}
+                    onChange={(e) => setPostContent(e.target.value)}
+                    placeholder="Was möchtest du mit der Community teilen?"
+                  />
+
+                  <button className="primaryButton">
+                    Beitrag veröffentlichen
+                  </button>
+                </form>
+              )}
+
+              <div className="postList">
+                {posts.length === 0 && (
+                  <div className="emptyState">
+                    Noch keine Beiträge vorhanden.
+                  </div>
+                )}
+
+                {posts.map((post) => (
+                  <article className="postCard" key={post.id}>
+                    <div className="postAuthor">
+                      <div className="avatar">
+                        {getProfileName(post.author_id).charAt(0)}
+                      </div>
+
+                      <div>
+                        <strong>
+                          {getProfileName(post.author_id)}
+                        </strong>
+
+                        <span>
+                          {post.created_at
+                            ? new Date(post.created_at).toLocaleString("de-AT")
+                            : ""}
+                        </span>
+                      </div>
+                    </div>
+
+                    <p className="postText">
+                      {post.content}
+                    </p>
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* =====================================================
+              MARKTPLATZ
+          ====================================================== */}
+
+          {activePage === "marketplace" && (
+            <section className="section">
+              <span className="eyebrow">REGIONAL</span>
+              <h1>Marktplatz</h1>
+
+              <p>
+                Angebote und Dinge aus der Community.
+              </p>
+
+              {user && (
+                <form
+                  className="marketForm"
+                  onSubmit={createMarketplaceItem}
+                >
+                  <input
+                    placeholder="Titel deines Angebots"
+                    value={marketForm.title}
+                    onChange={(e) =>
+                      setMarketForm({
+                        ...marketForm,
+                        title: e.target.value
+                      })
+                    }
+                  />
+
+                  <textarea
+                    placeholder="Beschreibung"
+                    value={marketForm.description}
+                    onChange={(e) =>
+                      setMarketForm({
+                        ...marketForm,
+                        description: e.target.value
+                      })
+                    }
+                  />
+
+                  <input
+                    placeholder="Preis, z. B. 20 €"
+                    value={marketForm.price}
+                    onChange={(e) =>
+                      setMarketForm({
+                        ...marketForm,
+                        price: e.target.value
+                      })
+                    }
+                  />
+
+                  <button className="primaryButton">
+                    Angebot veröffentlichen
+                  </button>
+                </form>
+              )}
+
+              <div className="marketGrid">
+                {marketplaceItems.map((item) => (
+                  <article className="marketCard" key={item.id}>
+                    <div className="marketImage">
+                      🏔️
+                    </div>
+
+                    <h3>{item.title}</h3>
+
+                    <p>
+                      {item.description}
+                    </p>
+
+                    <div className="marketFooter">
+                      <strong>
+                        {item.price || "Preis auf Anfrage"}
+                      </strong>
+
+                      <span>
+                        {getProfileName(item.seller_id)}
+                      </span>
+                    </div>
+
+                    {user &&
+                      user.id !== item.seller_id && (
+                        <button
+                          className="secondaryButton"
+                          onClick={() => {
+                            setSelectedChat(item.seller_id);
+                            setActivePage("messages");
+                          }}
+                        >
+                          Nachricht schreiben
+                        </button>
+                      )}
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* =====================================================
+              MITGLIEDER
+          ====================================================== */}
+
+          {activePage === "members" && (
+            <section className="section">
+              <span className="eyebrow">COMMUNITY</span>
+              <h1>Mitglieder</h1>
+
+              <div className="memberGrid">
+                {profiles
+                  .filter(
+                    (member) =>
+                      member.approved === true ||
+                      member.status === "approved" ||
+                      member.role === "admin" ||
+                      member.role === "mainadmin" ||
+                      member.role === "superadmin"
+                  )
+                  .map((member) => (
+                    <article
+                      className="memberCard"
+                      key={member.id}
+                    >
+                      <div className="memberAvatar">
+                        {member.nickname?.charAt(0) ||
+                          member.first_name?.charAt(0) ||
+                          "M"}
+                      </div>
+
+                      <h3>
+                        {member.nickname ||
+                          `${member.first_name || ""} ${
+                            member.last_name || ""
+                          }`}
+                      </h3>
+
+                      <span
+                        className={
+                          member.role === "admin" ||
+                          member.role === "mainadmin" ||
+                          member.role === "superadmin"
+                            ? "role adminRole"
+                            : "role"
+                        }
+                      >
+                        {getMemberStatus(member)}
+                      </span>
+
+                      <p>
+                        {member.bio ||
+                          "Mitglied der Ennstal Connect Community."}
+                      </p>
+
+                      {user &&
+                        user.id !== member.id && (
+                          <div className="memberActions">
+                            <button
+                              className="secondaryButton"
+                              onClick={() =>
+                                setSelectedMember(member)
+                              }
+                            >
+                              Profil
+                            </button>
+
+                            <button
+                              className="secondaryButton"
+                              onClick={() =>
+                                sendFriendRequest(member.id)
+                              }
+                            >
+                              Freund hinzufügen
+                            </button>
+                          </div>
+                        )}
+                    </article>
+                  ))}
+              </div>
+            </section>
+          )}
+
+          {/* =====================================================
+              NACHRICHTEN
+          ====================================================== */}
+
+          {activePage === "messages" && (
+            <MessagesPage
+              user={user}
+              profiles={profiles}
+              messages={messages}
+              selectedChat={selectedChat}
+              setSelectedChat={setSelectedChat}
+              sendMessage={sendMessage}
+              getProfileName={getProfileName}
+            />
+          )}
+
+          {/* =====================================================
+              PROFIL
+          ====================================================== */}
+
+          {activePage === "profile" && user && profile && (
+            <ProfilePage
+              profile={profile}
+              updateProfile={updateProfile}
+            />
+          )}
+
+          {/* =====================================================
+              ADMIN
+          ====================================================== */}
+
+          {activePage === "admin" && isAdmin() && (
+            <AdminPage
+              profiles={profiles}
+              approveMember={approveMember}
+              rejectMember={rejectMember}
+              isMainAdmin={isMainAdmin()}
+            />
+          )}
+
+        </section>
+
+        {/* =====================================================
+            RECHTER MEIN BEREICH
+        ====================================================== */}
+
+        <aside className="rightSidebar">
+
+          {!user ? (
+            <div className="sidebarCard">
+              <h3>Willkommen</h3>
+              <p>
+                Melde dich an und werde Teil der Community.
+              </p>
+
+              <button
+                className="primaryButton fullButton"
+                onClick={() => setAuthMode("login")}
+              >
+                Anmelden
+              </button>
+
+              <button
+                className="secondaryButton fullButton"
+                onClick={() => setAuthMode("register")}
+              >
+                Registrieren
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="sidebarCard userCard">
+                <div className="userCardTop">
+                  <div className="bigAvatar">
+                    {profile?.nickname?.charAt(0) ||
+                      profile?.first_name?.charAt(0) ||
+                      "M"}
+                  </div>
+
+                  <div>
+                    <h3>
+                      {profile?.nickname ||
+                        profile?.first_name}
+                    </h3>
+
+                    <span className="onlineLabel">
+                      ● Online
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  className="secondaryButton fullButton"
+                  onClick={() => setActivePage("profile")}
+                >
+                  Mein Profil bearbeiten
+                </button>
+              </div>
+
+              <div className="sidebarCard">
+                <h3>Mein Bereich</h3>
+
+                <button
+                  className="sideLink"
+                  onClick={() => setActivePage("members")}
+                >
+                  👥 Mitglieder
+                </button>
+
+                <button
+                  className="sideLink"
+                  onClick={() => setActivePage("messages")}
+                >
+                  💬 Nachrichten
+                </button>
+
+                <button
+                  className="sideLink"
+                  onClick={() => setActivePage("profile")}
+                >
+                  👤 Mein Profil
+                </button>
+
+                <button
+                  className="sideLink"
+                  onClick={() => setActivePage("notifications")}
+                >
+                  🔔 Benachrichtigungen
+                  {notifications.length > 0 && (
+                    <span className="countBadge">
+                      {notifications.length}
+                    </span>
+                  )}
+                </button>
+              </div>
+
+              <div className="sidebarCard">
+                <h3>Freundschaftsanfragen</h3>
+
+                {friendRequests.length === 0 && (
+                  <p className="smallText">
+                    Keine offenen Anfragen.
+                  </p>
+                )}
+
+                {friendRequests.map((request) => (
+                  <div
+                    className="friendRequest"
+                    key={request.id}
+                  >
+                    <strong>
+                      {getProfileName(request.sender_id)}
+                    </strong>
+
+                    <div>
+                      <button
+                        className="acceptButton"
+                        onClick={() =>
+                          answerFriendRequest(request, true)
+                        }
+                      >
+                        ✓
+                      </button>
+
+                      <button
+                        className="rejectButton"
+                        onClick={() =>
+                          answerFriendRequest(request, false)
+                        }
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="sidebarCard">
+                <h3>Online</h3>
+
+                {onlineUsers.slice(0, 8).map((online) => (
+                  <div
+                    className="onlineUser"
+                    key={online.user_id || online.id}
+                  >
+                    <span className="onlineDot" />
+
+                    {getProfileName(online.user_id)}
+                  </div>
+                ))}
+
+                {onlineUsers.length === 0 && (
+                  <p className="smallText">
+                    Derzeit keine weiteren Mitglieder online.
+                  </p>
+                )}
+              </div>
+
+              {isAdmin() && (
+                <div className="sidebarCard adminBox">
+                  <h3>⭐ Admin Tools</h3>
+
+                  <button
+                    className="sideLink"
+                    onClick={() => setActivePage("admin")}
+                  >
+                    Mitglieder verwalten
+                  </button>
+
+                  <button
+                    className="sideLink"
+                    onClick={() => setActivePage("admin")}
+                  >
+                    Freigaben
+                  </button>
+                </div>
+              )}
+
+              <div className="sidebarCard">
+                <button
+                  className="logoutButton"
+                  onClick={logout}
+                >
+                  Abmelden
+                </button>
+              </div>
+            </>
+          )}
+        </aside>
+      </main>
+
+      {/* =====================================================
+          FOOTER
+      ====================================================== */}
+
+      <footer className="footer">
+        <div>
+          <strong>Ennstal Connect</strong>
+          <span>Deine Region. Deine Community.</span>
         </div>
 
-        <form onSubmit={submit}>
-          {mode === "register" && (
+        <div className="footerLinks">
+          <button onClick={() => setActivePage("rules")}>
+            Community-Regeln
+          </button>
+
+          <button onClick={() => setActivePage("privacy")}>
+            Datenschutz
+          </button>
+
+          <button onClick={() => setActivePage("imprint")}>
+            Impressum
+          </button>
+        </div>
+      </footer>
+
+      {/* =====================================================
+          AUTH MODAL
+      ====================================================== */}
+
+      {authMode && (
+        <AuthModal
+          mode={authMode}
+          setMode={setAuthMode}
+          form={authForm}
+          changeField={changeAuthField}
+          login={login}
+          register={register}
+          close={() => setAuthMode(null)}
+        />
+      )}
+
+      {/* =====================================================
+          MEMBER MODAL
+      ====================================================== */}
+
+      {selectedMember && (
+        <div
+          className="modalOverlay"
+          onClick={() => setSelectedMember(null)}
+        >
+          <div
+            className="modal memberModal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="closeButton"
+              onClick={() => setSelectedMember(null)}
+            >
+              ×
+            </button>
+
+            <div className="profilePreviewAvatar">
+              {selectedMember.nickname?.charAt(0) ||
+                selectedMember.first_name?.charAt(0) ||
+                "M"}
+            </div>
+
+            <h2>
+              {selectedMember.nickname ||
+                `${selectedMember.first_name || ""} ${
+                  selectedMember.last_name || ""
+                }`}
+            </h2>
+
+            <span className="role">
+              {getMemberStatus(selectedMember)}
+            </span>
+
+            <p>
+              {selectedMember.bio ||
+                "Dieses Mitglied hat noch keine Beschreibung hinzugefügt."}
+            </p>
+
+            {user && user.id !== selectedMember.id && (
+              <>
+                <button
+                  className="primaryButton fullButton"
+                  onClick={() =>
+                    sendFriendRequest(selectedMember.id)
+                  }
+                >
+                  Freundschaftsanfrage senden
+                </button>
+
+                <button
+                  className="secondaryButton fullButton"
+                  onClick={() => {
+                    setSelectedChat(selectedMember.id);
+                    setSelectedMember(null);
+                    setActivePage("messages");
+                  }}
+                >
+                  Nachricht schreiben
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================
+          SIMPLE INFO PAGES
+      ====================================================== */}
+
+      {activePage === "rules" && (
+        <InfoModal
+          title="Community-Regeln"
+          close={() => setActivePage("home")}
+        >
+          <p>1. Begegne anderen Mitgliedern respektvoll.</p>
+          <p>2. Keine Beleidigungen, Diskriminierung oder Belästigung.</p>
+          <p>3. Respektiere die Privatsphäre anderer Mitglieder.</p>
+          <p>4. Keine illegalen Inhalte.</p>
+          <p>5. Admin-Entscheidungen dienen dem Schutz der Community.</p>
+        </InfoModal>
+      )}
+
+      {activePage === "privacy" && (
+        <InfoModal
+          title="Datenschutz"
+          close={() => setActivePage("home")}
+        >
+          <p>
+            Ennstal Connect verarbeitet Daten, die für die
+            Registrierung und Nutzung der Community notwendig sind.
+          </p>
+
+          <p>
+            Die technische Verarbeitung erfolgt über die für die
+            Plattform verwendeten Dienste wie Supabase und Vercel.
+          </p>
+
+          <p>
+            Mitglieder können ihr Profil innerhalb der Community
+            bearbeiten.
+          </p>
+        </InfoModal>
+      )}
+
+      {activePage === "imprint" && (
+        <InfoModal
+          title="Impressum"
+          close={() => setActivePage("home")}
+        >
+          <p>
+            Hier kannst du deine vollständigen Impressumsdaten
+            eintragen.
+          </p>
+        </InfoModal>
+      )}
+    </>
+  );
+}
+
+
+/* =========================================================
+   AUTH MODAL
+========================================================= */
+
+function AuthModal({
+  mode,
+  setMode,
+  form,
+  changeField,
+  login,
+  register,
+  close
+}) {
+  const isRegister = mode === "register";
+
+  return (
+    <div className="modalOverlay">
+      <div className="modal authModal">
+        <button className="closeButton" onClick={close}>
+          ×
+        </button>
+
+        <h2>
+          {isRegister
+            ? "Bei Ennstal Connect registrieren"
+            : "Willkommen zurück"}
+        </h2>
+
+        <form onSubmit={isRegister ? register : login}>
+          {isRegister && (
             <>
               <input
                 placeholder="Vorname"
                 value={form.first_name}
                 onChange={(e) =>
-                  updateField("first_name", e.target.value)
+                  changeField("first_name", e.target.value)
                 }
+                required
               />
 
               <input
                 placeholder="Nachname"
                 value={form.last_name}
                 onChange={(e) =>
-                  updateField("last_name", e.target.value)
+                  changeField("last_name", e.target.value)
                 }
+                required
               />
 
               <input
-                placeholder="Spitzname"
+                placeholder="Nickname"
                 value={form.nickname}
                 onChange={(e) =>
-                  updateField("nickname", e.target.value)
+                  changeField("nickname", e.target.value)
+                }
+                required
+              />
+
+              <label>Geburtsdatum</label>
+
+              <input
+                type="date"
+                value={form.birth_date}
+                onChange={(e) =>
+                  changeField("birth_date", e.target.value)
                 }
               />
             </>
@@ -244,11 +1474,12 @@ function Auth({ onSuccess }) {
 
           <input
             type="email"
-            placeholder="E-Mail"
+            placeholder="E-Mail-Adresse"
             value={form.email}
             onChange={(e) =>
-              updateField("email", e.target.value)
+              changeField("email", e.target.value)
             }
+            required
           />
 
           <input
@@ -256,1475 +1487,350 @@ function Auth({ onSuccess }) {
             placeholder="Passwort"
             value={form.password}
             onChange={(e) =>
-              updateField("password", e.target.value)
+              changeField("password", e.target.value)
             }
+            required
           />
 
-          <button
-            className="primaryButton fullButton"
-            disabled={loading}
-          >
-            {loading
-              ? "Bitte warten..."
-              : mode === "login"
-              ? "Anmelden"
-              : "Konto beantragen"}
+          <button className="primaryButton fullButton">
+            {isRegister
+              ? "Registrierung beantragen"
+              : "Anmelden"}
           </button>
         </form>
 
-        {message && (
-          <div className="authMessage">
-            {message}
-          </div>
-        )}
-
-        {mode === "register" && (
-          <p className="approvalInfo">
-            Neue Mitglieder können die Community erst nach
-            erfolgreicher Freigabe durch einen Administrator
-            vollständig nutzen.
-          </p>
-        )}
+        <div className="authSwitch">
+          {isRegister ? (
+            <>
+              Bereits Mitglied?
+              <button onClick={() => setMode("login")}>
+                Jetzt anmelden
+              </button>
+            </>
+          ) : (
+            <>
+              Noch nicht registriert?
+              <button onClick={() => setMode("register")}>
+                Mitglied werden
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
-/* =====================================================
-   PROFILE
-===================================================== */
 
-function ProfileEditor({ profile, onSaved }) {
+/* =========================================================
+   PROFILE PAGE
+========================================================= */
+
+function ProfilePage({ profile, updateProfile }) {
   const [form, setForm] = useState({
-    first_name: profile?.first_name || "",
-    last_name: profile?.last_name || "",
-    nickname: profile?.nickname || "",
-    bio: profile?.bio || "",
-    avatar_url: profile?.avatar_url || "",
+    nickname: profile.nickname || "",
+    first_name: profile.first_name || "",
+    last_name: profile.last_name || "",
+    bio: profile.bio || "",
+    location: profile.location || ""
   });
 
-  const [message, setMessage] = useState("");
-
-  function update(field, value) {
-    setForm((old) => ({
-      ...old,
-      [field]: value,
-    }));
+  function change(name, value) {
+    setForm({
+      ...form,
+      [name]: value
+    });
   }
 
-  async function save(e) {
+  function submit(e) {
     e.preventDefault();
-
-    const { data, error } = await supabase
-      .from("profiles")
-      .update({
-        first_name: form.first_name,
-        last_name: form.last_name,
-        nickname: form.nickname,
-        bio: form.bio,
-        avatar_url: form.avatar_url,
-      })
-      .eq("id", profile.id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error(error);
-      setMessage("Profil konnte nicht gespeichert werden.");
-      return;
-    }
-
-    setMessage("Profil gespeichert.");
-    onSaved(data);
+    updateProfile(form);
   }
 
   return (
-    <div className="contentCard">
-      <h2>Mein Profil bearbeiten</h2>
+    <section className="section profilePage">
+      <span className="eyebrow">MEIN BEREICH</span>
+      <h1>Mein Profil</h1>
 
-      <form className="profileForm" onSubmit={save}>
-        <input
-          placeholder="Vorname"
-          value={form.first_name}
-          onChange={(e) =>
-            update("first_name", e.target.value)
-          }
-        />
+      <form className="profileForm" onSubmit={submit}>
+        <div className="formGrid">
+          <div>
+            <label>Vorname</label>
+            <input
+              value={form.first_name}
+              onChange={(e) =>
+                change("first_name", e.target.value)
+              }
+            />
+          </div>
+
+          <div>
+            <label>Nachname</label>
+            <input
+              value={form.last_name}
+              onChange={(e) =>
+                change("last_name", e.target.value)
+              }
+            />
+          </div>
+        </div>
+
+        <label>Nickname</label>
 
         <input
-          placeholder="Nachname"
-          value={form.last_name}
-          onChange={(e) =>
-            update("last_name", e.target.value)
-          }
-        />
-
-        <input
-          placeholder="Spitzname"
           value={form.nickname}
           onChange={(e) =>
-            update("nickname", e.target.value)
+            change("nickname", e.target.value)
           }
         />
+
+        <label>Wohnort / Region</label>
 
         <input
-          placeholder="Profilbild URL"
-          value={form.avatar_url}
+          value={form.location}
           onChange={(e) =>
-            update("avatar_url", e.target.value)
+            change("location", e.target.value)
           }
         />
 
+        <label>Über mich</label>
+
         <textarea
-          placeholder="Über mich..."
           value={form.bio}
           onChange={(e) =>
-            update("bio", e.target.value)
+            change("bio", e.target.value)
           }
+          placeholder="Erzähl der Community etwas über dich ..."
         />
 
         <button className="primaryButton">
-          Änderungen speichern
+          Profil speichern
         </button>
       </form>
-
-      {message && (
-        <p className="successMessage">
-          {message}
-        </p>
-      )}
-    </div>
+    </section>
   );
 }
 
-/* =====================================================
-   POSTS
-===================================================== */
 
-function CommunityFeed({ profile, posts, reloadPosts }) {
-  const [content, setContent] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  async function createPost() {
-    if (!content.trim()) return;
-
-    setLoading(true);
-
-    const { error } = await supabase
-      .from("posts")
-      .insert({
-        author_id: profile.id,
-        content: content.trim(),
-      });
-
-    if (error) {
-      console.error(error);
-      alert("Beitrag konnte nicht erstellt werden.");
-    } else {
-      setContent("");
-      reloadPosts();
-    }
-
-    setLoading(false);
-  }
-
-  return (
-    <div>
-      <div className="contentCard createPost">
-        <div className="createPostHeader">
-          <Avatar profile={profile} />
-
-          <textarea
-            placeholder="Was möchtest du mit der Community teilen?"
-            value={content}
-            onChange={(e) =>
-              setContent(e.target.value)
-            }
-          />
-        </div>
-
-        <button
-          className="primaryButton"
-          onClick={createPost}
-          disabled={loading}
-        >
-          {loading ? "Wird veröffentlicht..." : "Beitrag veröffentlichen"}
-        </button>
-      </div>
-
-      <div className="sectionTitle">
-        Community Beiträge
-      </div>
-
-      {posts.length === 0 && (
-        <div className="contentCard emptyState">
-          Noch keine Beiträge vorhanden.
-          Sei der Erste und starte die Community!
-        </div>
-      )}
-
-      {posts.map((post) => (
-        <article className="contentCard postCard" key={post.id}>
-          <div className="postHeader">
-            <Avatar profile={post.profiles} />
-
-            <div>
-              <strong>
-                {post.profiles?.nickname ||
-                  post.profiles?.first_name ||
-                  "Mitglied"}
-              </strong>
-
-              <div>
-                <RoleBadge profile={post.profiles} />
-              </div>
-            </div>
-          </div>
-
-          <p className="postContent">
-            {post.content}
-          </p>
-
-          <small className="muted">
-            {post.created_at
-              ? new Date(post.created_at).toLocaleString(
-                  "de-DE"
-                )
-              : ""}
-          </small>
-        </article>
-      ))}
-    </div>
-  );
-}
-
-/* =====================================================
-   MEMBERS
-===================================================== */
-
-function Members({ members, currentProfile, reload }) {
-  async function sendFriendRequest(member) {
-    if (member.id === currentProfile.id) return;
-
-    const { error } = await supabase
-      .from("friend_requests")
-      .insert({
-        sender_id: currentProfile.id,
-        receiver_id: member.id,
-        status: "pending",
-      });
-
-    if (error) {
-      console.error(error);
-      alert(
-        "Freundschaftsanfrage konnte nicht gesendet werden."
-      );
-    } else {
-      alert("Freundschaftsanfrage gesendet.");
-      reload();
-    }
-  }
-
-  return (
-    <div>
-      <h2 className="pageTitle">
-        Mitglieder
-      </h2>
-
-      <div className="memberGrid">
-        {members.map((member) => (
-          <div className="contentCard memberCard" key={member.id}>
-            <Avatar profile={member} size="large" />
-
-            <h3>
-              {member.nickname ||
-                `${member.first_name || ""} ${
-                  member.last_name || ""
-                }`}
-            </h3>
-
-            <RoleBadge profile={member} />
-
-            {member.bio && (
-              <p className="memberBio">
-                {member.bio}
-              </p>
-            )}
-
-            {member.id !== currentProfile.id && (
-              <button
-                className="secondaryButton"
-                onClick={() =>
-                  sendFriendRequest(member)
-                }
-              >
-                Freundschaft anfragen
-              </button>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/* =====================================================
-   FRIENDS
-===================================================== */
-
-function Friends({ profile, members, reload }) {
-  const [requests, setRequests] = useState([]);
-
-  useEffect(() => {
-    loadRequests();
-  }, [profile]);
-
-  async function loadRequests() {
-    const { data, error } = await supabase
-      .from("friend_requests")
-      .select(`
-        *,
-        sender:profiles!friend_requests_sender_id_fkey(*),
-        receiver:profiles!friend_requests_receiver_id_fkey(*)
-      `)
-      .or(
-        `sender_id.eq.${profile.id},receiver_id.eq.${profile.id}`
-      );
-
-    if (!error) {
-      setRequests(data || []);
-    }
-  }
-
-  async function accept(id) {
-    await supabase
-      .from("friend_requests")
-      .update({ status: "accepted" })
-      .eq("id", id);
-
-    loadRequests();
-    reload();
-  }
-
-  const incoming = requests.filter(
-    (request) =>
-      request.receiver_id === profile.id &&
-      request.status === "pending"
-  );
-
-  const friends = requests.filter(
-    (request) =>
-      request.status === "accepted"
-  );
-
-  return (
-    <div>
-      <h2 className="pageTitle">
-        Freunde
-      </h2>
-
-      <div className="contentCard">
-        <h3>Freundschaftsanfragen</h3>
-
-        {incoming.length === 0 && (
-          <p className="muted">
-            Keine neuen Freundschaftsanfragen.
-          </p>
-        )}
-
-        {incoming.map((request) => (
-          <div
-            className="friendRow"
-            key={request.id}
-          >
-            <div className="rowUser">
-              <Avatar profile={request.sender} />
-
-              <strong>
-                {request.sender?.nickname}
-              </strong>
-            </div>
-
-            <button
-              className="primaryButton"
-              onClick={() => accept(request.id)}
-            >
-              Annehmen
-            </button>
-          </div>
-        ))}
-      </div>
-
-      <div className="contentCard">
-        <h3>Meine Freunde</h3>
-
-        {friends.length === 0 && (
-          <p className="muted">
-            Du hast noch keine bestätigten Freunde.
-          </p>
-        )}
-
-        {friends.map((request) => {
-          const friend =
-            request.sender_id === profile.id
-              ? request.receiver
-              : request.sender;
-
-          return (
-            <div
-              className="friendRow"
-              key={request.id}
-            >
-              <div className="rowUser">
-                <Avatar profile={friend} />
-
-                <div>
-                  <strong>
-                    {friend?.nickname}
-                  </strong>
-
-                  <div>
-                    <RoleBadge profile={friend} />
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-/* =====================================================
-   NEWS
-===================================================== */
-
-function News({ profile, news, reload }) {
-  const role = getRole(profile);
-
-  const canCreate =
-    role === "admin" ||
-    role === "mainadmin";
-
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
-
-  async function createNews() {
-    if (!title.trim() || !content.trim()) return;
-
-    const { error } = await supabase
-      .from("news")
-      .insert({
-        author_id: profile.id,
-        title,
-        content,
-      });
-
-    if (error) {
-      console.error(error);
-      alert("News konnte nicht erstellt werden.");
-    } else {
-      setTitle("");
-      setContent("");
-      reload();
-    }
-  }
-
-  return (
-    <div>
-      <h2 className="pageTitle">
-        News aus dem Ennstal
-      </h2>
-
-      {canCreate && (
-        <div className="contentCard">
-          <h3>News veröffentlichen</h3>
-
-          <input
-            placeholder="Titel"
-            value={title}
-            onChange={(e) =>
-              setTitle(e.target.value)
-            }
-          />
-
-          <textarea
-            placeholder="Was gibt es Neues?"
-            value={content}
-            onChange={(e) =>
-              setContent(e.target.value)
-            }
-          />
-
-          <button
-            className="primaryButton"
-            onClick={createNews}
-          >
-            News veröffentlichen
-          </button>
-        </div>
-      )}
-
-      {news.map((item) => (
-        <article
-          className="contentCard"
-          key={item.id}
-        >
-          <h2>{item.title}</h2>
-
-          <p>{item.content}</p>
-
-          <small className="muted">
-            {item.created_at
-              ? new Date(
-                  item.created_at
-                ).toLocaleString("de-DE")
-              : ""}
-          </small>
-        </article>
-      ))}
-    </div>
-  );
-}
-
-/* =====================================================
-   MARKETPLACE
-===================================================== */
-
-function Marketplace({ profile, items, reload }) {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] =
-    useState("");
-  const [price, setPrice] = useState("");
-
-  async function createItem() {
-    if (!title.trim()) return;
-
-    const { error } = await supabase
-      .from("marketplace_items")
-      .insert({
-        seller_id: profile.id,
-        title,
-        description,
-        price: price || null,
-      });
-
-    if (error) {
-      console.error(error);
-      alert("Anzeige konnte nicht erstellt werden.");
-    } else {
-      setTitle("");
-      setDescription("");
-      setPrice("");
-      reload();
-    }
-  }
-
-  return (
-    <div>
-      <h2 className="pageTitle">
-        Community Marktplatz
-      </h2>
-
-      <div className="contentCard">
-        <h3>Etwas anbieten</h3>
-
-        <input
-          placeholder="Titel"
-          value={title}
-          onChange={(e) =>
-            setTitle(e.target.value)
-          }
-        />
-
-        <textarea
-          placeholder="Beschreibung"
-          value={description}
-          onChange={(e) =>
-            setDescription(e.target.value)
-          }
-        />
-
-        <input
-          placeholder="Preis"
-          value={price}
-          onChange={(e) =>
-            setPrice(e.target.value)
-          }
-        />
-
-        <button
-          className="primaryButton"
-          onClick={createItem}
-        >
-          Anzeige erstellen
-        </button>
-      </div>
-
-      <div className="marketGrid">
-        {items.map((item) => (
-          <div
-            className="contentCard marketItem"
-            key={item.id}
-          >
-            <h3>{item.title}</h3>
-
-            <p>{item.description}</p>
-
-            {item.price && (
-              <strong>
-                {item.price} €
-              </strong>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/* =====================================================
+/* =========================================================
    MESSAGES
-===================================================== */
+========================================================= */
 
-function Messages({ profile, members }) {
-  const [selected, setSelected] =
-    useState(null);
-
-  const [messages, setMessages] =
-    useState([]);
-
+function MessagesPage({
+  user,
+  profiles,
+  messages,
+  selectedChat,
+  setSelectedChat,
+  sendMessage,
+  getProfileName
+}) {
   const [text, setText] = useState("");
 
-  async function loadMessages(member) {
-    setSelected(member);
+  const chats = profiles.filter(
+    (profile) => profile.id !== user?.id
+  );
 
-    const { data, error } = await supabase
-      .from("messages")
-      .select("*")
-      .or(
-        `and(sender_id.eq.${profile.id},receiver_id.eq.${member.id}),and(sender_id.eq.${member.id},receiver_id.eq.${profile.id})`
+  const currentMessages = selectedChat
+    ? messages.filter(
+        (message) =>
+          (message.sender_id === user.id &&
+            message.receiver_id === selectedChat) ||
+          (message.receiver_id === user.id &&
+            message.sender_id === selectedChat)
       )
-      .order("created_at", {
-        ascending: true,
-      });
+    : [];
 
-    if (!error) {
-      setMessages(data || []);
-    }
-  }
+  function submit(e) {
+    e.preventDefault();
 
-  async function sendMessage() {
-    if (!selected || !text.trim()) return;
+    if (!selectedChat) return;
 
-    const { error } = await supabase
-      .from("messages")
-      .insert({
-        sender_id: profile.id,
-        receiver_id: selected.id,
-        content: text.trim(),
-      });
-
-    if (!error) {
-      setText("");
-      loadMessages(selected);
-    }
+    sendMessage(selectedChat, text);
+    setText("");
   }
 
   return (
-    <div className="messagesLayout">
-      <div className="contentCard conversationList">
-        <h3>Mitglieder</h3>
+    <section className="section messagesPage">
+      <span className="eyebrow">COMMUNITY</span>
+      <h1>Nachrichten</h1>
 
-        {members
-          .filter((member) => member.id !== profile.id)
-          .map((member) => (
+      <div className="messagesLayout">
+
+        <aside className="chatList">
+          {chats.map((person) => (
             <button
-              className="conversationButton"
-              key={member.id}
-              onClick={() =>
-                loadMessages(member)
+              key={person.id}
+              className={
+                selectedChat === person.id
+                  ? "chatPerson activeChat"
+                  : "chatPerson"
               }
+              onClick={() => setSelectedChat(person.id)}
             >
-              <Avatar profile={member} />
+              <div className="smallAvatar">
+                {getProfileName(person.id).charAt(0)}
+              </div>
 
-              {member.nickname ||
-                member.first_name}
+              <span>
+                {getProfileName(person.id)}
+              </span>
             </button>
           ))}
-      </div>
+        </aside>
 
-      <div className="contentCard conversation">
-        {!selected && (
-          <div className="emptyState">
-            Wähle ein Mitglied aus, um eine
-            Nachricht zu schreiben.
-          </div>
-        )}
-
-        {selected && (
-          <>
-            <div className="conversationHeader">
-              <Avatar profile={selected} />
-
-              <div>
+        <div className="chatWindow">
+          {!selectedChat ? (
+            <div className="emptyState">
+              Wähle ein Mitglied aus, um eine Unterhaltung zu starten.
+            </div>
+          ) : (
+            <>
+              <div className="chatHeader">
                 <strong>
-                  {selected.nickname}
+                  {getProfileName(selectedChat)}
                 </strong>
-
-                <RoleBadge
-                  profile={selected}
-                />
               </div>
-            </div>
 
-            <div className="messageList">
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={
-                    message.sender_id === profile.id
-                      ? "message own"
-                      : "message"
-                  }
-                >
-                  {message.content}
-                </div>
-              ))}
-            </div>
+              <div className="messageArea">
+                {currentMessages.map((message) => (
+                  <div
+                    key={message.id}
+                    className={
+                      message.sender_id === user.id
+                        ? "message ownMessage"
+                        : "message"
+                    }
+                  >
+                    {message.content}
+                  </div>
+                ))}
+              </div>
 
-            <div className="messageInput">
-              <input
-                value={text}
-                placeholder="Nachricht schreiben..."
-                onChange={(e) =>
-                  setText(e.target.value)
-                }
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    sendMessage();
-                  }
-                }}
-              />
-
-              <button
-                className="primaryButton"
-                onClick={sendMessage}
+              <form
+                className="messageForm"
+                onSubmit={submit}
               >
-                Senden
-              </button>
-            </div>
-          </>
-        )}
+                <input
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  placeholder="Nachricht schreiben ..."
+                />
+
+                <button className="primaryButton">
+                  Senden
+                </button>
+              </form>
+            </>
+          )}
+        </div>
       </div>
-    </div>
+    </section>
   );
 }
 
-/* =====================================================
-   ADMIN PANEL
-===================================================== */
 
-function AdminPanel({
-  profile,
-  members,
-  reload,
+/* =========================================================
+   ADMIN
+========================================================= */
+
+function AdminPage({
+  profiles,
+  approveMember,
+  rejectMember,
+  isMainAdmin
 }) {
-  const role = getRole(profile);
-
-  if (
-    role !== "admin" &&
-    role !== "mainadmin"
-  ) {
-    return (
-      <div className="contentCard">
-        Du hast keine Berechtigung für
-        diesen Bereich.
-      </div>
-    );
-  }
-
-  async function approve(member) {
-    const { error } = await supabase
-      .from("profiles")
-      .update({
-        approved: true,
-      })
-      .eq("id", member.id);
-
-    if (error) {
-      console.error(error);
-      alert("Freigabe fehlgeschlagen.");
-    } else {
-      reload();
-    }
-  }
-
-  async function changeRole(member, role) {
-    if (
-      getRole(profile) !== "mainadmin"
-    ) {
-      alert(
-        "Nur der Hauptadmin kann Rollen ändern."
-      );
-      return;
-    }
-
-    await supabase
-      .from("profiles")
-      .update({
-        role,
-      })
-      .eq("id", member.id);
-
-    reload();
-  }
-
-  const pending = members.filter(
-    (member) => !member.approved
+  const pendingMembers = profiles.filter(
+    (member) =>
+      member.approved !== true &&
+      member.status !== "approved"
   );
 
   return (
-    <div>
-      <h2 className="pageTitle">
-        Admin Bereich
-      </h2>
+    <section className="section">
+      <span className="eyebrow">VERWALTUNG</span>
+      <h1>⭐ Admin Bereich</h1>
 
-      <div className="contentCard">
-        <h3>
-          Wartende Registrierungen
-        </h3>
+      <div className="adminPanel">
+        <h2>Offene Registrierungen</h2>
 
-        {pending.length === 0 && (
-          <p className="muted">
-            Keine Mitglieder warten auf
-            Freigabe.
-          </p>
+        {pendingMembers.length === 0 && (
+          <div className="emptyState">
+            Keine offenen Registrierungen.
+          </div>
         )}
 
-        {pending.map((member) => (
+        {pendingMembers.map((member) => (
           <div
             className="adminMember"
             key={member.id}
           >
-            <div className="rowUser">
-              <Avatar profile={member} />
-
-              <div>
-                <strong>
-                  {member.nickname}
-                </strong>
-
-                <div className="muted">
-                  {member.first_name}{" "}
-                  {member.last_name}
-                </div>
-              </div>
-            </div>
-
-            <button
-              className="primaryButton"
-              onClick={() =>
-                approve(member)
-              }
-            >
-              Freigeben
-            </button>
-          </div>
-        ))}
-      </div>
-
-      {role === "mainadmin" && (
-        <div className="contentCard">
-          <h3>
-            Rollen verwalten
-          </h3>
-
-          {members
-            .filter((member) => member.approved)
-            .map((member) => (
-              <div
-                className="adminMember"
-                key={member.id}
-              >
-                <div className="rowUser">
-                  <Avatar profile={member} />
-
-                  <div>
-                    <strong>
-                      {member.nickname}
-                    </strong>
-
-                    <div>
-                      <RoleBadge
-                        profile={member}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <select
-                  value={getRole(member)}
-                  onChange={(e) =>
-                    changeRole(
-                      member,
-                      e.target.value
-                    )
-                  }
-                >
-                  <option value="member">
-                    Mitglied
-                  </option>
-
-                  <option value="supporter">
-                    Unterstützer
-                  </option>
-
-                  <option value="admin">
-                    Admin
-                  </option>
-
-                  <option value="mainadmin">
-                    Hauptadmin
-                  </option>
-                </select>
-              </div>
-            ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* =====================================================
-   RIGHT SIDEBAR
-===================================================== */
-
-function RightSidebar({
-  profile,
-  members,
-  setPage,
-  logout,
-}) {
-  const onlineMembers = members.filter(
-    (member) => member.approved
-  );
-
-  const admins = members.filter(
-    (member) =>
-      member.role === "admin" ||
-      member.role === "mainadmin"
-  );
-
-  const isAdmin =
-    profile.role === "admin" ||
-    profile.role === "mainadmin";
-
-  return (
-    <aside className="rightSidebar">
-      <div className="sidebarSection myArea">
-        <div className="myProfile">
-          <Avatar profile={profile} />
-
-          <div>
-            <strong>
-              {profile.nickname ||
-                profile.first_name}
-            </strong>
-
-            <RoleBadge profile={profile} />
-          </div>
-        </div>
-
-        <button
-          onClick={() =>
-            setPage("profile")
-          }
-        >
-          Mein Profil
-        </button>
-
-        <button
-          onClick={() =>
-            setPage("friends")
-          }
-        >
-          Meine Freunde
-        </button>
-
-        <button
-          onClick={() =>
-            setPage("messages")
-          }
-        >
-          Nachrichten
-        </button>
-
-        {isAdmin && (
-          <button
-            onClick={() =>
-              setPage("admin")
-            }
-          >
-            Admin Tools
-          </button>
-        )}
-
-        <button
-          className="logoutButton"
-          onClick={logout}
-        >
-          Abmelden
-        </button>
-      </div>
-
-      <div className="sidebarSection">
-        <h3>
-          Online Mitglieder
-        </h3>
-
-        {onlineMembers.slice(0, 8).map(
-          (member) => (
-            <div
-              className="onlineMember"
-              key={member.id}
-            >
-              <Avatar
-                profile={member}
-                size="small"
-              />
-
-              <span className="onlineDot" />
-
-              <div>
-                <strong>
-                  {member.nickname ||
-                    member.first_name}
-                </strong>
-
-                <RoleBadge
-                  profile={member}
-                />
-              </div>
-            </div>
-          )
-        )}
-      </div>
-
-      <div className="sidebarSection">
-        <h3>
-          Admins
-        </h3>
-
-        {admins.map((admin) => (
-          <div
-            className="onlineMember"
-            key={admin.id}
-          >
-            <Avatar
-              profile={admin}
-              size="small"
-            />
-
             <div>
               <strong>
-                {admin.nickname ||
-                  admin.first_name}
+                {member.nickname ||
+                  `${member.first_name || ""} ${
+                    member.last_name || ""
+                  }`}
               </strong>
 
-              <RoleBadge
-                profile={admin}
-              />
+              <span>{member.email}</span>
+            </div>
+
+            <div className="adminActions">
+              <button
+                className="acceptButton large"
+                onClick={() => approveMember(member.id)}
+              >
+                Freigeben
+              </button>
+
+              <button
+                className="rejectButton large"
+                onClick={() => rejectMember(member.id)}
+              >
+                Ablehnen
+              </button>
             </div>
           </div>
         ))}
       </div>
-    </aside>
+
+      {isMainAdmin && (
+        <div className="adminPanel">
+          <h2>⭐ Hauptadmin</h2>
+
+          <p>
+            Du hast Zugriff auf die erweiterten Verwaltungsfunktionen
+            deiner Community.
+          </p>
+        </div>
+      )}
+    </section>
   );
 }
 
-/* =====================================================
-   MAIN APP
-===================================================== */
 
-function App() {
-  const [user, setUser] =
-    useState(null);
+/* =========================================================
+   INFO MODAL
+========================================================= */
 
-  const [profile, setProfile] =
-    useState(null);
-
-  const [members, setMembers] =
-    useState([]);
-
-  const [posts, setPosts] =
-    useState([]);
-
-  const [news, setNews] =
-    useState([]);
-
-  const [marketItems, setMarketItems] =
-    useState([]);
-
-  const [page, setPage] =
-    useState("home");
-
-  const [loading, setLoading] =
-    useState(true);
-
-  useEffect(() => {
-    initialize();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(
-      (_, session) => {
-        if (session?.user) {
-          setUser(session.user);
-        } else {
-          setUser(null);
-          setProfile(null);
-        }
-      }
-    );
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  async function initialize() {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (session?.user) {
-      setUser(session.user);
-      await loadEverything(session.user);
-    }
-
-    setLoading(false);
-  }
-
-  async function loadEverything(currentUser) {
-    const userId =
-      currentUser?.id || user?.id;
-
-    if (!userId) return;
-
-    const { data: currentProfile } =
-      await supabase
-        .from("profiles")
-        .select("*")
-        .or(
-          `id.eq.${userId},auth_id.eq.${userId}`
-        )
-        .maybeSingle();
-
-    if (currentProfile) {
-      setProfile(currentProfile);
-    }
-
-    await Promise.all([
-      loadMembers(),
-      loadPosts(),
-      loadNews(),
-      loadMarketplace(),
-    ]);
-  }
-
-  async function loadMembers() {
-    const { data, error } =
-      await supabase
-        .from("profiles")
-        .select("*")
-        .order("created_at", {
-          ascending: false,
-        });
-
-    if (!error) {
-      setMembers(data || []);
-    }
-  }
-
-  async function loadPosts() {
-    const { data, error } =
-      await supabase
-        .from("posts")
-        .select(`
-          *,
-          profiles:author_id (*)
-        `)
-        .order("created_at", {
-          ascending: false,
-        });
-
-    if (!error) {
-      setPosts(data || []);
-    }
-  }
-
-  async function loadNews() {
-    const { data, error } =
-      await supabase
-        .from("news")
-        .select("*")
-        .order("created_at", {
-          ascending: false,
-        });
-
-    if (!error) {
-      setNews(data || []);
-    }
-  }
-
-  async function loadMarketplace() {
-    const { data, error } =
-      await supabase
-        .from("marketplace_items")
-        .select("*")
-        .order("created_at", {
-          ascending: false,
-        });
-
-    if (!error) {
-      setMarketItems(data || []);
-    }
-  }
-
-  async function logout() {
-    await supabase.auth.signOut();
-
-    setUser(null);
-    setProfile(null);
-    setPage("home");
-  }
-
-  function renderPage() {
-    if (!profile) {
-      return (
-        <div className="contentCard">
-          Profil wird geladen...
-        </div>
-      );
-    }
-
-    /*
-      Wichtig:
-      Ein nicht freigegebenes Mitglied kann
-      sich anmelden, aber noch nicht die
-      Community benutzen.
-    */
-
-    if (!profile.approved) {
-      return (
-        <div className="contentCard approvalScreen">
-          <h1>
-            Willkommen bei Ennstal Connect
-          </h1>
-
-          <p>
-            Dein Konto wurde erfolgreich
-            erstellt.
-          </p>
-
-          <p>
-            Ein Administrator muss deine
-            Mitgliedschaft noch freigeben.
-          </p>
-
-          <button
-            className="secondaryButton"
-            onClick={logout}
-          >
-            Abmelden
-          </button>
-        </div>
-      );
-    }
-
-    switch (page) {
-      case "members":
-        return (
-          <Members
-            members={members.filter(
-              (member) => member.approved
-            )}
-            currentProfile={profile}
-            reload={loadMembers}
-          />
-        );
-
-      case "friends":
-        return (
-          <Friends
-            profile={profile}
-            members={members}
-            reload={loadMembers}
-          />
-        );
-
-      case "messages":
-        return (
-          <Messages
-            profile={profile}
-            members={members.filter(
-              (member) => member.approved
-            )}
-          />
-        );
-
-      case "news":
-        return (
-          <News
-            profile={profile}
-            news={news}
-            reload={loadNews}
-          />
-        );
-
-      case "marketplace":
-        return (
-          <Marketplace
-            profile={profile}
-            items={marketItems}
-            reload={loadMarketplace}
-          />
-        );
-
-      case "profile":
-        return (
-          <ProfileEditor
-            profile={profile}
-            onSaved={(updated) => {
-              setProfile(updated);
-              loadMembers();
-            }}
-          />
-        );
-
-      case "admin":
-        return (
-          <AdminPanel
-            profile={profile}
-            members={members}
-            reload={() =>
-              loadEverything(user)
-            }
-          />
-        );
-
-      default:
-        return (
-          <CommunityFeed
-            profile={profile}
-            posts={posts}
-            reloadPosts={loadPosts}
-          />
-        );
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="loadingScreen">
-        Ennstal Connect wird geladen...
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <Auth
-        onSuccess={async (loggedUser) => {
-          setUser(loggedUser);
-          await loadEverything(loggedUser);
-        }}
-      />
-    );
-  }
-
+function InfoModal({ title, children, close }) {
   return (
-    <div className="appShell">
-      <header className="topbar">
-        <button
-          className="brand"
-          onClick={() =>
-            setPage("home")
-          }
-        >
-          <img
-            src="/logo.png"
-            alt="Ennstal Connect"
-          />
-
-          <span>
-            Ennstal Connect
-          </span>
+    <div className="modalOverlay">
+      <div className="modal infoModal">
+        <button className="closeButton" onClick={close}>
+          ×
         </button>
 
-        <nav>
-          <button
-            onClick={() =>
-              setPage("home")
-            }
-          >
-            Start
-          </button>
+        <h2>{title}</h2>
 
-          <button
-            onClick={() =>
-              setPage("news")
-            }
-          >
-            News
-          </button>
-
-          <button
-            onClick={() =>
-              setPage("members")
-            }
-          >
-            Mitglieder
-          </button>
-
-          <button
-            onClick={() =>
-              setPage("marketplace")
-            }
-          >
-            Marktplatz
-          </button>
-
-          <button
-            onClick={() =>
-              setPage("messages")
-            }
-          >
-            Nachrichten
-          </button>
-        </nav>
-      </header>
-
-      <main className="mainLayout">
-        <section className="mainContent">
-          {renderPage()}
-        </section>
-
-        {profile?.approved && (
-          <RightSidebar
-            profile={profile}
-            members={members}
-            setPage={setPage}
-            logout={logout}
-          />
-        )}
-      </main>
+        <div className="infoContent">
+          {children}
+        </div>
+      </div>
     </div>
   );
 }
 
-createRoot(
-  document.getElementById("root")
-).render(<App />);
+
+createRoot(document.getElementById("root")).render(<App />);
