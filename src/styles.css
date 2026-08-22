@@ -13,3 +13,109 @@
 footer{padding:28px 6%;display:flex;justify-content:space-between;gap:16px;background:#20382c;color:#d9e4da;font-size:13px;margin-top:auto}footer button{border:0;background:transparent;color:#fff;margin-left:14px}
 @media(max-width:1000px){.community-layout{grid-template-columns:1fr}.right-sidebar{display:grid;grid-template-columns:repeat(2,1fr)}.sidebar-profile{grid-column:1/-1}.main-nav{overflow:auto;justify-content:flex-start}.profile-editor{grid-template-columns:1fr}.profile-preview{border-right:0;border-bottom:1px solid #edf0ed}}
 @media(max-width:700px){.topbar{flex-wrap:wrap}.brand{font-size:18px}.main-nav{order:3;width:100%}.profile-nav{margin-left:auto}.community-layout{width:92%;margin:18px auto}.right-sidebar{display:block}.right-sidebar>*{margin-bottom:14px}.stats{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}.admin-member{align-items:flex-start;flex-wrap:wrap}.admin-actions{width:100%}.admin-actions button{flex:1}.public-main{padding:20px 0}.public-hero{padding:55px 6%}.public-hero h1{font-size:54px}.auth-modal{padding:30px 20px}footer{flex-direction:column}.member-grid,.market-grid{grid-template-columns:1fr}}
+/* Mitgliederkarten */
+
+.member-card {
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.member-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.12);
+}
+
+/* Unterstützer: hellgrüner Hintergrund */
+
+.member-card.supporter {
+  background: #e7f7e8;
+  border: 2px solid #7fcf8a;
+}
+
+/* Admin */
+
+.member-card.admin {
+  border: 2px solid #e25b5b;
+}
+
+/* Profilbilder */
+
+.member-avatar,
+.profile-avatar img,
+.profile-image-preview img {
+  object-fit: cover;
+}
+
+.member-avatar {
+  width: 90px;
+  height: 90px;
+}
+
+.profile-avatar img {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+}
+
+.profile-image-preview img {
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  border: 2px solid #ddd;
+}
+
+/* Punkte */
+
+.member-points,
+.profile-points {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.member-points span,
+.profile-points span {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #f2f4f3;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* Sterne direkt hinter dem Nickname */
+
+.role-star {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+/* Profilbild-Vorschau */
+
+.profile-image-preview {
+  margin: 10px 0 15px;
+}
+
+/* Vorname/Nachname */
+
+.member-real-name {
+  font-weight: 600;
+  margin: 4px 0;
+}
+
+/* Große übersichtliche Mitgliederkarten */
+
+.members-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+  gap: 22px;
+}
+
+.member-card {
+  min-height: 180px;
+  padding: 22px;
+  border-radius: 18px;
+}
