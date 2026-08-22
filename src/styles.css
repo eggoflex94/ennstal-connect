@@ -302,7 +302,7 @@ button:disabled {
     ),
     url("/hero.jpg");
 
-  background-size: cover;
+  background-size: 60;
   background-position: center;
 
   border-bottom:
