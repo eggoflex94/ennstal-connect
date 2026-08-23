@@ -469,7 +469,80 @@ export default function App() {
   /* =========================================================
      PROFIL SPEICHERN
      ========================================================= */
+async function uploadProfileImage(file) {
+  if (!user || !file) return;
 
+  if (!file.type.startsWith("image/")) {
+    showNotice("Bitte eine Bilddatei auswählen.");
+    return;
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    showNotice("Das Profilbild darf maximal 5 MB groß sein.");
+    return;
+  }
+
+  const extension =
+    file.name.split(".").pop()?.toLowerCase() || "jpg";
+
+  const filePath =
+    `${user.id}/${crypto.randomUUID()}.${extension}`;
+
+  showNotice("Profilbild wird hochgeladen...");
+
+  const { error: uploadError } =
+    await supabase.storage
+      .from("profile-avatars")
+      .upload(filePath, file, {
+        cacheControl: "3600",
+        upsert: false,
+        contentType: file.type,
+      });
+
+  if (uploadError) {
+    showNotice(
+      "Profilbild konnte nicht hochgeladen werden: " +
+      uploadError.message
+    );
+    return;
+  }
+
+  const { data } =
+    supabase.storage
+      .from("profile-avatars")
+      .getPublicUrl(filePath);
+
+  const avatarUrl = data?.publicUrl;
+
+  if (!avatarUrl) {
+    showNotice(
+      "Bildadresse konnte nicht erstellt werden."
+    );
+    return;
+  }
+
+  const { error: profileError } =
+    await supabase
+      .from("profiles")
+      .update({
+        avatar_url: avatarUrl,
+      })
+      .eq("id", user.id);
+
+  if (profileError) {
+    showNotice(
+      "Profilbild konnte nicht gespeichert werden: " +
+      profileError.message
+    );
+    return;
+  }
+
+  showNotice(
+    "Profilbild erfolgreich gespeichert."
+  );
+
+  await loadAll();
+}
   async function saveProfile(event) {
     event.preventDefault();
 
