@@ -1,15 +1,15 @@
 import { createClient } from "@supabase/supabase-js";
 
-const url = import.meta.env.VITE_SUPABASE_URL;
-const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!url || !key) {
-  console.warn(
-    "Supabase-Konfiguration fehlt: VITE_SUPABASE_URL und VITE_SUPABASE_ANON_KEY müssen gesetzt sein."
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error(
+    "Supabase-Konfiguration fehlt. Bitte VITE_SUPABASE_URL und VITE_SUPABASE_ANON_KEY setzen."
   );
 }
 
 export const supabase = createClient(
-  url || "https://placeholder.supabase.co",
-  key || "placeholder"
+  supabaseUrl,
+  supabaseAnonKey
 );
