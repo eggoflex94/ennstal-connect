@@ -346,27 +346,36 @@ export default function App() {
     [blockedUsers]
   );
 
-  const sortedMembers = useMemo(() => {
+  const visibleMembers = useMemo(
+  () =>
+    members.filter(
+      (member) =>
+        !blockedUsers.some(
+          (block) =>
+            block.blocked_id === member.id
+        ) &&
+        member.account_status !== "SUSPENDED"
+    ),
+  [members, blockedUsers]
+);
+
+const sortedMembers = useMemo(() => {
   const query =
     search.trim().toLowerCase();
 
-  const filtered = visibleMembers.filter((member) => {
-    // Gesperrte Mitglieder niemals anzeigen
-    if (member.account_status === "SUSPENDED") {
-      return false;
-    }
+  const filtered =
+    visibleMembers.filter((member) => {
+      const text = [
+        member.nickname,
+        member.first_name,
+        member.last_name
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
 
-    const text = [
-      member.nickname,
-      member.first_name,
-      member.last_name
-    ]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase();
-
-    return text.includes(query);
-  });
+      return text.includes(query);
+    });
 
   const admins = filtered
     .filter((member) =>
@@ -1951,29 +1960,7 @@ async function changePoints(event) {
     Gesperrte Konten
   </button>
 )}
-{isHeadAdmin(profile?.role) && (
-  <button
-    onClick={async () => {
-      const {
-        data,
-        error
-      } = await supabase.rpc(
-        "head_admin_get_suspended_users"
-      );
 
-      if (error) {
-        showNotice(error.message);
-        return;
-      }
-
-      setSuspendedUsers(data || []);
-      setPage("suspended-users");
-    }}
-  >
-    <span>🔒</span>
-    Gesperrte Konten
-  </button>
-)}
                     <button
                       onClick={() =>
                         setPage("admin")
