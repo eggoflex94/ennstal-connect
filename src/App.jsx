@@ -346,69 +346,70 @@ export default function App() {
     [blockedUsers]
   );
 
-  const visibleMembers = useMemo(
-    () => members.filter((member) => !blockedIds.has(member.id)),
-    [members, blockedIds]
-  );
-
   const sortedMembers = useMemo(() => {
-    const query =
-      search.trim().toLowerCase();
+  const query =
+    search.trim().toLowerCase();
 
-    const filtered = visibleMembers.filter((member) => {
-      const text = [
-        member.nickname,
-        member.first_name,
-        member.last_name
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
+  const filtered = visibleMembers.filter((member) => {
+    // Gesperrte Mitglieder niemals anzeigen
+    if (member.account_status === "SUSPENDED") {
+      return false;
+    }
 
-      return text.includes(query);
-    });
+    const text = [
+      member.nickname,
+      member.first_name,
+      member.last_name
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
 
-    const admins = filtered
-      .filter((member) =>
-        isAdmin(member.role)
+    return text.includes(query);
+  });
+
+  const admins = filtered
+    .filter((member) =>
+      isAdmin(member.role)
+    )
+    .sort((a, b) =>
+      getName(a).localeCompare(
+        getName(b),
+        "de"
       )
-      .sort((a, b) =>
-        getName(a).localeCompare(
-          getName(b),
-          "de"
-        )
-      );
+    );
 
-    const supporters = filtered
-      .filter((member) =>
+  const supporters = filtered
+    .filter(
+      (member) =>
         member.role === "SUPPORTER"
+    )
+    .sort((a, b) =>
+      getName(a).localeCompare(
+        getName(b),
+        "de"
       )
-      .sort((a, b) =>
-        getName(a).localeCompare(
-          getName(b),
-          "de"
-        )
-      );
+    );
 
-    const normalMembers = filtered
-      .filter(
-        (member) =>
-          !isAdmin(member.role) &&
-          member.role !== "SUPPORTER"
+  const normalMembers = filtered
+    .filter(
+      (member) =>
+        !isAdmin(member.role) &&
+        member.role !== "SUPPORTER"
+    )
+    .sort((a, b) =>
+      getName(a).localeCompare(
+        getName(b),
+        "de"
       )
-      .sort((a, b) =>
-        getName(a).localeCompare(
-          getName(b),
-          "de"
-        )
-      );
+    );
 
-    return {
-      admins,
-      supporters,
-      normalMembers
-    };
-  }, [visibleMembers, search]);
+  return {
+    admins,
+    supporters,
+    normalMembers
+  };
+}, [visibleMembers, search]);
 
   const onlineMembers = useMemo(
     () => visibleMembers.filter((member) => member.is_online),
