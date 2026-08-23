@@ -1919,7 +1919,52 @@ async function uploadProfileImage(file) {
                       <span>⭐</span>
                       Punkte verwalten
                     </button>
+                    {isHeadAdmin(profile?.role) && (
+  <button
+    onClick={async () => {
+      const {
+        data,
+        error
+      } = await supabase.rpc(
+        "head_admin_get_suspended_users"
+      );
 
+      if (error) {
+        showNotice(error.message);
+        return;
+      }
+
+      setSuspendedUsers(data || []);
+      setPage("suspended-users");
+    }}
+  >
+    <span>🔒</span>
+    Gesperrte Konten
+  </button>
+)}
+{isHeadAdmin(profile?.role) && (
+  <button
+    onClick={async () => {
+      const {
+        data,
+        error
+      } = await supabase.rpc(
+        "head_admin_get_suspended_users"
+      );
+
+      if (error) {
+        showNotice(error.message);
+        return;
+      }
+
+      setSuspendedUsers(data || []);
+      setPage("suspended-users");
+    }}
+  >
+    <span>🔒</span>
+    Gesperrte Konten
+  </button>
+)}
                     <button
                       onClick={() =>
                         setPage("admin")
