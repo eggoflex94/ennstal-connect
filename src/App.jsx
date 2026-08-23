@@ -121,6 +121,7 @@ export default function App() {
   const [blockedUsers, setBlockedUsers] = useState([]);
   const [reports, setReports] = useState([]);
   const [myPermissions, setMyPermissions] = useState({});
+  const [suspendedUsers, setSuspendedUsers] = useState([]);
 
   const [contentEditor, setContentEditor] =
     useState(null);
@@ -145,164 +146,81 @@ export default function App() {
   async function loadAll() {
     setLoading(true);
 
-    const {
-      data: { user: currentUser }
-    } = await supabase.auth.getUser();
+    try {
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError) throw authError;
 
-    setUser(currentUser || null);
+      const currentUser = authData?.user || null;
+      setUser(currentUser);
 
-    if (!currentUser) {
-      setProfile(null);
-      setMembers([]);
+      if (!currentUser) {
+        setProfile(null);
+        setMembers([]);
+        setFriendships([]);
+        return;
+      }
+
+      const safe = async (label, query, fallback = []) => {
+        const { data, error } = await query;
+        if (error) {
+          console.warn(`Ennstal Connect: ${label} konnte nicht geladen werden.`, error);
+          return fallback;
+        }
+        return data ?? fallback;
+      };
+
+      const [
+        myProfile,
+        allMembers,
+        newsData,
+        eventData,
+        groupData,
+        homepageData,
+        historyData,
+        messageData,
+        friendshipData,
+        visitData,
+        blockData,
+        reportData,
+        activityData,
+        permissionData
+      ] = await Promise.all([
+        safe("Profil", supabase.from("profiles").select("*").eq("id", currentUser.id).maybeSingle(), null),
+        safe("Mitglieder", supabase.from("profiles").select("*")),
+        safe("Neuigkeiten", supabase.from("news").select("*").order("created_at", { ascending: false })),
+        safe("Events", supabase.from("events").select("*").order("created_at", { ascending: false })),
+        safe("Gruppen", supabase.from("groups").select("*").order("created_at", { ascending: false })),
+        safe("Startseite", supabase.from("homepage_sections").select("*").eq("is_visible", true).order("sort_order", { ascending: true })),
+        safe("Punkteverlauf", supabase.from("point_history").select("*").eq("user_id", currentUser.id).order("created_at", { ascending: false })),
+        safe("Nachrichten", supabase.from("messages").select("*").or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`).order("created_at", { ascending: false })),
+        safe("Freundschaften", supabase.from("friendships").select("*").or(`requester_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`)),
+        safe("Profilbesuche", supabase.from("profile_visits").select("*").eq("profile_id", currentUser.id).order("visited_at", { ascending: false })),
+        safe("Blockierungen", supabase.from("user_blocks").select("*").eq("blocker_id", currentUser.id)),
+        safe("Meldungen", supabase.from("user_reports").select("*").order("created_at", { ascending: false })),
+        safe("Profilaktivitäten", supabase.from("profile_activity").select("*").order("created_at", { ascending: false }).limit(40)),
+        safe("Berechtigungen", supabase.from("user_permissions").select("*").eq("user_id", currentUser.id).maybeSingle(), {})
+      ]);
+
+      setProfile(myProfile);
+      setMembers(allMembers);
+      setNews(newsData);
+      setEvents(eventData);
+      setGroups(groupData);
+      setHomepageSections(homepageData);
+      setHistory(historyData);
+      setMessages(messageData);
+      setFriendships(friendshipData);
+      setProfileVisits(visitData);
+      setBlockedUsers(blockData);
+      setReports(reportData);
+      setProfileActivities(activityData);
+      setMyPermissions(permissionData || {});
+    } catch (error) {
+      console.error("Fehler beim Starten von Ennstal Connect:", error);
+      showNotice(`Fehler beim Laden: ${error?.message || "Unbekannter Fehler"}`);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const [
-      profileResult,
-      membersResult,
-      newsResult,
-      eventsResult,
-      groupsResult,
-      homepageResult,
-      historyResult,
-      messagesResult,
-      friendshipsResult,
-      visitsResult,
-      blocksResult,
-      reportsResult,
-      profileActivityResult
-    ] = await Promise.all([
-      supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", currentUser.id)
-        .single(),
-
-      supabase
-        .from("profiles")
-        .select("*"),
-
-      supabase
-        .from("community_news")
-        .select("*")
-        .order("created_at", {
-          ascending: false
-        }),
-
-      supabase
-        .from("events")
-        .select("*")
-        .order("starts_at", {
-          ascending: true
-        }),
-
-      supabase
-        .from("groups")
-        .select("*")
-        .order("created_at", {
-          ascending: false
-        }),
-
-      supabase
-        .from("homepage_sections")
-        .select("*")
-        .eq("is_visible", true)
-        .order("sort_order", { ascending: true }),
-
-      supabase
-        .from("point_history")
-        .select("*")
-        .eq("user_id", currentUser.id)
-        .order("created_at", {
-          ascending: false
-        }),
-
-      supabase
-        .from("messages")
-        .select("*")
-        .or(
-          `sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`
-        )
-        .order("created_at", {
-          ascending: false
-        }),
-
-      supabase
-        .from("friendships")
-        .select("*")
-        .or(`requester_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`),
-
-      supabase
-        .from("profile_visits")
-        .select("*")
-        .eq("profile_id", currentUser.id)
-        .order("visited_at", { ascending: false }),
-
-      supabase
-        .from("user_blocks")
-        .select("*")
-        .eq("blocker_id", currentUser.id),
-
-      supabase
-        .from("user_reports")
-        .select("*")
-        .order("created_at", { ascending: false }),
-
-      supabase
-        .from("profile_activity")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(40)
-    ]);
-
-    setProfile(
-      profileResult.data || null
-    );
-
-    setMembers(
-      membersResult.data || []
-    );
-
-    setNews(
-      newsResult.data || []
-    );
-
-    setEvents(
-      eventsResult.data || []
-    );
-
-    setGroups(
-      groupsResult.data || []
-    );
-
-    setHomepageSections(
-      homepageResult?.data || []
-    );
-
-    setHistory(
-      historyResult.data || []
-    );
-
-    setMessages(
-      messagesResult.data || []
-    );
-
-    setFriendships(friendshipsResult.data || []);
-    setProfileVisits(visitsResult.data || []);
-    setBlockedUsers(blocksResult?.data || []);
-    setReports(reportsResult?.data || []);
-    setProfileActivities(profileActivityResult?.data || []);
-
-    const { data: permissionData } = await supabase
-      .from("user_permissions")
-      .select("*")
-      .eq("user_id", currentUser.id)
-      .maybeSingle();
-
-    setMyPermissions(permissionData || {});
-
-    setLoading(false);
   }
 
   useEffect(() => {
@@ -367,6 +285,79 @@ export default function App() {
 
     return () => {
       supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel(`friendships-${user.id}`)
+      .on("postgres_changes", {
+        event: "*",
+        schema: "public",
+        table: "friendships",
+        filter: `receiver_id=eq.${user.id}`
+      }, () => loadAll())
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
+
+  const totalOnlineHours = Number(profile?.total_online_seconds || 0) / 3600;
+  const rewardableOnlineSeconds = Math.max(
+    0,
+    Number(profile?.total_online_seconds || 0) - Number(profile?.last_reward_seconds || 0)
+  );
+  const onlineHoursUntilReward = Math.max(0, 5 - rewardableOnlineSeconds / 3600);
+
+  async function syncOnlineTime() {
+    if (!user?.id || document.visibilityState !== "visible") return;
+
+    const { data, error } = await supabase.rpc("record_online_activity");
+    if (error) {
+      console.warn("Onlinezeit konnte nicht gespeichert werden:", error);
+      return;
+    }
+
+    if (data?.total_online_seconds !== undefined) {
+      setProfile((current) => current ? { ...current, ...data } : current);
+    }
+  }
+
+  async function claimOnlineReward() {
+    if (!user?.id) return;
+
+    const { data, error } = await supabase.rpc("claim_online_reward");
+    if (error) {
+      showNotice(error.message);
+      return;
+    }
+
+    if (!data?.ok) {
+      showNotice(data?.message || "Die Belohnung ist noch nicht verfügbar.");
+      return;
+    }
+
+    showNotice("10 Punkte für deine Onlinezeit erhalten!");
+    await loadAll();
+  }
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    syncOnlineTime();
+    const interval = window.setInterval(syncOnlineTime, 60000);
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") syncOnlineTime();
+    };
+    window.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [user?.id]);
 
@@ -525,6 +516,30 @@ const sortedMembers = useMemo(() => {
     }
 
     showNotice("Freundschaftsanfrage gesendet.");
+    await loadAll();
+  }
+
+  const incomingFriendRequests = useMemo(
+    () => friendships.filter((item) => item.status === "PENDING" && item.receiver_id === user?.id),
+    [friendships, user?.id]
+  );
+
+  async function respondToFriendRequest(request, accept) {
+    if (!user || request?.receiver_id !== user.id) return;
+
+    const { error } = await supabase
+      .from("friendships")
+      .update({ status: accept ? "ACCEPTED" : "DECLINED" })
+      .eq("id", request.id)
+      .eq("receiver_id", user.id)
+      .eq("status", "PENDING");
+
+    if (error) {
+      showNotice(error.message);
+      return;
+    }
+
+    showNotice(accept ? "Freundschaftsanfrage angenommen." : "Freundschaftsanfrage abgelehnt.");
     await loadAll();
   }
 
@@ -887,7 +902,7 @@ const sortedMembers = useMemo(() => {
     myAdminPermission("manage_groups");
 
   const canManageEventItem = (item) =>
-    item?.created_by === user?.id ||
+    (item?.created_by || item?.creator_id) === user?.id ||
     myAdminPermission("manage_events");
 
   async function createHomepageSection(event) {
@@ -2621,10 +2636,10 @@ async function changePoints(event) {
                     </strong>
 
                     <small>
-                      {new Date(event.starts_at).toLocaleString("de-AT")}
+                      {new Date(event.event_date || event.starts_at).toLocaleString("de-AT")}
                       <br />
-                      Erstellt von {actorLabel(event.created_by)}
-                      {event.updated_by && event.updated_by !== event.created_by && (
+                      Erstellt von {actorLabel(event.creator_id || event.created_by)}
+                      {event.updated_by && event.updated_by !== (event.creator_id || event.created_by) && (
                         <> · Bearbeitet von {actorLabel(event.updated_by)}{["ADMIN", "HEAD_ADMIN"].includes(memberById(event.updated_by)?.role) ? " ★" : ""}</>
                       )}
                     </small>
@@ -2838,6 +2853,40 @@ async function changePoints(event) {
           {/* =================================================
               MEIN BEREICH
               ================================================= */}
+
+          {page === "friend-requests" && (
+            <section>
+              <div className="page-heading">
+                <div>
+                  <button className="back-button" onClick={() => setPage("profile")}>← Zurück</button>
+                  <h1>Freundschaftsanfragen</h1>
+                  <p>Hier kommen deine eingehenden Freundschaftsanfragen an.</p>
+                </div>
+              </div>
+
+              <div className="cards">
+                {incomingFriendRequests.map((request) => {
+                  const sender = memberById(request.requester_id);
+                  return (
+                    <article className="member-card" key={request.id}>
+                      <img src={sender?.avatar_url || DEFAULT_AVATAR} alt="" />
+                      <div>
+                        <h2>{sender ? getName(sender) : "Mitglied"}</h2>
+                        <p>möchte mit dir befreundet sein.</p>
+                        <div className="content-manage-actions">
+                          <button className="primary-button" onClick={() => respondToFriendRequest(request, true)}>✓ Annehmen</button>
+                          <button className="danger-button" onClick={() => respondToFriendRequest(request, false)}>Ablehnen</button>
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
+                {!incomingFriendRequests.length && (
+                  <div className="empty-card">Keine offenen Freundschaftsanfragen.</div>
+                )}
+              </div>
+            </section>
+          )}
 
           {page === "profile" && (
             <section>
@@ -3371,6 +3420,23 @@ async function changePoints(event) {
 
                 </div>
 
+              </div>
+
+              <div className="panel online-reward-panel">
+                <h2>⏱ Online-Belohnung</h2>
+                <p>Gesamte gespeicherte Onlinezeit: <strong>{totalOnlineHours.toFixed(2)} Stunden</strong></p>
+                <p>
+                  {onlineHoursUntilReward <= 0
+                    ? "Du kannst jetzt 10 Punkte abholen!"
+                    : `Noch ${onlineHoursUntilReward.toFixed(2)} Stunden bis zu den nächsten 10 Punkten.`}
+                </p>
+                <button
+                  className="primary-button"
+                  disabled={onlineHoursUntilReward > 0}
+                  onClick={claimOnlineReward}
+                >
+                  🎁 10 Punkte abholen
+                </button>
               </div>
 
               <div className="point-list">
@@ -4002,9 +4068,10 @@ async function changePoints(event) {
           )}
 
           <button
-            onClick={() => setPage("profile")}
+            onClick={() => setPage("friend-requests")}
           >
             🤝 Freundschaftsanfragen
+            {incomingFriendRequests.length > 0 && <span className="rail-badge">{incomingFriendRequests.length}</span>}
           </button>
 
           <button onClick={() => setPage("blocked")}>
