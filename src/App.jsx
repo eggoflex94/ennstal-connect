@@ -60,6 +60,7 @@ export default function App() {
 
   const [history, setHistory] = useState([]);
   const [messages, setMessages] = useState([]);
+  const [profileActivities, setProfileActivities] = useState([]);
 
   const [selectedMember, setSelectedMember] =
     useState(null);
@@ -169,7 +170,8 @@ export default function App() {
       friendshipsResult,
       visitsResult,
       blocksResult,
-      reportsResult
+      reportsResult,
+      profileActivityResult
     ] = await Promise.all([
       supabase
         .from("profiles")
@@ -245,7 +247,13 @@ export default function App() {
       supabase
         .from("user_reports")
         .select("*")
+        .order("created_at", { ascending: false }),
+
+      supabase
+        .from("profile_activity")
+        .select("*")
         .order("created_at", { ascending: false })
+        .limit(40)
     ]);
 
     setProfile(
@@ -284,6 +292,7 @@ export default function App() {
     setProfileVisits(visitsResult.data || []);
     setBlockedUsers(blocksResult?.data || []);
     setReports(reportsResult?.data || []);
+    setProfileActivities(profileActivityResult?.data || []);
 
     const { data: permissionData } = await supabase
       .from("user_permissions")
@@ -332,6 +341,34 @@ export default function App() {
       window.clearInterval(interval);
     };
   }, [user]);
+
+  /* =========================================================
+     NACHRICHTEN LIVE AKTUALISIEREN
+     ========================================================= */
+
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel(`messages-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+          filter: `receiver_id=eq.${user.id}`
+        },
+        () => {
+          loadAll();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
 
   /* =========================================================
      SORTIERTE MITGLIEDER
@@ -1025,6 +1062,30 @@ const sortedMembers = useMemo(() => {
     await loadAll();
   }
 
+  async function logProfileActivity(
+    activityText,
+    activityType = "PROFILE"
+  ) {
+    if (!user?.id) return;
+
+    const { error } =
+      await supabase
+        .from("profile_activity")
+        .insert({
+          actor_id: user.id,
+          target_user_id: user.id,
+          activity_type: activityType,
+          text: activityText
+        });
+
+    if (error) {
+      console.warn(
+        "Profilaktivität konnte nicht gespeichert werden:",
+        error.message
+      );
+    }
+  }
+
   /* =========================================================
      PROFIL SPEICHERN
      ========================================================= */
@@ -1100,6 +1161,11 @@ async function uploadProfileImage(file) {
     "Profilbild erfolgreich gespeichert."
   );
 
+  await logProfileActivity(
+    "hat sein Profilbild geändert",
+    "AVATAR"
+  );
+
   await loadAll();
 }
   async function saveProfile(event) {
@@ -1108,59 +1174,192 @@ async function uploadProfileImage(file) {
     const form =
       new FormData(event.currentTarget);
 
-    let avatarUrl = form.get("avatar_url")?.trim() || profile?.avatar_url || null;
-    const avatarFile = form.get("avatar_file");
+    let avatarUrl =
+      form.get("avatar_url")?.trim() ||
+      profile?.avatar_url ||
+      null;
 
-    if (avatarFile && avatarFile.size > 0) {
-      await uploadProfileImage(avatarFile);
+    const avatarFile =
+      form.get("avatar_file");
 
-      const refreshed = await supabase
-        .from("profiles")
-        .select("avatar_url")
-        .eq("id", user.id)
-        .single();
+    if (
+      avatarFile &&
+      avatarFile.size > 0
+    ) {
+      await uploadProfileImage(
+        avatarFile
+      );
 
-      avatarUrl = refreshed.data?.avatar_url || avatarUrl;
+      const refreshed =
+        await supabase
+          .from("profiles")
+          .select("avatar_url")
+          .eq("id", user.id)
+          .single();
+
+      avatarUrl =
+        refreshed.data?.avatar_url ||
+        avatarUrl;
     }
 
-    const firstName = form.get("first_name")?.trim();
-    const lastName = form.get("last_name")?.trim();
-    const birthDate = form.get("birth_date");
-    const gender = form.get("gender");
+    const firstName =
+      form.get("first_name")?.trim();
 
-    if (!firstName || !lastName || !birthDate || !gender) {
-      showNotice("Vorname, Nachname, Geburtsdatum und Geschlecht sind Pflichtfelder.");
+    const lastName =
+      form.get("last_name")?.trim();
+
+    const birthDate =
+      form.get("birth_date");
+
+    const gender =
+      form.get("gender");
+
+    if (
+      !firstName ||
+      !lastName ||
+      !birthDate ||
+      !gender
+    ) {
+      showNotice(
+        "Vorname, Nachname, Geburtsdatum und Geschlecht sind Pflichtfelder."
+      );
       return;
     }
 
     const updateData = {
-      nickname: form.get("nickname")?.trim(),
-      nickname_color: form.get("nickname_color"),
-      avatar_url: avatarUrl,
-      first_name: firstName,
-      last_name: lastName,
-      birth_date: birthDate,
+      nickname:
+        form.get("nickname")?.trim(),
+
+      nickname_color:
+        form.get("nickname_color"),
+
+      avatar_url:
+        avatarUrl,
+
+      first_name:
+        firstName,
+
+      last_name:
+        lastName,
+
+      birth_date:
+        birthDate,
+
       gender,
-      bio: form.get("bio")?.trim(),
-      location: form.get("location")?.trim(),
-      interests: form.get("interests")?.trim(),
-      website: form.get("website")?.trim()
+
+      bio:
+        form.get("bio")?.trim(),
+
+      location:
+        form.get("location")?.trim(),
+
+      interests:
+        form.get("interests")?.trim(),
+
+      website:
+        form.get("website")?.trim(),
+
+      profile_accent:
+        form.get("profile_accent") ||
+        "#ff6b25",
+
+      profile_background:
+        form.get("profile_background") ||
+        "#171b22",
+
+      profile_layout:
+        form.get("profile_layout") ||
+        "standard"
     };
 
-    const { error } =
+    let result =
       await supabase
         .from("profiles")
         .update(updateData)
         .eq("id", user.id);
 
-    if (error) {
-      showNotice(error.message);
-      return;
+    if (result.error) {
+      const fallbackData = {
+        nickname: updateData.nickname,
+        nickname_color: updateData.nickname_color,
+        avatar_url: updateData.avatar_url,
+        first_name: updateData.first_name,
+        last_name: updateData.last_name,
+        birth_date: updateData.birth_date,
+        gender: updateData.gender,
+        bio: updateData.bio,
+        location: updateData.location,
+        interests: updateData.interests,
+        website: updateData.website
+      };
+
+      result =
+        await supabase
+          .from("profiles")
+          .update(fallbackData)
+          .eq("id", user.id);
+
+      if (result.error) {
+        showNotice(
+          result.error.message
+        );
+        return;
+      }
+
+      showNotice(
+        "Profil gespeichert. Die Designfelder brauchen noch die SQL-Erweiterung."
+      );
+    } else {
+      showNotice(
+        "Profil wurde gespeichert."
+      );
     }
 
-    showNotice(
-      "Profil wurde gespeichert."
-    );
+    const changes = [];
+
+    if (
+      profile?.nickname !==
+      updateData.nickname
+    ) {
+      changes.push(
+        "hat seinen Nicknamen geändert"
+      );
+    }
+
+    if (
+      profile?.bio !== updateData.bio ||
+      profile?.location !== updateData.location ||
+      profile?.interests !== updateData.interests ||
+      profile?.website !== updateData.website ||
+      profile?.first_name !== updateData.first_name ||
+      profile?.last_name !== updateData.last_name
+    ) {
+      changes.push(
+        "hat sein Profil bearbeitet"
+      );
+    }
+
+    if (
+      profile?.profile_accent !==
+        updateData.profile_accent ||
+      profile?.profile_background !==
+        updateData.profile_background ||
+      profile?.profile_layout !==
+        updateData.profile_layout
+    ) {
+      changes.push(
+        "hat sein Profil gestaltet"
+      );
+    }
+
+    for (const entry of [
+      ...new Set(changes)
+    ]) {
+      await logProfileActivity(
+        entry,
+        "PROFILE"
+      );
+    }
 
     await loadAll();
   }
@@ -1356,6 +1555,13 @@ async function uploadProfileImage(file) {
 
     setMessages(data || []);
 
+    await supabase
+      .from("messages")
+      .update({ is_read: true })
+      .eq("receiver_id", user.id)
+      .eq("sender_id", member.id)
+      .eq("is_read", false);
+
     setPage("messages");
   }
 
@@ -1387,7 +1593,10 @@ async function uploadProfileImage(file) {
             messageText.trim(),
 
           message_type:
-            "PRIVATE"
+            "PRIVATE",
+
+          is_read:
+            false
         });
 
     if (error) {
@@ -2632,28 +2841,52 @@ async function changePoints(event) {
 
           {page === "profile" && (
             <section>
-
-              <div className="my-area-layout">
-
-                {/* LINKER BEREICH */}
+              <div
+                className="my-area-layout"
+                style={{
+                  "--profile-accent":
+                    profile?.profile_accent ||
+                    "#ff6b25"
+                }}
+              >
 
                 <div
                   className={
-                    `my-profile-card ${
+                    `my-profile-card profile-showcase ${
                       isAdmin(profile?.role)
                         ? "admin-profile"
-                        : profile?.role ===
-                          "SUPPORTER"
+                        : profile?.role === "SUPPORTER"
                         ? "supporter-profile"
                         : ""
                     }`
                   }
+                  style={{
+                    background:
+                      profile?.profile_background ||
+                      "#1b1f26",
+                    borderColor:
+                      isAdmin(profile?.role)
+                        ? "#dd5c5c"
+                        : profile?.profile_accent ||
+                          "#58616d"
+                  }}
                 >
 
                   <div className="my-profile-top">
-
                     {isAdmin(profile?.role) && (
-                      <img className="role-symbol role-symbol-large" src="/Admin-star.png" alt="Admin" />
+                      <img
+                        className="role-symbol role-symbol-large"
+                        src="/Admin-star.png"
+                        alt="Admin"
+                      />
+                    )}
+
+                    {profile?.role === "SUPPORTER" && (
+                      <img
+                        className="role-symbol role-symbol-large"
+                        src="/supporter-star.png"
+                        alt="Supporter"
+                      />
                     )}
 
                     <h1
@@ -2665,7 +2898,6 @@ async function changePoints(event) {
                     >
                       {getName(profile)}
                     </h1>
-
                   </div>
 
                   <img
@@ -2681,30 +2913,30 @@ async function changePoints(event) {
                     }}
                   />
 
-                  <h2>
-                    {
-                      [
-                        profile?.first_name,
-                        profile?.last_name
-                      ]
-                        .filter(Boolean)
-                        .join(" ")
-                    }
+                  <p className="profile-showcase-role">
+                    {profile?.role === "HEAD_ADMIN"
+                      ? "Hauptadmin"
+                      : profile?.role === "ADMIN"
+                      ? "Admin"
+                      : profile?.role === "SUPPORTER"
+                      ? "Supporter"
+                      : "Mitglied"}
+                  </p>
 
-                    {getAge(
-                      profile?.birth_date
-                    ) !== null && (
+                  <h2>
+                    {[
+                      profile?.first_name,
+                      profile?.last_name
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+
+                    {getAge(profile?.birth_date) !== null && (
                       <>
                         {" · "}
-                        {
-                          getAge(
-                            profile?.birth_date
-                          )
-                        }
-                        {" Jahre"}
+                        {getAge(profile?.birth_date)} Jahre
                       </>
                     )}
-
                   </h2>
 
                   <div className="profile-status online">
@@ -2713,11 +2945,9 @@ async function changePoints(event) {
                   </div>
 
                   <div className="profile-points">
-
                     <button
-                      onClick={() =>
-                        setPage("points")
-                      }
+                      type="button"
+                      onClick={() => setPage("points")}
                     >
                       <span>⭐</span>
                       <strong>
@@ -2728,204 +2958,231 @@ async function changePoints(event) {
                         ({profile?.purchase_points || 0} KP)
                       </small>
                     </button>
-
                   </div>
 
+                  <div className="profile-self-preview">
+                    <small>Über mich</small>
+                    <p>
+                      {profile?.bio ||
+                        "Gestalte dein Profil mit einem persönlichen Über-mich-Text."}
+                    </p>
+                  </div>
                 </div>
 
-                {/* RECHTER BEREICH */}
-
                 <form
-                  className="panel profile-form"
+                  className="panel profile-form profile-builder"
                   onSubmit={saveProfile}
                 >
+                  <div className="profile-builder-heading">
+                    <span className="eyebrow">
+                      DEIN PROFIL
+                    </span>
+                    <h2>Profil gestalten</h2>
+                    <p>
+                      Farben, Profilbild, Texte und Layout kannst du
+                      selbst festlegen.
+                    </p>
+                  </div>
 
-                  <h2>
-                    Profil bearbeiten
-                  </h2>
+                  <label>Nickname *</label>
+                  <input
+                    name="nickname"
+                    defaultValue={
+                      profile?.nickname || ""
+                    }
+                    required
+                  />
 
-                <label>
-  Nickname *
-</label>
+                  <div className="profile-design-grid">
+                    <div>
+                      <label>Nickname-Farbe</label>
+                      <input
+                        type="color"
+                        name="nickname_color"
+                        defaultValue={
+                          profile?.nickname_color ||
+                          "#ffffff"
+                        }
+                      />
+                    </div>
 
-<input
-  name="nickname"
-  defaultValue={profile?.nickname || ""}
-  required
-/>
+                    <div>
+                      <label>Profil-Akzent</label>
+                      <input
+                        type="color"
+                        name="profile_accent"
+                        defaultValue={
+                          profile?.profile_accent ||
+                          "#ff6b25"
+                        }
+                      />
+                    </div>
 
-<label>
-  Nickname-Farbe
-</label>
+                    <div>
+                      <label>Profil-Hintergrund</label>
+                      <input
+                        type="color"
+                        name="profile_background"
+                        defaultValue={
+                          profile?.profile_background ||
+                          "#171b22"
+                        }
+                      />
+                    </div>
 
-<input
-  type="color"
-  name="nickname_color"
-  defaultValue={
-    profile?.nickname_color || "#263238"
-  }
-/>
+                    <div>
+                      <label>Profil-Layout</label>
+                      <select
+                        name="profile_layout"
+                        defaultValue={
+                          profile?.profile_layout ||
+                          "standard"
+                        }
+                      >
+                        <option value="standard">
+                          Standard
+                        </option>
+                        <option value="showcase">
+                          Showcase
+                        </option>
+                        <option value="compact">
+                          Kompakt
+                        </option>
+                      </select>
+                    </div>
+                  </div>
 
-<label>
-  Profilbild hochladen
-</label>
+                  <label>Profilbild</label>
 
-<div className="profile-upload-box">
+                  <div className="profile-upload-box">
+                    <div className="profile-upload-preview">
+                      <img
+                        src={
+                          profile?.avatar_url ||
+                          DEFAULT_AVATAR
+                        }
+                        alt="Profilbild"
+                      />
+                    </div>
 
-  <div className="profile-upload-preview">
-    <img
-      src={
-        profile?.avatar_url ||
-        "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Crect width='160' height='160' fill='%23e9edf1'/%3E%3Ctext x='80' y='90' text-anchor='middle' font-size='55' fill='%23818a94'%3E?%3C/text%3E%3C/svg%3E"
-      }
-      alt="Profilbild"
-    />
-  </div>
+                    <label className="upload-button">
+                      📷 Bild auswählen
 
-  <label className="upload-button">
-    📷 Bild auswählen
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp,image/gif"
+                        hidden
+                        onChange={async (event) => {
+                          const file =
+                            event.target.files?.[0];
 
-    <input
-      type="file"
-      accept="image/png,image/jpeg,image/webp,image/gif"
-      hidden
-      onChange={async (event) => {
-        const file = event.target.files?.[0];
+                          if (file) {
+                            await uploadProfileImage(
+                              file
+                            );
+                          }
 
-        if (file) {
-          await uploadProfileImage(file);
-        }
+                          event.target.value = "";
+                        }}
+                      />
+                    </label>
 
-        event.target.value = "";
-      }}
-    />
-  </label>
+                    <small className="form-help">
+                      JPG, PNG, WEBP oder GIF · maximal 5 MB
+                    </small>
+                  </div>
 
-  <small className="form-help">
-    JPG, PNG, WEBP oder GIF · maximal 5 MB
-  </small>
+                  <label>Vorname *</label>
+                  <input
+                    name="first_name"
+                    defaultValue={
+                      profile?.first_name || ""
+                    }
+                    required
+                  />
 
-</div>
+                  <label>Nachname *</label>
+                  <input
+                    name="last_name"
+                    defaultValue={
+                      profile?.last_name || ""
+                    }
+                    required
+                  />
 
-<label>
-  Vorname *
-</label>
+                  <label>Geburtsdatum *</label>
+                  <input
+                    type="date"
+                    name="birth_date"
+                    defaultValue={
+                      profile?.birth_date || ""
+                    }
+                    required
+                  />
 
-<input
-  name="first_name"
-  defaultValue={
-    profile?.first_name || ""
-  }
-  required
-/>
+                  <label>Geschlecht *</label>
+                  <select
+                    name="gender"
+                    defaultValue={
+                      profile?.gender || ""
+                    }
+                    required
+                  >
+                    <option value="">
+                      Bitte auswählen
+                    </option>
+                    <option value="männlich">
+                      Männlich
+                    </option>
+                    <option value="weiblich">
+                      Weiblich
+                    </option>
+                    <option value="divers">
+                      Divers
+                    </option>
+                  </select>
 
-<label>
-  Nachname *
-</label>
+                  <label>Über mich</label>
+                  <textarea
+                    name="bio"
+                    defaultValue={
+                      profile?.bio || ""
+                    }
+                    placeholder="Was sollen andere über dich wissen?"
+                  />
 
-<input
-  name="last_name"
-  defaultValue={
-    profile?.last_name || ""
-  }
-  required
-/>
+                  <label>Interessen</label>
+                  <input
+                    name="interests"
+                    defaultValue={
+                      profile?.interests || ""
+                    }
+                  />
 
-<label>
-  Geburtsdatum *
-</label>
+                  <label>Wohnort</label>
+                  <input
+                    name="location"
+                    defaultValue={
+                      profile?.location || ""
+                    }
+                  />
 
-<input
-  type="date"
-  name="birth_date"
-  defaultValue={
-    profile?.birth_date || ""
-  }
-  required
-/>
+                  <label>Website</label>
+                  <input
+                    name="website"
+                    defaultValue={
+                      profile?.website || ""
+                    }
+                  />
 
-<label>
-  Geschlecht *
-</label>
-
-<select
-  name="gender"
-  defaultValue={
-    profile?.gender || ""
-  }
-  required
->
-  <option value="">
-    Bitte auswählen
-  </option>
-
-  <option value="männlich">
-    Männlich
-  </option>
-
-  <option value="weiblich">
-    Weiblich
-  </option>
-
-  <option value="divers">
-    Divers
-  </option>
-</select>
-
-<label>
-  Über mich
-</label>
-
-<textarea
-  name="bio"
-  defaultValue={
-    profile?.bio || ""
-  }
-/>
-
-<label>
-  Interessen
-</label>
-
-<input
-  name="interests"
-  defaultValue={
-    profile?.interests || ""
-  }
-/>
-
-<label>
-  Wohnort
-</label>
-
-<input
-  name="location"
-  defaultValue={
-    profile?.location || ""
-  }
-/>
-
-<label>
-  Website
-</label>
-
-<input
-  name="website"
-  defaultValue={
-    profile?.website || ""
-  }
-/>
-
-<button
-  type="submit"
-  className="primary-button"
->
-  Änderungen speichern
-</button>
+                  <button
+                    type="submit"
+                    className="primary-button"
+                  >
+                    Änderungen speichern
+                  </button>
                 </form>
-
               </div>
-
             </section>
           )}
 
@@ -3315,192 +3572,296 @@ async function changePoints(event) {
 
                 </form>
 
-                <h2 className="admin-member-title">
-                  Mitglieder verwalten
-                </h2>
+                <section className="admin-members-panel">
+  <div className="admin-members-heading">
+    <div>
+      <span className="eyebrow">COMMUNITY</span>
+      <h2>Mitglieder verwalten</h2>
+      <p>Übersichtliche Karten mit direkten Aktionen.</p>
+    </div>
 
-                <div className="admin-members">
+    <div className="admin-member-count">
+      {members.length}
+      <small>Mitglieder</small>
+    </div>
+  </div>
 
-                  {members
-                    .slice()
-                    .sort((a, b) => {
-                      const rank = (member) => {
-                        if (
-                          isAdmin(
-                            member.role
-                          )
-                        ) {
-                          return 1;
-                        }
+  <div className="admin-member-cards">
+    {members
+      .slice()
+      .sort((a, b) => {
+        const rank = (member) => {
+          if (member.role === "HEAD_ADMIN") return 1;
+          if (member.role === "ADMIN") return 2;
+          if (member.role === "SUPPORTER") return 3;
+          return 4;
+        };
 
-                        if (
-                          member.role ===
-                          "SUPPORTER"
-                        ) {
-                          return 2;
-                        }
+        const diff = rank(a) - rank(b);
 
-                        return 3;
-                      };
+        return diff !== 0
+          ? diff
+          : getName(a).localeCompare(
+              getName(b),
+              "de"
+            );
+      })
+      .map((member) => (
+        <article
+          className={
+            `admin-member-card ${
+              member.role === "HEAD_ADMIN"
+                ? "head-admin-card"
+                : member.role === "ADMIN"
+                ? "admin-card"
+                : member.role === "SUPPORTER"
+                ? "supporter-card"
+                : ""
+            }`
+          }
+          key={member.id}
+        >
+          <div className="admin-member-card-top">
+            <button
+              type="button"
+              className="admin-member-person-button"
+              onClick={() => openMember(member)}
+            >
+              <img
+                src={
+                  member.avatar_url ||
+                  DEFAULT_AVATAR
+                }
+                alt=""
+                className="admin-member-avatar"
+              />
 
-                      const rankDifference =
-                        rank(a) - rank(b);
+              <span>
+                <strong>
+                  {isAdmin(member.role) && (
+                    <img
+                      className="inline-role-symbol"
+                      src="/Admin-star.png"
+                      alt=""
+                    />
+                  )}
 
-                      if (
-                        rankDifference !== 0
-                      ) {
-                        return rankDifference;
+                  {member.role === "SUPPORTER" && (
+                    <img
+                      className="inline-role-symbol"
+                      src="/supporter-star.png"
+                      alt=""
+                    />
+                  )}
+
+                  {getName(member)}
+                </strong>
+
+                <small>
+                  {member.role === "HEAD_ADMIN"
+                    ? "Hauptadmin"
+                    : member.role === "ADMIN"
+                    ? "Admin"
+                    : member.role === "SUPPORTER"
+                    ? "Supporter"
+                    : "Mitglied"}
+                </small>
+              </span>
+            </button>
+
+            <div
+              className={
+                `admin-member-status ${
+                  member.is_online
+                    ? "online"
+                    : "offline"
+                }`
+              }
+            >
+              <span />
+              {member.is_online
+                ? "Online"
+                : "Offline"}
+            </div>
+          </div>
+
+          <div className="admin-member-card-info">
+            <div>
+              <span>Punkte</span>
+              <strong>
+                {member.community_points || 0}
+              </strong>
+            </div>
+
+            <div>
+              <span>Status</span>
+              <strong>
+                {member.account_status === "SUSPENDED"
+                  ? "Gesperrt"
+                  : "Aktiv"}
+              </strong>
+            </div>
+
+            <div>
+              <span>Alter</span>
+              <strong>
+                {getAge(member.birth_date) ?? "—"}
+              </strong>
+            </div>
+          </div>
+
+          <div className="admin-member-card-actions">
+            <button
+              type="button"
+              onClick={() => openMember(member)}
+            >
+              👤 Profil
+            </button>
+
+            {(isHeadAdmin(profile?.role) ||
+              myAdminPermission("manage_points")) && (
+              <button
+                type="button"
+                onClick={async () => {
+                  const amount = Number(
+                    window.prompt(
+                      "Punkte, z. B. 5 oder -5:",
+                      "5"
+                    )
+                  );
+
+                  if (
+                    !Number.isFinite(amount) ||
+                    amount === 0
+                  ) return;
+
+                  const reason =
+                    window.prompt(
+                      "Begründung:"
+                    );
+
+                  if (
+                    !reason ||
+                    reason.trim().length < 3
+                  ) {
+                    showNotice(
+                      "Bitte eine Begründung angeben."
+                    );
+                    return;
+                  }
+
+                  const { error } =
+                    await supabase.rpc(
+                      "admin_change_points",
+                      {
+                        target_user:
+                          member.id,
+                        delta:
+                          Math.trunc(amount),
+                        change_kind:
+                          amount > 0
+                            ? "ADD"
+                            : "REMOVE",
+                        reason_text:
+                          reason.trim()
                       }
+                    );
 
-                      return getName(a)
-                        .localeCompare(
-                          getName(b),
-                          "de"
-                        );
-                    })
-                    .map((member) => (
+                  if (error) {
+                    showNotice(
+                      error.message
+                    );
+                    return;
+                  }
 
-                      <form
-                        className={
-                          `admin-member-row ${
-                            isAdmin(member.role)
-                              ? "admin-row"
-                              : member.role ===
-                                "SUPPORTER"
-                              ? "supporter-row"
-                              : ""
-                          }`
-                        }
-                        key={member.id}
-                        onSubmit={
-                          adminSaveMember
-                        }
-                      >
+                  showNotice(
+                    "Punkte wurden geändert."
+                  );
 
-                        <input
-                          type="hidden"
-                          name="user_id"
-                          value={member.id}
-                        />
+                  await loadAll();
+                }}
+              >
+                ⭐ Punkte
+              </button>
+            )}
 
-                        <div className="admin-member-user">
+            {(isHeadAdmin(profile?.role) ||
+              myAdminPermission("manage_roles")) && (
+              <button
+                type="button"
+                onClick={async () => {
+                  const { error } =
+                    await supabase.rpc(
+                      "admin_set_role",
+                      {
+                        target_user:
+                          member.id,
+                        new_role:
+                          "SUPPORTER"
+                      }
+                    );
 
-                          {isAdmin(member.role) && (
-                            <span className="admin-star">
-                              ★
-                            </span>
-                          )}
+                  if (error) {
+                    showNotice(
+                      error.message
+                    );
+                    return;
+                  }
 
-                          {member.role ===
-                            "SUPPORTER" && (
-                            <span className="supporter-star">
-                              ★
-                            </span>
-                          )}
+                  showNotice(
+                    "Supporter-Rolle wurde gespeichert."
+                  );
 
-                          <strong>
-                            {getName(member)}
-                          </strong>
+                  await loadAll();
+                }}
+              >
+                🟢 Supporter
+              </button>
+            )}
 
-                        </div>
+            {isHeadAdmin(profile?.role) && (
+              <button
+                type="button"
+                onClick={async () => {
+                  const { error } =
+                    await supabase.rpc(
+                      "admin_set_role",
+                      {
+                        target_user:
+                          member.id,
+                        new_role:
+                          "ADMIN"
+                      }
+                    );
 
-                        <input
-                          name="nickname"
-                          defaultValue={
-                            member.nickname || ""
-                          }
-                          placeholder="Nickname"
-                        />
+                  if (error) {
+                    showNotice(
+                      error.message
+                    );
+                    return;
+                  }
 
-                        <input
-                          name="first_name"
-                          defaultValue={
-                            member.first_name ||
-                            ""
-                          }
-                          placeholder="Vorname"
-                        />
+                  showNotice(
+                    "Admin-Rolle wurde gespeichert."
+                  );
 
-                        <input
-                          name="last_name"
-                          defaultValue={
-                            member.last_name ||
-                            ""
-                          }
-                          placeholder="Nachname"
-                        />
+                  await loadAll();
+                }}
+              >
+                ★ Admin
+              </button>
+            )}
+          </div>
+        </article>
+      ))}
 
-                        <input
-                          type="date"
-                          name="birth_date"
-                          defaultValue={
-                            member.birth_date ||
-                            ""
-                          }
-                        />
-
-                        <select
-                          name="gender"
-                          defaultValue={member.gender || ""}
-                          required
-                        >
-                          <option value="männlich">Männlich</option>
-                          <option value="weiblich">Weiblich</option>
-                          <option value="divers">Divers</option>
-                        </select>
-
-                        <select
-                          name="role"
-                          defaultValue={
-                            member.role ||
-                            "MEMBER"
-                          }
-                        >
-
-                          {ROLES.filter(
-                            (role) =>
-                              isHeadAdmin(
-                                profile?.role
-                              ) ||
-                              role !==
-                                "HEAD_ADMIN"
-                          ).map((role) => (
-                            <option
-                              key={role}
-                              value={role}
-                            >
-                              {role}
-                            </option>
-                          ))}
-
-                        </select>
-
-                        <select
-                          name="account_status"
-                          defaultValue={
-                            member.account_status ||
-                            "ACTIVE"
-                          }
-                        >
-
-                          <option value="ACTIVE">
-                            Aktiv
-                          </option>
-
-                          <option value="SUSPENDED">
-                            Gesperrt
-                          </option>
-
-                        </select>
-
-                        <button>
-                          Speichern
-                        </button>
-
-                      </form>
-                    ))}
-
-                </div>
+    {!members.length && (
+      <div className="empty-card">
+        Keine Mitglieder vorhanden.
+      </div>
+    )}
+  </div>
+</section>
 
               </section>
             )}
@@ -3655,6 +4016,76 @@ async function changePoints(event) {
           >
             👁 Profilbesucher ({profileVisits.length})
           </button>
+
+          <section className="rail-activity-panel">
+            <div className="quick-section-title">
+              AKTIVITÄTEN
+            </div>
+
+            <div className="rail-activity-list">
+              {profileActivities.slice(0, 14).map((activity) => {
+                const actor =
+                  memberById(activity.actor_id);
+
+                if (!actor) return null;
+
+                return (
+                  <button
+                    key={activity.id}
+                    type="button"
+                    className="rail-activity-item"
+                    onClick={() => openMember(actor)}
+                  >
+                    <img
+                      src={
+                        actor.avatar_url ||
+                        DEFAULT_AVATAR
+                      }
+                      alt=""
+                    />
+
+                    <span>
+                      <strong>
+                        {isAdmin(actor.role) && (
+                          <img
+                            className="inline-role-symbol"
+                            src="/Admin-star.png"
+                            alt=""
+                          />
+                        )}
+
+                        {actor.role === "SUPPORTER" && (
+                          <img
+                            className="inline-role-symbol"
+                            src="/supporter-star.png"
+                            alt=""
+                          />
+                        )}
+
+                        {getName(actor)}
+                      </strong>
+
+                      <small>
+                        {activity.text}
+                      </small>
+
+                      <em>
+                        {new Date(
+                          activity.created_at
+                        ).toLocaleString("de-AT")}
+                      </em>
+                    </span>
+                  </button>
+                );
+              })}
+
+              {!profileActivities.length && (
+                <small className="rail-empty">
+                  Noch keine Profilupdates.
+                </small>
+              )}
+            </div>
+          </section>
 
           {isAdmin(profile?.role) && (
             <>
@@ -3834,7 +4265,21 @@ async function changePoints(event) {
           >
 
             <div
-              className="profile-modal"
+              className={`profile-modal ${
+                selectedMember?.profile_layout === "compact"
+                  ? "profile-layout-compact"
+                  : selectedMember?.profile_layout === "showcase"
+                  ? "profile-layout-showcase"
+                  : ""
+              }`}
+              style={{
+                "--profile-accent":
+                  selectedMember?.profile_accent ||
+                  "#ff6b25",
+                background:
+                  selectedMember?.profile_background ||
+                  "#1a1e25"
+              }}
               onClick={(event) =>
                 event.stopPropagation()
               }
@@ -6288,6 +6733,375 @@ function GlobalStyle() {
         .public-profile-data,
         .profile-admin-tools-grid {
           grid-template-columns: 1fr;
+        }
+      }
+
+
+      /* =========================================================
+         FINAL COMPACT RIGHT RAIL
+         ========================================================= */
+
+      .quick-rail {
+        width: 190px !important;
+        right: 10px !important;
+        top: 86px !important;
+        padding: 7px !important;
+        border-radius: 13px !important;
+        max-height: calc(100vh - 98px);
+        overflow-y: auto;
+      }
+
+      .quick-rail > button,
+      .quick-rail .permission-heading {
+        font-size: 10px !important;
+        padding: 7px 8px !important;
+        border-radius: 8px !important;
+        margin-top: 4px !important;
+      }
+
+      .quick-rail .quick-profile {
+        padding: 7px !important;
+        gap: 7px;
+      }
+
+      .quick-rail .quick-profile > img {
+        width: 34px;
+        height: 34px;
+      }
+
+      .quick-rail .quick-profile strong {
+        font-size: 11px;
+      }
+
+      .quick-rail .quick-profile small {
+        font-size: 9px;
+      }
+
+      .quick-rail .quick-section-title {
+        margin-top: 8px;
+        padding: 5px 4px 3px;
+        font-size: 9px;
+      }
+
+      .rail-activity-panel {
+        margin-top: 7px;
+        border-top: 1px solid rgba(120,130,145,.22);
+        padding-top: 3px;
+      }
+
+      .rail-activity-list {
+        max-height: 180px;
+        overflow-y: auto;
+        display: grid;
+        gap: 2px;
+      }
+
+      .rail-activity-item {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 24px minmax(0,1fr);
+        gap: 6px;
+        padding: 4px 2px;
+        border: 0;
+        background: transparent;
+        color: inherit;
+        text-align: left;
+      }
+
+      .rail-activity-item > img {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        object-fit: cover;
+      }
+
+      .rail-activity-item strong,
+      .rail-activity-item small,
+      .rail-activity-item em {
+        display: block;
+      }
+
+      .rail-activity-item strong {
+        font-size: 9px;
+        line-height: 1.1;
+      }
+
+      .rail-activity-item small {
+        font-size: 8px;
+        color: #b6bec8;
+        line-height: 1.2;
+      }
+
+      .rail-activity-item em {
+        font-size: 7px;
+        color: #79838f;
+        font-style: normal;
+      }
+
+      .profile-builder {
+        border-left: 3px solid var(--profile-accent, #ff6b25);
+      }
+
+      .profile-builder-heading h2 {
+        margin: 3px 0 5px;
+      }
+
+      .profile-builder-heading p {
+        margin: 0;
+        color: #9da7b3;
+        line-height: 1.45;
+      }
+
+      .profile-design-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 9px;
+      }
+
+      .profile-design-grid > div {
+        display: grid;
+        gap: 5px;
+      }
+
+      .profile-design-grid input[type="color"] {
+        min-height: 44px;
+        padding: 4px;
+      }
+
+      .profile-showcase {
+        position: sticky;
+        top: 100px;
+      }
+
+      .profile-showcase-role {
+        margin: 0;
+        color: var(--profile-accent, #ff6b25);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .profile-self-preview {
+        margin-top: 18px;
+        text-align: left;
+        padding-top: 12px;
+        border-top: 1px solid rgba(120,130,145,.25);
+      }
+
+      .profile-self-preview small {
+        color: #8e98a4;
+        text-transform: uppercase;
+        font-size: 9px;
+        letter-spacing: .1em;
+      }
+
+      .profile-self-preview p {
+        margin: 6px 0 0;
+        color: #d6dce4;
+        font-size: 12px;
+        line-height: 1.4;
+      }
+
+      .profile-layout-compact .modal-profile-header {
+        padding: 22px 18px 18px;
+      }
+
+      .profile-layout-compact .modal-avatar {
+        width: 92px;
+        height: 92px;
+      }
+
+      .profile-layout-compact .modal-content {
+        padding: 18px;
+      }
+
+      .profile-layout-showcase .modal-profile-header {
+        min-height: 320px;
+      }
+
+      .admin-members-panel {
+        margin-top: 22px;
+        border: 1px solid #3a4350;
+        border-radius: 16px;
+        padding: 18px;
+        background: rgba(22,27,35,.82);
+      }
+
+      .admin-members-heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 15px;
+        margin-bottom: 14px;
+      }
+
+      .admin-members-heading h2 {
+        margin: 3px 0 4px;
+      }
+
+      .admin-members-heading p {
+        margin: 0;
+        color: #929ca7;
+        font-size: 11px;
+      }
+
+      .admin-member-count {
+        min-width: 64px;
+        padding: 7px;
+        border: 1px solid #3d4653;
+        border-radius: 9px;
+        text-align: center;
+      }
+
+      .admin-member-count small {
+        display: block;
+        color: #7f8995;
+        font-size: 8px;
+      }
+
+      .admin-member-cards {
+        display: grid;
+        gap: 9px;
+      }
+
+      .admin-member-card {
+        border: 1px solid #3a4350;
+        border-radius: 13px;
+        padding: 13px;
+        background: rgba(28,33,40,.9);
+      }
+
+      .admin-member-card.head-admin-card {
+        border-color: #c9a92b;
+        background: rgba(55,46,20,.42);
+      }
+
+      .admin-member-card.admin-card {
+        border-color: rgba(221,92,92,.7);
+        background: rgba(65,27,30,.34);
+      }
+
+      .admin-member-card.supporter-card {
+        border-color: rgba(55,189,105,.7);
+        background: rgba(23,61,37,.32);
+      }
+
+      .admin-member-card-top {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .admin-member-person-button {
+        display: flex;
+        gap: 9px;
+        align-items: center;
+        border: 0;
+        background: transparent;
+        color: inherit;
+        text-align: left;
+        padding: 0;
+      }
+
+      .admin-member-person-button > span {
+        display: grid;
+        gap: 2px;
+      }
+
+      .admin-member-person-button strong {
+        font-size: 13px;
+      }
+
+      .admin-member-person-button small {
+        color: #919ba6;
+        font-size: 9px;
+      }
+
+      .admin-member-avatar {
+        width: 42px;
+        height: 42px;
+        border-radius: 11px;
+        object-fit: cover;
+        border: 1px solid #5b6572;
+      }
+
+      .admin-member-status {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 8px;
+      }
+
+      .admin-member-status span {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #707b87;
+      }
+
+      .admin-member-status.online span {
+        background: #42d878;
+      }
+
+      .admin-member-card-info {
+        display: grid;
+        grid-template-columns: repeat(3,minmax(0,1fr));
+        gap: 6px;
+        margin-top: 10px;
+      }
+
+      .admin-member-card-info > div {
+        border: 1px solid #313a46;
+        border-radius: 8px;
+        padding: 6px 7px;
+        background: rgba(13,17,22,.4);
+      }
+
+      .admin-member-card-info span {
+        display: block;
+        color: #7f8995;
+        font-size: 8px;
+        text-transform: uppercase;
+      }
+
+      .admin-member-card-info strong {
+        display: block;
+        margin-top: 2px;
+        font-size: 11px;
+      }
+
+      .admin-member-card-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        margin-top: 9px;
+      }
+
+      .admin-member-card-actions button {
+        border: 1px solid #47515f;
+        border-radius: 7px;
+        padding: 6px 8px;
+        background: rgba(23,29,36,.9);
+        color: #edf2f7;
+        font-size: 9px;
+      }
+
+      @media (min-width: 1280px) {
+        main {
+          margin-right: 210px !important;
+          width: auto;
+          max-width: 1450px;
+        }
+      }
+
+      @media (max-width: 900px) {
+        .profile-design-grid,
+        .admin-member-card-info {
+          grid-template-columns: repeat(2,minmax(0,1fr));
+        }
+
+        .profile-showcase {
+          position: static;
         }
       }
     `}</style>
