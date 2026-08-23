@@ -5226,9 +5226,8 @@ function GlobalStyle() {
 
       }
 
-    `}</style>
-  );
-      .homepage-builder {
+    
+.homepage-builder {
         margin-bottom: 22px;
       }
 
