@@ -1,1415 +1,280 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "./supabaseClient";
 
-function getName(member) {
+const emptyRegister = { first_name: "", last_name: "", nickname: "", birth_date: "", email: "", password: "" };
+const emptyLogin = { email: "", password: "" };
+const emptyGroup = { name: "", description: "", image_url: "" };
+const emptyEvent = { title: "", description: "", location: "", event_date: "", image_url: "" };
+const emptyNews = { title: "", content: "" };
+
+function nameOf(member) {
   if (!member) return "Mitglied";
-
-  return (
-    member.nickname ||
-    `${member.first_name || ""} ${member.last_name || ""}`.trim() ||
-    "Mitglied"
-  );
+  return member.nickname || `${member.first_name || ""} ${member.last_name || ""}`.trim() || "Mitglied";
 }
 
-function getInitial(member) {
-  return getName(member).charAt(0).toUpperCase();
-}
-
-function normalizeRole(role) {
-  return String(role || "MEMBER").toUpperCase();
-}
-
-function roleLabel(role) {
-  const value = normalizeRole(role);
-
-  if (value === "ADMIN" || value === "HEAD_ADMIN") {
-    return "Admin";
-  }
-
-  if (value === "SUPPORTER") {
-    return "Supporter";
-  }
-
-  return "Mitglied";
+function roleOf(role) {
+  return String(role || "member").toLowerCase();
 }
 
 function isAdmin(role) {
-  const value = normalizeRole(role);
-
-  return value === "ADMIN" || value === "HEAD_ADMIN";
+  const value = roleOf(role);
+  return value === "admin" || value === "head_admin" || value === "head-admin";
 }
 
-function Avatar({ member }) {
+function roleLabel(role) {
+  if (isAdmin(role)) return "Admin";
+  if (roleOf(role) === "supporter") return "Supporter";
+  return "Mitglied";
+}
+
+function roleClass(role) {
+  if (isAdmin(role)) return "admin";
+  if (roleOf(role) === "supporter") return "supporter";
+  return "member";
+}
+
+function Avatar({ member, large = false }) {
+  const label = nameOf(member);
   return (
-    <div className="member-avatar">
-      {member?.avatar_url ? (
-        <img
-          src={member.avatar_url}
-          alt={getName(member)}
-        />
-      ) : (
-        getInitial(member)
-      )}
+    <div className={`avatar ${large ? "avatar-large" : ""}`}>
+      {member?.avatar_url ? <img src={member.avatar_url} alt={label} /> : <span>{label.charAt(0).toUpperCase()}</span>}
     </div>
   );
 }
 
-function App() {
-  const [page, setPage] = useState("home");
+function formatDate(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("de-AT", { dateStyle: "medium", timeStyle: value.includes?.("T") ? "short" : undefined }).format(date);
+}
 
+export default function App() {
+  const [page, setPage] = useState("home");
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
-
   const [members, setMembers] = useState([]);
   const [groups, setGroups] = useState([]);
   const [events, setEvents] = useState([]);
   const [news, setNews] = useState([]);
-
   const [search, setSearch] = useState("");
-
   const [loading, setLoading] = useState(true);
-
   const [authMode, setAuthMode] = useState(null);
+  const [notice, setNotice] = useState("");
+  const [registerForm, setRegisterForm] = useState(emptyRegister);
+  const [loginForm, setLoginForm] = useState(emptyLogin);
+  const [groupForm, setGroupForm] = useState(emptyGroup);
+  const [eventForm, setEventForm] = useState(emptyEvent);
+  const [newsForm, setNewsForm] = useState(emptyNews);
 
-  const [message, setMessage] = useState("");
-
-  const [registerForm, setRegisterForm] = useState({
-    first_name: "",
-    last_name: "",
-    nickname: "",
-    birth_date: "",
-    email: "",
-    password: ""
-  });
-
-  const [loginForm, setLoginForm] = useState({
-    email: "",
-    password: ""
-  });
-
-  const [groupForm, setGroupForm] = useState({
-    name: "",
-    description: "",
-    image_url: ""
-  });
-
-  const [eventForm, setEventForm] = useState({
-    title: "",
-    description: "",
-    location: "",
-    event_date: "",
-    image_url: ""
-  });
-
-  const [newsForm, setNewsForm] = useState({
-    title: "",
-    content: ""
-  });
-
-  function showMessage(text) {
-    setMessage(text);
-
-    setTimeout(() => {
-      setMessage("");
-    }, 5000);
+  function showNotice(text) {
+    setNotice(text);
+    window.clearTimeout(showNotice.timer);
+    showNotice.timer = window.setTimeout(() => setNotice(""), 5000);
   }
 
-  async function loadProfile(userId) {
-    if (!userId) {
-      setProfile(null);
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", userId)
-      .maybeSingle();
-
-    if (error) {
-      console.error("Profil Fehler:", error);
-      return;
-    }
-
-    setProfile(data);
-  }
-
-  async function loadMembers() {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*");
-
-    if (error) {
-      console.error("Mitglieder Fehler:", error);
-      return;
-    }
-
-    setMembers(data || []);
-  }
-
-  async function loadGroups() {
-    const { data, error } = await supabase
-      .from("groups")
-      .select("*")
-      .order("created_at", {
-        ascending: false
-      });
-
-    if (error) {
-      console.error("Gruppen Fehler:", error);
-      return;
-    }
-
-    setGroups(data || []);
-  }
-
-  async function loadEvents() {
-    const { data, error } = await supabase
-      .from("events")
-      .select("*")
-      .order("event_date", {
-        ascending: true
-      });
-
-    if (error) {
-      console.error("Events Fehler:", error);
-      return;
-    }
-
-    setEvents(data || []);
-  }
-
-  async function loadNews() {
-    const { data, error } = await supabase
-      .from("news")
-      .select("*")
-      .order("created_at", {
-        ascending: false
-      });
-
-    if (error) {
-      console.error("News Fehler:", error);
-      return;
-    }
-
-    setNews(data || []);
-  }
-
-  async function loadEverything(userId) {
+  async function loadAll(userId) {
     setLoading(true);
-
-    await Promise.all([
-      loadMembers(),
-      loadGroups(),
-      loadEvents(),
-      loadNews()
+    const [membersResult, groupsResult, eventsResult, newsResult, profileResult] = await Promise.all([
+      supabase.from("profiles").select("*"),
+      supabase.from("groups").select("*").order("created_at", { ascending: false }),
+      supabase.from("events").select("*").order("event_date", { ascending: true }),
+      supabase.from("news").select("*").order("created_at", { ascending: false }),
+      userId ? supabase.from("profiles").select("*").eq("id", userId).maybeSingle() : Promise.resolve({ data: null })
     ]);
 
-    if (userId) {
-      await loadProfile(userId);
-    } else {
-      setProfile(null);
-    }
+    if (membersResult.error) console.error("Mitglieder:", membersResult.error);
+    if (groupsResult.error) console.error("Gruppen:", groupsResult.error);
+    if (eventsResult.error) console.error("Events:", eventsResult.error);
+    if (newsResult.error) console.error("News:", newsResult.error);
+    if (profileResult.error) console.error("Profil:", profileResult.error);
 
+    setMembers(membersResult.data || []);
+    setGroups(groupsResult.data || []);
+    setEvents(eventsResult.data || []);
+    setNews(newsResult.data || []);
+    setProfile(profileResult.data || null);
     setLoading(false);
   }
 
   useEffect(() => {
-    async function initialize() {
-      const {
-        data: { session }
-      } = await supabase.auth.getSession();
-
-      setSession(session);
-
-      await loadEverything(session?.user?.id);
+    let active = true;
+    async function init() {
+      const { data } = await supabase.auth.getSession();
+      if (!active) return;
+      setSession(data.session);
+      await loadAll(data.session?.user?.id);
     }
-
-    initialize();
-
-    const {
-      data: { subscription }
-    } = supabase.auth.onAuthStateChange(
-      async (_event, newSession) => {
-        setSession(newSession);
-
-        if (newSession?.user?.id) {
-          await loadEverything(newSession.user.id);
-        } else {
-          setProfile(null);
-        }
-      }
-    );
-
+    init();
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+      loadAll(nextSession?.user?.id);
+    });
     return () => {
-      subscription.unsubscribe();
+      active = false;
+      listener.subscription.unsubscribe();
     };
   }, []);
 
   const sortedMembers = useMemo(() => {
-    const searchValue = search.trim().toLowerCase();
-
-    const filtered = members.filter((member) => {
-      if (!searchValue) return true;
-
-      const name = getName(member).toLowerCase();
-
-      const fullName = `${member.first_name || ""} ${
-        member.last_name || ""
-      }`.toLowerCase();
-
-      return (
-        name.includes(searchValue) ||
-        fullName.includes(searchValue)
-      );
-    });
-
-    return [...filtered].sort((a, b) => {
-      const roleA = normalizeRole(a.role);
-      const roleB = normalizeRole(b.role);
-
-      function priority(role) {
-        if (
-          role === "ADMIN" ||
-          role === "HEAD_ADMIN"
-        ) {
-          return 1;
-        }
-
-        if (role === "SUPPORTER") {
-          return 2;
-        }
-
-        return 3;
-      }
-
-      const priorityA = priority(roleA);
-      const priorityB = priority(roleB);
-
-      if (priorityA !== priorityB) {
-        return priorityA - priorityB;
-      }
-
-      return getName(a).localeCompare(
-        getName(b),
-        "de"
-      );
-    });
+    const query = search.trim().toLowerCase();
+    const priority = (role) => isAdmin(role) ? 0 : roleOf(role) === "supporter" ? 1 : 2;
+    return members
+      .filter((member) => {
+        if (!query) return true;
+        return [nameOf(member), member.first_name, member.last_name, member.nickname]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase()
+          .includes(query);
+      })
+      .sort((a, b) => priority(a.role) - priority(b.role) || nameOf(a).localeCompare(nameOf(b), "de"));
   }, [members, search]);
 
-  const admins = sortedMembers.filter((member) =>
-    isAdmin(member.role)
-  );
-
-  const supporters = sortedMembers.filter(
-    (member) =>
-      normalizeRole(member.role) === "SUPPORTER"
-  );
-
-  const normalMembers = sortedMembers.filter(
-    (member) =>
-      !isAdmin(member.role) &&
-      normalizeRole(member.role) !== "SUPPORTER"
-  );
+  const admins = sortedMembers.filter((m) => isAdmin(m.role));
+  const supporters = sortedMembers.filter((m) => roleOf(m.role) === "supporter");
+  const regularMembers = sortedMembers.filter((m) => !isAdmin(m.role) && roleOf(m.role) !== "supporter");
 
   async function register(event) {
     event.preventDefault();
-
-    const { error } =
-      await supabase.auth.signUp({
-        email: registerForm.email.trim(),
-        password: registerForm.password,
-        options: {
-          emailRedirectTo: window.location.origin,
-          data: {
-            first_name:
-              registerForm.first_name.trim(),
-
-            last_name:
-              registerForm.last_name.trim(),
-
-            nickname:
-              registerForm.nickname.trim(),
-
-            birth_date:
-              registerForm.birth_date
-          }
+    const { error } = await supabase.auth.signUp({
+      email: registerForm.email.trim(),
+      password: registerForm.password,
+      options: {
+        emailRedirectTo: window.location.origin,
+        data: {
+          first_name: registerForm.first_name.trim(),
+          last_name: registerForm.last_name.trim(),
+          nickname: registerForm.nickname.trim(),
+          birth_date: registerForm.birth_date || null
         }
-      });
-
-    if (error) {
-      showMessage(error.message);
-      return;
-    }
-
-    showMessage(
-      "Registrierung erfolgreich. Bitte bestätige deine E-Mail."
-    );
-
+      }
+    });
+    if (error) return showNotice(error.message);
+    setRegisterForm(emptyRegister);
     setAuthMode(null);
+    showNotice("Registrierung erfolgreich. Bitte bestätige deine E-Mail, falls die Bestätigung aktiviert ist.");
   }
 
   async function login(event) {
     event.preventDefault();
-
-    const { error } =
-      await supabase.auth.signInWithPassword({
-        email: loginForm.email.trim(),
-        password: loginForm.password
-      });
-
-    if (error) {
-      showMessage(error.message);
-      return;
-    }
-
-    showMessage("Erfolgreich angemeldet.");
-
+    const { error } = await supabase.auth.signInWithPassword({ email: loginForm.email.trim(), password: loginForm.password });
+    if (error) return showNotice(error.message);
+    setLoginForm(emptyLogin);
     setAuthMode(null);
+    showNotice("Du bist angemeldet.");
   }
 
   async function logout() {
-    const { error } =
-      await supabase.auth.signOut();
-
-    if (error) {
-      showMessage(error.message);
-      return;
-    }
-
-    setProfile(null);
-    setSession(null);
-
-    showMessage("Du wurdest abgemeldet.");
-
+    const { error } = await supabase.auth.signOut();
+    if (error) return showNotice(error.message);
     setPage("home");
+    showNotice("Du wurdest abgemeldet.");
   }
 
   async function createGroup(event) {
     event.preventDefault();
-
-    if (!session?.user) {
-      showMessage(
-        "Du musst angemeldet sein."
-      );
-
-      return;
-    }
-
-    const { error } =
-      await supabase
-        .from("groups")
-        .insert({
-          owner_id: session.user.id,
-
-          name:
-            groupForm.name.trim(),
-
-          description:
-            groupForm.description.trim(),
-
-          image_url:
-            groupForm.image_url.trim() || null
-        });
-
-    if (error) {
-      showMessage(error.message);
-      return;
-    }
-
-    showMessage(
-      "Gruppe wurde erstellt."
-    );
-
-    setGroupForm({
-      name: "",
-      description: "",
-      image_url: ""
-    });
-
-    await loadGroups();
+    if (!session?.user) return showNotice("Bitte zuerst anmelden.");
+    const { error } = await supabase.from("groups").insert({ owner_id: session.user.id, name: groupForm.name.trim(), description: groupForm.description.trim(), image_url: groupForm.image_url.trim() || null });
+    if (error) return showNotice(error.message);
+    setGroupForm(emptyGroup);
+    await loadAll(session.user.id);
+    showNotice("Gruppe wurde erstellt.");
   }
 
   async function createEvent(event) {
     event.preventDefault();
-
-    if (!session?.user) {
-      showMessage(
-        "Du musst angemeldet sein."
-      );
-
-      return;
-    }
-
-    const { error } =
-      await supabase
-        .from("events")
-        .insert({
-          creator_id: session.user.id,
-
-          title:
-            eventForm.title.trim(),
-
-          description:
-            eventForm.description.trim(),
-
-          location:
-            eventForm.location.trim(),
-
-          event_date:
-            eventForm.event_date,
-
-          image_url:
-            eventForm.image_url.trim() || null
-        });
-
-    if (error) {
-      showMessage(error.message);
-      return;
-    }
-
-    showMessage(
-      "Event wurde erstellt."
-    );
-
-    setEventForm({
-      title: "",
-      description: "",
-      location: "",
-      event_date: "",
-      image_url: ""
-    });
-
-    await loadEvents();
+    if (!session?.user) return showNotice("Bitte zuerst anmelden.");
+    const { error } = await supabase.from("events").insert({ creator_id: session.user.id, title: eventForm.title.trim(), description: eventForm.description.trim(), location: eventForm.location.trim(), event_date: eventForm.event_date, image_url: eventForm.image_url.trim() || null });
+    if (error) return showNotice(error.message);
+    setEventForm(emptyEvent);
+    await loadAll(session.user.id);
+    showNotice("Event wurde erstellt.");
   }
 
   async function createNews(event) {
     event.preventDefault();
-
-    if (!session?.user || !isAdmin(profile?.role)) {
-      showMessage(
-        "Nur Admins können News erstellen."
-      );
-
-      return;
-    }
-
-    const { error } =
-      await supabase
-        .from("news")
-        .insert({
-          author_id: session.user.id,
-
-          title:
-            newsForm.title.trim(),
-
-          content:
-            newsForm.content.trim()
-        });
-
-    if (error) {
-      showMessage(error.message);
-      return;
-    }
-
-    showMessage(
-      "News wurde veröffentlicht."
-    );
-
-    setNewsForm({
-      title: "",
-      content: ""
-    });
-
-    await loadNews();
+    if (!session?.user || !isAdmin(profile?.role)) return showNotice("Nur Admins können News veröffentlichen.");
+    const { error } = await supabase.from("news").insert({ author_id: session.user.id, title: newsForm.title.trim(), content: newsForm.content.trim() });
+    if (error) return showNotice(error.message);
+    setNewsForm(emptyNews);
+    await loadAll(session.user.id);
+    showNotice("News wurde veröffentlicht.");
   }
 
-  if (loading) {
-    return (
-      <div className="app-loading">
-        Community wird geladen...
-      </div>
-    );
-  }
+  const setPageAndClose = (next) => { setPage(next); window.scrollTo({ top: 0, behavior: "smooth" }); };
+
+  if (loading) return <div className="app-loading">Community wird geladen…</div>;
 
   return (
     <div className="app">
-
       <header className="site-header">
-
-        <div
-          className="brand"
-          onClick={() =>
-            setPage("home")
-          }
-        >
-          ENNSTAL CONNECT
-        </div>
-
-        <nav className="navigation">
-
-          <button
-            className={
-              page === "home"
-                ? "active"
-                : ""
-            }
-            onClick={() =>
-              setPage("home")
-            }
-          >
-            Start
-          </button>
-
-          <button
-            className={
-              page === "members"
-                ? "active"
-                : ""
-            }
-            onClick={() =>
-              setPage("members")
-            }
-          >
-            Mitglieder
-          </button>
-
-          <button
-            className={
-              page === "groups"
-                ? "active"
-                : ""
-            }
-            onClick={() =>
-              setPage("groups")
-            }
-          >
-            Gruppen
-          </button>
-
-          <button
-            className={
-              page === "events"
-                ? "active"
-                : ""
-            }
-            onClick={() =>
-              setPage("events")
-            }
-          >
-            Events
-          </button>
-
+        <button className="brand" onClick={() => setPageAndClose("home")}>ENNSTAL <span>CONNECT</span></button>
+        <nav className="navigation" aria-label="Hauptnavigation">
+          {[ ["home", "Start"], ["members", "Mitglieder"], ["groups", "Gruppen"], ["events", "Events"] ].map(([id, label]) => (
+            <button key={id} className={page === id ? "active" : ""} onClick={() => setPageAndClose(id)}>{label}</button>
+          ))}
         </nav>
-
         <div className="header-user">
-
-          {session ? (
-            <>
-              <span>
-                {getName(profile)}
-              </span>
-
-              <button
-                onClick={logout}
-              >
-                Abmelden
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                onClick={() =>
-                  setAuthMode("login")
-                }
-              >
-                Anmelden
-              </button>
-
-              <button
-                className="primary-button"
-                onClick={() =>
-                  setAuthMode("register")
-                }
-              >
-                Mitglied werden
-              </button>
-            </>
-          )}
-
+          {session ? <><span className="signed-in">{nameOf(profile)}</span><button onClick={logout}>Abmelden</button></> : <><button onClick={() => setAuthMode("login")}>Anmelden</button><button className="primary-button" onClick={() => setAuthMode("register")}>Mitglied werden</button></>}
         </div>
-
       </header>
 
-      {message && (
-        <div className="message">
-          {message}
-        </div>
-      )}
+      {notice && <div className="notice">{notice}</div>}
 
       <main className="main-content">
-
-        {/* STARTSEITE */}
-
-        {page === "home" && (
-          <section>
-
-            <div className="hero">
-              <span>
-                WILLKOMMEN
-              </span>
-
-              <h1>
-                Deine Community.
-                <br />
-                Deine Region.
-              </h1>
-
-              <p>
-                Verbinde dich mit Menschen,
-                entdecke Gruppen und bleibe
-                über Events und Neuigkeiten
-                informiert.
-              </p>
-
-              <button
-                className="primary-button"
-                onClick={() =>
-                  setPage("members")
-                }
-              >
-                Mitglieder entdecken
-              </button>
-            </div>
-
-            <div className="section-heading">
-              <div>
-                <span className="eyebrow">
-                  AKTUELLES
-                </span>
-
-                <h2>
-                  Neuigkeiten
-                </h2>
-              </div>
-            </div>
-
-            {isAdmin(profile?.role) && (
-              <form
-                className="create-form"
-                onSubmit={createNews}
-              >
-                <h3>
-                  News erstellen
-                </h3>
-
-                <input
-                  placeholder="Titel"
-                  required
-                  value={newsForm.title}
-                  onChange={(e) =>
-                    setNewsForm({
-                      ...newsForm,
-                      title: e.target.value
-                    })
-                  }
-                />
-
-                <textarea
-                  placeholder="Neuigkeit schreiben..."
-                  required
-                  value={newsForm.content}
-                  onChange={(e) =>
-                    setNewsForm({
-                      ...newsForm,
-                      content: e.target.value
-                    })
-                  }
-                />
-
-                <button
-                  className="primary-button"
-                >
-                  Veröffentlichen
-                </button>
-              </form>
-            )}
-
-            <div className="news-grid">
-
-              {news.map((item) => (
-                <article
-                  className="news-card"
-                  key={item.id}
-                >
-                  <h3>
-                    {item.title}
-                  </h3>
-
-                  <p>
-                    {item.content}
-                  </p>
-
-                  <small>
-                    {item.created_at
-                      ? new Date(
-                          item.created_at
-                        ).toLocaleDateString(
-                          "de-DE"
-                        )
-                      : ""}
-                  </small>
-                </article>
-              ))}
-
-              {!news.length && (
-                <div className="empty-card">
-                  Noch keine Neuigkeiten vorhanden.
-                </div>
-              )}
-
-            </div>
-
+        {page === "home" && <>
+          <section className="hero">
+            <span className="eyebrow">WILLKOMMEN</span>
+            <h1>Deine Community.<br />Deine Region.</h1>
+            <p>Verbinde dich mit Menschen, entdecke Gruppen und bleibe über Events und Neuigkeiten informiert.</p>
+            <button className="primary-button" onClick={() => setPageAndClose("members")}>Mitglieder entdecken</button>
           </section>
-        )}
 
-        {/* MITGLIEDER */}
-
-        {page === "members" && (
-          <section>
-
-            <div className="section-heading members-heading">
-
-              <div>
-                <span className="eyebrow">
-                  COMMUNITY
-                </span>
-
-                <h1>
-                  Mitgliederübersicht
-                </h1>
-
-                <p>
-                  Entdecke alle registrierten
-                  Mitglieder.
-                </p>
-              </div>
-
-              <input
-                className="search-input"
-                placeholder="🔍 Mitglied suchen..."
-                value={search}
-                onChange={(e) =>
-                  setSearch(e.target.value)
-                }
-              />
-
+          <section className="content-section">
+            <div className="section-heading"><div><span className="eyebrow">AKTUELLES</span><h2>Neuigkeiten</h2></div></div>
+            {isAdmin(profile?.role) && <form className="create-form" onSubmit={createNews}>
+              <h3>News erstellen</h3>
+              <input required placeholder="Titel" value={newsForm.title} onChange={(e) => setNewsForm({ ...newsForm, title: e.target.value })} />
+              <textarea required placeholder="Neuigkeit schreiben…" value={newsForm.content} onChange={(e) => setNewsForm({ ...newsForm, content: e.target.value })} />
+              <button className="primary-button">Veröffentlichen</button>
+            </form>}
+            <div className="news-list">
+              {news.length ? news.map((item) => <article className="news-card" key={item.id}><div className="card-meta">NEWS · {formatDate(item.created_at)}</div><h3>{item.title}</h3><p>{item.content}</p></article>) : <div className="empty-state">Noch keine Neuigkeiten vorhanden.</div>}
             </div>
-
-            {admins.length > 0 && (
-              <>
-                <h2 className="member-section-title">
-                  ⭐ Admins
-                </h2>
-
-                <div className="member-grid">
-                  {admins.map((member) => (
-                    <article
-                      className="member-card role-admin"
-                      key={member.id}
-                    >
-                      <Avatar
-                        member={member}
-                      />
-
-                      <div className="member-info">
-
-                        <h3>
-                          {getName(member)}
-                        </h3>
-
-                        <span className="role-badge">
-                          ⭐ Admin
-                        </span>
-
-                        {member.location && (
-                          <p>
-                            📍 {member.location}
-                          </p>
-                        )}
-
-                        <div className="member-points">
-                          ★{" "}
-                          {member.community_points ||
-                            0}{" "}
-                          Punkte
-                        </div>
-
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              </>
-            )}
-
-            {supporters.length > 0 && (
-              <>
-                <h2 className="member-section-title">
-                  ★ Supporter
-                </h2>
-
-                <div className="member-grid">
-                  {supporters.map((member) => (
-                    <article
-                      className="member-card role-supporter"
-                      key={member.id}
-                    >
-                      <Avatar
-                        member={member}
-                      />
-
-                      <div className="member-info">
-
-                        <h3>
-                          {getName(member)}
-                        </h3>
-
-                        <span className="role-badge">
-                          ★ Supporter
-                        </span>
-
-                        {member.location && (
-                          <p>
-                            📍 {member.location}
-                          </p>
-                        )}
-
-                        <div className="member-points">
-                          ★{" "}
-                          {member.community_points ||
-                            0}{" "}
-                          Punkte
-                        </div>
-
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              </>
-            )}
-
-            <h2 className="member-section-title">
-              Mitglieder A–Z
-            </h2>
-
-            <div className="member-grid">
-
-              {normalMembers.map((member) => (
-                <article
-                  className="member-card role-member"
-                  key={member.id}
-                >
-                  <Avatar
-                    member={member}
-                  />
-
-                  <div className="member-info">
-
-                    <h3>
-                      {getName(member)}
-                    </h3>
-
-                    <span className="role-badge">
-                      {roleLabel(member.role)}
-                    </span>
-
-                    {member.location && (
-                      <p>
-                        📍 {member.location}
-                      </p>
-                    )}
-
-                    <div className="member-points">
-                      ★{" "}
-                      {member.community_points ||
-                        0}{" "}
-                      Punkte
-                    </div>
-
-                  </div>
-                </article>
-              ))}
-
-              {!sortedMembers.length && (
-                <div className="empty-card">
-                  Keine Mitglieder gefunden.
-                </div>
-              )}
-
-            </div>
-
           </section>
-        )}
+        </>}
 
-        {/* GRUPPEN */}
+        {page === "members" && <section className="content-section">
+          <div className="section-heading"><div><span className="eyebrow">COMMUNITY</span><h1>Mitgliederübersicht</h1><p>Admins zuerst, danach Supporter und anschließend alle weiteren Mitglieder alphabetisch.</p></div><div className="member-count">{sortedMembers.length} Mitglieder</div></div>
+          <input className="member-search" placeholder="Mitglied suchen…" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <MemberSection title="Admins" members={admins} empty="Keine Admins gefunden." />
+          <MemberSection title="Supporter" members={supporters} empty="Keine Supporter gefunden." />
+          <MemberSection title="Mitglieder" members={regularMembers} empty="Keine Mitglieder gefunden." />
+        </section>}
 
-        {page === "groups" && (
-          <section>
+        {page === "groups" && <section className="content-section">
+          <div className="section-heading"><div><span className="eyebrow">GEMEINSAM</span><h1>Gruppen</h1><p>Finde oder erstelle eine Gruppe für gemeinsame Interessen.</p></div></div>
+          {session && <form className="create-form" onSubmit={createGroup}><h3>Neue Gruppe erstellen</h3><input required placeholder="Gruppenname" value={groupForm.name} onChange={(e) => setGroupForm({ ...groupForm, name: e.target.value })} /><textarea placeholder="Beschreibung" value={groupForm.description} onChange={(e) => setGroupForm({ ...groupForm, description: e.target.value })} /><input placeholder="Bild-URL (optional)" value={groupForm.image_url} onChange={(e) => setGroupForm({ ...groupForm, image_url: e.target.value })} /><button className="primary-button">Gruppe erstellen</button></form>}
+          <div className="content-grid">{groups.length ? groups.map((group) => <article className="content-card" key={group.id}>{group.image_url && <img src={group.image_url} alt="" />}<h3>{group.name}</h3><p>{group.description || "Noch keine Beschreibung."}</p></article>) : <div className="empty-state">Noch keine Gruppen vorhanden.</div>}</div>
+        </section>}
 
-            <div className="section-heading">
-
-              <div>
-                <span className="eyebrow">
-                  GEMEINSCHAFT
-                </span>
-
-                <h1>
-                  Gruppen
-                </h1>
-              </div>
-
-            </div>
-
-            {session && (
-              <form
-                className="create-form"
-                onSubmit={createGroup}
-              >
-
-                <h3>
-                  Neue Gruppe erstellen
-                </h3>
-
-                <input
-                  placeholder="Gruppenname"
-                  required
-                  value={groupForm.name}
-                  onChange={(e) =>
-                    setGroupForm({
-                      ...groupForm,
-                      name: e.target.value
-                    })
-                  }
-                />
-
-                <textarea
-                  placeholder="Beschreibung"
-                  required
-                  value={groupForm.description}
-                  onChange={(e) =>
-                    setGroupForm({
-                      ...groupForm,
-                      description: e.target.value
-                    })
-                  }
-                />
-
-                <input
-                  placeholder="Bild URL (optional)"
-                  value={groupForm.image_url}
-                  onChange={(e) =>
-                    setGroupForm({
-                      ...groupForm,
-                      image_url: e.target.value
-                    })
-                  }
-                />
-
-                <button
-                  className="primary-button"
-                >
-                  Gruppe erstellen
-                </button>
-
-              </form>
-            )}
-
-            <div className="group-grid">
-
-              {groups.map((group) => (
-                <article
-                  className="group-card"
-                  key={group.id}
-                >
-
-                  {group.image_url && (
-                    <img
-                      src={group.image_url}
-                      alt={group.name}
-                    />
-                  )}
-
-                  <div className="group-card-content">
-
-                    <h3>
-                      {group.name}
-                    </h3>
-
-                    <p>
-                      {group.description}
-                    </p>
-
-                  </div>
-
-                </article>
-              ))}
-
-              {!groups.length && (
-                <div className="empty-card">
-                  Noch keine Gruppen vorhanden.
-                </div>
-              )}
-
-            </div>
-
-          </section>
-        )}
-
-        {/* EVENTS */}
-
-        {page === "events" && (
-          <section>
-
-            <div className="section-heading">
-
-              <div>
-                <span className="eyebrow">
-                  TREFFEN & AKTIVITÄTEN
-                </span>
-
-                <h1>
-                  Events
-                </h1>
-              </div>
-
-            </div>
-
-            {session && (
-              <form
-                className="create-form"
-                onSubmit={createEvent}
-              >
-
-                <h3>
-                  Event erstellen
-                </h3>
-
-                <input
-                  placeholder="Titel"
-                  required
-                  value={eventForm.title}
-                  onChange={(e) =>
-                    setEventForm({
-                      ...eventForm,
-                      title: e.target.value
-                    })
-                  }
-                />
-
-                <textarea
-                  placeholder="Beschreibung"
-                  required
-                  value={eventForm.description}
-                  onChange={(e) =>
-                    setEventForm({
-                      ...eventForm,
-                      description: e.target.value
-                    })
-                  }
-                />
-
-                <input
-                  placeholder="Ort"
-                  required
-                  value={eventForm.location}
-                  onChange={(e) =>
-                    setEventForm({
-                      ...eventForm,
-                      location: e.target.value
-                    })
-                  }
-                />
-
-                <input
-                  type="datetime-local"
-                  required
-                  value={eventForm.event_date}
-                  onChange={(e) =>
-                    setEventForm({
-                      ...eventForm,
-                      event_date: e.target.value
-                    })
-                  }
-                />
-
-                <input
-                  placeholder="Bild URL (optional)"
-                  value={eventForm.image_url}
-                  onChange={(e) =>
-                    setEventForm({
-                      ...eventForm,
-                      image_url: e.target.value
-                    })
-                  }
-                />
-
-                <button
-                  className="primary-button"
-                >
-                  Event erstellen
-                </button>
-
-              </form>
-            )}
-
-            <div className="events-grid">
-
-              {events.map((item) => (
-                <article
-                  className="event-card"
-                  key={item.id}
-                >
-
-                  {item.image_url && (
-                    <img
-                      src={item.image_url}
-                      alt={item.title}
-                    />
-                  )}
-
-                  <div className="event-content">
-
-                    <h3>
-                      {item.title}
-                    </h3>
-
-                    <p>
-                      {item.description}
-                    </p>
-
-                    <p>
-                      📍 {item.location}
-                    </p>
-
-                    <strong>
-                      📅{" "}
-                      {item.event_date
-                        ? new Date(
-                            item.event_date
-                          ).toLocaleString(
-                            "de-DE"
-                          )
-                        : ""}
-                    </strong>
-
-                  </div>
-
-                </article>
-              ))}
-
-              {!events.length && (
-                <div className="empty-card">
-                  Noch keine Events vorhanden.
-                </div>
-              )}
-
-            </div>
-
-          </section>
-        )}
-
+        {page === "events" && <section className="content-section">
+          <div className="section-heading"><div><span className="eyebrow">KALENDER</span><h1>Events</h1><p>Was ist in der Community als Nächstes geplant?</p></div></div>
+          {session && <form className="create-form" onSubmit={createEvent}><h3>Neues Event erstellen</h3><input required placeholder="Titel" value={eventForm.title} onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })} /><textarea placeholder="Beschreibung" value={eventForm.description} onChange={(e) => setEventForm({ ...eventForm, description: e.target.value })} /><input placeholder="Ort" value={eventForm.location} onChange={(e) => setEventForm({ ...eventForm, location: e.target.value })} /><input required type="datetime-local" value={eventForm.event_date} onChange={(e) => setEventForm({ ...eventForm, event_date: e.target.value })} /><input placeholder="Bild-URL (optional)" value={eventForm.image_url} onChange={(e) => setEventForm({ ...eventForm, image_url: e.target.value })} /><button className="primary-button">Event erstellen</button></form>}
+          <div className="content-grid">{events.length ? events.map((item) => <article className="content-card" key={item.id}>{item.image_url && <img src={item.image_url} alt="" />}<div className="card-meta">{formatDate(item.event_date)}</div><h3>{item.title}</h3>{item.location && <div className="event-location">📍 {item.location}</div>}<p>{item.description || "Noch keine Beschreibung."}</p></article>) : <div className="empty-state">Noch keine Events vorhanden.</div>}</div>
+        </section>}
       </main>
 
-      {/* LOGIN */}
+      {authMode && <div className="modal-backdrop" onMouseDown={() => setAuthMode(null)}><div className="auth-modal" onMouseDown={(e) => e.stopPropagation()}><button className="modal-close" onClick={() => setAuthMode(null)} aria-label="Schließen">×</button>
+        {authMode === "login" ? <form onSubmit={login}><h2>Anmelden</h2><p>Schön, dass du wieder da bist.</p><input required type="email" placeholder="E-Mail" value={loginForm.email} onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })} /><input required type="password" placeholder="Passwort" value={loginForm.password} onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })} /><button className="primary-button full">Anmelden</button><button type="button" className="text-button" onClick={() => setAuthMode("register")}>Noch kein Konto? Jetzt registrieren</button></form> : <form onSubmit={register}><h2>Mitglied werden</h2><p>Erstelle dein Konto für EnnStal Connect.</p><div className="two-inputs"><input required placeholder="Vorname" value={registerForm.first_name} onChange={(e) => setRegisterForm({ ...registerForm, first_name: e.target.value })} /><input required placeholder="Nachname" value={registerForm.last_name} onChange={(e) => setRegisterForm({ ...registerForm, last_name: e.target.value })} /></div><input placeholder="Nickname (optional)" value={registerForm.nickname} onChange={(e) => setRegisterForm({ ...registerForm, nickname: e.target.value })} /><label className="input-label">Geburtsdatum<input type="date" value={registerForm.birth_date} onChange={(e) => setRegisterForm({ ...registerForm, birth_date: e.target.value })} /></label><input required type="email" placeholder="E-Mail" value={registerForm.email} onChange={(e) => setRegisterForm({ ...registerForm, email: e.target.value })} /><input required minLength="6" type="password" placeholder="Passwort (mindestens 6 Zeichen)" value={registerForm.password} onChange={(e) => setRegisterForm({ ...registerForm, password: e.target.value })} /><button className="primary-button full">Konto erstellen</button><button type="button" className="text-button" onClick={() => setAuthMode("login")}>Bereits Mitglied? Anmelden</button></form>}
+      </div></div>}
 
-      {authMode === "login" && (
-        <div className="modal-overlay">
-
-          <form
-            className="auth-modal"
-            onSubmit={login}
-          >
-
-            <button
-              type="button"
-              className="close-button"
-              onClick={() =>
-                setAuthMode(null)
-              }
-            >
-              ×
-            </button>
-
-            <h2>
-              Anmelden
-            </h2>
-
-            <input
-              type="email"
-              placeholder="E-Mail"
-              required
-              value={loginForm.email}
-              onChange={(e) =>
-                setLoginForm({
-                  ...loginForm,
-                  email: e.target.value
-                })
-              }
-            />
-
-            <input
-              type="password"
-              placeholder="Passwort"
-              required
-              value={loginForm.password}
-              onChange={(e) =>
-                setLoginForm({
-                  ...loginForm,
-                  password: e.target.value
-                })
-              }
-            />
-
-            <button
-              className="primary-button"
-            >
-              Anmelden
-            </button>
-
-          </form>
-
-        </div>
-      )}
-
-      {/* REGISTRIERUNG */}
-
-      {authMode === "register" && (
-        <div className="modal-overlay">
-
-          <form
-            className="auth-modal"
-            onSubmit={register}
-          >
-
-            <button
-              type="button"
-              className="close-button"
-              onClick={() =>
-                setAuthMode(null)
-              }
-            >
-              ×
-            </button>
-
-            <h2>
-              Mitglied werden
-            </h2>
-
-            <input
-              placeholder="Vorname"
-              required
-              value={
-                registerForm.first_name
-              }
-              onChange={(e) =>
-                setRegisterForm({
-                  ...registerForm,
-                  first_name:
-                    e.target.value
-                })
-              }
-            />
-
-            <input
-              placeholder="Nachname"
-              required
-              value={
-                registerForm.last_name
-              }
-              onChange={(e) =>
-                setRegisterForm({
-                  ...registerForm,
-                  last_name:
-                    e.target.value
-                })
-              }
-            />
-
-            <input
-              placeholder="Nickname"
-              required
-              value={
-                registerForm.nickname
-              }
-              onChange={(e) =>
-                setRegisterForm({
-                  ...registerForm,
-                  nickname:
-                    e.target.value
-                })
-              }
-            />
-
-            <input
-              type="date"
-              value={
-                registerForm.birth_date
-              }
-              onChange={(e) =>
-                setRegisterForm({
-                  ...registerForm,
-                  birth_date:
-                    e.target.value
-                })
-              }
-            />
-
-            <input
-              type="email"
-              placeholder="E-Mail"
-              required
-              value={
-                registerForm.email
-              }
-              onChange={(e) =>
-                setRegisterForm({
-                  ...registerForm,
-                  email:
-                    e.target.value
-                })
-              }
-            />
-
-            <input
-              type="password"
-              placeholder="Passwort"
-              minLength="6"
-              required
-              value={
-                registerForm.password
-              }
-              onChange={(e) =>
-                setRegisterForm({
-                  ...registerForm,
-                  password:
-                    e.target.value
-                })
-              }
-            />
-
-            <button
-              className="primary-button"
-            >
-              Registrieren
-            </button>
-
-          </form>
-
-        </div>
-      )}
-
+      <footer>ENNSTAL CONNECT · Deine Community. Deine Region.</footer>
     </div>
   );
 }
 
-export default App;
+function MemberSection({ title, members, empty }) {
+  return <section className="member-section"><h2>{title}</h2>{members.length ? <div className="members-grid">{members.map((member) => <article className={`member-card ${roleClass(member.role)}`} key={member.id}><div className="member-role">{roleLabel(member.role)}</div><Avatar member={member} large /><h3 title={nameOf(member)}>{nameOf(member)}</h3>{member.nickname && member.first_name && <p className="member-real-name">{`${member.first_name} ${member.last_name || ""}`.trim()}</p>}<div className="member-divider" /><span>{roleLabel(member.role)}</span></article>)}</div> : <div className="empty-state small">{empty}</div>}</section>;
+}
