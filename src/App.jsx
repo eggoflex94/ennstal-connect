@@ -2015,47 +2015,9 @@ export default function App() {
                   />
 
                   <label>Profilbild hochladen</label>
-
-<div className="profile-upload-box">
-
-  <div className="profile-upload-preview">
-    <img
-      src={
-        profile?.avatar_url ||
-        "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Crect width='160' height='160' fill='%23e9edf1'/%3E%3Ctext x='80' y='88' text-anchor='middle' font-size='50' fill='%23818a94'%3E%3F%3C/text%3E%3C/svg%3E"
-      }
-      alt="Profilbild"
-    />
-  </div>
-
-  <div className="profile-upload-controls">
-
-    <label className="upload-button">
-      📷 Bild auswählen
-
-      <input
-        type="file"
-        accept="image/png,image/jpeg,image/webp,image/gif"
-        hidden
-        onChange={async (event) => {
-          const file = event.target.files?.[0];
-
-          if (file) {
-            await uploadProfileImage(file);
-          }
-
-          event.target.value = "";
-        }}
-      />
-    </label>
-
-    <small className="form-help">
-      JPG, PNG, WEBP oder GIF · maximal 5 MB
-    </small>
-
-  </div>
-
-</div>
+                  <input type="file" name="avatar_file" accept="image/*" />
+                  <small className="form-help">Oder alternativ eine Bild-URL eintragen.</small>
+                  <input name="avatar_url" defaultValue={profile?.avatar_url || ""} placeholder="https://..." />
 
                   <label>Vorname *</label>
                   <input name="first_name" defaultValue={profile?.first_name || ""} required />
