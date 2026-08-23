@@ -629,7 +629,7 @@ export default function App() {
   };
 
   const canManageNewsItem = (item) =>
-    item?.created_by === user?.id ||
+    item?.author_id === user?.id ||
     myAdminPermission("manage_news");
 
   const canManageGroupItem = (item) =>
@@ -954,16 +954,11 @@ async function uploadProfileImage(file) {
 
     const { error } =
       await supabase
-        .from("community_news")
+        .from("news")
         .insert({
-          title:
-            form.get("title"),
-
-          content:
-            form.get("content"),
-
-          created_by:
-            user.id
+          title: String(form.get("title") || "").trim(),
+          content: String(form.get("content") || "").trim(),
+          author_id: user.id
         });
 
     if (error) {
@@ -1834,8 +1829,8 @@ async function uploadProfileImage(file) {
                       </p>
 
                       <small>
-                        Erstellt von {actorLabel(item.created_by)}
-                        {item.updated_by && item.updated_by !== item.created_by && (
+                        Erstellt von {actorLabel(item.author_id)}
+                        {item.updated_by && item.updated_by !== item.author_id && (
                           <> · Bearbeitet von {actorLabel(item.updated_by)}{["ADMIN", "HEAD_ADMIN"].includes(memberById(item.updated_by)?.role) ? " ★" : ""}</>
                         )}
                         <br />
