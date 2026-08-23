@@ -336,12 +336,12 @@ export default function App() {
       return;
     }
 
-    if (!data?.ok) {
+    if (!data?.success) {
       showNotice(data?.message || "Die Belohnung ist noch nicht verfügbar.");
       return;
     }
 
-    showNotice("10 Punkte für deine Onlinezeit erhalten!");
+    showNotice(data?.message || `${data?.points_added || 10} Punkte für deine Onlinezeit erhalten!`);
     await loadAll();
   }
 
