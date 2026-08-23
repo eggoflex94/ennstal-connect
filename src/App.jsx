@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "./supabaseClient";
 
 const blankRegister = { first_name: "", last_name: "", nickname: "", birth_date: "", email: "", password: "" };
