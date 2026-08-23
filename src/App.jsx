@@ -1196,23 +1196,7 @@ async function uploadProfileImage(file) {
               Events
             </button>
 
-            <button
-              className={
-                page === "messages"
-                  ? "active"
-                  : ""
-              }
-              onClick={() =>
-                setPage("messages")
-              }
-            >
-              💬 Nachrichten
-              {inboxMessages.length > 0 && (
-                <span className="message-count">
-                  {inboxMessages.length}
-                </span>
-              )}
-            </button>
+           
 
             {isAdmin(profile?.role) && (
               <button
