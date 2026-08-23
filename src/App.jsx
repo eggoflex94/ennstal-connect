@@ -2001,89 +2001,184 @@ export default function App() {
                     required
                   />
 
-                  <label>
-                    Nickname Farbe
-                  </label>
+                <label>
+  Nickname *
+</label>
 
-                  <input
-                    type="color"
-                    name="nickname_color"
-                    defaultValue={
-                      profile?.nickname_color ||
-                      "#ffffff"
-                    }
-                  />
+<input
+  name="nickname"
+  defaultValue={profile?.nickname || ""}
+  required
+/>
 
-                  <label>Profilbild hochladen</label>
-                  <input type="file" name="avatar_file" accept="image/*" />
-                  <small className="form-help">Oder alternativ eine Bild-URL eintragen.</small>
-                  <input name="avatar_url" defaultValue={profile?.avatar_url || ""} placeholder="https://..." />
+<label>
+  Nickname-Farbe
+</label>
 
-                  <label>Vorname *</label>
-                  <input name="first_name" defaultValue={profile?.first_name || ""} required />
+<input
+  type="color"
+  name="nickname_color"
+  defaultValue={
+    profile?.nickname_color || "#263238"
+  }
+/>
 
-                  <label>Nachname *</label>
-                  <input name="last_name" defaultValue={profile?.last_name || ""} required />
+<label>
+  Profilbild hochladen
+</label>
 
-                  <label>Geburtsdatum *</label>
-                  <input type="date" name="birth_date" defaultValue={profile?.birth_date || ""} required />
+<div className="profile-upload-box">
 
-                  <label>Geschlecht *</label>
-                  <select name="gender" defaultValue={profile?.gender || ""} required>
-                    <option value="" disabled>Bitte auswählen</option>
-                    <option value="männlich">Männlich</option>
-                    <option value="weiblich">Weiblich</option>
-                    <option value="divers">Divers</option>
-                  </select>
+  <div className="profile-upload-preview">
+    <img
+      src={
+        profile?.avatar_url ||
+        "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Crect width='160' height='160' fill='%23e9edf1'/%3E%3Ctext x='80' y='90' text-anchor='middle' font-size='55' fill='%23818a94'%3E?%3C/text%3E%3C/svg%3E"
+      }
+      alt="Profilbild"
+    />
+  </div>
 
-                  <label>
-                    Über mich
-                  </label>
+  <label className="upload-button">
+    📷 Bild auswählen
 
-                  <textarea
-                    name="bio"
-                    defaultValue={
-                      profile?.bio || ""
-                    }
-                  />
+    <input
+      type="file"
+      accept="image/png,image/jpeg,image/webp,image/gif"
+      hidden
+      onChange={async (event) => {
+        const file = event.target.files?.[0];
 
-                  <label>
-                    Wohnort
-                  </label>
+        if (file) {
+          await uploadProfileImage(file);
+        }
 
-                  <input
-                    name="location"
-                    defaultValue={
-                      profile?.location || ""
-                    }
-                  />
+        event.target.value = "";
+      }}
+    />
+  </label>
 
-                  <label>
-                    Interessen
-                  </label>
+  <small className="form-help">
+    JPG, PNG, WEBP oder GIF · maximal 5 MB
+  </small>
 
-                  <input
-                    name="interests"
-                    defaultValue={
-                      profile?.interests || ""
-                    }
-                  />
+</div>
 
-                  <label>
-                    Website
-                  </label>
+<label>
+  Vorname *
+</label>
 
-                  <input
-                    name="website"
-                    defaultValue={
-                      profile?.website || ""
-                    }
-                  />
+<input
+  name="first_name"
+  defaultValue={
+    profile?.first_name || ""
+  }
+  required
+/>
 
-                  <button className="primary-button">
-                    Änderungen speichern
-                  </button>
+<label>
+  Nachname *
+</label>
 
+<input
+  name="last_name"
+  defaultValue={
+    profile?.last_name || ""
+  }
+  required
+/>
+
+<label>
+  Geburtsdatum *
+</label>
+
+<input
+  type="date"
+  name="birth_date"
+  defaultValue={
+    profile?.birth_date || ""
+  }
+  required
+/>
+
+<label>
+  Geschlecht *
+</label>
+
+<select
+  name="gender"
+  defaultValue={
+    profile?.gender || ""
+  }
+  required
+>
+  <option value="">
+    Bitte auswählen
+  </option>
+
+  <option value="männlich">
+    Männlich
+  </option>
+
+  <option value="weiblich">
+    Weiblich
+  </option>
+
+  <option value="divers">
+    Divers
+  </option>
+</select>
+
+<label>
+  Über mich
+</label>
+
+<textarea
+  name="bio"
+  defaultValue={
+    profile?.bio || ""
+  }
+/>
+
+<label>
+  Interessen
+</label>
+
+<input
+  name="interests"
+  defaultValue={
+    profile?.interests || ""
+  }
+/>
+
+<label>
+  Wohnort
+</label>
+
+<input
+  name="location"
+  defaultValue={
+    profile?.location || ""
+  }
+/>
+
+<label>
+  Website
+</label>
+
+<input
+  name="website"
+  defaultValue={
+    profile?.website || ""
+  }
+/>
+
+<button
+  type="submit"
+  className="primary-button"
+>
+  Änderungen speichern
+</button>
                 </form>
 
               </div>
