@@ -6204,7 +6204,90 @@ function GlobalStyle() {
         border-color: rgba(220,85,85,.68) !important;
         background: rgba(120,36,36,.12) !important;
       }
+      .public-profile-data {
+        display: grid;
+        grid-template-columns:
+          repeat(2, minmax(0, 1fr));
+        gap: 9px;
+        margin-bottom: 20px;
+      }
 
+      .public-profile-data-item {
+        border: 1px solid #343d49;
+        background: rgba(27,32,40,.8);
+        border-radius: 10px;
+        padding: 10px 12px;
+      }
+
+      .public-profile-data-item span {
+        display: block;
+        color: #8994a1;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: .08em;
+      }
+
+      .public-profile-data-item strong {
+        display: block;
+        margin-top: 4px;
+        color: #f0f3f7;
+        font-size: 13px;
+      }
+
+      .profile-admin-tools {
+        margin-top: 20px;
+        padding: 16px;
+        border: 1px solid rgba(221,92,92,.55);
+        border-radius: 13px;
+        background: rgba(95,30,30,.14);
+      }
+
+      .profile-admin-tools-title span {
+        display: block;
+        color: #ff8f8f;
+        font-size: 9px;
+        letter-spacing: .12em;
+        font-weight: 800;
+      }
+
+      .profile-admin-tools-grid {
+        display: grid;
+        grid-template-columns:
+          repeat(2, minmax(0,1fr));
+        gap: 8px;
+      }
+
+      .profile-admin-button {
+        padding: 10px;
+        border-radius: 9px;
+        border: 1px solid #4c5765;
+        background: #222832;
+        color: #f2f5f8;
+        text-align: left;
+      }
+
+      .profile-admin-button.danger {
+        border-color: #c75e5e;
+        color: #ffb1b1;
+      }
+
+      .profile-admin-button.supporter {
+        border-color: #40ca70;
+        color: #86eea7;
+      }
+
+      .profile-admin-button.admin {
+        border-color: #e3bb34;
+        color: #ffe174;
+        background: rgba(105,85,20,.16);
+      }
+
+      @media (max-width: 820px) {
+        .public-profile-data,
+        .profile-admin-tools-grid {
+          grid-template-columns: 1fr;
+        }
+      }
     `}</style>
   );
 }
