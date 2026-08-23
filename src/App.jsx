@@ -4085,10 +4085,9 @@ async function changePoints(event) {
                     )}
                   </section>
                 </div>
-
-                {selectedMember.id !== user.id && (
-                {isAdmin(profile?.role) &&
+{isAdmin(profile?.role) &&
   selectedMember.id !== user.id && (
+                
     <section className="profile-admin-tools">
 
       <div className="profile-admin-tools-title">
@@ -4323,9 +4322,12 @@ async function changePoints(event) {
           </button>
         )}
 
-      </div>
+     </div>
     </section>
-  )}  <div className="profile-actions">
+  )}
+
+  {selectedMember.id !== user.id && (
+    <div className="profile-actions">
                     <button
                       className="primary-button"
                       onClick={() => {
