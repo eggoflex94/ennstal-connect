@@ -104,7 +104,8 @@ export default function App() {
       manage_events: false,
       manage_marketplace: false,
       manage_friend_requests: false,
-      manage_homepage: false
+      manage_homepage: false,
+      manage_reports: false
     });
 
   const [selectedMemberGroups, setSelectedMemberGroups] =
@@ -115,6 +116,10 @@ export default function App() {
 
   const [homepageSections, setHomepageSections] =
     useState([]);
+
+  const [blockedUsers, setBlockedUsers] = useState([]);
+  const [reports, setReports] = useState([]);
+  const [myPermissions, setMyPermissions] = useState({});
 
   const [contentEditor, setContentEditor] =
     useState(null);
@@ -162,7 +167,9 @@ export default function App() {
       historyResult,
       messagesResult,
       friendshipsResult,
-      visitsResult
+      visitsResult,
+      blocksResult,
+      reportsResult
     ] = await Promise.all([
       supabase
         .from("profiles")
@@ -228,7 +235,17 @@ export default function App() {
         .from("profile_visits")
         .select("*")
         .eq("profile_id", currentUser.id)
-        .order("visited_at", { ascending: false })
+        .order("visited_at", { ascending: false }),
+
+      supabase
+        .from("user_blocks")
+        .select("*")
+        .eq("blocker_id", currentUser.id),
+
+      supabase
+        .from("user_reports")
+        .select("*")
+        .order("created_at", { ascending: false })
     ]);
 
     setProfile(
@@ -265,6 +282,8 @@ export default function App() {
 
     setFriendships(friendshipsResult.data || []);
     setProfileVisits(visitsResult.data || []);
+    setBlockedUsers(blocksResult?.data || []);
+    setReports(reportsResult?.data || []);
 
     const { data: permissionData } = await supabase
       .from("user_permissions")
@@ -320,11 +339,23 @@ export default function App() {
      JEWEILS ALPHABETISCH
      ========================================================= */
 
+  const blockedIds = useMemo(
+    () => new Set(
+      blockedUsers.map((item) => item.blocked_id)
+    ),
+    [blockedUsers]
+  );
+
+  const visibleMembers = useMemo(
+    () => members.filter((member) => !blockedIds.has(member.id)),
+    [members, blockedIds]
+  );
+
   const sortedMembers = useMemo(() => {
     const query =
       search.trim().toLowerCase();
 
-    const filtered = members.filter((member) => {
+    const filtered = visibleMembers.filter((member) => {
       const text = [
         member.nickname,
         member.first_name,
@@ -377,11 +408,11 @@ export default function App() {
       supporters,
       normalMembers
     };
-  }, [members, search]);
+  }, [visibleMembers, search]);
 
   const onlineMembers = useMemo(
-    () => members.filter((member) => member.is_online),
-    [members]
+    () => visibleMembers.filter((member) => member.is_online),
+    [visibleMembers]
   );
 
   const friendshipWith = (memberId) =>
@@ -403,19 +434,190 @@ export default function App() {
   );
 
   async function requestFriend(member) {
-    if (!user || member.id === user.id) return;
-    const existing = friendshipWith(member.id);
-    if (existing) {
-      showNotice(existing.status === "ACCEPTED" ? "Ihr seid bereits Freunde." : "Freundschaftsanfrage ist bereits vorhanden.");
+    if (!user || !member?.id || member.id === user.id) return;
+
+    if (blockedIds.has(member.id)) {
+      showNotice("Dieser Nutzer ist blockiert.");
       return;
     }
-    const { error } = await supabase.from("friendships").insert({
-      requester_id: user.id,
-      receiver_id: member.id,
-      status: "PENDING"
-    });
-    if (error) return showNotice(error.message);
+
+    const existing = friendshipWith(member.id);
+
+    if (existing) {
+      showNotice(
+        existing.status === "ACCEPTED"
+          ? "Ihr seid bereits Freunde."
+          : "Freundschaftsanfrage ist bereits vorhanden."
+      );
+      return;
+    }
+
+    const { data: blockedByOther } = await supabase
+      .from("user_blocks")
+      .select("id")
+      .eq("blocker_id", member.id)
+      .eq("blocked_id", user.id)
+      .maybeSingle();
+
+    if (blockedByOther) {
+      showNotice("Du kannst diesem Nutzer keine Anfrage senden.");
+      return;
+    }
+
+    const { error } = await supabase
+      .from("friendships")
+      .insert({
+        requester_id: user.id,
+        receiver_id: member.id,
+        status: "PENDING"
+      });
+
+    if (error) {
+      showNotice(error.message);
+      return;
+    }
+
     showNotice("Freundschaftsanfrage gesendet.");
+    await loadAll();
+  }
+
+  async function blockUser(member) {
+    if (!user || !member?.id || member.id === user.id) return;
+
+    if (!window.confirm(
+      `${getName(member)} wirklich blockieren?\n\nDer Nutzer wird aus deinen Kontakt- und Mitgliederansichten ausgeblendet.`
+    )) return;
+
+    const { error } = await supabase
+      .from("user_blocks")
+      .insert({
+        blocker_id: user.id,
+        blocked_id: member.id
+      });
+
+    if (error) {
+      showNotice(error.message);
+      return;
+    }
+
+    await supabase
+      .from("friendships")
+      .delete()
+      .or(
+        `and(requester_id.eq.${user.id},receiver_id.eq.${member.id}),and(requester_id.eq.${member.id},receiver_id.eq.${user.id})`
+      );
+
+    setSelectedMember(null);
+    showNotice(`${getName(member)} wurde blockiert.`);
+    await loadAll();
+  }
+
+  async function unblockUser(blockedId) {
+    const { error } = await supabase
+      .from("user_blocks")
+      .delete()
+      .eq("blocker_id", user.id)
+      .eq("blocked_id", blockedId);
+
+    if (error) {
+      showNotice(error.message);
+      return;
+    }
+
+    showNotice("Nutzer wurde entsperrt.");
+    await loadAll();
+  }
+
+  async function reportUser(member) {
+    if (!user || !member?.id || member.id === user.id) return;
+
+    const reason = window.prompt(
+      `Warum möchtest du ${getName(member)} melden?\n\nBitte nenne einen konkreten Grund.`
+    );
+
+    if (reason === null) return;
+
+    if (reason.trim().length < 10) {
+      showNotice(
+        "Eine Meldung muss begründet sein und mindestens 10 Zeichen enthalten."
+      );
+      return;
+    }
+
+    const { error } = await supabase.rpc(
+      "submit_user_report",
+      {
+        target_user: member.id,
+        reason_text: reason.trim()
+      }
+    );
+
+    if (error) {
+      showNotice(error.message);
+      return;
+    }
+
+    setSelectedMember(null);
+    showNotice("Meldung wurde an die Administration gesendet.");
+    await loadAll();
+  }
+
+  async function resolveReport(reportId, resolution) {
+    if (!myAdminPermission("manage_reports")) {
+      showNotice("Keine Berechtigung für Nutzer-Meldungen.");
+      return;
+    }
+
+    const note = window.prompt(
+      resolution === "UNFOUNDED"
+        ? "Warum ist die Meldung unbegründet?"
+        : "Begründung der Entscheidung:"
+    );
+
+    if (note === null || note.trim().length < 3) {
+      showNotice("Bitte eine begründete Entscheidung eingeben.");
+      return;
+    }
+
+    let penaltyPoints = 0;
+
+    if (resolution === "UNFOUNDED") {
+      const value = window.prompt(
+        "Wie viele Minuspunkte bekommt der Meldende?\nStandard: 2",
+        "2"
+      );
+
+      if (value === null) return;
+
+      penaltyPoints = Number(value);
+
+      if (!Number.isInteger(penaltyPoints) || penaltyPoints < 0) {
+        showNotice("Ungültige Minuspunkte.");
+        return;
+      }
+    }
+
+    const { error } = await supabase.rpc(
+      "admin_resolve_user_report",
+      {
+        report_id: reportId,
+        resolution,
+        admin_note: note.trim(),
+        penalty_points: penaltyPoints
+      }
+    );
+
+    if (error) {
+      showNotice(error.message);
+      return;
+    }
+
+    showNotice(
+      resolution === "UNFOUNDED"
+        ? `Meldung unbegründet. ${penaltyPoints} Minuspunkte wurden vergeben.`
+        : "Meldung wurde bearbeitet."
+    );
+
     await loadAll();
   }
 
@@ -587,7 +789,8 @@ export default function App() {
       manage_events: !!data?.manage_events,
       manage_marketplace: !!data?.manage_marketplace,
       manage_friend_requests: !!data?.manage_friend_requests,
-      manage_homepage: !!data?.manage_homepage
+      manage_homepage: !!data?.manage_homepage,
+      manage_reports: !!data?.manage_reports
     });
   }
 
@@ -725,11 +928,15 @@ export default function App() {
     const content = window.prompt("Beitrag:", item.content || "");
     if (content === null) return;
 
-    const { error } = await supabase.rpc("update_community_news", {
-      target_id: item.id,
-      new_title: title.trim(),
-      new_content: content.trim()
-    });
+    const { error } = await supabase
+      .from("news")
+      .update({
+        title: title.trim(),
+        content: content.trim(),
+        updated_by: user.id,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", item.id);
 
     if (error) {
       showNotice(error.message);
@@ -744,9 +951,10 @@ export default function App() {
     if (!canManageNewsItem(item)) return;
     if (!window.confirm("Diesen Beitrag wirklich löschen?")) return;
 
-    const { error } = await supabase.rpc("delete_community_news", {
-      target_id: item.id
-    });
+    const { error } = await supabase
+      .from("news")
+      .delete()
+      .eq("id", item.id);
 
     if (error) {
       showNotice(error.message);
@@ -769,12 +977,16 @@ export default function App() {
     const imageUrl = window.prompt("Bild-URL:", item.image_url || "");
     if (imageUrl === null) return;
 
-    const { error } = await supabase.rpc("update_group", {
-      target_id: item.id,
-      new_name: name.trim(),
-      new_description: description.trim(),
-      new_image_url: imageUrl.trim()
-    });
+    const { error } = await supabase
+      .from("groups")
+      .update({
+        name: name.trim(),
+        description: description.trim(),
+        image_url: imageUrl.trim(),
+        updated_by: user.id,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", item.id);
 
     if (error) {
       showNotice(error.message);
@@ -789,9 +1001,10 @@ export default function App() {
     if (!canManageGroupItem(item)) return;
     if (!window.confirm("Diese Gruppe wirklich löschen?")) return;
 
-    const { error } = await supabase.rpc("delete_group", {
-      target_id: item.id
-    });
+    const { error } = await supabase
+      .from("groups")
+      .delete()
+      .eq("id", item.id);
 
     if (error) {
       showNotice(error.message);
@@ -1070,13 +1283,16 @@ async function uploadProfileImage(file) {
     const location = window.prompt("Ort:", item.location || "");
     if (location === null) return;
 
-    const { error } = await supabase.rpc("update_event", {
-      target_id: item.id,
-      new_title: title.trim(),
-      new_description: description.trim(),
-      new_location: location.trim(),
-      new_starts_at: item.starts_at
-    });
+    const { error } = await supabase
+      .from("events")
+      .update({
+        title: title.trim(),
+        description: description.trim(),
+        location: location.trim(),
+        updated_by: user.id,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", item.id);
 
     if (error) {
       showNotice(error.message);
@@ -1091,9 +1307,10 @@ async function uploadProfileImage(file) {
     if (!canManageEventItem(item)) return;
     if (!window.confirm("Dieses Event wirklich löschen?")) return;
 
-    const { error } = await supabase.rpc("delete_event", {
-      target_id: item.id
-    });
+    const { error } = await supabase
+      .from("events")
+      .delete()
+      .eq("id", item.id);
 
     if (error) {
       showNotice(error.message);
@@ -1298,8 +1515,6 @@ async function uploadProfileImage(file) {
 
     await loadAll();
   }
-
-  const [myPermissions, setMyPermissions] = useState({});
 
   function myAdminPermission(permission) {
     if (profile?.role === "HEAD_ADMIN") return true;
@@ -2673,6 +2888,141 @@ async function uploadProfileImage(file) {
           )}
 
           {/* =================================================
+              BLOCKIERTE NUTZER
+              ================================================= */}
+
+          {page === "blocked" && (
+            <section>
+              <div className="page-heading">
+                <div>
+                  <span className="eyebrow">SICHERHEIT</span>
+                  <h1>Blockierte Nutzer</h1>
+                  <p>Von dir blockierte Mitglieder verwalten.</p>
+                </div>
+              </div>
+
+              {!blockedUsers.length ? (
+                <div className="empty-card">
+                  Du hast derzeit keine Nutzer blockiert.
+                </div>
+              ) : (
+                <div className="member-grid">
+                  {blockedUsers.map((block) => {
+                    const member = memberById(block.blocked_id);
+                    if (!member) return null;
+
+                    return (
+                      <article className="member-card" key={block.id}>
+                        <img
+                          src={member.avatar_url || DEFAULT_AVATAR}
+                          alt={getName(member)}
+                          className="member-avatar"
+                        />
+                        <div className="member-name">
+                          {getName(member)}
+                        </div>
+                        <button
+                          className="secondary-button"
+                          onClick={() => unblockUser(member.id)}
+                        >
+                          Entsperren
+                        </button>
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* =================================================
+              NUTZER-MELDUNGEN
+              ================================================= */}
+
+          {page === "reports" &&
+            (isHeadAdmin(profile?.role) ||
+              myAdminPermission("manage_reports")) && (
+              <section className="admin-page">
+                <div className="page-heading">
+                  <div>
+                    <span className="eyebrow">MODERATION</span>
+                    <h1>Nutzer-Meldungen</h1>
+                    <p>Gemeldete Nutzer begründet prüfen und entscheiden.</p>
+                  </div>
+                </div>
+
+                <div className="report-list">
+                  {reports.map((report) => (
+                    <article
+                      className={`report-card ${
+                        report.status === "PENDING"
+                          ? "pending"
+                          : report.status === "CONFIRMED"
+                          ? "confirmed"
+                          : "unfounded"
+                      }`}
+                      key={report.id}
+                    >
+                      <div className="report-header">
+                        <strong>🚩 {report.status}</strong>
+                        <small>
+                          {new Date(report.created_at).toLocaleString("de-AT")}
+                        </small>
+                      </div>
+
+                      <p>
+                        <strong>Gemeldet von:</strong>{" "}
+                        {actorLabel(report.reporter_id)}
+                      </p>
+
+                      <p>
+                        <strong>Gemeldetes Mitglied:</strong>{" "}
+                        {actorLabel(report.reported_user_id)}
+                      </p>
+
+                      <div className="report-reason">
+                        {report.reason}
+                      </div>
+
+                      {report.status === "PENDING" ? (
+                        <div className="content-manage-actions">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              resolveReport(report.id, "CONFIRMED")
+                            }
+                          >
+                            Meldung bestätigen
+                          </button>
+
+                          <button
+                            type="button"
+                            className="danger-link"
+                            onClick={() =>
+                              resolveReport(report.id, "UNFOUNDED")
+                            }
+                          >
+                            Unbegründet / Minuspunkte
+                          </button>
+                        </div>
+                      ) : (
+                        <small>
+                          Entscheidung: {report.admin_note || "—"}
+                        </small>
+                      )}
+                    </article>
+                  ))}
+
+                  {!reports.length && (
+                    <div className="empty-card">
+                      Keine Meldungen vorhanden.
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
+
+          {/* =================================================
               PUNKTE
               ================================================= */}
 
@@ -3254,6 +3604,10 @@ async function uploadProfileImage(file) {
             🤝 Freundschaftsanfragen
           </button>
 
+          <button onClick={() => setPage("blocked")}>
+            🚫 Blockierte Nutzer ({blockedUsers.length})
+          </button>
+
           <button
             onClick={() => setPage("profile")}
           >
@@ -3320,6 +3674,15 @@ async function uploadProfileImage(file) {
                 </button>
               )}
 
+              {(
+                isHeadAdmin(profile?.role) ||
+                myAdminPermission("manage_reports")
+              ) && (
+                <button onClick={() => setPage("reports")}>
+                  🚩 Meldungen ({reports.filter((item) => item.status === "PENDING").length})
+                </button>
+              )}
+
               {isHeadAdmin(profile?.role) && (
                 <section className="admin-permission-panel">
                   <button
@@ -3378,7 +3741,8 @@ async function uploadProfileImage(file) {
                             ["manage_events", "Events verwalten"],
                             ["manage_marketplace", "Marktplatz verwalten"],
                             ["manage_friend_requests", "Freundschaftsanfragen verwalten"],
-                            ["manage_homepage", "Hauptseite gestalten"]
+                            ["manage_homepage", "Hauptseite gestalten"],
+                            ["manage_reports", "Nutzer-Meldungen verwalten"]
                           ].map(([key, label]) => (
                             <label
                               className="permission-toggle"
@@ -3619,19 +3983,43 @@ async function uploadProfileImage(file) {
                   </section>
                 </div>
 
-                {selectedMember.id !==
-                  user.id && (
-                  <button
-                    className="primary-button message-button"
-                    onClick={() => {
-                      setSelectedMember(null);
-                      openChat(
-                        selectedMember
-                      );
-                    }}
-                  >
-                    💬 Nachricht schreiben
-                  </button>
+                {selectedMember.id !== user.id && (
+                  <div className="profile-actions">
+                    <button
+                      className="primary-button"
+                      onClick={() => {
+                        setSelectedMember(null);
+                        openChat(selectedMember);
+                      }}
+                    >
+                      💬 Nachricht senden
+                    </button>
+
+                    <button
+                      className="secondary-button"
+                      onClick={() => requestFriend(selectedMember)}
+                    >
+                      {friendshipWith(selectedMember.id)?.status === "ACCEPTED"
+                        ? "✓ Bereits befreundet"
+                        : friendshipWith(selectedMember.id)?.status === "PENDING"
+                        ? "⏳ Anfrage vorhanden"
+                        : "🤝 Freundschaftsanfrage senden"}
+                    </button>
+
+                    <button
+                      className="secondary-button"
+                      onClick={() => blockUser(selectedMember)}
+                    >
+                      🚫 Nutzer blockieren
+                    </button>
+
+                    <button
+                      className="danger-button"
+                      onClick={() => reportUser(selectedMember)}
+                    >
+                      🚩 Nutzer melden
+                    </button>
+                  </div>
                 )}
 
               </div>
@@ -5394,6 +5782,86 @@ function GlobalStyle() {
           width: auto;
           margin: 0 24px 24px;
         }
+      }
+
+      .profile-actions {
+        display: grid;
+        gap: 9px;
+        margin-top: 18px;
+        padding-top: 16px;
+        border-top: 1px solid #303744;
+      }
+
+      .profile-actions button {
+        width: 100%;
+      }
+
+      .secondary-button {
+        border: 1px solid #4b5563;
+        background: #242a33;
+        color: #f4f6f8;
+        padding: 10px 14px;
+        border-radius: 10px;
+        cursor: pointer;
+      }
+
+      .secondary-button:hover {
+        background: #303742;
+      }
+
+      .report-list {
+        display: grid;
+        gap: 14px;
+      }
+
+      .report-card {
+        padding: 16px;
+        border-radius: 14px;
+        border: 1px solid #39414d;
+        background: #181c23;
+      }
+
+      .report-card.pending {
+        border-color: #d5ad35;
+      }
+
+      .report-card.confirmed {
+        border-color: #43d87a;
+      }
+
+      .report-card.unfounded {
+        border-color: #d95c5c;
+      }
+
+      .report-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 10px;
+      }
+
+      .report-reason {
+        margin-top: 10px;
+        padding: 12px;
+        border-radius: 9px;
+        background: #101319;
+        white-space: pre-wrap;
+      }
+
+      .quick-rail {
+        background: rgba(12, 15, 20, 0.42) !important;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-color: rgba(120,130,145,.42) !important;
+      }
+
+      .quick-rail.quick-rail-admin {
+        border-color: rgba(220,85,85,.72) !important;
+      }
+
+      .quick-rail.quick-rail-admin .quick-profile {
+        border-color: rgba(220,85,85,.68) !important;
+        background: rgba(120,36,36,.12) !important;
       }
 
     `}</style>
