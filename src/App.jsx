@@ -524,6 +524,19 @@ const sortedMembers = useMemo(() => {
     [friendships, user?.id]
   );
 
+  const sentFriendRequests = useMemo(
+    () => friendships.filter((item) => item.status === "PENDING" && item.requester_id === user?.id),
+    [friendships, user?.id]
+  );
+
+  async function cancelFriendRequest(request) {
+    if (!user || !request || request.requester_id !== user.id || request.status !== "PENDING") return;
+    const { error } = await supabase.from("friendships").delete().eq("id", request.id).eq("requester_id", user.id).eq("status", "PENDING");
+    if (error) { showNotice(error.message); return; }
+    showNotice("Freundschaftsanfrage wurde zurückgezogen.");
+    await loadAll();
+  }
+
   async function respondToFriendRequest(request, accept) {
     if (!user || request?.receiver_id !== user.id) return;
 
@@ -1217,29 +1230,9 @@ async function uploadProfileImage(file) {
         avatarUrl;
     }
 
-    const firstName =
-      form.get("first_name")?.trim();
-
-    const lastName =
-      form.get("last_name")?.trim();
-
-    const birthDate =
-      form.get("birth_date");
-
-    const gender =
-      form.get("gender");
-
-    if (
-      !firstName ||
-      !lastName ||
-      !birthDate ||
-      !gender
-    ) {
-      showNotice(
-        "Vorname, Nachname, Geburtsdatum und Geschlecht sind Pflichtfelder."
-      );
-      return;
-    }
+    // Vorname, Nachname und Geburtsdatum bleiben nach der Registrierung unveränderbar.
+    const gender = form.get("gender");
+    if (!gender) { showNotice("Bitte ein Geschlecht auswählen."); return; }
 
     const updateData = {
       nickname:
@@ -1250,15 +1243,6 @@ async function uploadProfileImage(file) {
 
       avatar_url:
         avatarUrl,
-
-      first_name:
-        firstName,
-
-      last_name:
-        lastName,
-
-      birth_date:
-        birthDate,
 
       gender,
 
@@ -1298,9 +1282,6 @@ async function uploadProfileImage(file) {
         nickname: updateData.nickname,
         nickname_color: updateData.nickname_color,
         avatar_url: updateData.avatar_url,
-        first_name: updateData.first_name,
-        last_name: updateData.last_name,
-        birth_date: updateData.birth_date,
         gender: updateData.gender,
         bio: updateData.bio,
         location: updateData.location,
@@ -2881,10 +2862,22 @@ async function changePoints(event) {
                     </article>
                   );
                 })}
-                {!incomingFriendRequests.length && (
-                  <div className="empty-card">Keine offenen Freundschaftsanfragen.</div>
-                )}
+                {!incomingFriendRequests.length && (<div className="empty-card">Keine eingehenden Freundschaftsanfragen.</div>)}
               </div>
+              <h2 style={{marginTop:24}}>Gesendete Anfragen</h2>
+              <div className="cards">
+                {sentFriendRequests.map((request) => {
+                  const receiver = memberById(request.receiver_id);
+                  return <article className="member-card" key={request.id}><img src={receiver?.avatar_url || DEFAULT_AVATAR} alt="" /><div><h2>{receiver ? getName(receiver) : "Mitglied"}</h2><p>Deine Anfrage wartet auf eine Antwort.</p><button className="danger-button" onClick={() => cancelFriendRequest(request)}>Anfrage abbrechen</button></div></article>;
+                })}
+                {!sentFriendRequests.length && <div className="empty-card">Keine gesendeten Anfragen.</div>}
+              </div>
+            </section>
+          )}
+
+          {page === "profile-visits" && (
+            <section><div className="page-heading"><div><button className="back-button" onClick={() => setPage("profile")}>← Zurück</button><span className="eyebrow">DEIN PROFIL</span><h1>Letzte Profilbesucher</h1><p>Hier siehst du deine letzten Profilbesucher.</p></div></div>
+              <div className="cards">{profileVisits.map((visit) => { const visitor = memberById(visit.visitor_id); if (!visitor) return null; return <article className="member-card" key={visit.id}><img src={visitor.avatar_url || DEFAULT_AVATAR} alt="" /><div><h2>{getName(visitor)}</h2><p>{visit.visited_at ? new Date(visit.visited_at).toLocaleString("de-AT") : "Gerade eben"}</p></div><button className="secondary-button" onClick={() => openMember(visitor)}>Profil öffnen</button></article>; })}{!profileVisits.length && <div className="empty-card">Noch keine Profilbesuche vorhanden.</div>}</div>
             </section>
           )}
 
@@ -2923,11 +2916,7 @@ async function changePoints(event) {
 
                   <div className="my-profile-top">
                     {isAdmin(profile?.role) && (
-                      <img
-                        className="role-symbol role-symbol-large"
-                        src="/Admin-star.png"
-                        alt="Admin"
-                      />
+                      <span className="role-stack"><img className="role-symbol role-symbol-large" src="/Admin-star.png" alt="Admin" /><img className="friend-symbol" src="/freunde-logo.png" alt="Freund" /></span>
                     )}
 
                     {profile?.role === "SUPPORTER" && (
@@ -3144,29 +3133,23 @@ async function changePoints(event) {
                   <label>Vorname *</label>
                   <input
                     name="first_name"
-                    defaultValue={
-                      profile?.first_name || ""
-                    }
-                    required
+                    defaultValue={profile?.first_name || ""}
+                    readOnly
                   />
 
                   <label>Nachname *</label>
                   <input
                     name="last_name"
-                    defaultValue={
-                      profile?.last_name || ""
-                    }
-                    required
+                    defaultValue={profile?.last_name || ""}
+                    readOnly
                   />
 
                   <label>Geburtsdatum *</label>
                   <input
                     type="date"
                     name="birth_date"
-                    defaultValue={
-                      profile?.birth_date || ""
-                    }
-                    required
+                    defaultValue={profile?.birth_date || ""}
+                    readOnly
                   />
 
                   <label>Geschlecht *</label>
@@ -4078,11 +4061,7 @@ async function changePoints(event) {
             🚫 Blockierte Nutzer ({blockedUsers.length})
           </button>
 
-          <button
-            onClick={() => setPage("profile")}
-          >
-            👁 Profilbesucher ({profileVisits.length})
-          </button>
+          <button onClick={() => setPage("profile-visits")}>👁 Profilbesucher ({profileVisits.length})</button>
 
           <section className="rail-activity-panel">
             <div className="quick-section-title">
@@ -4884,6 +4863,7 @@ async function changePoints(event) {
           </div>
         )}
 
+        <footer className="site-footer"><div className="footer-brand"><img src="/banner.png" alt="Ennstal Connect" /></div><div><strong>Impressum</strong><p>Ennstal Connect<br/>Waidbachstraße<br/>8700 Leoben<br/>Verantwortlich für die Webseite: Hauptadmin.</p></div><div><strong>Datenschutzhinweise</strong><p>Informationen zur Verarbeitung deiner Daten und deinen Rechten.</p></div><div className="footer-links"><button onClick={() => showNotice("Impressum: Ennstal Connect, Waidbachstraße, 8700 Leoben. Verantwortlich für die Webseite: Hauptadmin.")}>Impressum</button><button onClick={() => showNotice("Datenschutzhinweise werden im Datenschutzbereich angezeigt.")}>Datenschutzhinweise</button></div></footer>
       </div>
     </>
   );
@@ -6401,6 +6381,12 @@ function GlobalStyle() {
       .quick-actions button { width:100%; text-align:left; background:#171b21; color:#dce2e9; border:1px solid #303844; border-radius:9px; padding:8px 9px; font-size:13px; }
       .quick-actions button:hover { background:#292f38; color:#fff; }
       .quick-actions .quick-admin { border-color:#e5bf31; background:rgba(229,191,49,.08); }
+      input[readonly] { opacity:.78; cursor:not-allowed; }
+      .role-stack{display:inline-flex;flex-direction:column;align-items:flex-start;gap:3px}.friend-symbol{width:22px;height:22px;object-fit:contain;background:transparent;}
+      .site-footer { margin:30px auto 0; padding:26px; display:grid; grid-template-columns:1.2fr 1fr 1fr 1fr; gap:22px; background:linear-gradient(180deg,rgba(34,39,48,.98),rgba(21,25,31,.98)); border:1px solid #3d4653; border-radius:18px 18px 0 0; color:#dce2ea; }
+      .site-footer img { width:min(260px,100%); height:auto; object-fit:contain; }
+      .site-footer strong { color:#ffb071; }.site-footer p { color:#aab3bf; line-height:1.55; font-size:13px; }.footer-links{display:flex;flex-direction:column;gap:8px}.footer-links button{text-align:left;background:transparent;border:0;color:#ff9a50;padding:0;cursor:pointer}@media (max-width:900px){.site-footer{grid-template-columns:1fr 1fr}}@media(max-width:560px){.site-footer{grid-template-columns:1fr}}
+
       @media (min-width: 1280px) { main { margin-right:250px; width:auto; max-width:1450px; } }
       @media (max-width: 1279px) { .quick-rail { position:static; width:auto; margin:0 24px 24px; } .quick-actions { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 
