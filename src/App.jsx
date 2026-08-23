@@ -81,6 +81,44 @@ export default function App() {
   const [notice, setNotice] =
     useState("");
 
+  const [friendsExpanded, setFriendsExpanded] =
+    useState(false);
+
+  const [permissionsExpanded, setPermissionsExpanded] =
+    useState(true);
+
+  const [permissionTarget, setPermissionTarget] =
+    useState("");
+
+  const [permissionDraft, setPermissionDraft] =
+    useState({
+      manage_members: false,
+      manage_points: false,
+      manage_messages: false,
+      manage_media: false,
+      manage_roles: false,
+      manage_admins: false,
+      view_profile_visits: false,
+      manage_news: false,
+      manage_groups: false,
+      manage_events: false,
+      manage_marketplace: false,
+      manage_friend_requests: false,
+      manage_homepage: false
+    });
+
+  const [selectedMemberGroups, setSelectedMemberGroups] =
+    useState([]);
+
+  const [selectedMemberEvents, setSelectedMemberEvents] =
+    useState([]);
+
+  const [homepageSections, setHomepageSections] =
+    useState([]);
+
+  const [contentEditor, setContentEditor] =
+    useState(null);
+
   const showNotice = (text) => {
     setNotice(text);
 
@@ -120,6 +158,7 @@ export default function App() {
       newsResult,
       eventsResult,
       groupsResult,
+      homepageResult,
       historyResult,
       messagesResult,
       friendshipsResult,
@@ -155,6 +194,12 @@ export default function App() {
         .order("created_at", {
           ascending: false
         }),
+
+      supabase
+        .from("homepage_sections")
+        .select("*")
+        .eq("is_visible", true)
+        .order("sort_order", { ascending: true }),
 
       supabase
         .from("point_history")
@@ -206,6 +251,10 @@ export default function App() {
       groupsResult.data || []
     );
 
+    setHomepageSections(
+      homepageResult?.data || []
+    );
+
     setHistory(
       historyResult.data || []
     );
@@ -216,6 +265,14 @@ export default function App() {
 
     setFriendships(friendshipsResult.data || []);
     setProfileVisits(visitsResult.data || []);
+
+    const { data: permissionData } = await supabase
+      .from("user_permissions")
+      .select("*")
+      .eq("user_id", currentUser.id)
+      .maybeSingle();
+
+    setMyPermissions(permissionData || {});
 
     setLoading(false);
   }
@@ -364,10 +421,45 @@ export default function App() {
 
   async function openMember(member) {
     setSelectedMember(member);
+
+    const [{ data: groupData }, { data: eventData }] =
+      await Promise.all([
+        supabase
+          .from("group_members")
+          .select("groups(*)")
+          .eq("user_id", member.id),
+
+        supabase
+          .from("event_members")
+          .select("events(*)")
+          .eq("user_id", member.id)
+      ]);
+
+    setSelectedMemberGroups(
+      (groupData || [])
+        .map((row) => row.groups)
+        .filter(Boolean)
+    );
+
+    setSelectedMemberEvents(
+      (eventData || [])
+        .map((row) => row.events)
+        .filter(Boolean)
+    );
+
     if (user && member.id !== user.id) {
-      const { error } = await supabase.rpc("record_profile_visit", { target_profile: member.id });
+      const { error } = await supabase.rpc(
+        "record_profile_visit",
+        { target_profile: member.id }
+      );
+
       if (error) {
-        await supabase.from("profile_visits").insert({ visitor_id: user.id, profile_id: member.id });
+        await supabase
+          .from("profile_visits")
+          .insert({
+            visitor_id: user.id,
+            profile_id: member.id
+          });
       }
     }
   }
@@ -466,6 +558,250 @@ export default function App() {
     setPage("home");
   }
 
+  async function loadPermissionDraft(userId) {
+    if (!userId) return;
+
+    const { data, error } = await supabase
+      .from("user_permissions")
+      .select("*")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (error) {
+      showNotice(error.message);
+      return;
+    }
+
+    setPermissionTarget(userId);
+
+    setPermissionDraft({
+      manage_members: !!data?.manage_members,
+      manage_points: !!data?.manage_points,
+      manage_messages: !!data?.manage_messages,
+      manage_media: !!data?.manage_media,
+      manage_roles: !!data?.manage_roles,
+      manage_admins: !!data?.manage_admins,
+      view_profile_visits: !!data?.view_profile_visits,
+      manage_news: !!data?.manage_news,
+      manage_groups: !!data?.manage_groups,
+      manage_events: !!data?.manage_events,
+      manage_marketplace: !!data?.manage_marketplace,
+      manage_friend_requests: !!data?.manage_friend_requests,
+      manage_homepage: !!data?.manage_homepage
+    });
+  }
+
+  async function saveAdminPermissions() {
+    if (!isHeadAdmin(profile?.role) || !permissionTarget) {
+      showNotice("Nur der Hauptadmin darf Admin-Rechte ändern.");
+      return;
+    }
+
+    const { error } = await supabase.rpc(
+      "admin_set_permissions",
+      {
+        target_user: permissionTarget,
+        ...Object.fromEntries(
+          Object.entries(permissionDraft).map(
+            ([key, value]) => [`p_${key}`, value]
+          )
+        )
+      }
+    );
+
+    if (error) {
+      showNotice(error.message);
+      return;
+    }
+
+    showNotice("Admin-Rechte wurden gespeichert.");
+    await loadAll();
+  }
+
+
+  const memberById = (id) =>
+    members.find((member) => member.id === id) || null;
+
+  const actorLabel = (id) => {
+    const actor = memberById(id);
+    if (!actor) return "Mitglied";
+    return getName(actor);
+  };
+
+  const canManageNewsItem = (item) =>
+    item?.created_by === user?.id ||
+    myAdminPermission("manage_news");
+
+  const canManageGroupItem = (item) =>
+    item?.created_by === user?.id ||
+    myAdminPermission("manage_groups");
+
+  const canManageEventItem = (item) =>
+    item?.created_by === user?.id ||
+    myAdminPermission("manage_events");
+
+  async function createHomepageSection(event) {
+    event.preventDefault();
+
+    if (!isHeadAdmin(profile?.role) && !myAdminPermission("manage_homepage")) {
+      showNotice("Keine Berechtigung zum Gestalten der Hauptseite.");
+      return;
+    }
+
+    const form = new FormData(event.currentTarget);
+
+    const { error } = await supabase
+      .from("homepage_sections")
+      .insert({
+        title: String(form.get("title") || "").trim(),
+        content: String(form.get("content") || "").trim(),
+        frame_style: form.get("frame_style") || "standard",
+        created_by: user.id,
+        updated_by: user.id,
+        sort_order: homepageSections.length
+      });
+
+    if (error) {
+      showNotice(error.message);
+      return;
+    }
+
+    event.currentTarget.reset();
+    showNotice("Hauptrahmen wurde erstellt.");
+    await loadAll();
+  }
+
+  async function editHomepageSection(section) {
+    if (!isHeadAdmin(profile?.role) && !myAdminPermission("manage_homepage")) return;
+
+    const title = window.prompt("Rahmen-Überschrift:", section.title || "");
+    if (title === null) return;
+    const content = window.prompt("Rahmen-Text:", section.content || "");
+    if (content === null) return;
+
+    const { error } = await supabase
+      .from("homepage_sections")
+      .update({
+        title: title.trim(),
+        content: content.trim(),
+        updated_by: user.id,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", section.id);
+
+    if (error) {
+      showNotice(error.message);
+      return;
+    }
+
+    showNotice("Hauptrahmen wurde gespeichert.");
+    await loadAll();
+  }
+
+  async function deleteHomepageSection(section) {
+    if (!isHeadAdmin(profile?.role) && !myAdminPermission("manage_homepage")) return;
+    if (!window.confirm("Diesen Rahmen wirklich löschen?")) return;
+
+    const { error } = await supabase
+      .from("homepage_sections")
+      .delete()
+      .eq("id", section.id);
+
+    if (error) {
+      showNotice(error.message);
+      return;
+    }
+
+    showNotice("Hauptrahmen wurde gelöscht.");
+    await loadAll();
+  }
+
+  async function editNews(item) {
+    if (!canManageNewsItem(item)) return;
+
+    const title = window.prompt("Überschrift:", item.title || "");
+    if (title === null) return;
+
+    const content = window.prompt("Beitrag:", item.content || "");
+    if (content === null) return;
+
+    const { error } = await supabase.rpc("update_community_news", {
+      target_id: item.id,
+      new_title: title.trim(),
+      new_content: content.trim()
+    });
+
+    if (error) {
+      showNotice(error.message);
+      return;
+    }
+
+    showNotice("Beitrag wurde gespeichert.");
+    await loadAll();
+  }
+
+  async function deleteNews(item) {
+    if (!canManageNewsItem(item)) return;
+    if (!window.confirm("Diesen Beitrag wirklich löschen?")) return;
+
+    const { error } = await supabase.rpc("delete_community_news", {
+      target_id: item.id
+    });
+
+    if (error) {
+      showNotice(error.message);
+      return;
+    }
+
+    showNotice("Beitrag wurde gelöscht.");
+    await loadAll();
+  }
+
+  async function editGroup(item) {
+    if (!canManageGroupItem(item)) return;
+
+    const name = window.prompt("Gruppenname:", item.name || "");
+    if (name === null) return;
+
+    const description = window.prompt("Beschreibung:", item.description || "");
+    if (description === null) return;
+
+    const imageUrl = window.prompt("Bild-URL:", item.image_url || "");
+    if (imageUrl === null) return;
+
+    const { error } = await supabase.rpc("update_group", {
+      target_id: item.id,
+      new_name: name.trim(),
+      new_description: description.trim(),
+      new_image_url: imageUrl.trim()
+    });
+
+    if (error) {
+      showNotice(error.message);
+      return;
+    }
+
+    showNotice("Gruppe wurde gespeichert.");
+    await loadAll();
+  }
+
+  async function deleteGroup(item) {
+    if (!canManageGroupItem(item)) return;
+    if (!window.confirm("Diese Gruppe wirklich löschen?")) return;
+
+    const { error } = await supabase.rpc("delete_group", {
+      target_id: item.id
+    });
+
+    if (error) {
+      showNotice(error.message);
+      return;
+    }
+
+    showNotice("Gruppe wurde gelöscht.");
+    await loadAll();
+  }
+
   /* =========================================================
      PROFIL SPEICHERN
      ========================================================= */
@@ -553,17 +889,15 @@ async function uploadProfileImage(file) {
     const avatarFile = form.get("avatar_file");
 
     if (avatarFile && avatarFile.size > 0) {
-      const extension = avatarFile.name.split(".").pop() || "jpg";
-      const path = `${user.id}/${Date.now()}.${extension}`;
-      const { error: uploadError } = await supabase.storage
-        .from("avatars")
-        .upload(path, avatarFile, { upsert: true, contentType: avatarFile.type });
-      if (uploadError) {
-        showNotice(`Profilbild konnte nicht hochgeladen werden: ${uploadError.message}`);
-        return;
-      }
-      const { data } = supabase.storage.from("avatars").getPublicUrl(path);
-      avatarUrl = data.publicUrl;
+      await uploadProfileImage(avatarFile);
+
+      const refreshed = await supabase
+        .from("profiles")
+        .select("avatar_url")
+        .eq("id", user.id)
+        .single();
+
+      avatarUrl = refreshed.data?.avatar_url || avatarUrl;
     }
 
     const firstName = form.get("first_name")?.trim();
@@ -728,6 +1062,50 @@ async function uploadProfileImage(file) {
       "Gruppe erstellt."
     );
 
+    await loadAll();
+  }
+
+  async function editEvent(item) {
+    if (!canManageEventItem(item)) return;
+
+    const title = window.prompt("Event-Titel:", item.title || "");
+    if (title === null) return;
+    const description = window.prompt("Beschreibung:", item.description || "");
+    if (description === null) return;
+    const location = window.prompt("Ort:", item.location || "");
+    if (location === null) return;
+
+    const { error } = await supabase.rpc("update_event", {
+      target_id: item.id,
+      new_title: title.trim(),
+      new_description: description.trim(),
+      new_location: location.trim(),
+      new_starts_at: item.starts_at
+    });
+
+    if (error) {
+      showNotice(error.message);
+      return;
+    }
+
+    showNotice("Event wurde gespeichert.");
+    await loadAll();
+  }
+
+  async function deleteEvent(item) {
+    if (!canManageEventItem(item)) return;
+    if (!window.confirm("Dieses Event wirklich löschen?")) return;
+
+    const { error } = await supabase.rpc("delete_event", {
+      target_id: item.id
+    });
+
+    if (error) {
+      showNotice(error.message);
+      return;
+    }
+
+    showNotice("Event wurde gelöscht.");
     await loadAll();
   }
 
@@ -924,6 +1302,13 @@ async function uploadProfileImage(file) {
     );
 
     await loadAll();
+  }
+
+  const [myPermissions, setMyPermissions] = useState({});
+
+  function myAdminPermission(permission) {
+    if (profile?.role === "HEAD_ADMIN") return true;
+    return !!myPermissions?.[permission];
   }
 
   /* =========================================================
@@ -1347,13 +1732,61 @@ async function uploadProfileImage(file) {
                 </section>
               )}
 
+              {(isHeadAdmin(profile?.role) || myAdminPermission("manage_homepage")) && (
+                <section className="homepage-builder panel">
+                  <div className="homepage-builder-heading">
+                    <div>
+                      <span className="eyebrow">HAUPTSEITE</span>
+                      <h2>Eigene Rahmen gestalten</h2>
+                      <p>Eigene Infoboxen auf der Startseite erstellen und veröffentlichen.</p>
+                    </div>
+                  </div>
+
+                  <form onSubmit={createHomepageSection} className="homepage-builder-form">
+                    <input name="title" placeholder="Rahmen-Überschrift" required />
+                    <textarea name="content" placeholder="Text für den Rahmen" required />
+                    <select name="frame_style" defaultValue="standard">
+                      <option value="standard">Standard</option>
+                      <option value="accent">Hervorgehoben</option>
+                      <option value="soft">Soft</option>
+                      <option value="dark">Dunkel</option>
+                    </select>
+                    <button className="primary-button">Rahmen veröffentlichen</button>
+                  </form>
+                </section>
+              )}
+
+              {homepageSections.length > 0 && (
+                <section className="homepage-sections">
+                  {homepageSections.map((section) => (
+                    <article className={`homepage-frame ${section.frame_style || "standard"}`} key={section.id}>
+                      <h2>{section.title}</h2>
+                      <p>{section.content}</p>
+                      <small>
+                        Erstellt von {actorLabel(section.created_by)}
+                        {section.updated_by && section.updated_by !== section.created_by && (
+                          <> · Bearbeitet von {actorLabel(section.updated_by)}{["ADMIN", "HEAD_ADMIN"].includes(memberById(section.updated_by)?.role) ? " ★" : ""}</>
+                        )}
+                      </small>
+
+                      {(isHeadAdmin(profile?.role) || myAdminPermission("manage_homepage")) && (
+                        <div className="content-manage-actions">
+                          <button type="button" onClick={() => editHomepageSection(section)}>Bearbeiten</button>
+                          <button type="button" onClick={() => deleteHomepageSection(section)} className="danger-link">Löschen</button>
+                        </div>
+                      )}
+                    </article>
+                  ))}
+                </section>
+              )}
+
               <section>
 
                 <h2>
                   Neuigkeiten
                 </h2>
 
-                {isAdmin(profile?.role) && (
+                {(user && (isAdmin(profile?.role) || true)) && (
 
                   <form
                     className="panel"
@@ -1401,14 +1834,20 @@ async function uploadProfileImage(file) {
                       </p>
 
                       <small>
-                        {
-                          new Date(
-                            item.created_at
-                          ).toLocaleString(
-                            "de-AT"
-                          )
-                        }
+                        Erstellt von {actorLabel(item.created_by)}
+                        {item.updated_by && item.updated_by !== item.created_by && (
+                          <> · Bearbeitet von {actorLabel(item.updated_by)}{["ADMIN", "HEAD_ADMIN"].includes(memberById(item.updated_by)?.role) ? " ★" : ""}</>
+                        )}
+                        <br />
+                        {new Date(item.created_at).toLocaleString("de-AT")}
                       </small>
+
+                      {canManageNewsItem(item) && (
+                        <div className="content-manage-actions">
+                          <button type="button" onClick={() => editNews(item)}>Bearbeiten</button>
+                          <button type="button" onClick={() => deleteNews(item)} className="danger-link">Löschen</button>
+                        </div>
+                      )}
 
                     </article>
                   ))}
@@ -1561,7 +2000,7 @@ async function uploadProfileImage(file) {
 
               </div>
 
-              {isAdmin(profile?.role) && (
+              {user && (
                 <form
                   className="panel"
                   onSubmit={createGroup}
@@ -1615,6 +2054,20 @@ async function uploadProfileImage(file) {
                       <p>
                         {group.description}
                       </p>
+
+                      <small className="content-attribution">
+                        Gegründet von {actorLabel(group.created_by)}
+                        {group.updated_by && group.updated_by !== group.created_by && (
+                          <> · Bearbeitet von {actorLabel(group.updated_by)}{["ADMIN", "HEAD_ADMIN"].includes(memberById(group.updated_by)?.role) ? " ★" : ""}</>
+                        )}
+                      </small>
+
+                      {canManageGroupItem(group) && (
+                        <div className="content-manage-actions">
+                          <button type="button" onClick={() => editGroup(group)}>Bearbeiten</button>
+                          <button type="button" onClick={() => deleteGroup(group)} className="danger-link">Löschen</button>
+                        </div>
+                      )}
 
                     </div>
 
@@ -1707,14 +2160,20 @@ async function uploadProfileImage(file) {
                     </strong>
 
                     <small>
-                      {
-                        new Date(
-                          event.starts_at
-                        ).toLocaleString(
-                          "de-AT"
-                        )
-                      }
+                      {new Date(event.starts_at).toLocaleString("de-AT")}
+                      <br />
+                      Erstellt von {actorLabel(event.created_by)}
+                      {event.updated_by && event.updated_by !== event.created_by && (
+                        <> · Bearbeitet von {actorLabel(event.updated_by)}{["ADMIN", "HEAD_ADMIN"].includes(memberById(event.updated_by)?.role) ? " ★" : ""}</>
+                      )}
                     </small>
+
+                    {canManageEventItem(event) && (
+                      <div className="content-manage-actions">
+                        <button type="button" onClick={() => editEvent(event)}>Bearbeiten</button>
+                        <button type="button" onClick={() => deleteEvent(event)} className="danger-link">Löschen</button>
+                      </div>
+                    )}
 
                   </article>
                 ))}
@@ -2010,12 +2469,12 @@ async function uploadProfileImage(file) {
                     >
                       <span>⭐</span>
                       <strong>
-                        {
-                          profile?.community_points ||
-                          0
-                        }
+                        {profile?.community_points || 0}
                       </strong>
                       Punkte
+                      <small>
+                        ({profile?.purchase_points || 0} KP)
+                      </small>
                     </button>
 
                   </div>
@@ -2032,18 +2491,6 @@ async function uploadProfileImage(file) {
                   <h2>
                     Profil bearbeiten
                   </h2>
-
-                  <label>
-                    Nickname
-                  </label>
-
-                  <input
-                    name="nickname"
-                    defaultValue={
-                      profile?.nickname || ""
-                    }
-                    required
-                  />
 
                 <label>
   Nickname *
@@ -2674,26 +3121,302 @@ async function uploadProfileImage(file) {
         </main>
 
         <aside className="quick-rail">
-          <button className="quick-profile" onClick={() => setPage("profile")}>
-            <img src={profile?.avatar_url || DEFAULT_AVATAR} alt="" onError={(e)=>{e.currentTarget.src=DEFAULT_AVATAR;}} />
+          <button
+            className={`quick-profile ${isAdmin(profile?.role) ? "admin" : profile?.role === "SUPPORTER" ? "supporter" : ""}`}
+            onClick={() => setPage("profile")}
+          >
+            <img
+              src={profile?.avatar_url || DEFAULT_AVATAR}
+              alt=""
+              onError={(e) => {
+                e.currentTarget.src = DEFAULT_AVATAR;
+              }}
+            />
+
             <span>
-              <strong style={{color: profile?.nickname_color || undefined}}>
-                {isAdmin(profile?.role) && <img className="inline-role-symbol" src="/Admin-star.png" alt="" />}
-                {profile?.role === "SUPPORTER" && <img className="inline-role-symbol" src="/supporter-star.png" alt="" />}
+              <strong style={{ color: profile?.nickname_color || undefined }}>
+                {isAdmin(profile?.role) && (
+                  <img
+                    className="inline-role-symbol"
+                    src="/Admin-star.png"
+                    alt=""
+                  />
+                )}
+
+                {profile?.role === "SUPPORTER" && (
+                  <img
+                    className="inline-role-symbol"
+                    src="/supporter-star.png"
+                    alt=""
+                  />
+                )}
+
                 {getName(profile)}
               </strong>
-              <small>Mein Bereich</small>
+
+              <small>
+                {profile?.is_online ? "● Online" : "● Offline"}
+              </small>
             </span>
           </button>
-          <div className="quick-actions">
-            <button onClick={() => setPage("messages")}>💬 Nachrichten</button>
-            <button onClick={() => setPage("online")}>● Freunde online ({onlineFriends.length})</button>
-            <button onClick={() => setPage("profile")}>♡ Freunde ({friendships.filter(f=>f.status==="ACCEPTED").length})</button>
-            <button onClick={() => setPage("profile")}>👁 Besucher ({profileVisits.length})</button>
-            <button onClick={() => setPage("points")}>⭐ Punkte</button>
-            <button onClick={() => setPage("profile")}>⚙ Einstellungen</button>
-            {isAdmin(profile?.role) && <button className="quick-admin" onClick={() => setPage("admin")}><img className="inline-role-symbol" src="/Admin-star.png" alt="" /> Admin-Tools</button>}
+
+          <div className="quick-section-title">
+            MEIN BEREICH
           </div>
+
+          <button onClick={() => setPage("profile")}>
+            👤 Mein Profil
+          </button>
+
+          <button onClick={() => setPage("profile")}>
+            ⚙ Einstellungen
+          </button>
+
+          <button
+            onClick={() => setPage("messages")}
+            className="rail-message-button"
+          >
+            💬 Nachrichten
+            {inboxMessages.length > 0 && (
+              <span className="rail-badge">
+                {inboxMessages.length}
+              </span>
+            )}
+          </button>
+
+          <button onClick={() => setPage("points")}>
+            ⭐ {profile?.community_points || 0} Punkte
+            <span className="rail-subvalue">
+              ({profile?.purchase_points || 0} KP)
+            </span>
+          </button>
+
+          <button
+            onClick={() =>
+              setFriendsExpanded((value) => !value)
+            }
+            className="rail-expand-button"
+          >
+            🤝 Freunde
+            <span>
+              {acceptedFriendIds.length}
+            </span>
+            <b>{friendsExpanded ? "⌃" : "⌄"}</b>
+          </button>
+
+          {friendsExpanded && (
+            <div className="rail-subpanel">
+              <div className="rail-subtitle">
+                Freunde online ({onlineFriends.length})
+              </div>
+
+              {onlineFriends.map((friend) => (
+                <button
+                  key={friend.id}
+                  className="rail-member"
+                  onClick={() => openMember(friend)}
+                >
+                  <img
+                    src={friend.avatar_url || DEFAULT_AVATAR}
+                    alt=""
+                  />
+
+                  <span>
+                    <strong>
+                      {isAdmin(friend.role) && (
+                        <span className="rail-mini-star">
+                          ★
+                        </span>
+                      )}
+                      {friend.nickname || getName(friend)}
+                    </strong>
+
+                    <small className="online-text">
+                      ● Online
+                    </small>
+                  </span>
+                </button>
+              ))}
+
+              {!onlineFriends.length && (
+                <small className="rail-empty">
+                  Gerade keine Freunde online.
+                </small>
+              )}
+
+              <button
+                className="rail-link"
+                onClick={() => setPage("online")}
+              >
+                Alle Online-Mitglieder →
+              </button>
+            </div>
+          )}
+
+          <button
+            onClick={() => setPage("profile")}
+          >
+            🤝 Freundschaftsanfragen
+          </button>
+
+          <button
+            onClick={() => setPage("profile")}
+          >
+            👁 Profilbesucher ({profileVisits.length})
+          </button>
+
+          {isAdmin(profile?.role) && (
+            <>
+              <div className="quick-section-title admin-section-title">
+                ★ ADMIN-BEREICH
+              </div>
+
+              {(
+                isHeadAdmin(profile?.role) ||
+                myAdminPermission("manage_members")
+              ) && (
+                <button onClick={() => setPage("admin")}>
+                  👥 Mitglieder verwalten
+                </button>
+              )}
+
+              {(
+                isHeadAdmin(profile?.role) ||
+                myAdminPermission("manage_points")
+              ) && (
+                <button onClick={() => setPage("admin")}>
+                  ⭐ Punkte verwalten
+                </button>
+              )}
+
+              {(
+                isHeadAdmin(profile?.role) ||
+                myAdminPermission("manage_news")
+              ) && (
+                <button onClick={() => setPage("home")}>
+                  📰 News verwalten
+                </button>
+              )}
+
+              {(
+                isHeadAdmin(profile?.role) ||
+                myAdminPermission("manage_groups")
+              ) && (
+                <button onClick={() => setPage("groups")}>
+                  👥 Gruppen verwalten
+                </button>
+              )}
+
+              {(
+                isHeadAdmin(profile?.role) ||
+                myAdminPermission("manage_events")
+              ) && (
+                <button onClick={() => setPage("events")}>
+                  📅 Events verwalten
+                </button>
+              )}
+
+              {(
+                isHeadAdmin(profile?.role) ||
+                myAdminPermission("manage_marketplace")
+              ) && (
+                <button onClick={() => setPage("admin")}>
+                  🛒 Marktplatz verwalten
+                </button>
+              )}
+
+              {isHeadAdmin(profile?.role) && (
+                <section className="admin-permission-panel">
+                  <button
+                    className="permission-heading"
+                    onClick={() =>
+                      setPermissionsExpanded((value) => !value)
+                    }
+                  >
+                    <span>★ Rechte & Rollen</span>
+                    <b>
+                      {permissionsExpanded ? "⌃" : "⌄"}
+                    </b>
+                  </button>
+
+                  {permissionsExpanded && (
+                    <>
+                      <select
+                        value={permissionTarget}
+                        onChange={(event) =>
+                          loadPermissionDraft(
+                            event.target.value
+                          )
+                        }
+                      >
+                        <option value="">
+                          Admin auswählen
+                        </option>
+
+                        {members
+                          .filter(
+                            (member) =>
+                              member.role === "ADMIN"
+                          )
+                          .map((member) => (
+                            <option
+                              key={member.id}
+                              value={member.id}
+                            >
+                              {getName(member)}
+                            </option>
+                          ))}
+                      </select>
+
+                      {permissionTarget && (
+                        <div className="permission-list">
+                          {[
+                            ["manage_members", "Mitglieder verwalten"],
+                            ["manage_points", "Punkte verwalten"],
+                            ["manage_messages", "Nachrichten verwalten"],
+                            ["manage_media", "Medien verwalten"],
+                            ["manage_roles", "Rollen vergeben"],
+                            ["manage_admins", "Admins verwalten"],
+                            ["view_profile_visits", "Profilbesucher sehen"],
+                            ["manage_news", "News verwalten"],
+                            ["manage_groups", "Gruppen verwalten"],
+                            ["manage_events", "Events verwalten"],
+                            ["manage_marketplace", "Marktplatz verwalten"],
+                            ["manage_friend_requests", "Freundschaftsanfragen verwalten"],
+                            ["manage_homepage", "Hauptseite gestalten"]
+                          ].map(([key, label]) => (
+                            <label
+                              className="permission-toggle"
+                              key={key}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={!!permissionDraft[key]}
+                                onChange={(event) =>
+                                  setPermissionDraft({
+                                    ...permissionDraft,
+                                    [key]: event.target.checked
+                                  })
+                                }
+                              />
+                              <span>{label}</span>
+                            </label>
+                          ))}
+
+                          <button
+                            className="primary-button"
+                            onClick={saveAdminPermissions}
+                          >
+                            Rechte speichern
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </section>
+              )}
+            </>
+          )}
         </aside>
 
         {/* =====================================================
@@ -2868,6 +3591,37 @@ async function uploadProfileImage(file) {
                     </div>
                   )}
 
+                </div>
+
+                <div className="profile-memberships-grid">
+                  <section className="profile-membership-box">
+                    <h3>👥 Gruppen</h3>
+                    {selectedMemberGroups.length ? (
+                      selectedMemberGroups.map((group) => (
+                        <div className="profile-membership-card" key={group.id}>
+                          {group.image_url && (
+                            <img src={group.image_url} alt="" />
+                          )}
+                          <span>{group.name}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <small>Noch keiner Gruppe beigetreten.</small>
+                    )}
+                  </section>
+
+                  <section className="profile-membership-box">
+                    <h3>📅 Events</h3>
+                    {selectedMemberEvents.length ? (
+                      selectedMemberEvents.map((event) => (
+                        <div className="profile-membership-card" key={event.id}>
+                          <span>{event.title}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <small>Noch an keinem Event teilgenommen.</small>
+                    )}
+                  </section>
                 </div>
 
                 {selectedMember.id !==
@@ -3146,38 +3900,26 @@ function MemberMini({
    LOGIN
    ========================================================= */
 
-function Auth({
-  login,
-  register
-}) {
-  const [mode, setMode] =
-    useState("login");
+function Auth({ login, register }) {
+  const [mode, setMode] = useState("login");
 
   return (
     <div className="auth-box">
-
       {mode === "login" ? (
-
-        <form
-          className="panel"
-          onSubmit={login}
-        >
-
-          <h1>
-            Anmelden
-          </h1>
+        <form className="panel" onSubmit={login}>
+          <h1>Anmelden</h1>
 
           <input
             name="email"
             type="email"
-            placeholder="E-Mail"
+            placeholder="E-Mail *"
             required
           />
 
           <input
             name="password"
             type="password"
-            placeholder="Passwort"
+            placeholder="Passwort *"
             required
           />
 
@@ -3188,78 +3930,47 @@ function Auth({
           <button
             type="button"
             className="text-button"
-            onClick={() =>
-              setMode("register")
-            }
+            onClick={() => setMode("register")}
           >
-            Noch kein Konto?
-            Jetzt registrieren
+            Noch kein Konto? Jetzt registrieren
           </button>
-
         </form>
-
       ) : (
-
-        <form
-          className="panel"
-          onSubmit={register}
-        >
-
-          <h1>
-            Registrieren
-          </h1>
+        <form className="panel" onSubmit={register}>
+          <h1>Registrieren</h1>
 
           <input
             name="nickname"
-            placeholder="Nickname"
+            placeholder="Nickname *"
+            minLength={3}
+            maxLength={30}
             required
           />
 
           <input
             name="first_name"
-            placeholder="Vorname"
+            placeholder="Vorname *"
             required
           />
 
           <input
             name="last_name"
-            placeholder="Nachname"
+            placeholder="Nachname *"
             required
           />
 
+          <label>Geburtsdatum *</label>
           <input
             name="birth_date"
             type="date"
             required
           />
-          <label>
-  Geschlecht *
-</label>
 
-<select
-  name="gender"
-  defaultValue=""
-  required
->
-  <option value="" disabled>
-    Bitte auswählen
-  </option>
-
-  <option value="männlich">
-    Männlich
-  </option>
-
-  <option value="weiblich">
-    Weiblich
-  </option>
-
-  <option value="divers">
-    Divers
-  </option>
-</select>
-
-          <select name="gender" required defaultValue="">
-            <option value="" disabled>Geschlecht auswählen</option>
+          <label>Geschlecht *</label>
+          <select name="gender" defaultValue="" required>
+            <option value="" disabled>
+              Bitte auswählen
+            </option>
             <option value="männlich">Männlich</option>
             <option value="weiblich">Weiblich</option>
             <option value="divers">Divers</option>
@@ -3268,15 +3979,15 @@ function Auth({
           <input
             name="email"
             type="email"
-            placeholder="E-Mail"
+            placeholder="E-Mail *"
             required
           />
 
           <input
             name="password"
             type="password"
-            minLength="6"
-            placeholder="Passwort"
+            minLength={6}
+            placeholder="Passwort * (mind. 6 Zeichen)"
             required
           />
 
@@ -3287,24 +3998,15 @@ function Auth({
           <button
             type="button"
             className="text-button"
-            onClick={() =>
-              setMode("login")
-            }
+            onClick={() => setMode("login")}
           >
-            Zur Anmeldung
+            Bereits registriert? Anmelden
           </button>
-
         </form>
       )}
-
     </div>
   );
 }
-
-
-/* =========================================================
-   KOMPLETTES DESIGN DIREKT IN APP
-   ========================================================= */
 
 function GlobalStyle() {
   return (
@@ -4532,3 +5234,61 @@ function GlobalStyle() {
     `}</style>
   );
 }
+      .homepage-builder {
+        margin-bottom: 22px;
+      }
+
+      .homepage-builder-form {
+        display: grid;
+        gap: 10px;
+      }
+
+      .homepage-sections {
+        display: grid;
+        gap: 14px;
+        margin-bottom: 28px;
+      }
+
+      .homepage-frame {
+        border: 1px solid #3b4350;
+        border-radius: 16px;
+        padding: 20px;
+        background: #171b22;
+      }
+
+      .homepage-frame.accent {
+        border-color: #f0b62b;
+        background: rgba(240,182,43,.08);
+      }
+
+      .homepage-frame.soft {
+        background: #20252d;
+      }
+
+      .homepage-frame.dark {
+        background: #0e1014;
+        border-color: #596271;
+      }
+
+      .homepage-frame h2 { margin-top: 0; }
+      .homepage-frame small, .content-attribution {
+        color: #8d97a5;
+      }
+
+      .content-manage-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+        flex-wrap: wrap;
+      }
+
+      .content-manage-actions button {
+        width: auto;
+        margin: 0;
+        padding: 7px 10px;
+        background: #222833;
+      }
+
+      .content-manage-actions .danger-link {
+        color: #ff8d8d;
+      }
