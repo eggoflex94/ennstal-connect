@@ -3115,7 +3115,7 @@ async function uploadProfileImage(file) {
 
         </main>
 
-        <aside className="quick-rail">
+        <aside className={`quick-rail ${isAdmin(profile?.role) ? "quick-rail-admin" : ""}`}>
           <button
             className={`quick-profile ${isAdmin(profile?.role) ? "admin" : profile?.role === "SUPPORTER" ? "supporter" : ""}`}
             onClick={() => setPage("profile")}
@@ -5284,6 +5284,116 @@ function GlobalStyle() {
 
       .content-manage-actions .danger-link {
         color: #ff8d8d;
+      }
+
+
+      /* =========================================================
+         RECHTE LEISTE – TRANSPARENT + ROLLENRAHMEN
+         ========================================================= */
+
+      .quick-rail {
+        position: fixed;
+        right: 16px;
+        top: 94px;
+        width: 240px;
+        z-index: 15;
+        background: rgba(12, 15, 20, 0.42) !important;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(120, 130, 145, 0.42) !important;
+        border-radius: 16px;
+        padding: 10px;
+        box-shadow: 0 14px 36px rgba(0, 0, 0, 0.22);
+      }
+
+      .quick-rail.quick-rail-admin {
+        border-color: rgba(221, 92, 92, 0.72) !important;
+        box-shadow:
+          0 0 0 1px rgba(221, 92, 92, 0.08),
+          0 14px 36px rgba(0, 0, 0, 0.22);
+      }
+
+      .quick-rail > button,
+      .quick-rail .permission-heading {
+        width: 100% !important;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        box-sizing: border-box;
+        text-align: left;
+        background: rgba(20, 24, 31, 0.42) !important;
+        color: #f3f5f8 !important;
+        border: 1px solid rgba(112, 122, 136, 0.30) !important;
+        border-radius: 9px !important;
+        padding: 9px 10px !important;
+        margin-top: 6px !important;
+      }
+
+      .quick-rail > button:hover,
+      .quick-rail .permission-heading:hover {
+        background: rgba(44, 49, 59, 0.58) !important;
+        border-color: rgba(170, 180, 194, 0.45) !important;
+      }
+
+      .quick-rail .quick-profile {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px !important;
+        background: rgba(22, 26, 34, 0.48) !important;
+      }
+
+      .quick-rail .quick-profile.admin {
+        border-color: rgba(221, 92, 92, 0.70) !important;
+        background: rgba(120, 36, 36, 0.14) !important;
+      }
+
+      .quick-rail .quick-profile.supporter {
+        border-color: rgba(66, 216, 120, 0.56) !important;
+        background: rgba(20, 110, 55, 0.12) !important;
+      }
+
+      .quick-rail .quick-profile > img {
+        width: 44px;
+        height: 44px;
+        flex: 0 0 44px;
+        object-fit: cover;
+        border-radius: 50%;
+      }
+
+      .quick-rail .quick-section-title {
+        margin-top: 12px;
+        padding: 8px 6px 4px;
+        font-size: 11px;
+        font-weight: 900;
+        letter-spacing: 1.4px;
+        color: #bdc5cf;
+      }
+
+      .quick-rail .admin-section-title {
+        color: #ff8d8d;
+      }
+
+      .quick-rail .rail-subpanel {
+        background: rgba(10, 13, 18, 0.34) !important;
+        border-color: rgba(120, 130, 145, 0.26) !important;
+      }
+
+      .quick-rail .admin-permission-panel {
+        background: rgba(38, 23, 24, 0.34) !important;
+        border-color: rgba(221, 92, 92, 0.52) !important;
+      }
+
+      .quick-rail .permission-toggle {
+        background: rgba(28, 32, 40, 0.34) !important;
+      }
+
+      @media (max-width: 1279px) {
+        .quick-rail {
+          position: static;
+          width: auto;
+          margin: 0 24px 24px;
+        }
       }
 
     `}</style>
