@@ -1198,20 +1198,7 @@ async function uploadProfileImage(file) {
 
            
 
-            {isAdmin(profile?.role) && (
-              <button
-                className={
-                  page === "admin"
-                    ? "active"
-                    : ""
-                }
-                onClick={() =>
-                  setPage("admin")
-                }
-              >
-                ★ Admin-Bereich
-              </button>
-            )}
+           
 
           </nav>
 
@@ -3245,6 +3232,31 @@ function Auth({
             type="date"
             required
           />
+          <label>
+  Geschlecht *
+</label>
+
+<select
+  name="gender"
+  defaultValue=""
+  required
+>
+  <option value="" disabled>
+    Bitte auswählen
+  </option>
+
+  <option value="männlich">
+    Männlich
+  </option>
+
+  <option value="weiblich">
+    Weiblich
+  </option>
+
+  <option value="divers">
+    Divers
+  </option>
+</select>
 
           <select name="gender" required defaultValue="">
             <option value="" disabled>Geschlecht auswählen</option>
