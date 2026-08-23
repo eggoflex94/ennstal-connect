@@ -1395,7 +1395,7 @@ async function uploadProfileImage(file) {
      PUNKTE ÄNDERN
      ========================================================= */
 
- async function changePoints(event) {
+async function changePoints(event) {
   event.preventDefault();
 
   const form =
@@ -1436,26 +1436,25 @@ async function uploadProfileImage(file) {
     return;
   }
 
-  const {
-    error
-  } = await supabase.rpc(
-    "admin_change_points",
-    {
-      target_user:
-        targetUser,
+  const { error } =
+    await supabase.rpc(
+      "admin_change_points",
+      {
+        target_user:
+          targetUser,
 
-      delta:
-        Math.trunc(amount),
+        delta:
+          Math.trunc(amount),
 
-      change_kind:
-        amount > 0
-          ? "ADD"
-          : "REMOVE",
+        change_kind:
+          amount > 0
+            ? "ADD"
+            : "REMOVE",
 
-      reason_text:
-        reason
-    }
-  );
+        reason_text:
+          reason
+      }
+    );
 
   if (error) {
     showNotice(
@@ -1474,7 +1473,6 @@ async function uploadProfileImage(file) {
 
   await loadAll();
 }
-  }
 
   /* =========================================================
      ADMIN MITGLIED SPEICHERN
