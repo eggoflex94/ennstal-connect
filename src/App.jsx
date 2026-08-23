@@ -52,6 +52,8 @@ export default function App() {
   const [profile, setProfile] = useState(null);
 
   const [members, setMembers] = useState([]);
+  const [friendships, setFriendships] = useState([]);
+  const [profileVisits, setProfileVisits] = useState([]);
   const [news, setNews] = useState([]);
   const [events, setEvents] = useState([]);
   const [groups, setGroups] = useState([]);
@@ -119,7 +121,9 @@ export default function App() {
       eventsResult,
       groupsResult,
       historyResult,
-      messagesResult
+      messagesResult,
+      friendshipsResult,
+      visitsResult
     ] = await Promise.all([
       supabase
         .from("profiles")
@@ -168,7 +172,18 @@ export default function App() {
         )
         .order("created_at", {
           ascending: false
-        })
+        }),
+
+      supabase
+        .from("friendships")
+        .select("*")
+        .or(`requester_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`),
+
+      supabase
+        .from("profile_visits")
+        .select("*")
+        .eq("profile_id", currentUser.id)
+        .order("visited_at", { ascending: false })
     ]);
 
     setProfile(
@@ -198,6 +213,9 @@ export default function App() {
     setMessages(
       messagesResult.data || []
     );
+
+    setFriendships(friendshipsResult.data || []);
+    setProfileVisits(visitsResult.data || []);
 
     setLoading(false);
   }
@@ -304,6 +322,56 @@ export default function App() {
     };
   }, [members, search]);
 
+  const onlineMembers = useMemo(
+    () => members.filter((member) => member.is_online),
+    [members]
+  );
+
+  const friendshipWith = (memberId) =>
+    friendships.find((item) =>
+      (item.requester_id === user?.id && item.receiver_id === memberId) ||
+      (item.receiver_id === user?.id && item.requester_id === memberId)
+    );
+
+  const acceptedFriendIds = useMemo(() =>
+    friendships
+      .filter((item) => item.status === "ACCEPTED")
+      .map((item) => item.requester_id === user?.id ? item.receiver_id : item.requester_id),
+    [friendships, user?.id]
+  );
+
+  const onlineFriends = useMemo(
+    () => onlineMembers.filter((member) => acceptedFriendIds.includes(member.id)),
+    [onlineMembers, acceptedFriendIds]
+  );
+
+  async function requestFriend(member) {
+    if (!user || member.id === user.id) return;
+    const existing = friendshipWith(member.id);
+    if (existing) {
+      showNotice(existing.status === "ACCEPTED" ? "Ihr seid bereits Freunde." : "Freundschaftsanfrage ist bereits vorhanden.");
+      return;
+    }
+    const { error } = await supabase.from("friendships").insert({
+      requester_id: user.id,
+      receiver_id: member.id,
+      status: "PENDING"
+    });
+    if (error) return showNotice(error.message);
+    showNotice("Freundschaftsanfrage gesendet.");
+    await loadAll();
+  }
+
+  async function openMember(member) {
+    setSelectedMember(member);
+    if (user && member.id !== user.id) {
+      const { error } = await supabase.rpc("record_profile_visit", { target_profile: member.id });
+      if (error) {
+        await supabase.from("profile_visits").insert({ visitor_id: user.id, profile_id: member.id });
+      }
+    }
+  }
+
   /* =========================================================
      LOGIN
      ========================================================= */
@@ -357,7 +425,10 @@ export default function App() {
               form.get("last_name"),
 
             birth_date:
-              form.get("birth_date")
+              form.get("birth_date"),
+
+            gender:
+              form.get("gender")
           }
         }
       });
@@ -405,37 +476,45 @@ export default function App() {
     const form =
       new FormData(event.currentTarget);
 
+    let avatarUrl = form.get("avatar_url")?.trim() || profile?.avatar_url || null;
+    const avatarFile = form.get("avatar_file");
+
+    if (avatarFile && avatarFile.size > 0) {
+      const extension = avatarFile.name.split(".").pop() || "jpg";
+      const path = `${user.id}/${Date.now()}.${extension}`;
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(path, avatarFile, { upsert: true, contentType: avatarFile.type });
+      if (uploadError) {
+        showNotice(`Profilbild konnte nicht hochgeladen werden: ${uploadError.message}`);
+        return;
+      }
+      const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+      avatarUrl = data.publicUrl;
+    }
+
+    const firstName = form.get("first_name")?.trim();
+    const lastName = form.get("last_name")?.trim();
+    const birthDate = form.get("birth_date");
+    const gender = form.get("gender");
+
+    if (!firstName || !lastName || !birthDate || !gender) {
+      showNotice("Vorname, Nachname, Geburtsdatum und Geschlecht sind Pflichtfelder.");
+      return;
+    }
+
     const updateData = {
-      nickname:
-        form.get("nickname")
-          ?.trim(),
-
-      nickname_color:
-        form.get("nickname_color"),
-
-      avatar_url:
-        form.get("avatar_url")
-          ?.trim(),
-
-      gender:
-        form.get("gender")
-          ?.trim(),
-
-      bio:
-        form.get("bio")
-          ?.trim(),
-
-      location:
-        form.get("location")
-          ?.trim(),
-
-      interests:
-        form.get("interests")
-          ?.trim(),
-
-      website:
-        form.get("website")
-          ?.trim()
+      nickname: form.get("nickname")?.trim(),
+      nickname_color: form.get("nickname_color"),
+      avatar_url: avatarUrl,
+      first_name: firstName,
+      last_name: lastName,
+      birth_date: birthDate,
+      gender,
+      bio: form.get("bio")?.trim(),
+      location: form.get("location")?.trim(),
+      interests: form.get("interests")?.trim(),
+      website: form.get("website")?.trim()
     };
 
     const { error } =
@@ -751,6 +830,9 @@ export default function App() {
           p_birth_date:
             form.get("birth_date"),
 
+          p_gender:
+            form.get("gender"),
+
           p_role:
             form.get("role"),
 
@@ -1006,6 +1088,13 @@ export default function App() {
               }
             >
               Mitglieder
+            </button>
+
+            <button
+              className={page === "online" ? "active" : ""}
+              onClick={() => setPage("online")}
+            >
+              ● Online ({onlineMembers.length})
             </button>
 
             <button
@@ -1344,8 +1433,10 @@ export default function App() {
                     sortedMembers.admins
                   }
                   profile={profile}
-                  onOpen={setSelectedMember}
+                  onOpen={openMember}
                   onMessage={openChat}
+                  friendships={friendships}
+                  onFriend={requestFriend}
                 />
               )}
 
@@ -1358,8 +1449,10 @@ export default function App() {
                     sortedMembers.supporters
                   }
                   profile={profile}
-                  onOpen={setSelectedMember}
+                  onOpen={openMember}
                   onMessage={openChat}
+                  friendships={friendships}
+                  onFriend={requestFriend}
                 />
               )}
 
@@ -1371,10 +1464,33 @@ export default function App() {
                   sortedMembers.normalMembers
                 }
                 profile={profile}
-                onOpen={setSelectedMember}
+                onOpen={openMember}
                 onMessage={openChat}
+                friendships={friendships}
+                onFriend={requestFriend}
               />
 
+            </section>
+          )}
+
+          {page === "online" && (
+            <section>
+              <div className="page-heading">
+                <div>
+                  <span className="eyebrow">JETZT AKTIV</span>
+                  <h1>Online ({onlineMembers.length})</h1>
+                  <p>Alle Mitglieder, die aktuell online sind.</p>
+                </div>
+              </div>
+              <MemberSection
+                title={`Online-Mitglieder (${onlineMembers.length})`}
+                members={onlineMembers.sort((a,b) => getName(a).localeCompare(getName(b), "de"))}
+                profile={profile}
+                onOpen={openMember}
+                onMessage={openChat}
+                friendships={friendships}
+                onFriend={requestFriend}
+              />
             </section>
           )}
 
@@ -1782,9 +1898,7 @@ export default function App() {
                   <div className="my-profile-top">
 
                     {isAdmin(profile?.role) && (
-                      <span className="admin-star-large">
-                        ★
-                      </span>
+                      <img className="role-symbol role-symbol-large" src="/Admin-star.png" alt="Admin" />
                     )}
 
                     <h1
@@ -1900,27 +2014,27 @@ export default function App() {
                     }
                   />
 
-                  <label>
-                    Profilbild URL
-                  </label>
+                  <label>Profilbild hochladen</label>
+                  <input type="file" name="avatar_file" accept="image/*" />
+                  <small className="form-help">Oder alternativ eine Bild-URL eintragen.</small>
+                  <input name="avatar_url" defaultValue={profile?.avatar_url || ""} placeholder="https://..." />
 
-                  <input
-                    name="avatar_url"
-                    defaultValue={
-                      profile?.avatar_url || ""
-                    }
-                  />
+                  <label>Vorname *</label>
+                  <input name="first_name" defaultValue={profile?.first_name || ""} required />
 
-                  <label>
-                    Geschlecht
-                  </label>
+                  <label>Nachname *</label>
+                  <input name="last_name" defaultValue={profile?.last_name || ""} required />
 
-                  <input
-                    name="gender"
-                    defaultValue={
-                      profile?.gender || ""
-                    }
-                  />
+                  <label>Geburtsdatum *</label>
+                  <input type="date" name="birth_date" defaultValue={profile?.birth_date || ""} required />
+
+                  <label>Geschlecht *</label>
+                  <select name="gender" defaultValue={profile?.gender || ""} required>
+                    <option value="" disabled>Bitte auswählen</option>
+                    <option value="männlich">Männlich</option>
+                    <option value="weiblich">Weiblich</option>
+                    <option value="divers">Divers</option>
+                  </select>
 
                   <label>
                     Über mich
@@ -2353,6 +2467,16 @@ export default function App() {
                         />
 
                         <select
+                          name="gender"
+                          defaultValue={member.gender || ""}
+                          required
+                        >
+                          <option value="männlich">Männlich</option>
+                          <option value="weiblich">Weiblich</option>
+                          <option value="divers">Divers</option>
+                        </select>
+
+                        <select
                           name="role"
                           defaultValue={
                             member.role ||
@@ -2410,6 +2534,29 @@ export default function App() {
 
         </main>
 
+        <aside className="quick-rail">
+          <button className="quick-profile" onClick={() => setPage("profile")}>
+            <img src={profile?.avatar_url || DEFAULT_AVATAR} alt="" onError={(e)=>{e.currentTarget.src=DEFAULT_AVATAR;}} />
+            <span>
+              <strong style={{color: profile?.nickname_color || undefined}}>
+                {isAdmin(profile?.role) && <img className="inline-role-symbol" src="/Admin-star.png" alt="" />}
+                {profile?.role === "SUPPORTER" && <img className="inline-role-symbol" src="/supporter-star.png" alt="" />}
+                {getName(profile)}
+              </strong>
+              <small>Mein Bereich</small>
+            </span>
+          </button>
+          <div className="quick-actions">
+            <button onClick={() => setPage("messages")}>💬 Nachrichten</button>
+            <button onClick={() => setPage("online")}>● Freunde online ({onlineFriends.length})</button>
+            <button onClick={() => setPage("profile")}>♡ Freunde ({friendships.filter(f=>f.status==="ACCEPTED").length})</button>
+            <button onClick={() => setPage("profile")}>👁 Besucher ({profileVisits.length})</button>
+            <button onClick={() => setPage("points")}>⭐ Punkte</button>
+            <button onClick={() => setPage("profile")}>⚙ Einstellungen</button>
+            {isAdmin(profile?.role) && <button className="quick-admin" onClick={() => setPage("admin")}><img className="inline-role-symbol" src="/Admin-star.png" alt="" /> Admin-Tools</button>}
+          </div>
+        </aside>
+
         {/* =====================================================
             PROFIL MODAL
             ===================================================== */}
@@ -2459,16 +2606,12 @@ export default function App() {
                   {isAdmin(
                     selectedMember.role
                   ) && (
-                    <span className="admin-star">
-                      ★
-                    </span>
+                    <img className="role-symbol" src="/Admin-star.png" alt="Admin" />
                   )}
 
                   {selectedMember.role ===
                     "SUPPORTER" && (
-                    <span className="supporter-star">
-                      ★
-                    </span>
+                    <img className="role-symbol" src="/supporter-star.png" alt="Supporter" />
                   )}
 
                   <h1
@@ -2625,7 +2768,9 @@ function MemberSection({
   members,
   profile,
   onOpen,
-  onMessage
+  onMessage,
+  friendships = [],
+  onFriend
 }) {
   return (
     <section className="member-section">
@@ -2644,6 +2789,8 @@ function MemberSection({
             profile={profile}
             onOpen={onOpen}
             onMessage={onMessage}
+            friendships={friendships}
+            onFriend={onFriend}
           />
 
         ))}
@@ -2669,7 +2816,9 @@ function MemberCard({
   member,
   profile,
   onOpen,
-  onMessage
+  onMessage,
+  friendships = [],
+  onFriend
 }) {
   const age =
     getAge(member.birth_date);
@@ -2679,6 +2828,12 @@ function MemberCard({
 
   const supporter =
     member.role === "SUPPORTER";
+
+  const friendship = friendships.find((item) =>
+    (item.requester_id === profile?.id && item.receiver_id === member.id) ||
+    (item.receiver_id === profile?.id && item.requester_id === member.id)
+  );
+  const isFriend = friendship?.status === "ACCEPTED";
 
   return (
     <article
@@ -2700,17 +2855,8 @@ function MemberCard({
 
         <div className="member-left">
 
-          {admin && (
-            <span className="admin-star">
-              ★
-            </span>
-          )}
-
-          {supporter && (
-            <span className="supporter-star">
-              ★
-            </span>
-          )}
+          {admin && <img className="role-symbol" src="/Admin-star.png" alt="Admin" />}
+          {supporter && <img className="role-symbol" src="/supporter-star.png" alt="Supporter" />}
 
         </div>
 
@@ -2735,10 +2881,10 @@ function MemberCard({
               onClick={(event) => {
                 event.stopPropagation();
 
-                showFriendMessage();
+                onFriend?.(member);
               }}
             >
-              ♡
+              {isFriend ? <img src="/friend.png" alt="Freund" /> : "♡"}
             </button>
           )}
 
@@ -2947,6 +3093,13 @@ function Auth({
             type="date"
             required
           />
+
+          <select name="gender" required defaultValue="">
+            <option value="" disabled>Geschlecht auswählen</option>
+            <option value="männlich">Männlich</option>
+            <option value="weiblich">Weiblich</option>
+            <option value="divers">Divers</option>
+          </select>
 
           <input
             name="email"
@@ -4128,6 +4281,24 @@ function GlobalStyle() {
         border-radius:
           10px;
       }
+
+
+      .role-symbol { width: 23px; height: 23px; object-fit: contain; vertical-align: middle; flex: 0 0 auto; }
+      .role-symbol-large { width: 30px; height: 30px; object-fit: contain; }
+      .inline-role-symbol { width: 17px; height: 17px; object-fit: contain; vertical-align: -3px; margin-right: 4px; }
+      .friend-button img { width: 20px; height: 20px; object-fit: contain; display:block; }
+      .form-help { display:block; color:#9da6b1; margin:-4px 0 4px; }
+      .quick-rail { position:fixed; right:16px; top:94px; width:210px; z-index:15; background:rgba(24,27,34,.97); border:1px solid #3a424f; border-radius:16px; padding:10px; box-shadow:0 16px 40px rgba(0,0,0,.28); }
+      .quick-profile { width:100%; display:flex; align-items:center; gap:9px; background:#20252d; color:#fff; border:1px solid #414956; border-radius:12px; padding:9px; text-align:left; }
+      .quick-profile img { width:38px; height:38px; border-radius:50%; object-fit:cover; border:2px solid #68717d; }
+      .quick-profile strong,.quick-profile small { display:block; }
+      .quick-profile small { color:#aeb7c3; margin-top:2px; }
+      .quick-actions { display:grid; gap:5px; margin-top:9px; }
+      .quick-actions button { width:100%; text-align:left; background:#171b21; color:#dce2e9; border:1px solid #303844; border-radius:9px; padding:8px 9px; font-size:13px; }
+      .quick-actions button:hover { background:#292f38; color:#fff; }
+      .quick-actions .quick-admin { border-color:#e5bf31; background:rgba(229,191,49,.08); }
+      @media (min-width: 1280px) { main { margin-right:250px; width:auto; max-width:1450px; } }
+      @media (max-width: 1279px) { .quick-rail { position:static; width:auto; margin:0 24px 24px; } .quick-actions { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 
       @media (max-width: 1100px) {
 
