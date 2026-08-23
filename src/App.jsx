@@ -5228,7 +5228,6 @@ function GlobalStyle() {
 
     `}</style>
   );
-}
       .homepage-builder {
         margin-bottom: 22px;
       }
@@ -5287,3 +5286,7 @@ function GlobalStyle() {
       .content-manage-actions .danger-link {
         color: #ff8d8d;
       }
+
+    `}</style>
+  );
+}
