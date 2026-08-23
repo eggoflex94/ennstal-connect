@@ -147,10 +147,11 @@ export default function App() {
     setLoading(true);
 
     try {
-      const { data: authData, error: authError } = await supabase.auth.getUser();
-      if (authError) throw authError;
+      const {
+        data: { session }
+      } = await supabase.auth.getSession();
 
-      const currentUser = authData?.user || null;
+      const currentUser = session?.user || null;
       setUser(currentUser);
 
       if (!currentUser) {
@@ -1771,8 +1772,6 @@ async function changePoints(event) {
   if (!user) {
     return (
       <>
-        <GlobalStyle />
-
         <div className="auth-page">
 
           <div className="auth-brand">
@@ -1808,8 +1807,6 @@ async function changePoints(event) {
   ) {
     return (
       <>
-        <GlobalStyle />
-
         <div className="suspended-page">
 
           <div className="suspended-box">
@@ -5224,9 +5221,4 @@ function Auth({ login, register }) {
       )}
     </div>
   );
-}
-
-function GlobalStyle() {
-  return (
-);
 }
