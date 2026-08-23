@@ -1395,74 +1395,85 @@ async function uploadProfileImage(file) {
      PUNKTE ÄNDERN
      ========================================================= */
 
-  async function changePoints(event) {
-    event.preventDefault();
+ async function changePoints(event) {
+  event.preventDefault();
 
-    const form =
-      new FormData(event.currentTarget);
+  const form =
+    new FormData(event.currentTarget);
 
-    const targetUser =
-      form.get("user_id");
+  const targetUser =
+    String(form.get("user_id") || "");
 
-    const amount =
-      Number(form.get("points"));
+  const amount =
+    Number(form.get("points"));
 
-    const reason =
-      form.get("reason")
-        ?.trim();
+  const reason =
+    String(
+      form.get("reason") || ""
+    ).trim();
 
-    if (
-      !targetUser ||
-      !Number.isFinite(amount) ||
-      amount === 0
-    ) {
-      showNotice(
-        "Bitte Mitglied und Punkte angeben."
-      );
-
-      return;
-    }
-
-    if (!reason || reason.length < 3) {
-      showNotice(
-        "Bitte einen Grund angeben."
-      );
-
-      return;
-    }
-
-    const { error } =
-      await supabase.rpc(
-        "admin_change_points",
-        {
-          target_user:
-            targetUser,
-
-          delta:
-            amount,
-
-          change_kind:
-            amount > 0
-              ? "ADD"
-              : "REMOVE",
-
-          reason_text:
-            reason
-        }
-      );
-
-    if (error) {
-      showNotice(error.message);
-      return;
-    }
-
-    event.currentTarget.reset();
-
+  if (!targetUser) {
     showNotice(
-      "Punkte erfolgreich geändert."
+      "Bitte ein Mitglied auswählen."
     );
+    return;
+  }
 
-    await loadAll();
+  if (
+    !Number.isFinite(amount) ||
+    amount === 0
+  ) {
+    showNotice(
+      "Bitte eine gültige Punktezahl eingeben."
+    );
+    return;
+  }
+
+  if (reason.length < 3) {
+    showNotice(
+      "Bitte einen Grund angeben."
+    );
+    return;
+  }
+
+  const {
+    error
+  } = await supabase.rpc(
+    "admin_change_points",
+    {
+      target_user:
+        targetUser,
+
+      delta:
+        Math.trunc(amount),
+
+      change_kind:
+        amount > 0
+          ? "ADD"
+          : "REMOVE",
+
+      reason_text:
+        reason
+    }
+  );
+
+  if (error) {
+    showNotice(
+      error.message
+    );
+    return;
+  }
+
+  event.currentTarget.reset();
+
+  showNotice(
+    amount > 0
+      ? `+${Math.trunc(amount)} Punkte vergeben.`
+      : `${Math.abs(Math.trunc(amount))} Minuspunkte vergeben.`
+  );
+
+  await loadAll();
+}
   }
 
   /* =========================================================
