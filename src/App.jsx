@@ -1,73 +1,1415 @@
-import {useEffect,useMemo,useState} from "react";
-import {supabase} from "./supabaseClient";
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "./supabaseClient";
 
-const FALLBACK="/default-avatar.svg";
-const roleRank={admin:0,supporter:1,member:2};
+function getName(member) {
+  if (!member) return "Mitglied";
 
-function age(d){if(!d)return null;const b=new Date(d),n=new Date();let a=n.getFullYear()-b.getFullYear();if(n<new Date(n.getFullYear(),b.getMonth(),b.getDate()))a--;return a}
-function fmtDate(d){return d?new Date(d).toLocaleDateString("de-AT"): ""}
-function Card({m,me,onOpen,friends,pending,onRequest}){
- const role=m.role||"member", isFriend=friends.has(m.id), sent=pending.has(m.id);
- return <button className={"member-card "+role} onClick={()=>onOpen(m)} aria-label={"Profil von "+m.nickname}>
-   <div className="member-top"><span className="nickname" style={{color:m.nickname_color||undefined}}>{m.nickname}</span>
-   <span className="badges">{role==="admin"&&<b title="Admin">★</b>}{role==="supporter"&&<b title="Supporter">★</b>}
-   {me&&m.id!==me.id&&(isFriend?<i title="Ihr seid Freunde">🤝</i>:<i title={sent?"Anfrage offen":"Freundschaftsanfrage"} onClick={(e)=>{e.stopPropagation();!sent&&onRequest(m.id)}}>{sent?"⏳":"➕"}</i>)}</span></div>
-   <img src={m.avatar_url||FALLBACK} onError={e=>e.currentTarget.src=FALLBACK} className="member-avatar"/>
-   <div className="realname">{m.first_name||""} {m.last_name||""}</div>
-   {m.show_age!==false&&<div className="member-age">{age(m.birth_date)!==null&&`(${age(m.birth_date)})`}</div>}
- </button>
+  return (
+    member.nickname ||
+    `${member.first_name || ""} ${member.last_name || ""}`.trim() ||
+    "Mitglied"
+  );
 }
 
-function Auth({close,refresh}){
- const [mode,setMode]=useState("login"),[form,setForm]=useState({email:"",password:"",nickname:"",first_name:"",last_name:"",birth_date:""}),[msg,setMsg]=useState("");
- const set=(k,v)=>setForm({...form,[k]:v});
- async function submit(e){e.preventDefault();setMsg("");
-  if(mode==="register"){
-   if(!form.birth_date)return setMsg("Geburtsdatum ist ein Pflichtfeld.");
-   const {error}=await supabase.auth.signUp({email:form.email,password:form.password,options:{data:{nickname:form.nickname,first_name:form.first_name,last_name:form.last_name,birth_date:form.birth_date}}});
-   setMsg(error?error.message:"Registrierung erfolgreich. Bitte prüfe deine E-Mails, falls eine Bestätigung aktiviert ist.");
-  }else{const {error}=await supabase.auth.signInWithPassword({email:form.email,password:form.password});if(error)setMsg(error.message);else{await refresh();close();}}
- }
- return <div className="modal-back"><form className="modal" onSubmit={submit}><button type="button" className="x" onClick={close}>×</button><h2>{mode==="login"?"Anmelden":"Registrieren"}</h2>
- {mode==="register"&&<><input placeholder="Nickname" required value={form.nickname} onChange={e=>set("nickname",e.target.value)}/><input placeholder="Vorname" required value={form.first_name} onChange={e=>set("first_name",e.target.value)}/><input placeholder="Nachname" required value={form.last_name} onChange={e=>set("last_name",e.target.value)}/><label>Geburtsdatum<input type="date" required value={form.birth_date} onChange={e=>set("birth_date",e.target.value)}/></label></>}
- <input type="email" placeholder="E-Mail" required value={form.email} onChange={e=>set("email",e.target.value)}/><input type="password" minLength="6" placeholder="Passwort" required value={form.password} onChange={e=>set("password",e.target.value)}/>
- <button className="primary">{mode==="login"?"Anmelden":"Konto erstellen"}</button><p>{mode==="login"?"Noch kein Konto? ":"Schon registriert? "}<button type="button" className="link" onClick={()=>setMode(mode==="login"?"register":"login")}>{mode==="login"?"Registrieren":"Anmelden"}</button></p>{msg&&<div className="notice">{msg}</div>}</form></div>
+function getInitial(member) {
+  return getName(member).charAt(0).toUpperCase();
 }
 
-function App(){
- const [session,setSession]=useState(null),[profile,setProfile]=useState(null),[members,setMembers]=useState([]),[news,setNews]=useState([]),[view,setView]=useState("home"),[search,setSearch]=useState(""),[selected,setSelected]=useState(null),[auth,setAuth]=useState(false),[friends,setFriends]=useState(new Set()),[pending,setPending]=useState(new Set()),[requests,setRequests]=useState([]),[toast,setToast]=useState("");
- const flash=(x)=>{setToast(x);setTimeout(()=>setToast(""),3500)};
- const refresh=async()=>{
-  const {data:{session:s}}=await supabase.auth.getSession();setSession(s);
-  if(s){const {data}=await supabase.from("profiles").select("*").eq("id",s.user.id).single();setProfile(data||null);
-   const {data:fs}=await supabase.from("friendships").select("*").or(`requester_id.eq.${s.user.id},addressee_id.eq.${s.user.id}`);
-   const f=new Set(),p=new Set(),r=[];(fs||[]).forEach(x=>{const other=x.requester_id===s.user.id?x.addressee_id:x.requester_id;if(x.status==="accepted")f.add(other);else if(x.requester_id===s.user.id)p.add(other);else r.push(x)});setFriends(f);setPending(p);setRequests(r);
-  } else {setProfile(null);setFriends(new Set());setPending(new Set());setRequests([])}
- };
- const load=async()=>{const [{data:m},{data:n}]=await Promise.all([supabase.from("public_profiles").select("*"),supabase.from("news_posts").select("*").order("created_at",{ascending:false})]);setMembers(m||[]);setNews(n||[])};
- useEffect(()=>{refresh();load();const {data:{subscription}}=supabase.auth.onAuthStateChange(()=>refresh());return()=>subscription.unsubscribe()},[]);
- const filtered=useMemo(()=>members.filter(m=>[m.nickname,m.first_name,m.last_name].join(" ").toLowerCase().includes(search.toLowerCase())).sort((a,b)=>(roleRank[a.role||"member"]-roleRank[b.role||"member"])||a.nickname.localeCompare(b.nickname,"de")),[members,search]);
- async function friend(id){if(!session)return setAuth(true);const {error}=await supabase.from("friendships").insert({requester_id:session.user.id,addressee_id:id,status:"pending"});flash(error?error.message:"Freundschaftsanfrage gesendet.");if(!error)refresh()}
- async function answer(r,ok){const {error}=ok?await supabase.from("friendships").update({status:"accepted"}).eq("id",r.id):await supabase.from("friendships").delete().eq("id",r.id);flash(error?error.message:(ok?"Freundschaft angenommen.":"Anfrage abgelehnt."));refresh()}
- async function saveSettings(e){e.preventDefault();if(!profile)return;const fd=new FormData(e.target);const payload={show_age:fd.get("show_age")==="on",show_online_status:fd.get("show_online_status")==="on",show_profile_visits:fd.get("show_profile_visits")==="on",allow_friend_requests:fd.get("allow_friend_requests")==="on"};const {error}=await supabase.from("user_settings").upsert({user_id:profile.id,...payload});flash(error?error.message:"Einstellungen gespeichert.");}
- async function uploadAvatar(file){if(!file||!session)return;const ext=file.name.split(".").pop();const path=`${session.user.id}/avatar.${ext}`;const {error}=await supabase.storage.from("avatars").upload(path,file,{upsert:true,contentType:file.type});if(error)return flash(error.message);const {data}=supabase.storage.from("avatars").getPublicUrl(path);const r=await supabase.from("profiles").update({avatar_url:data.publicUrl}).eq("id",session.user.id);if(r.error)flash(r.error.message);else{flash("Profilbild gespeichert.");refresh();load()}}
- async function createNews(e){e.preventDefault();if(!profile||profile.role!=="admin")return;const fd=new FormData(e.target);let image_url=null,file=fd.get("image");if(file&&file.size){const path=`${crypto.randomUUID()}-${file.name}`;const u=await supabase.storage.from("news-images").upload(path,file,{contentType:file.type});if(u.error)return flash(u.error.message);image_url=supabase.storage.from("news-images").getPublicUrl(path).data.publicUrl}const {error}=await supabase.from("news_posts").insert({author_id:profile.id,title:fd.get("title"),body:fd.get("body"),image_url});flash(error?error.message:"News veröffentlicht.");if(!error){e.target.reset();load()}}
- async function createTest(){if(profile?.role!=="admin")return;const nick="Testmitglied"+Math.floor(Math.random()*9999);const {error}=await supabase.from("profiles").insert({id:crypto.randomUUID(),nickname:nick,first_name:"Test",last_name:"Profil",birth_date:"2000-01-01",role:"member",is_test:true});flash(error?error.message:"Testprofil erstellt.");load()}
- const isAdmin=profile?.role==="admin";
- return <div className="app">
- <header><div className="brand"><img src="/banner.png" onError={e=>e.currentTarget.style.display="none"}/><div className="brand-fallback">ENNSTAL CONNECT</div></div><nav><button onClick={()=>setView("home")}>Startseite</button><button onClick={()=>setView("members")}>Mitglieder</button><button onClick={()=>setView("groups")}>Gruppen</button><button onClick={()=>setView("events")}>Events</button></nav><div className="auth">{session?<button className="primary" onClick={()=>supabase.auth.signOut()}>Abmelden</button>:<button className="primary" onClick={()=>setAuth(true)}>Anmelden</button>}</div></header>
- <main><section className="content">
- {view==="home"&&<><h1>Neuigkeiten</h1>{isAdmin&&<form className="panel admin-form" onSubmit={createNews}><h3>News erstellen</h3><input name="title" placeholder="Überschrift" required/><textarea name="body" placeholder="Neuigkeit" required/><label>Bild hinzufügen<input type="file" name="image" accept="image/*"/></label><button className="primary">Veröffentlichen</button></form>}{news.length?news.map(n=><article className="news-card" key={n.id}>{n.image_url&&<img src={n.image_url}/>}<h2>{n.title}</h2><p>{n.body}</p><small>{fmtDate(n.created_at)}</small></article>):<div className="empty">Noch keine News vorhanden.</div>}</>}
- {view==="members"&&<><h1>Mitgliederübersicht</h1><input className="search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Mitglieder suchen nach Nickname oder Name"/>{["admin","supporter","member"].map(role=>{const list=filtered.filter(m=>(m.role||"member")===role);if(!list.length)return null;return <section key={role}><h2 className="section-title">{role==="admin"?"⭐ Admins":role==="supporter"?"★ Supporter":"Mitglieder A–Z"}</h2><div className="members-grid">{list.map(m=><Card key={m.id} m={m} me={profile} onOpen={setSelected} friends={friends} pending={pending} onRequest={friend}/>)}</div></section>})}</>}
- {view==="settings"&&profile&&<><h1>Meine Einstellungen</h1><form className="panel settings" onSubmit={saveSettings}><h3>Darstellung & Privatsphäre</h3>{["show_age","show_online_status","show_profile_visits","allow_friend_requests"].map((x,i)=><label key={x}><input type="checkbox" name={x} defaultChecked={i===0}/> {["Alter im Profil anzeigen","Online-Status für Mitglieder anzeigen","Profilbesucher aktivieren","Freundschaftsanfragen erlauben"][i]}</label>)}<button className="primary">Speichern</button></form><div className="panel"><h3>Profilbild</h3><input type="file" accept="image/*" onChange={e=>uploadAvatar(e.target.files[0])}/></div></>}
- {view==="requests"&&<><h1>Freundschaftsanfragen</h1>{requests.length?requests.map(r=><div className="panel request" key={r.id}>Neue Freundschaftsanfrage <span><button onClick={()=>answer(r,true)}>Annehmen</button><button onClick={()=>answer(r,false)}>Ablehnen</button></span></div>):<div className="empty">Keine offenen Anfragen.</div>}</>}
- {["groups","events"].includes(view)&&<div className="empty"><h1>{view==="groups"?"Gruppen":"Events"}</h1><p>Dieser Bereich ist vorbereitet. Gruppen und Events können hier mit denselben Berechtigungen wie im SQL-Schema ergänzt werden.</p></div>}
- </section>
- {session&&<aside className="sidebar"><div className={"mini-profile "+(profile?.role||"member")}><div className="side-nick" style={{color:profile?.nickname_color||undefined}}>{profile?.nickname}</div><img src={profile?.avatar_url||FALLBACK} onError={e=>e.currentTarget.src=FALLBACK}/>{profile?.role==="admin"&&<span className="role admin-star">★</span>}{profile?.role==="supporter"&&<span className="role supporter-star">★</span>}</div><h3>MEIN BEREICH</h3><button onClick={()=>setSelected(profile)}>👤 Mein Profil</button><button onClick={()=>setView("settings")}>⚙️ Einstellungen</button><button onClick={()=>setView("requests")}>🤝 Freundschaftsanfragen {requests.length?`(${requests.length})`:""}</button><button>👁 Profilbesucher</button><button>💬 Nachrichten</button><button>🪙 Punkte & Verlauf</button><button>🛒 Marktplatz</button>{isAdmin&&<><h3>ADMIN-BEREICH</h3><button onClick={()=>setView("home")}>📰 News verwalten</button><button onClick={createTest}>🧪 Testprofil erstellen</button><button>👥 Mitglieder verwalten</button><button>📊 Statistik</button></>}</aside>}
- </main>
- {selected&&<div className="modal-back" onClick={()=>setSelected(null)}><div className="profile-modal" onClick={e=>e.stopPropagation()}><button className="x" onClick={()=>setSelected(null)}>×</button><Card m={selected} me={profile} onOpen={()=>{}} friends={friends} pending={pending} onRequest={friend}/><h2>{selected.first_name} {selected.last_name}</h2><p>Mitglied seit {fmtDate(selected.created_at)}</p></div></div>}
- {auth&&<Auth close={()=>setAuth(false)} refresh={refresh}/>} {toast&&<div className="toast">{toast}</div>}
- <footer><b>Ennstal Connect</b><span>Impressum · Datenschutz · Nutzungsbedingungen · Community-Regeln</span><span>© 2026 Ennstal Connect · Verantwortlich für den Inhalt: Marco Egger, 8700 Leoben</span></footer>
- </div>
+function normalizeRole(role) {
+  return String(role || "MEMBER").toUpperCase();
 }
+
+function roleLabel(role) {
+  const value = normalizeRole(role);
+
+  if (value === "ADMIN" || value === "HEAD_ADMIN") {
+    return "Admin";
+  }
+
+  if (value === "SUPPORTER") {
+    return "Supporter";
+  }
+
+  return "Mitglied";
+}
+
+function isAdmin(role) {
+  const value = normalizeRole(role);
+
+  return value === "ADMIN" || value === "HEAD_ADMIN";
+}
+
+function Avatar({ member }) {
+  return (
+    <div className="member-avatar">
+      {member?.avatar_url ? (
+        <img
+          src={member.avatar_url}
+          alt={getName(member)}
+        />
+      ) : (
+        getInitial(member)
+      )}
+    </div>
+  );
+}
+
+function App() {
+  const [page, setPage] = useState("home");
+
+  const [session, setSession] = useState(null);
+  const [profile, setProfile] = useState(null);
+
+  const [members, setMembers] = useState([]);
+  const [groups, setGroups] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [news, setNews] = useState([]);
+
+  const [search, setSearch] = useState("");
+
+  const [loading, setLoading] = useState(true);
+
+  const [authMode, setAuthMode] = useState(null);
+
+  const [message, setMessage] = useState("");
+
+  const [registerForm, setRegisterForm] = useState({
+    first_name: "",
+    last_name: "",
+    nickname: "",
+    birth_date: "",
+    email: "",
+    password: ""
+  });
+
+  const [loginForm, setLoginForm] = useState({
+    email: "",
+    password: ""
+  });
+
+  const [groupForm, setGroupForm] = useState({
+    name: "",
+    description: "",
+    image_url: ""
+  });
+
+  const [eventForm, setEventForm] = useState({
+    title: "",
+    description: "",
+    location: "",
+    event_date: "",
+    image_url: ""
+  });
+
+  const [newsForm, setNewsForm] = useState({
+    title: "",
+    content: ""
+  });
+
+  function showMessage(text) {
+    setMessage(text);
+
+    setTimeout(() => {
+      setMessage("");
+    }, 5000);
+  }
+
+  async function loadProfile(userId) {
+    if (!userId) {
+      setProfile(null);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Profil Fehler:", error);
+      return;
+    }
+
+    setProfile(data);
+  }
+
+  async function loadMembers() {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*");
+
+    if (error) {
+      console.error("Mitglieder Fehler:", error);
+      return;
+    }
+
+    setMembers(data || []);
+  }
+
+  async function loadGroups() {
+    const { data, error } = await supabase
+      .from("groups")
+      .select("*")
+      .order("created_at", {
+        ascending: false
+      });
+
+    if (error) {
+      console.error("Gruppen Fehler:", error);
+      return;
+    }
+
+    setGroups(data || []);
+  }
+
+  async function loadEvents() {
+    const { data, error } = await supabase
+      .from("events")
+      .select("*")
+      .order("event_date", {
+        ascending: true
+      });
+
+    if (error) {
+      console.error("Events Fehler:", error);
+      return;
+    }
+
+    setEvents(data || []);
+  }
+
+  async function loadNews() {
+    const { data, error } = await supabase
+      .from("news")
+      .select("*")
+      .order("created_at", {
+        ascending: false
+      });
+
+    if (error) {
+      console.error("News Fehler:", error);
+      return;
+    }
+
+    setNews(data || []);
+  }
+
+  async function loadEverything(userId) {
+    setLoading(true);
+
+    await Promise.all([
+      loadMembers(),
+      loadGroups(),
+      loadEvents(),
+      loadNews()
+    ]);
+
+    if (userId) {
+      await loadProfile(userId);
+    } else {
+      setProfile(null);
+    }
+
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    async function initialize() {
+      const {
+        data: { session }
+      } = await supabase.auth.getSession();
+
+      setSession(session);
+
+      await loadEverything(session?.user?.id);
+    }
+
+    initialize();
+
+    const {
+      data: { subscription }
+    } = supabase.auth.onAuthStateChange(
+      async (_event, newSession) => {
+        setSession(newSession);
+
+        if (newSession?.user?.id) {
+          await loadEverything(newSession.user.id);
+        } else {
+          setProfile(null);
+        }
+      }
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const sortedMembers = useMemo(() => {
+    const searchValue = search.trim().toLowerCase();
+
+    const filtered = members.filter((member) => {
+      if (!searchValue) return true;
+
+      const name = getName(member).toLowerCase();
+
+      const fullName = `${member.first_name || ""} ${
+        member.last_name || ""
+      }`.toLowerCase();
+
+      return (
+        name.includes(searchValue) ||
+        fullName.includes(searchValue)
+      );
+    });
+
+    return [...filtered].sort((a, b) => {
+      const roleA = normalizeRole(a.role);
+      const roleB = normalizeRole(b.role);
+
+      function priority(role) {
+        if (
+          role === "ADMIN" ||
+          role === "HEAD_ADMIN"
+        ) {
+          return 1;
+        }
+
+        if (role === "SUPPORTER") {
+          return 2;
+        }
+
+        return 3;
+      }
+
+      const priorityA = priority(roleA);
+      const priorityB = priority(roleB);
+
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB;
+      }
+
+      return getName(a).localeCompare(
+        getName(b),
+        "de"
+      );
+    });
+  }, [members, search]);
+
+  const admins = sortedMembers.filter((member) =>
+    isAdmin(member.role)
+  );
+
+  const supporters = sortedMembers.filter(
+    (member) =>
+      normalizeRole(member.role) === "SUPPORTER"
+  );
+
+  const normalMembers = sortedMembers.filter(
+    (member) =>
+      !isAdmin(member.role) &&
+      normalizeRole(member.role) !== "SUPPORTER"
+  );
+
+  async function register(event) {
+    event.preventDefault();
+
+    const { error } =
+      await supabase.auth.signUp({
+        email: registerForm.email.trim(),
+        password: registerForm.password,
+        options: {
+          emailRedirectTo: window.location.origin,
+          data: {
+            first_name:
+              registerForm.first_name.trim(),
+
+            last_name:
+              registerForm.last_name.trim(),
+
+            nickname:
+              registerForm.nickname.trim(),
+
+            birth_date:
+              registerForm.birth_date
+          }
+        }
+      });
+
+    if (error) {
+      showMessage(error.message);
+      return;
+    }
+
+    showMessage(
+      "Registrierung erfolgreich. Bitte bestätige deine E-Mail."
+    );
+
+    setAuthMode(null);
+  }
+
+  async function login(event) {
+    event.preventDefault();
+
+    const { error } =
+      await supabase.auth.signInWithPassword({
+        email: loginForm.email.trim(),
+        password: loginForm.password
+      });
+
+    if (error) {
+      showMessage(error.message);
+      return;
+    }
+
+    showMessage("Erfolgreich angemeldet.");
+
+    setAuthMode(null);
+  }
+
+  async function logout() {
+    const { error } =
+      await supabase.auth.signOut();
+
+    if (error) {
+      showMessage(error.message);
+      return;
+    }
+
+    setProfile(null);
+    setSession(null);
+
+    showMessage("Du wurdest abgemeldet.");
+
+    setPage("home");
+  }
+
+  async function createGroup(event) {
+    event.preventDefault();
+
+    if (!session?.user) {
+      showMessage(
+        "Du musst angemeldet sein."
+      );
+
+      return;
+    }
+
+    const { error } =
+      await supabase
+        .from("groups")
+        .insert({
+          owner_id: session.user.id,
+
+          name:
+            groupForm.name.trim(),
+
+          description:
+            groupForm.description.trim(),
+
+          image_url:
+            groupForm.image_url.trim() || null
+        });
+
+    if (error) {
+      showMessage(error.message);
+      return;
+    }
+
+    showMessage(
+      "Gruppe wurde erstellt."
+    );
+
+    setGroupForm({
+      name: "",
+      description: "",
+      image_url: ""
+    });
+
+    await loadGroups();
+  }
+
+  async function createEvent(event) {
+    event.preventDefault();
+
+    if (!session?.user) {
+      showMessage(
+        "Du musst angemeldet sein."
+      );
+
+      return;
+    }
+
+    const { error } =
+      await supabase
+        .from("events")
+        .insert({
+          creator_id: session.user.id,
+
+          title:
+            eventForm.title.trim(),
+
+          description:
+            eventForm.description.trim(),
+
+          location:
+            eventForm.location.trim(),
+
+          event_date:
+            eventForm.event_date,
+
+          image_url:
+            eventForm.image_url.trim() || null
+        });
+
+    if (error) {
+      showMessage(error.message);
+      return;
+    }
+
+    showMessage(
+      "Event wurde erstellt."
+    );
+
+    setEventForm({
+      title: "",
+      description: "",
+      location: "",
+      event_date: "",
+      image_url: ""
+    });
+
+    await loadEvents();
+  }
+
+  async function createNews(event) {
+    event.preventDefault();
+
+    if (!session?.user || !isAdmin(profile?.role)) {
+      showMessage(
+        "Nur Admins können News erstellen."
+      );
+
+      return;
+    }
+
+    const { error } =
+      await supabase
+        .from("news")
+        .insert({
+          author_id: session.user.id,
+
+          title:
+            newsForm.title.trim(),
+
+          content:
+            newsForm.content.trim()
+        });
+
+    if (error) {
+      showMessage(error.message);
+      return;
+    }
+
+    showMessage(
+      "News wurde veröffentlicht."
+    );
+
+    setNewsForm({
+      title: "",
+      content: ""
+    });
+
+    await loadNews();
+  }
+
+  if (loading) {
+    return (
+      <div className="app-loading">
+        Community wird geladen...
+      </div>
+    );
+  }
+
+  return (
+    <div className="app">
+
+      <header className="site-header">
+
+        <div
+          className="brand"
+          onClick={() =>
+            setPage("home")
+          }
+        >
+          ENNSTAL CONNECT
+        </div>
+
+        <nav className="navigation">
+
+          <button
+            className={
+              page === "home"
+                ? "active"
+                : ""
+            }
+            onClick={() =>
+              setPage("home")
+            }
+          >
+            Start
+          </button>
+
+          <button
+            className={
+              page === "members"
+                ? "active"
+                : ""
+            }
+            onClick={() =>
+              setPage("members")
+            }
+          >
+            Mitglieder
+          </button>
+
+          <button
+            className={
+              page === "groups"
+                ? "active"
+                : ""
+            }
+            onClick={() =>
+              setPage("groups")
+            }
+          >
+            Gruppen
+          </button>
+
+          <button
+            className={
+              page === "events"
+                ? "active"
+                : ""
+            }
+            onClick={() =>
+              setPage("events")
+            }
+          >
+            Events
+          </button>
+
+        </nav>
+
+        <div className="header-user">
+
+          {session ? (
+            <>
+              <span>
+                {getName(profile)}
+              </span>
+
+              <button
+                onClick={logout}
+              >
+                Abmelden
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() =>
+                  setAuthMode("login")
+                }
+              >
+                Anmelden
+              </button>
+
+              <button
+                className="primary-button"
+                onClick={() =>
+                  setAuthMode("register")
+                }
+              >
+                Mitglied werden
+              </button>
+            </>
+          )}
+
+        </div>
+
+      </header>
+
+      {message && (
+        <div className="message">
+          {message}
+        </div>
+      )}
+
+      <main className="main-content">
+
+        {/* STARTSEITE */}
+
+        {page === "home" && (
+          <section>
+
+            <div className="hero">
+              <span>
+                WILLKOMMEN
+              </span>
+
+              <h1>
+                Deine Community.
+                <br />
+                Deine Region.
+              </h1>
+
+              <p>
+                Verbinde dich mit Menschen,
+                entdecke Gruppen und bleibe
+                über Events und Neuigkeiten
+                informiert.
+              </p>
+
+              <button
+                className="primary-button"
+                onClick={() =>
+                  setPage("members")
+                }
+              >
+                Mitglieder entdecken
+              </button>
+            </div>
+
+            <div className="section-heading">
+              <div>
+                <span className="eyebrow">
+                  AKTUELLES
+                </span>
+
+                <h2>
+                  Neuigkeiten
+                </h2>
+              </div>
+            </div>
+
+            {isAdmin(profile?.role) && (
+              <form
+                className="create-form"
+                onSubmit={createNews}
+              >
+                <h3>
+                  News erstellen
+                </h3>
+
+                <input
+                  placeholder="Titel"
+                  required
+                  value={newsForm.title}
+                  onChange={(e) =>
+                    setNewsForm({
+                      ...newsForm,
+                      title: e.target.value
+                    })
+                  }
+                />
+
+                <textarea
+                  placeholder="Neuigkeit schreiben..."
+                  required
+                  value={newsForm.content}
+                  onChange={(e) =>
+                    setNewsForm({
+                      ...newsForm,
+                      content: e.target.value
+                    })
+                  }
+                />
+
+                <button
+                  className="primary-button"
+                >
+                  Veröffentlichen
+                </button>
+              </form>
+            )}
+
+            <div className="news-grid">
+
+              {news.map((item) => (
+                <article
+                  className="news-card"
+                  key={item.id}
+                >
+                  <h3>
+                    {item.title}
+                  </h3>
+
+                  <p>
+                    {item.content}
+                  </p>
+
+                  <small>
+                    {item.created_at
+                      ? new Date(
+                          item.created_at
+                        ).toLocaleDateString(
+                          "de-DE"
+                        )
+                      : ""}
+                  </small>
+                </article>
+              ))}
+
+              {!news.length && (
+                <div className="empty-card">
+                  Noch keine Neuigkeiten vorhanden.
+                </div>
+              )}
+
+            </div>
+
+          </section>
+        )}
+
+        {/* MITGLIEDER */}
+
+        {page === "members" && (
+          <section>
+
+            <div className="section-heading members-heading">
+
+              <div>
+                <span className="eyebrow">
+                  COMMUNITY
+                </span>
+
+                <h1>
+                  Mitgliederübersicht
+                </h1>
+
+                <p>
+                  Entdecke alle registrierten
+                  Mitglieder.
+                </p>
+              </div>
+
+              <input
+                className="search-input"
+                placeholder="🔍 Mitglied suchen..."
+                value={search}
+                onChange={(e) =>
+                  setSearch(e.target.value)
+                }
+              />
+
+            </div>
+
+            {admins.length > 0 && (
+              <>
+                <h2 className="member-section-title">
+                  ⭐ Admins
+                </h2>
+
+                <div className="member-grid">
+                  {admins.map((member) => (
+                    <article
+                      className="member-card role-admin"
+                      key={member.id}
+                    >
+                      <Avatar
+                        member={member}
+                      />
+
+                      <div className="member-info">
+
+                        <h3>
+                          {getName(member)}
+                        </h3>
+
+                        <span className="role-badge">
+                          ⭐ Admin
+                        </span>
+
+                        {member.location && (
+                          <p>
+                            📍 {member.location}
+                          </p>
+                        )}
+
+                        <div className="member-points">
+                          ★{" "}
+                          {member.community_points ||
+                            0}{" "}
+                          Punkte
+                        </div>
+
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {supporters.length > 0 && (
+              <>
+                <h2 className="member-section-title">
+                  ★ Supporter
+                </h2>
+
+                <div className="member-grid">
+                  {supporters.map((member) => (
+                    <article
+                      className="member-card role-supporter"
+                      key={member.id}
+                    >
+                      <Avatar
+                        member={member}
+                      />
+
+                      <div className="member-info">
+
+                        <h3>
+                          {getName(member)}
+                        </h3>
+
+                        <span className="role-badge">
+                          ★ Supporter
+                        </span>
+
+                        {member.location && (
+                          <p>
+                            📍 {member.location}
+                          </p>
+                        )}
+
+                        <div className="member-points">
+                          ★{" "}
+                          {member.community_points ||
+                            0}{" "}
+                          Punkte
+                        </div>
+
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </>
+            )}
+
+            <h2 className="member-section-title">
+              Mitglieder A–Z
+            </h2>
+
+            <div className="member-grid">
+
+              {normalMembers.map((member) => (
+                <article
+                  className="member-card role-member"
+                  key={member.id}
+                >
+                  <Avatar
+                    member={member}
+                  />
+
+                  <div className="member-info">
+
+                    <h3>
+                      {getName(member)}
+                    </h3>
+
+                    <span className="role-badge">
+                      {roleLabel(member.role)}
+                    </span>
+
+                    {member.location && (
+                      <p>
+                        📍 {member.location}
+                      </p>
+                    )}
+
+                    <div className="member-points">
+                      ★{" "}
+                      {member.community_points ||
+                        0}{" "}
+                      Punkte
+                    </div>
+
+                  </div>
+                </article>
+              ))}
+
+              {!sortedMembers.length && (
+                <div className="empty-card">
+                  Keine Mitglieder gefunden.
+                </div>
+              )}
+
+            </div>
+
+          </section>
+        )}
+
+        {/* GRUPPEN */}
+
+        {page === "groups" && (
+          <section>
+
+            <div className="section-heading">
+
+              <div>
+                <span className="eyebrow">
+                  GEMEINSCHAFT
+                </span>
+
+                <h1>
+                  Gruppen
+                </h1>
+              </div>
+
+            </div>
+
+            {session && (
+              <form
+                className="create-form"
+                onSubmit={createGroup}
+              >
+
+                <h3>
+                  Neue Gruppe erstellen
+                </h3>
+
+                <input
+                  placeholder="Gruppenname"
+                  required
+                  value={groupForm.name}
+                  onChange={(e) =>
+                    setGroupForm({
+                      ...groupForm,
+                      name: e.target.value
+                    })
+                  }
+                />
+
+                <textarea
+                  placeholder="Beschreibung"
+                  required
+                  value={groupForm.description}
+                  onChange={(e) =>
+                    setGroupForm({
+                      ...groupForm,
+                      description: e.target.value
+                    })
+                  }
+                />
+
+                <input
+                  placeholder="Bild URL (optional)"
+                  value={groupForm.image_url}
+                  onChange={(e) =>
+                    setGroupForm({
+                      ...groupForm,
+                      image_url: e.target.value
+                    })
+                  }
+                />
+
+                <button
+                  className="primary-button"
+                >
+                  Gruppe erstellen
+                </button>
+
+              </form>
+            )}
+
+            <div className="group-grid">
+
+              {groups.map((group) => (
+                <article
+                  className="group-card"
+                  key={group.id}
+                >
+
+                  {group.image_url && (
+                    <img
+                      src={group.image_url}
+                      alt={group.name}
+                    />
+                  )}
+
+                  <div className="group-card-content">
+
+                    <h3>
+                      {group.name}
+                    </h3>
+
+                    <p>
+                      {group.description}
+                    </p>
+
+                  </div>
+
+                </article>
+              ))}
+
+              {!groups.length && (
+                <div className="empty-card">
+                  Noch keine Gruppen vorhanden.
+                </div>
+              )}
+
+            </div>
+
+          </section>
+        )}
+
+        {/* EVENTS */}
+
+        {page === "events" && (
+          <section>
+
+            <div className="section-heading">
+
+              <div>
+                <span className="eyebrow">
+                  TREFFEN & AKTIVITÄTEN
+                </span>
+
+                <h1>
+                  Events
+                </h1>
+              </div>
+
+            </div>
+
+            {session && (
+              <form
+                className="create-form"
+                onSubmit={createEvent}
+              >
+
+                <h3>
+                  Event erstellen
+                </h3>
+
+                <input
+                  placeholder="Titel"
+                  required
+                  value={eventForm.title}
+                  onChange={(e) =>
+                    setEventForm({
+                      ...eventForm,
+                      title: e.target.value
+                    })
+                  }
+                />
+
+                <textarea
+                  placeholder="Beschreibung"
+                  required
+                  value={eventForm.description}
+                  onChange={(e) =>
+                    setEventForm({
+                      ...eventForm,
+                      description: e.target.value
+                    })
+                  }
+                />
+
+                <input
+                  placeholder="Ort"
+                  required
+                  value={eventForm.location}
+                  onChange={(e) =>
+                    setEventForm({
+                      ...eventForm,
+                      location: e.target.value
+                    })
+                  }
+                />
+
+                <input
+                  type="datetime-local"
+                  required
+                  value={eventForm.event_date}
+                  onChange={(e) =>
+                    setEventForm({
+                      ...eventForm,
+                      event_date: e.target.value
+                    })
+                  }
+                />
+
+                <input
+                  placeholder="Bild URL (optional)"
+                  value={eventForm.image_url}
+                  onChange={(e) =>
+                    setEventForm({
+                      ...eventForm,
+                      image_url: e.target.value
+                    })
+                  }
+                />
+
+                <button
+                  className="primary-button"
+                >
+                  Event erstellen
+                </button>
+
+              </form>
+            )}
+
+            <div className="events-grid">
+
+              {events.map((item) => (
+                <article
+                  className="event-card"
+                  key={item.id}
+                >
+
+                  {item.image_url && (
+                    <img
+                      src={item.image_url}
+                      alt={item.title}
+                    />
+                  )}
+
+                  <div className="event-content">
+
+                    <h3>
+                      {item.title}
+                    </h3>
+
+                    <p>
+                      {item.description}
+                    </p>
+
+                    <p>
+                      📍 {item.location}
+                    </p>
+
+                    <strong>
+                      📅{" "}
+                      {item.event_date
+                        ? new Date(
+                            item.event_date
+                          ).toLocaleString(
+                            "de-DE"
+                          )
+                        : ""}
+                    </strong>
+
+                  </div>
+
+                </article>
+              ))}
+
+              {!events.length && (
+                <div className="empty-card">
+                  Noch keine Events vorhanden.
+                </div>
+              )}
+
+            </div>
+
+          </section>
+        )}
+
+      </main>
+
+      {/* LOGIN */}
+
+      {authMode === "login" && (
+        <div className="modal-overlay">
+
+          <form
+            className="auth-modal"
+            onSubmit={login}
+          >
+
+            <button
+              type="button"
+              className="close-button"
+              onClick={() =>
+                setAuthMode(null)
+              }
+            >
+              ×
+            </button>
+
+            <h2>
+              Anmelden
+            </h2>
+
+            <input
+              type="email"
+              placeholder="E-Mail"
+              required
+              value={loginForm.email}
+              onChange={(e) =>
+                setLoginForm({
+                  ...loginForm,
+                  email: e.target.value
+                })
+              }
+            />
+
+            <input
+              type="password"
+              placeholder="Passwort"
+              required
+              value={loginForm.password}
+              onChange={(e) =>
+                setLoginForm({
+                  ...loginForm,
+                  password: e.target.value
+                })
+              }
+            />
+
+            <button
+              className="primary-button"
+            >
+              Anmelden
+            </button>
+
+          </form>
+
+        </div>
+      )}
+
+      {/* REGISTRIERUNG */}
+
+      {authMode === "register" && (
+        <div className="modal-overlay">
+
+          <form
+            className="auth-modal"
+            onSubmit={register}
+          >
+
+            <button
+              type="button"
+              className="close-button"
+              onClick={() =>
+                setAuthMode(null)
+              }
+            >
+              ×
+            </button>
+
+            <h2>
+              Mitglied werden
+            </h2>
+
+            <input
+              placeholder="Vorname"
+              required
+              value={
+                registerForm.first_name
+              }
+              onChange={(e) =>
+                setRegisterForm({
+                  ...registerForm,
+                  first_name:
+                    e.target.value
+                })
+              }
+            />
+
+            <input
+              placeholder="Nachname"
+              required
+              value={
+                registerForm.last_name
+              }
+              onChange={(e) =>
+                setRegisterForm({
+                  ...registerForm,
+                  last_name:
+                    e.target.value
+                })
+              }
+            />
+
+            <input
+              placeholder="Nickname"
+              required
+              value={
+                registerForm.nickname
+              }
+              onChange={(e) =>
+                setRegisterForm({
+                  ...registerForm,
+                  nickname:
+                    e.target.value
+                })
+              }
+            />
+
+            <input
+              type="date"
+              value={
+                registerForm.birth_date
+              }
+              onChange={(e) =>
+                setRegisterForm({
+                  ...registerForm,
+                  birth_date:
+                    e.target.value
+                })
+              }
+            />
+
+            <input
+              type="email"
+              placeholder="E-Mail"
+              required
+              value={
+                registerForm.email
+              }
+              onChange={(e) =>
+                setRegisterForm({
+                  ...registerForm,
+                  email:
+                    e.target.value
+                })
+              }
+            />
+
+            <input
+              type="password"
+              placeholder="Passwort"
+              minLength="6"
+              required
+              value={
+                registerForm.password
+              }
+              onChange={(e) =>
+                setRegisterForm({
+                  ...registerForm,
+                  password:
+                    e.target.value
+                })
+              }
+            />
+
+            <button
+              className="primary-button"
+            >
+              Registrieren
+            </button>
+
+          </form>
+
+        </div>
+      )}
+
+    </div>
+  );
+}
+
 export default App;
