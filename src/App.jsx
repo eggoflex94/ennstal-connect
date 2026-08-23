@@ -3949,6 +3949,67 @@ async function changePoints(event) {
               </div>
 
               <div className="modal-content">
+                <section className="public-profile-data">
+
+  <div className="public-profile-data-item">
+    <span>Vorname</span>
+    <strong>
+      {selectedMember.first_name || "—"}
+    </strong>
+  </div>
+
+  <div className="public-profile-data-item">
+    <span>Nachname</span>
+    <strong>
+      {selectedMember.last_name || "—"}
+    </strong>
+  </div>
+
+  <div className="public-profile-data-item">
+    <span>Alter</span>
+    <strong>
+      {getAge(selectedMember.birth_date) !== null
+        ? `${getAge(selectedMember.birth_date)} Jahre`
+        : "—"}
+    </strong>
+  </div>
+
+  <div className="public-profile-data-item">
+    <span>Geburtsdatum</span>
+    <strong>
+      {selectedMember.birth_date || "—"}
+    </strong>
+  </div>
+
+  <div className="public-profile-data-item">
+    <span>Geschlecht</span>
+    <strong>
+      {selectedMember.gender || "—"}
+    </strong>
+  </div>
+
+  <div className="public-profile-data-item">
+    <span>Wohnort</span>
+    <strong>
+      {selectedMember.location || "—"}
+    </strong>
+  </div>
+
+  <div className="public-profile-data-item">
+    <span>Interessen</span>
+    <strong>
+      {selectedMember.interests || "—"}
+    </strong>
+  </div>
+
+  <div className="public-profile-data-item">
+    <span>Website</span>
+    <strong>
+      {selectedMember.website || "—"}
+    </strong>
+  </div>
+
+</section>
 
                 {selectedMember.bio && (
                   <>
@@ -4026,7 +4087,245 @@ async function changePoints(event) {
                 </div>
 
                 {selectedMember.id !== user.id && (
-                  <div className="profile-actions">
+                {isAdmin(profile?.role) &&
+  selectedMember.id !== user.id && (
+    <section className="profile-admin-tools">
+
+      <div className="profile-admin-tools-title">
+        <span>MODERATION</span>
+        <h3>
+          ★ Admin-Werkzeuge
+        </h3>
+      </div>
+
+      <div className="profile-admin-tools-grid">
+
+        {(isHeadAdmin(profile?.role) ||
+          myAdminPermission("manage_points")) && (
+          <button
+            type="button"
+            className="profile-admin-button"
+            onClick={async () => {
+
+              const amount = Number(
+                window.prompt(
+                  "Punkte eingeben, z.B. 5 oder -5:",
+                  "5"
+                )
+              );
+
+              if (
+                !Number.isFinite(amount) ||
+                amount === 0
+              ) {
+                return;
+              }
+
+              const reason =
+                window.prompt(
+                  "Begründung:"
+                );
+
+              if (
+                !reason ||
+                reason.trim().length < 3
+              ) {
+                showNotice(
+                  "Eine Begründung ist erforderlich."
+                );
+                return;
+              }
+
+              const { error } =
+                await supabase.rpc(
+                  "admin_change_points",
+                  {
+                    target_user:
+                      selectedMember.id,
+
+                    delta:
+                      Math.trunc(amount),
+
+                    change_kind:
+                      amount > 0
+                        ? "ADD"
+                        : "REMOVE",
+
+                    reason_text:
+                      reason.trim()
+                  }
+                );
+
+              if (error) {
+                showNotice(
+                  error.message
+                );
+                return;
+              }
+
+              showNotice(
+                "Punkte wurden geändert."
+              );
+
+              await loadAll();
+
+              setSelectedMember(
+                memberById(
+                  selectedMember.id
+                )
+              );
+            }}
+          >
+            ⭐ Punkte vergeben
+          </button>
+        )}
+
+        {(isHeadAdmin(profile?.role) ||
+          myAdminPermission("manage_media")) && (
+          <button
+            type="button"
+            className="profile-admin-button danger"
+            onClick={async () => {
+
+              if (
+                !window.confirm(
+                  `Profilbild von ${getName(selectedMember)} löschen?`
+                )
+              ) {
+                return;
+              }
+
+              const { error } =
+                await supabase.rpc(
+                  "admin_remove_profile_avatar",
+                  {
+                    target_user:
+                      selectedMember.id
+                  }
+                );
+
+              if (error) {
+                showNotice(
+                  error.message
+                );
+                return;
+              }
+
+              setSelectedMember(
+                (current) =>
+                  current
+                    ? {
+                        ...current,
+                        avatar_url: null
+                      }
+                    : current
+              );
+
+              showNotice(
+                "Profilbild wurde gelöscht."
+              );
+
+              await loadAll();
+            }}
+          >
+            🖼 Profilbild löschen
+          </button>
+        )}
+
+        {(isHeadAdmin(profile?.role) ||
+          myAdminPermission("manage_roles")) && (
+          <button
+            type="button"
+            className="profile-admin-button supporter"
+            onClick={async () => {
+
+              const { error } =
+                await supabase.rpc(
+                  "admin_set_role",
+                  {
+                    target_user:
+                      selectedMember.id,
+                    new_role:
+                      "SUPPORTER"
+                  }
+                );
+
+              if (error) {
+                showNotice(
+                  error.message
+                );
+                return;
+              }
+
+              showNotice(
+                `${getName(selectedMember)} ist jetzt Supporter.`
+              );
+
+              await loadAll();
+
+              setSelectedMember(
+                (current) =>
+                  current
+                    ? {
+                        ...current,
+                        role: "SUPPORTER"
+                      }
+                    : current
+              );
+            }}
+          >
+            🟢 Supporter ernennen
+          </button>
+        )}
+
+        {isHeadAdmin(profile?.role) && (
+          <button
+            type="button"
+            className="profile-admin-button admin"
+            onClick={async () => {
+
+              const { error } =
+                await supabase.rpc(
+                  "admin_set_role",
+                  {
+                    target_user:
+                      selectedMember.id,
+                    new_role:
+                      "ADMIN"
+                  }
+                );
+
+              if (error) {
+                showNotice(
+                  error.message
+                );
+                return;
+              }
+
+              showNotice(
+                `${getName(selectedMember)} ist jetzt Admin.`
+              );
+
+              await loadAll();
+
+              setSelectedMember(
+                (current) =>
+                  current
+                    ? {
+                        ...current,
+                        role: "ADMIN"
+                      }
+                    : current
+              );
+            }}
+          >
+            ★ Zum Admin ernennen
+          </button>
+        )}
+
+      </div>
+    </section>
+  )}  <div className="profile-actions">
                     <button
                       className="primary-button"
                       onClick={() => {
