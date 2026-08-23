@@ -1199,24 +1199,24 @@ async function uploadProfileImage(file) {
       new FormData(event.currentTarget);
 
     const { error } =
-      await supabase
-        .from("events")
-        .insert({
-          title:
-            form.get("title"),
+  await supabase
+    .from("events")
+    .insert({
+      title:
+        form.get("title"),
 
-          description:
-            form.get("description"),
+      description:
+        form.get("description"),
 
-          location:
-            form.get("location"),
+      location:
+        form.get("location"),
 
-          starts_at:
-            form.get("starts_at"),
+      event_date:
+        form.get("event_date"),
 
-          created_by:
-            user.id
-        });
+      creator_id:
+        user.id
+    });
 
     if (error) {
       showNotice(error.message);
@@ -2336,7 +2336,7 @@ async function uploadProfileImage(file) {
 
                   <input
                     type="datetime-local"
-                    name="starts_at"
+                    name="event_date"
                     required
                   />
 
