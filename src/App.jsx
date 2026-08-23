@@ -1931,6 +1931,8 @@ async function changePoints(event) {
 
   return (
     <>
+      <GlobalStyle />
+
       <div className="app">
 
         {/* HEADER */}
