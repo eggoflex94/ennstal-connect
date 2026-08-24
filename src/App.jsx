@@ -56,6 +56,9 @@ export default function App() {
   const [friendships, setFriendships] = useState([]);
   const [profileVisits, setProfileVisits] = useState([]);
   const [news, setNews] = useState([]);
+  const [forumPosts, setForumPosts] = useState([]);
+  const [adminLogs, setAdminLogs] = useState([]);
+  const [memberRestrictions, setMemberRestrictions] = useState([]);
   const [events, setEvents] = useState([]);
   const [groups, setGroups] = useState([]);
 
@@ -102,6 +105,7 @@ export default function App() {
       manage_admins: false,
       view_profile_visits: false,
       manage_news: false,
+      manage_forum: false,
       manage_groups: false,
       manage_events: false,
       manage_marketplace: false,
@@ -200,7 +204,10 @@ export default function App() {
         blockData,
         reportData,
         activityData,
-        permissionData
+        permissionData,
+        forumData,
+        adminLogData,
+        restrictionData
       ] = await Promise.all([
         safe("Profil", supabase.from("profiles").select("*").eq("id", currentUser.id).maybeSingle(), null),
         safe("Mitglieder", supabase.from("profiles").select("*")),
@@ -215,7 +222,10 @@ export default function App() {
         safe("Blockierungen", supabase.from("user_blocks").select("*").eq("blocker_id", currentUser.id)),
         safe("Meldungen", supabase.from("user_reports").select("*").order("created_at", { ascending: false })),
         safe("Profilaktivitäten", supabase.from("profile_activity").select("*").order("created_at", { ascending: false }).limit(40)),
-        safe("Berechtigungen", supabase.from("user_permissions").select("*").eq("user_id", currentUser.id).maybeSingle(), {})
+        safe("Berechtigungen", supabase.from("user_permissions").select("*").eq("user_id", currentUser.id).maybeSingle(), {}),
+        safe("Forum", supabase.from("forum_posts").select("*").order("created_at", { ascending: false })),
+        safe("Admin-Logbuch", supabase.rpc("head_admin_get_logs"), []),
+        safe("Funktionssperren", supabase.rpc("admin_get_member_restrictions"), [])
       ]);
 
       setProfile(myProfile);
@@ -232,6 +242,9 @@ export default function App() {
       setReports(reportData);
       setProfileActivities(activityData);
       setMyPermissions(permissionData || {});
+      setForumPosts(forumData || []);
+      setAdminLogs(adminLogData || []);
+      setMemberRestrictions(restrictionData || []);
     } catch (error) {
       console.error("Fehler beim Starten von Ennstal Connect:", error);
       showNotice(`Fehler beim Laden: ${error?.message || "Unbekannter Fehler"}`);
@@ -344,21 +357,54 @@ export default function App() {
     }
   }
 
+  const REWARD_LABELS = [
+    "Profil-Akzentfarbe",
+    "Eigener Profil-Hintergrund",
+    "Erweiterte Profilgestaltung",
+    "Zusätzliches Profil-Layout",
+    "Exklusive Profil-Designoptionen"
+  ];
+
   async function claimOnlineReward() {
     if (!user?.id) return;
-
     const { data, error } = await supabase.rpc("claim_online_reward");
-    if (error) {
-      showNotice(error.message);
-      return;
-    }
+    if (error) { showNotice(error.message); return; }
+    if (!data?.success) { showNotice(data?.message || "Die nächste Belohnung ist noch nicht verfügbar."); return; }
+    showNotice(data?.message || "Neue Belohnungsstufe freigeschaltet!");
+    await loadAll();
+  }
 
-    if (!data?.success) {
-      showNotice(data?.message || "Die Belohnung ist noch nicht verfügbar.");
-      return;
-    }
+  async function createForumPost(event) {
+    event.preventDefault();
+    if (!user?.id) return;
+    const form = new FormData(event.currentTarget);
+    const { error } = await supabase.from("forum_posts").insert({
+      author_id: user.id,
+      title: String(form.get("title") || "").trim(),
+      content: String(form.get("content") || "").trim()
+    });
+    if (error) { showNotice(error.message); return; }
+    event.currentTarget.reset();
+    showNotice("Forenbeitrag veröffentlicht.");
+    await loadAll();
+  }
 
-    showNotice(data?.message || `${data?.points_added || 10} Punkte für deine Onlinezeit erhalten!`);
+  async function deleteForumPost(post) {
+    if (!window.confirm("Forenbeitrag wirklich löschen?")) return;
+    const { error } = await supabase.from("forum_posts").delete().eq("id", post.id);
+    if (error) { showNotice(error.message); return; }
+    showNotice("Forenbeitrag gelöscht.");
+    await loadAll();
+  }
+
+  async function adminAction(action, target, extra = {}) {
+    if (!target?.id) return;
+    const reason = window.prompt("Grund / Begründung:", "") || "Keine Angabe";
+    const { error } = await supabase.rpc("admin_member_action", {
+      p_target_user: target.id, p_action: action, p_reason: reason, p_payload: extra
+    });
+    if (error) { showNotice(error.message); return; }
+    showNotice("Admin-Aktion gespeichert.");
     await loadAll();
   }
 
@@ -993,7 +1039,7 @@ const sortedMembers = useMemo(() => {
 
   const canManageEventItem = (item) =>
     (item?.created_by || item?.creator_id) === user?.id ||
-    myAdminPermission("manage_events");
+    myAdminPermission("manage_forum");
 
   async function createHomepageSection(event) {
     event.preventDefault();
@@ -1878,8 +1924,7 @@ async function changePoints(event) {
      ========================================================= */
 
   if (
-    profile?.account_status ===
-    "SUSPENDED"
+    ["SUSPENDED", "DELETED"].includes(profile?.account_status)
   ) {
     return (
       <>
@@ -2060,30 +2105,12 @@ async function changePoints(event) {
               ● Online ({onlineMembers.length})
             </button>
 
-            <button
-              className={
-                page === "groups"
-                  ? "active"
-                  : ""
-              }
-              onClick={() =>
-                setPage("groups")
-              }
-            >
-              Gruppen
+            <button className={page === "forum" ? "active" : ""} onClick={() => setPage("forum")}>
+              Forum
             </button>
 
-            <button
-              className={
-                page === "events"
-                  ? "active"
-                  : ""
-              }
-              onClick={() =>
-                setPage("events")
-              }
-            >
-              Events
+            <button className={page === "home" ? "active" : ""} onClick={() => setPage("home")}>
+              News & Beiträge
             </button>
 
            
@@ -2210,8 +2237,8 @@ async function changePoints(event) {
                         setPage("admin")
                       }
                     >
-                      <span>⭐</span>
-                      Punkte verwalten
+                      <span>🎁</span>
+                      Belohnungen verwalten
                     </button>
                     {isHeadAdmin(profile?.role) && (
   <button
@@ -2248,11 +2275,11 @@ async function changePoints(event) {
 
                     <button
                       onClick={() =>
-                        setPage("events")
+                        setPage("forum")
                       }
                     >
-                      <span>📅</span>
-                      Events bearbeiten
+                      <span>💬</span>
+                      Forum moderieren
                     </button>
 
                   </div>
@@ -3089,7 +3116,7 @@ async function changePoints(event) {
                   <div className="profile-points">
                     <button
                       type="button"
-                      onClick={() => setPage("points")}
+                      onClick={() => setPage("rewards")}
                     >
                       <span>⭐</span>
                       <strong>
@@ -3458,131 +3485,21 @@ async function changePoints(event) {
             )}
 
           {/* =================================================
-              PUNKTE
+              BELOHNUNGEN
               ================================================= */}
-
-          {page === "points" && (
+          {page === "rewards" && (
             <section>
+              <div className="page-heading"><div><button className="back-button" onClick={() => setPage("profile")}>← Zurück</button><span className="eyebrow">DEINE COMMUNITY-ZEIT</span><h1>Meine Belohnungen</h1><p>Je 5 Stunden aktiver Community-Zeit schaltest du eine neue Belohnungsstufe frei.</p></div></div>
+              <div className="points-overview"><div><span>Aktuelle Belohnungsstufe</span><strong>{profile?.reward_level || 0}</strong></div><div><span>Gesamte Onlinezeit</span><strong>{totalOnlineHours.toFixed(2)} h</strong></div></div>
+              <div className="panel online-reward-panel"><h2>🎁 Nächste Belohnung</h2><p><strong>{REWARD_LABELS[Math.min(profile?.reward_level || 0, REWARD_LABELS.length - 1)] || "Exklusive Profilfunktion"}</strong></p><p>{onlineHoursUntilReward <= 0 ? "Du kannst jetzt deine nächste Belohnung freischalten!" : `Noch ${onlineHoursUntilReward.toFixed(2)} Stunden bis zur nächsten Belohnung.`}</p><button className="primary-button" disabled={onlineHoursUntilReward > 0} onClick={claimOnlineReward}>🎁 Belohnung freischalten</button></div>
+              <div className="panel"><h2>Belohnungsstufen</h2><div className="point-list">{REWARD_LABELS.map((label, index) => <article className={`point-row ${(profile?.reward_level || 0) > index ? "positive" : ""}`} key={label}><strong>Stufe {index + 1}</strong><span>{label}</span></article>)}</div></div>
+            </section>
+          )}
 
-              <div className="page-heading">
-
-                <div>
-
-                  <button
-                    className="back-button"
-                    onClick={() =>
-                      setPage("profile")
-                    }
-                  >
-                    ← Zurück
-                  </button>
-
-                  <h1>
-                    Meine Punkte
-                  </h1>
-
-                  <p>
-                    Dein vollständiger
-                    Punkteverlauf.
-                  </p>
-
-                </div>
-
-              </div>
-
-              <div className="points-overview">
-
-                <div>
-
-                  <span>
-                    Aktueller Punktestand
-                  </span>
-
-                  <strong>
-                    {
-                      profile?.community_points ||
-                      0
-                    }
-                  </strong>
-
-                </div>
-
-              </div>
-
-              <div className="panel online-reward-panel">
-                <h2>⏱ Online-Belohnung</h2>
-                <p>Gesamte gespeicherte Onlinezeit: <strong>{totalOnlineHours.toFixed(2)} Stunden</strong></p>
-                <p>
-                  {onlineHoursUntilReward <= 0
-                    ? "Du kannst jetzt 10 Punkte abholen!"
-                    : `Noch ${onlineHoursUntilReward.toFixed(2)} Stunden bis zu den nächsten 10 Punkten.`}
-                </p>
-                <button
-                  className="primary-button"
-                  disabled={onlineHoursUntilReward > 0}
-                  onClick={claimOnlineReward}
-                >
-                  🎁 10 Punkte abholen
-                </button>
-              </div>
-
-              <div className="point-list">
-
-                {history.map((item) => {
-
-                  const delta =
-                    item.delta ??
-                    item.community_points_change ??
-                    0;
-
-                  return (
-                    <article
-                      className={
-                        `point-row ${
-                          delta < 0
-                            ? "negative"
-                            : "positive"
-                        }`
-                      }
-                      key={item.id}
-                    >
-
-                      <strong>
-                        {delta > 0
-                          ? "+"
-                          : ""}
-                        {delta}
-                        {" "}
-                        Punkte
-                      </strong>
-
-                      <span>
-                        {item.reason}
-                      </span>
-
-                      <small>
-                        {
-                          new Date(
-                            item.created_at
-                          ).toLocaleString(
-                            "de-AT"
-                          )
-                        }
-                      </small>
-
-                    </article>
-                  );
-                })}
-
-                {!history.length && (
-                  <div className="empty-card">
-                    Noch keine
-                    Punkteänderungen.
-                  </div>
-                )}
-
-              </div>
-
+          {page === "forum" && (
+            <section><div className="page-heading"><div><span className="eyebrow">AUSTAUSCHEN & MITREDEN</span><h1>Forum</h1><p>Diskutiere mit der Community über Themen aus der Region.</p></div></div>
+              <form className="panel" onSubmit={createForumPost}><h2>Neues Thema</h2><input name="title" placeholder="Titel" required /><textarea name="content" placeholder="Dein Beitrag" required rows="5" /><button className="primary-button">Beitrag veröffentlichen</button></form>
+              <div className="news-grid">{forumPosts.map(post => <article className="news-card" key={post.id}><h2>{post.title}</h2><p>{post.content}</p><small>Von {actorLabel(post.author_id)} · {new Date(post.created_at).toLocaleString("de-AT")}</small>{(post.author_id === user?.id || myAdminPermission("manage_forum")) && <div className="content-manage-actions"><button className="danger-link" onClick={() => deleteForumPost(post)}>Löschen</button></div>}</article>)}{!forumPosts.length && <div className="empty-card">Noch keine Beiträge im Forum.</div>}</div>
             </section>
           )}
 
@@ -4085,10 +4002,10 @@ async function changePoints(event) {
             )}
           </button>
 
-          <button onClick={() => setPage("points")}>
-            ⭐ {profile?.community_points || 0} Punkte
+          <button onClick={() => setPage("rewards")}>
+            🎁 Belohnungen
             <span className="rail-subvalue">
-              ({profile?.purchase_points || 0} KP)
+              Stufe {profile?.reward_level || 0}
             </span>
           </button>
 
@@ -4254,15 +4171,6 @@ async function changePoints(event) {
 
               {(
                 isHeadAdmin(profile?.role) ||
-                myAdminPermission("manage_points")
-              ) && (
-                <button onClick={() => setPage("admin")}>
-                  ⭐ Punkte verwalten
-                </button>
-              )}
-
-              {(
-                isHeadAdmin(profile?.role) ||
                 myAdminPermission("manage_news")
               ) && (
                 <button onClick={() => setPage("home")}>
@@ -4272,19 +4180,10 @@ async function changePoints(event) {
 
               {(
                 isHeadAdmin(profile?.role) ||
-                myAdminPermission("manage_groups")
+                myAdminPermission("manage_forum")
               ) && (
-                <button onClick={() => setPage("groups")}>
-                  👥 Gruppen verwalten
-                </button>
-              )}
-
-              {(
-                isHeadAdmin(profile?.role) ||
-                myAdminPermission("manage_events")
-              ) && (
-                <button onClick={() => setPage("events")}>
-                  📅 Events verwalten
+                <button onClick={() => setPage("forum")}>
+                  💬 Forum moderieren
                 </button>
               )}
 
@@ -4304,6 +4203,10 @@ async function changePoints(event) {
                 <button onClick={() => setPage("reports")}>
                   🚩 Meldungen ({reports.filter((item) => item.status === "PENDING").length})
                 </button>
+              )}
+
+              {isHeadAdmin(profile?.role) && (
+                <button onClick={() => setPage("admin-log")}>📋 Admin-Logbuch ({adminLogs.length})</button>
               )}
 
               {isHeadAdmin(profile?.role) && (
@@ -4353,15 +4256,14 @@ async function changePoints(event) {
                         <div className="permission-list">
                           {[
                             ["manage_members", "Mitglieder verwalten"],
-                            ["manage_points", "Punkte verwalten"],
+                            ["manage_forum", "Forum moderieren"],
                             ["manage_messages", "Nachrichten verwalten"],
                             ["manage_media", "Medien verwalten"],
                             ["manage_roles", "Rollen vergeben"],
                             ["manage_admins", "Admins verwalten"],
                             ["view_profile_visits", "Profilbesucher sehen"],
                             ["manage_news", "News verwalten"],
-                            ["manage_groups", "Gruppen verwalten"],
-                            ["manage_events", "Events verwalten"],
+                            
                             ["manage_marketplace", "Marktplatz verwalten"],
                             ["manage_friend_requests", "Freundschaftsanfragen verwalten"],
                             ["manage_homepage", "Hauptseite gestalten"],
@@ -4404,6 +4306,10 @@ async function changePoints(event) {
         {/* =====================================================
             PROFIL MODAL
             ===================================================== */}
+
+        {page === "admin-log" && isHeadAdmin(profile?.role) && (
+          <section><div className="page-heading"><div><span className="eyebrow">NUR FÜR HEAD ADMIN</span><h1>Admin-Logbuch</h1><p>Alle wichtigen Verwaltungsaktionen werden automatisch dokumentiert.</p></div></div><div className="panel point-list">{adminLogs.map(log => <article className="point-row" key={log.id}><div><strong>{log.action}</strong><p>{log.reason || "Keine Begründung"}</p><small>{new Date(log.created_at).toLocaleString("de-AT")} · Admin: {actorLabel(log.actor_id)} · Mitglied: {actorLabel(log.target_user)}</small></div></article>)}{!adminLogs.length && <div className="empty-card">Noch keine Admin-Aktionen protokolliert.</div>}</div></section>
+        )}
 
         {selectedMember && page !== "member-profile" && (
 
@@ -4862,6 +4768,20 @@ async function changePoints(event) {
       ↩ Rolle entfernen · Zum Mitglied
     </button>
   )}
+
+        {selectedMember.id !== user?.id && myAdminPermission("manage_members") && (
+          <>
+            <button type="button" className="profile-admin-button" onClick={() => adminAction("WARN", selectedMember)}>⚠ Verwarnung erteilen</button>
+            <button type="button" className="profile-admin-button" onClick={() => { const feature = window.prompt("Funktion sperren: messages, forum, news, profile_edit"); if (feature) adminAction("RESTRICT", selectedMember, { feature }); }}>🔒 Funktion sperren</button>
+            <button type="button" className="profile-admin-button remove-role" onClick={() => adminAction("UNRESTRICT", selectedMember)}>🔓 Funktionssperre aufheben</button>
+          </>
+        )}
+        {isHeadAdmin(profile?.role) && selectedMember.id !== user?.id && (
+          <>
+            <button type="button" className="profile-admin-button remove-role" onClick={() => adminAction("SUSPEND", selectedMember)}>🚫 Konto sperren</button>
+            <button type="button" className="profile-admin-button danger" onClick={() => { if (window.confirm(`${getName(selectedMember)} endgültig löschen?`)) adminAction("DELETE", selectedMember); }}>🗑 Mitglied löschen</button>
+          </>
+        )}
 
      </div>
     </section>
