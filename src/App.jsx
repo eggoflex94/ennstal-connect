@@ -4920,7 +4920,7 @@ async function changePoints(event) {
           </div>
         )}
 
-        <footer className="site-footer"><div className="footer-brand"><img src="/ennstal-connect-logo.svg" alt="Ennstal Connect" /></div><div><strong>Rechtliches</strong><p>Alle rechtlichen Hinweise sind direkt in der Community aufrufbar.</p></div><div><strong>Support</strong><p>Fragen und Fehlermeldungen können direkt an das Admin-Team gesendet werden.</p></div><div className="footer-links"><button onClick={() => setPage("impressum")}>Impressum</button><button onClick={() => setPage("privacy")}>Datenschutzhinweise</button><button onClick={() => setPage("support")}>Support / Fehlermeldung</button>{isAdmin(profile?.role) && <button onClick={() => setPage("support-admin")}>Admin: Support-Anfragen</button>}</div></footer>
+        <footer className="site-footer"><div className="footer-brand"><img src="/ennstal-connect-logo.svg" alt="Ennstal Connect" /></div><div><strong>Rechtliches</strong><p>Alle rechtlichen Hinweise sind direkt in der Community aufrufbar.</p></div><div><strong>Community</strong><p>Supporter, Admins und Hauptadmin verwalten gemeinsam die Community.</p></div><div className="footer-links"><button onClick={() => setPage("impressum")}>Impressum</button><button onClick={() => setPage("privacy")}>Datenschutzhinweise</button></div></footer>
       </div>
     </>
   );
