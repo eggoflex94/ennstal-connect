@@ -1862,10 +1862,7 @@ async function changePoints(event) {
   if (loading) {
     return (
       <div className="loading-screen">
-        <img
-          src="/ennstal-connect-logo.svg"
-          alt="Ennstal Connect"
-        />
+        <div className="text-logo" aria-label="Ennstal Connect">ENNSTAL CONNECT</div>
 
         <p>
           Ennstal Connect wird geladen …
@@ -1884,10 +1881,7 @@ async function changePoints(event) {
         <div className="auth-page">
 
           <div className="auth-brand">
-            <img
-              src="/ennstal-connect-logo.svg"
-              alt="Ennstal Connect"
-            />
+            <div className="text-logo" aria-label="Ennstal Connect">ENNSTAL CONNECT</div>
           </div>
 
           <Auth
@@ -1920,10 +1914,7 @@ async function changePoints(event) {
 
           <div className="suspended-box">
 
-            <img
-              src="/ennstal-connect-logo.svg"
-              alt="Ennstal Connect"
-            />
+            <div className="text-logo" aria-label="Ennstal Connect">ENNSTAL CONNECT</div>
 
             <h1>
               Konto gesperrt
@@ -2052,10 +2043,7 @@ async function changePoints(event) {
               setPage("home")
             }
           >
-            <img
-              src="/ennstal-connect-logo.svg"
-              alt="Ennstal Connect"
-            />
+            <div className="text-logo" aria-label="Ennstal Connect">ENNSTAL CONNECT</div>
           </div>
 
           <nav>
@@ -2188,7 +2176,7 @@ async function changePoints(event) {
               <div className="hero">
 
                 <img
-                  src="/banner.svg"
+                  src="/banner.png"
                   alt="Ennstal Connect – Panorama"
                 />
 
@@ -3010,54 +2998,54 @@ async function changePoints(event) {
               </div>
 
               <div className="support-ticket-list">
-                {supportTickets.map((ticket) => {
-                  const sender = members.find((member) => member.id === ticket.user_id);
-                  const statusLabel =
-                    ticket.status === "OPEN"
-                      ? "Offen"
-                      : ticket.status === "IN_PROGRESS"
-                      ? "In Bearbeitung"
-                      : "Erledigt";
-
-                  return (
-                    <article className="support-ticket" key={ticket.id}>
-                      <div>
-                        <strong>{ticket.subject}</strong>
-                        <p>
-                          Von: {sender ? getName(sender) : ticket.user_id} · {ticket.category}
-                        </p>
-                        <p>{ticket.description}</p>
-                      </div>
-
-                      <div className="support-ticket-actions">
-                        <span>{statusLabel}</span>
-
-                        {ticket.status === "OPEN" && (
-                          <button
-                            type="button"
-                            className="secondary-button"
-                            onClick={() => updateSupportTicketStatus(ticket, "IN_PROGRESS")}
-                          >
-                            In Bearbeitung
-                          </button>
-                        )}
-
-                        {ticket.status !== "RESOLVED" && (
-                          <button
-                            type="button"
-                            className="primary-button"
-                            onClick={() => updateSupportTicketStatus(ticket, "RESOLVED")}
-                          >
-                            Erledigt
-                          </button>
-                        )}
-                      </div>
-                    </article>
-                  );
-                })}
-
-                {!supportTickets.length && (
+                {supportTickets.length === 0 ? (
                   <div className="empty-card">Keine Support-Anfragen vorhanden.</div>
+                ) : (
+                  supportTickets.map((ticket) => {
+                    const sender = members.find((member) => member.id === ticket.user_id);
+                    const statusLabel =
+                      ticket.status === "OPEN"
+                        ? "Offen"
+                        : ticket.status === "IN_PROGRESS"
+                        ? "In Bearbeitung"
+                        : "Erledigt";
+
+                    return (
+                      <article className="support-ticket" key={ticket.id}>
+                        <div>
+                          <strong>{ticket.subject}</strong>
+                          <p>
+                            Von: {sender ? getName(sender) : ticket.user_id} · {ticket.category}
+                          </p>
+                          <p>{ticket.description}</p>
+                        </div>
+
+                        <div className="support-ticket-actions">
+                          <span>{statusLabel}</span>
+
+                          {ticket.status === "OPEN" && (
+                            <button
+                              type="button"
+                              className="secondary-button"
+                              onClick={() => updateSupportTicketStatus(ticket, "IN_PROGRESS")}
+                            >
+                              In Bearbeitung
+                            </button>
+                          )}
+
+                          {ticket.status !== "RESOLVED" && (
+                            <button
+                              type="button"
+                              className="primary-button"
+                              onClick={() => updateSupportTicketStatus(ticket, "RESOLVED")}
+                            >
+                              Erledigt
+                            </button>
+                          )}
+                        </div>
+                      </article>
+                    );
+                  })
                 )}
               </div>
             </section>
@@ -3106,7 +3094,7 @@ async function changePoints(event) {
 
                   <div className="my-profile-top">
                     {isAdmin(profile?.role) && (
-                      <span className="role-stack"><img className="role-symbol role-symbol-large" src="/Admin-star.png" alt="Admin" /><img className="friend-symbol" src="/freunde-logo.png" alt="Freund" /></span>
+                      <span className="role-stack"><img className="role-symbol role-symbol-large" src="/Admin-star.png" alt="Admin" /><img className="friend-symbol" src="/freunde-logo" alt="Freund" /></span>
                     )}
 
                     {profile?.role === "SUPPORTER" && (
@@ -4931,7 +4919,6 @@ async function changePoints(event) {
           >
             ★ Zum Admin ernennen
           </button>
-        )}
 
         {selectedMember.id !== user?.id &&
           selectedMember.role !== "MEMBER" &&
@@ -4945,6 +4932,8 @@ async function changePoints(event) {
               ↩ Rolle entfernen · Zum Mitglied
             </button>
           )}
+
+        )}
 
      </div>
     </section>
@@ -5005,7 +4994,7 @@ async function changePoints(event) {
           </div>
         )}
 
-        <footer className="site-footer"><div className="footer-brand"><img src="/ennstal-connect-logo.svg" alt="Ennstal Connect" /></div><div><strong>Rechtliches</strong><p>Alle rechtlichen Hinweise sind direkt in der Community aufrufbar.</p></div><div><strong>Support</strong><p>Fragen und Fehlermeldungen können direkt an das Admin-Team gesendet werden.</p></div><div className="footer-links"><button onClick={() => setPage("impressum")}>Impressum</button><button onClick={() => setPage("privacy")}>Datenschutzhinweise</button><button onClick={() => setPage("support")}>Support / Fehlermeldung</button>{isAdmin(profile?.role) && <button onClick={() => setPage("support-admin")}>Admin: Support-Anfragen</button>}</div></footer>
+        <footer className="site-footer"><div className="footer-brand"><div className="text-logo">ENNSTAL CONNECT</div></div><div><strong>Rechtliches</strong><p>Alle rechtlichen Hinweise sind direkt in der Community aufrufbar.</p></div><div><strong>Support</strong><p>Fragen und Fehlermeldungen können direkt an das Admin-Team gesendet werden.</p></div><div className="footer-links"><button onClick={() => setPage("impressum")}>Impressum</button><button onClick={() => setPage("privacy")}>Datenschutzhinweise</button><button onClick={() => setPage("support")}>Support / Fehlermeldung</button>{isAdmin(profile?.role) && <button onClick={() => setPage("support-admin")}>Admin: Support-Anfragen</button>}</div></footer>
       </div>
     </>
   );
@@ -5137,7 +5126,7 @@ function MemberCard({
                 onFriend?.(member);
               }}
             >
-              {isFriend ? <img src="/friend.png" alt="Freund" /> : "♡"}
+              {isFriend ? "♥" : "♡"}
             </button>
           )}
 
@@ -5212,11 +5201,6 @@ function MemberCard({
   );
 }
 
-function showFriendMessage() {
-  alert(
-    "Die Freundesfunktion wird über deine bestehende Freundschaftstabelle verbunden. Die Nachrichtenfunktion ist bereits aktiv."
-  );
-}
 
 
 /* =========================================================
