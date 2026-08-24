@@ -41,7 +41,12 @@ export default function ProfileView({member,currentUserId,viewerRole,viewerPermi
       <label>Profilbild URL<input value={draft.avatar_url||""} onChange={e=>setDraft({...draft,avatar_url:e.target.value})}/></label>
       <label>Akzentfarbe<input type="color" value={draft.profile_accent||"#aeb7c2"} onChange={e=>setDraft({...draft,profile_accent:e.target.value})}/></label>
       <button className="primary">Speichern</button>
-      {!head&&<small>Vorname, Nachname und Geburtsdatum können nach der Registrierung nur vom Head Admin geändert werden.</small>
+      {!head && (
+  <small>
+    Vorname, Nachname und Geburtsdatum können nach der Registrierung
+    nur vom Head Admin geändert werden.
+  </small>
+)}
    </form>}
    {admin&&!mine&&<section className="panel admin-tools"><span className="eyebrow">MODERATION</span><h2>🛠️ Admin-Werkzeuge</h2><div className="admin-tool-grid">
       {can("manage_warnings")&&<button onClick={()=>adminAction("warn")}>⚠️ Verwarnung</button>}
