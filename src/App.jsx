@@ -3002,8 +3002,77 @@ async function changePoints(event) {
           )}
 
           {page === "support-admin" && isAdmin(profile?.role) && (
-            <section className="support-page"><div className="page-heading"><div><span className="eyebrow">ADMIN</span><h1>Support-Anfragen</h1><p>Hier erscheinen alle direkt eingereichten Anliegen und Fehlermeldungen.</p></div></div>
-            <div className="support-ticket-list">{supportTickets.map(ticket => { const sender = members.find(m => m.id === ticket.user_id); return <article className="support-ticket" key={ticket.id}><div><strong>{ticket.subject}</strong><p>Von: {sender ? getName(sender) : ticket.user_id} · {ticket.category}</p><p>{ticket.description}</p></div><div className="support-ticket-actions"><span>{ticket.status === "OPEN" ? "Offen" : ticket.status === "IN_PROGRESS" ? "In Bearbeitung" : "Erledigt"}</span>{ticket.status === "OPEN" && <button className="secondary-button" onClick={() => updateSupportTicketStatus(ticket, "IN_PROGRESS")}>In Bearbeitung</button>}{ticket.status !== "RESOLVED" && <button className="primary-button" onClick={() => updateSupportTicketStatus(ticket, "RESOLVED")}>Erledigt</button>}</div></article>)}{!supportTickets.length && <div className="empty-card">Keine Support-Anfragen vorhanden.</div>}</div></section>
+            <section className="support-page">
+              <div className="page-heading">
+                <div>
+                  <span className="eyebrow">ADMIN</span>
+                  <h1>Support-Anfragen</h1>
+                  <p>Hier erscheinen alle direkt eingereichten Anliegen und Fehlermeldungen.</p>
+                </div>
+              </div>
+
+              <div className="support-ticket-list">
+                {supportTickets.map((ticket) => {
+                  const sender = members.find(
+                    (member) => member.id === ticket.user_id
+                  );
+
+                  return (
+                    <article className="support-ticket" key={ticket.id}>
+                      <div>
+                        <strong>{ticket.subject}</strong>
+                        <p>
+                          Von: {sender ? getName(sender) : ticket.user_id}
+                          {" · "}
+                          {ticket.category}
+                        </p>
+                        <p>{ticket.description}</p>
+                      </div>
+
+                      <div className="support-ticket-actions">
+                        <span>
+                          {ticket.status === "OPEN"
+                            ? "Offen"
+                            : ticket.status === "IN_PROGRESS"
+                            ? "In Bearbeitung"
+                            : "Erledigt"}
+                        </span>
+
+                        {ticket.status === "OPEN" && (
+                          <button
+                            className="secondary-button"
+                            type="button"
+                            onClick={() =>
+                              updateSupportTicketStatus(ticket, "IN_PROGRESS")
+                            }
+                          >
+                            In Bearbeitung
+                          </button>
+                        )}
+
+                        {ticket.status !== "RESOLVED" && (
+                          <button
+                            className="primary-button"
+                            type="button"
+                            onClick={() =>
+                              updateSupportTicketStatus(ticket, "RESOLVED")
+                            }
+                          >
+                            Erledigt
+                          </button>
+                        )}
+                      </div>
+                    </article>
+                  );
+                })}
+
+                {!supportTickets.length && (
+                  <div className="empty-card">
+                    Keine Support-Anfragen vorhanden.
+                  </div>
+                )}
+              </div>
+            </section>
           )}
 
           {page === "impressum" && (
