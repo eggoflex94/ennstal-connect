@@ -1862,7 +1862,10 @@ async function changePoints(event) {
   if (loading) {
     return (
       <div className="loading-screen">
-        <div className="text-logo" aria-label="Ennstal Connect">ENNSTAL CONNECT</div>
+        <img
+          src="/ennstal-connect-logo.svg"
+          alt="Ennstal Connect"
+        />
 
         <p>
           Ennstal Connect wird geladen …
@@ -1881,7 +1884,10 @@ async function changePoints(event) {
         <div className="auth-page">
 
           <div className="auth-brand">
-            <div className="text-logo" aria-label="Ennstal Connect">ENNSTAL CONNECT</div>
+            <img
+              src="/ennstal-connect-logo.svg"
+              alt="Ennstal Connect"
+            />
           </div>
 
           <Auth
@@ -1914,7 +1920,10 @@ async function changePoints(event) {
 
           <div className="suspended-box">
 
-            <div className="text-logo" aria-label="Ennstal Connect">ENNSTAL CONNECT</div>
+            <img
+              src="/ennstal-connect-logo.svg"
+              alt="Ennstal Connect"
+            />
 
             <h1>
               Konto gesperrt
@@ -2043,7 +2052,10 @@ async function changePoints(event) {
               setPage("home")
             }
           >
-            <div className="text-logo" aria-label="Ennstal Connect">ENNSTAL CONNECT</div>
+            <img
+              src="/ennstal-connect-logo.svg"
+              alt="Ennstal Connect"
+            />
           </div>
 
           <nav>
@@ -2176,7 +2188,7 @@ async function changePoints(event) {
               <div className="hero">
 
                 <img
-                  src="/banner.png"
+                  src="/banner.svg"
                   alt="Ennstal Connect – Panorama"
                 />
 
@@ -2988,67 +3000,8 @@ async function changePoints(event) {
           )}
 
           {page === "support-admin" && isAdmin(profile?.role) && (
-            <section className="support-page">
-              <div className="page-heading">
-                <div>
-                  <span className="eyebrow">ADMIN</span>
-                  <h1>Support-Anfragen</h1>
-                  <p>Hier erscheinen alle direkt eingereichten Anliegen und Fehlermeldungen.</p>
-                </div>
-              </div>
-
-              <div className="support-ticket-list">
-                {supportTickets.length === 0 ? (
-                  <div className="empty-card">Keine Support-Anfragen vorhanden.</div>
-                ) : (
-                  supportTickets.map((ticket) => {
-                    const sender = members.find((member) => member.id === ticket.user_id);
-                    const statusLabel =
-                      ticket.status === "OPEN"
-                        ? "Offen"
-                        : ticket.status === "IN_PROGRESS"
-                        ? "In Bearbeitung"
-                        : "Erledigt";
-
-                    return (
-                      <article className="support-ticket" key={ticket.id}>
-                        <div>
-                          <strong>{ticket.subject}</strong>
-                          <p>
-                            Von: {sender ? getName(sender) : ticket.user_id} · {ticket.category}
-                          </p>
-                          <p>{ticket.description}</p>
-                        </div>
-
-                        <div className="support-ticket-actions">
-                          <span>{statusLabel}</span>
-
-                          {ticket.status === "OPEN" && (
-                            <button
-                              type="button"
-                              className="secondary-button"
-                              onClick={() => updateSupportTicketStatus(ticket, "IN_PROGRESS")}
-                            >
-                              In Bearbeitung
-                            </button>
-                          )}
-
-                          {ticket.status !== "RESOLVED" && (
-                            <button
-                              type="button"
-                              className="primary-button"
-                              onClick={() => updateSupportTicketStatus(ticket, "RESOLVED")}
-                            >
-                              Erledigt
-                            </button>
-                          )}
-                        </div>
-                      </article>
-                    );
-                  })
-                )}
-              </div>
-            </section>
+            <section className="support-page"><div className="page-heading"><div><span className="eyebrow">ADMIN</span><h1>Support-Anfragen</h1><p>Hier erscheinen alle direkt eingereichten Anliegen und Fehlermeldungen.</p></div></div>
+            <div className="support-ticket-list">{supportTickets.map(ticket => { const sender = members.find(m => m.id === ticket.user_id); return <article className="support-ticket" key={ticket.id}><div><strong>{ticket.subject}</strong><p>Von: {sender ? getName(sender) : ticket.user_id} · {ticket.category}</p><p>{ticket.description}</p></div><div className="support-ticket-actions"><span>{ticket.status === "OPEN" ? "Offen" : ticket.status === "IN_PROGRESS" ? "In Bearbeitung" : "Erledigt"}</span>{ticket.status === "OPEN" && <button className="secondary-button" onClick={() => updateSupportTicketStatus(ticket, "IN_PROGRESS")}>In Bearbeitung</button>}{ticket.status !== "RESOLVED" && <button className="primary-button" onClick={() => updateSupportTicketStatus(ticket, "RESOLVED")}>Erledigt</button>}</div></article>)}{!supportTickets.length && <div className="empty-card">Keine Support-Anfragen vorhanden.</div>}</div></section>
           )}
 
           {page === "impressum" && (
@@ -3094,13 +3047,13 @@ async function changePoints(event) {
 
                   <div className="my-profile-top">
                     {isAdmin(profile?.role) && (
-                      <span className="role-stack"><img className="role-symbol role-symbol-large" src="/Admin-star.png" alt="Admin" /><img className="friend-symbol" src="/freunde-logo" alt="Freund" /></span>
+                      <span className="role-stack"><img className="role-symbol role-symbol-large" src="/admin-star.svg" alt="Admin" /><img className="friend-symbol" src="/friends-logo.svg" alt="Freund" /></span>
                     )}
 
                     {profile?.role === "SUPPORTER" && (
                       <img
                         className="role-symbol role-symbol-large"
-                        src="/supporter-star.png"
+                        src="/supporter-star.svg"
                         alt="Supporter"
                       />
                     )}
@@ -3868,7 +3821,7 @@ async function changePoints(event) {
                   {isAdmin(member.role) && (
                     <img
                       className="inline-role-symbol"
-                      src="/Admin-star.png"
+                      src="/admin-star.svg"
                       alt=""
                     />
                   )}
@@ -3876,7 +3829,7 @@ async function changePoints(event) {
                   {member.role === "SUPPORTER" && (
                     <img
                       className="inline-role-symbol"
-                      src="/supporter-star.png"
+                      src="/supporter-star.svg"
                       alt=""
                     />
                   )}
@@ -4113,7 +4066,7 @@ async function changePoints(event) {
                 {isAdmin(profile?.role) && (
                   <img
                     className="inline-role-symbol"
-                    src="/Admin-star.png"
+                    src="/admin-star.svg"
                     alt=""
                   />
                 )}
@@ -4121,7 +4074,7 @@ async function changePoints(event) {
                 {profile?.role === "SUPPORTER" && (
                   <img
                     className="inline-role-symbol"
-                    src="/supporter-star.png"
+                    src="/supporter-star.svg"
                     alt=""
                   />
                 )}
@@ -4273,7 +4226,7 @@ async function changePoints(event) {
                         {isAdmin(actor.role) && (
                           <img
                             className="inline-role-symbol"
-                            src="/Admin-star.png"
+                            src="/admin-star.svg"
                             alt=""
                           />
                         )}
@@ -4281,7 +4234,7 @@ async function changePoints(event) {
                         {actor.role === "SUPPORTER" && (
                           <img
                             className="inline-role-symbol"
-                            src="/supporter-star.png"
+                            src="/supporter-star.svg"
                             alt=""
                           />
                         )}
@@ -4538,12 +4491,12 @@ async function changePoints(event) {
                   {isAdmin(
                     selectedMember.role
                   ) && (
-                    <img className="role-symbol" src="/Admin-star.png" alt="Admin" />
+                    <img className="role-symbol" src="/admin-star.svg" alt="Admin" />
                   )}
 
                   {selectedMember.role ===
                     "SUPPORTER" && (
-                    <img className="role-symbol" src="/supporter-star.png" alt="Supporter" />
+                    <img className="role-symbol" src="/supporter-star.svg" alt="Supporter" />
                   )}
 
                   <h1
@@ -4994,7 +4947,7 @@ async function changePoints(event) {
           </div>
         )}
 
-        <footer className="site-footer"><div className="footer-brand"><div className="text-logo">ENNSTAL CONNECT</div></div><div><strong>Rechtliches</strong><p>Alle rechtlichen Hinweise sind direkt in der Community aufrufbar.</p></div><div><strong>Support</strong><p>Fragen und Fehlermeldungen können direkt an das Admin-Team gesendet werden.</p></div><div className="footer-links"><button onClick={() => setPage("impressum")}>Impressum</button><button onClick={() => setPage("privacy")}>Datenschutzhinweise</button><button onClick={() => setPage("support")}>Support / Fehlermeldung</button>{isAdmin(profile?.role) && <button onClick={() => setPage("support-admin")}>Admin: Support-Anfragen</button>}</div></footer>
+        <footer className="site-footer"><div className="footer-brand"><img src="/ennstal-connect-logo.svg" alt="Ennstal Connect" /></div><div><strong>Rechtliches</strong><p>Alle rechtlichen Hinweise sind direkt in der Community aufrufbar.</p></div><div><strong>Support</strong><p>Fragen und Fehlermeldungen können direkt an das Admin-Team gesendet werden.</p></div><div className="footer-links"><button onClick={() => setPage("impressum")}>Impressum</button><button onClick={() => setPage("privacy")}>Datenschutzhinweise</button><button onClick={() => setPage("support")}>Support / Fehlermeldung</button>{isAdmin(profile?.role) && <button onClick={() => setPage("support-admin")}>Admin: Support-Anfragen</button>}</div></footer>
       </div>
     </>
   );
@@ -5097,8 +5050,8 @@ function MemberCard({
 
         <div className="member-left">
 
-          {admin && <img className="role-symbol" src="/Admin-star.png" alt="Admin" />}
-          {supporter && <img className="role-symbol" src="/supporter-star.png" alt="Supporter" />}
+          {admin && <img className="role-symbol" src="/admin-star.svg" alt="Admin" />}
+          {supporter && <img className="role-symbol" src="/supporter-star.svg" alt="Supporter" />}
 
         </div>
 
@@ -5126,7 +5079,7 @@ function MemberCard({
                 onFriend?.(member);
               }}
             >
-              {isFriend ? "♥" : "♡"}
+              {isFriend ? <img src="/friends-logo.svg" alt="Freund" /> : "♡"}
             </button>
           )}
 
@@ -5201,6 +5154,11 @@ function MemberCard({
   );
 }
 
+function showFriendMessage() {
+  alert(
+    "Die Freundesfunktion wird über deine bestehende Freundschaftstabelle verbunden. Die Nachrichtenfunktion ist bereits aktiv."
+  );
+}
 
 
 /* =========================================================
