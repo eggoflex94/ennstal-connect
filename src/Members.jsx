@@ -19,12 +19,11 @@ import {
 } from "lucide-react";
 
 const ROLE_LABELS = {
-  user: "Mitglied",
-  member: "Mitglied",
-  supporter: "Supporter",
-  moderator: "Moderator",
-  admin: "Admin",
-  owner: "Admin",
+  MEMBER: "Mitglied", member: "Mitglied", user: "Mitglied",
+  SUPPORTER: "Supporter", supporter: "Supporter",
+  MODERATOR: "Moderator", moderator: "Moderator",
+  ADMIN: "Admin", admin: "Admin",
+  HEAD_ADMIN: "Head Admin", head_admin: "Head Admin", owner: "Head Admin",
 };
 
 function getDisplayName(member) {
@@ -161,8 +160,8 @@ export default function Members() {
     if (
       isModerator &&
       (
-        getRole(member) === "admin" ||
-        getRole(member) === "owner"
+        getRole(member) === "ADMIN" ||
+        getRole(member) === "HEAD_ADMIN"
       )
     ) {
       alert("Du kannst keinen Administrator verwalten.");
@@ -219,7 +218,7 @@ export default function Members() {
 
     if (!confirmed) return;
 
-    await updateRole(member, "user");
+    await updateRole(member, "MEMBER");
   }
 
   async function deleteAvatar(member) {
@@ -267,36 +266,41 @@ export default function Members() {
     }
   }
 
-  function sendMessage(member) {
-    /*
-      Hier wird aktuell kein unbekanntes Tabellenmodell
-      vorausgesetzt, damit kein Supabase-Fehler entsteht.
-
-      Wenn du bereits eine Nachrichten-Seite hast,
-      kannst du die Navigation hier später anpassen.
-    */
-
+  async function sendMessage(member) {
     if (!member) return;
-
-    alert(
-      `Nachrichtenfunktion für ${getDisplayName(member)} öffnen.`
-    );
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Bitte zuerst einloggen.");
+      const body = window.prompt(`Nachricht an ${getDisplayName(member)}:`);
+      if (!body?.trim()) return;
+      const { error } = await supabase.from("messages").insert({ sender_id: user.id, receiver_id: member.id, content: body.trim() });
+      if (error) throw error;
+      alert("Nachricht wurde gesendet.");
+    } catch (err) { alert(err.message || "Nachricht konnte nicht gesendet werden."); }
   }
 
-  function blockUser(member) {
-    if (!member) return;
-
-    alert(
-      `Blockieren von ${getDisplayName(member)} muss mit deiner vorhandenen Blocked-Users-Tabelle verbunden werden.`
-    );
+  async function blockUser(member) {
+    if (!member || !window.confirm(`${getDisplayName(member)} wirklich blockieren?`)) return;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Bitte zuerst einloggen.");
+      const { error } = await supabase.from("user_blocks").upsert({ blocker_id: user.id, blocked_id: member.id }, { onConflict: "blocker_id,blocked_id" });
+      if (error) throw error;
+      alert("Mitglied wurde blockiert.");
+    } catch (err) { alert(err.message || "Blockieren fehlgeschlagen."); }
   }
 
-  function reportUser(member) {
+  async function reportUser(member) {
     if (!member) return;
-
-    alert(
-      `Melden von ${getDisplayName(member)} muss mit deiner vorhandenen Reports-Tabelle verbunden werden.`
-    );
+    const reason = window.prompt(`Warum möchtest du ${getDisplayName(member)} melden?`);
+    if (!reason?.trim()) return;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Bitte zuerst einloggen.");
+      const { error } = await supabase.from("user_reports").insert({ reporter_id: user.id, reported_user_id: member.id, reason: reason.trim(), status: "OPEN" });
+      if (error) throw error;
+      alert("Meldung wurde an das Admin-Team gesendet.");
+    } catch (err) { alert(err.message || "Meldung konnte nicht gesendet werden."); }
   }
 
   function MemberAvatar({ member, size = "normal" }) {
