@@ -1,432 +1,526 @@
-.ec-profile-page {
-  --ec-bg: #121a24;
-  --ec-card: #17212d;
-  --ec-card-2: #1b2734;
-  --ec-line: rgba(148, 163, 184, .18);
-  --ec-text: #e8edf4;
-  --ec-muted: #a8b3c0;
-  --ec-orange: #ff6b16;
-  --ec-green: #35c879;
-  color: var(--ec-text);
-  width: 100%;
-  max-width: 100%;
+import React, { useMemo, useState } from "react";
+import { supabase } from "./supabaseClient";
+import "./ProfileView.css";
+
+const DEFAULT_AVATAR = "/default-avatar.svg";
+
+function getName(member) {
+  if (!member) return "Mitglied";
+  return (
+    member.nickname ||
+    [member.first_name, member.last_name].filter(Boolean).join(" ") ||
+    "Mitglied"
+  );
 }
 
-.ec-profile-page * { box-sizing: border-box; }
-
-.ec-profile-hero,
-.ec-content-card,
-.ec-profile-tabs,
-.ec-profile-edit-card {
-  background:
-    radial-gradient(circle at 90% 0%, rgba(255, 107, 22, .055), transparent 32%),
-    linear-gradient(145deg, rgba(29, 42, 56, .96), rgba(19, 29, 40, .98));
-  border: 1px solid var(--ec-line);
-  box-shadow: 0 14px 35px rgba(0,0,0,.12);
+function getAge(date) {
+  if (!date) return null;
+  const birth = new Date(`${date}T12:00:00`);
+  if (Number.isNaN(birth.getTime())) return null;
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const beforeBirthday =
+    today.getMonth() < birth.getMonth() ||
+    (today.getMonth() === birth.getMonth() &&
+      today.getDate() < birth.getDate());
+  if (beforeBirthday) age -= 1;
+  return age;
 }
 
-.ec-profile-hero {
-  min-height: 216px;
-  padding: 26px 24px;
-  border-radius: 14px;
-  display: grid;
-  grid-template-columns: 176px minmax(0, 1fr);
-  gap: 26px;
-  margin-bottom: 12px;
+function formatDate(date) {
+  if (!date) return "Nicht angegeben";
+  const value = new Date(`${date}T12:00:00`);
+  if (Number.isNaN(value.getTime())) return "Nicht angegeben";
+  return value.toLocaleDateString("de-AT", {
+    day: "numeric",
+    month: "long",
+    year: "numeric"
+  });
 }
 
-.ec-profile-avatar-wrap {
-  position: relative;
-  width: 176px;
-  height: 176px;
-  align-self: center;
+function roleLabel(role) {
+  if (role === "HEAD_ADMIN") return "HEAD ADMIN";
+  if (role === "ADMIN") return "ADMIN";
+  if (role === "SUPPORTER") return "SUPPORTER";
+  return "MITGLIED";
 }
 
-.ec-profile-avatar {
-  width: 176px;
-  height: 176px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid rgba(232,237,244,.9);
-  background: #202b37;
+function roleClass(role) {
+  if (role === "HEAD_ADMIN" || role === "ADMIN") return "admin";
+  if (role === "SUPPORTER") return "supporter";
+  return "member";
 }
 
-.ec-online-dot {
-  position: absolute;
-  right: 12px;
-  bottom: 13px;
-  width: 19px;
-  height: 19px;
-  border-radius: 50%;
-  background: #67717d;
-  border: 2px solid #182330;
-}
-.ec-online-dot.online { background: var(--ec-green); }
+export default function ProfileView({
+  member,
+  currentUserId,
+  onClose,
+  onProfileSaved,
+  onMessage
+}) {
+  const ownProfile = member?.id === currentUserId;
+  const [tab, setTab] = useState("about");
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState("");
+  const [avatarPreview, setAvatarPreview] = useState(
+    member?.avatar_url || DEFAULT_AVATAR
+  );
 
-.ec-profile-main { min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+  const [form, setForm] = useState(() => ({
+    nickname: member?.nickname || "",
+    first_name: member?.first_name || "",
+    last_name: member?.last_name || "",
+    birth_date: member?.birth_date || "",
+    gender: member?.gender || "",
+    bio: member?.bio || "",
+    location: member?.location || "",
+    interests: member?.interests || "",
+    website: member?.website || "",
+    nickname_color: member?.nickname_color || "#f4f7fb"
+  }));
 
-.ec-profile-name-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 24px;
-  align-items: flex-start;
-  padding-bottom: 22px;
-  border-bottom: 1px solid var(--ec-line);
-}
+  const age = useMemo(() => getAge(member?.birth_date), [member?.birth_date]);
 
-.ec-profile-name-row h1 {
-  margin: 0 0 7px;
-  font-size: clamp(29px, 3vw, 40px);
-  line-height: 1;
-  font-weight: 800;
-  letter-spacing: -.03em;
-}
+  const stats = {
+    posts: Number(member?.posts_count ?? member?.post_count ?? 0),
+    friends: Number(member?.friends_count ?? member?.friend_count ?? 0),
+    visits: Number(member?.profile_visits_count ?? member?.visit_count ?? 0)
+  };
 
-.ec-role-line {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  color: #d5dbe3;
-  font-size: 16px;
-}
-.ec-role-star {
-  width: 27px;
-  height: 27px;
-  display: inline-grid;
-  place-items: center;
-  font-size: 27px;
-  line-height: 1;
-  background: transparent !important;
-  border: 0 !important;
-  box-shadow: none !important;
-}
-.ec-role-star.admin { color: #ff3b30; }
-.ec-role-star.supporter { color: #34c778; }
-.ec-role-star.member { color: #f4b740; }
+  const showNotice = (text) => {
+    setNotice(text);
+    window.clearTimeout(window.__profileNoticeTimer);
+    window.__profileNoticeTimer = window.setTimeout(() => setNotice(""), 3500);
+  };
 
-.ec-online-line {
-  margin-top: 8px;
-  color: var(--ec-muted);
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
-.ec-online-line span {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: #68717d;
-}
-.ec-online-line span.online { background: var(--ec-green); }
+  const changeField = (event) => {
+    const { name, value } = event.target;
+    setForm((current) => ({ ...current, [name]: value }));
+  };
 
-.ec-profile-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+  const handleAvatar = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
 
-.ec-outline-button,
-.ec-primary-button,
-.ec-icon-button,
-.ec-card-heading button {
-  border-radius: 9px;
-  border: 1px solid rgba(183, 196, 211, .35);
-  color: var(--ec-text);
-  background: rgba(18, 27, 38, .55);
-  min-height: 40px;
-  padding: 0 16px;
-  font: inherit;
-  cursor: pointer;
-  transition: .18s ease;
-}
-.ec-outline-button:hover,
-.ec-icon-button:hover,
-.ec-card-heading button:hover {
-  border-color: var(--ec-orange);
-  color: #fff;
-  transform: translateY(-1px);
-}
-.ec-primary-button {
-  border-color: var(--ec-orange);
-  background: linear-gradient(135deg, #ff7a1a, #ef5800);
-  color: white;
-  font-weight: 700;
-  box-shadow: 0 8px 20px rgba(255,107,22,.18);
-}
-.ec-primary-button:hover { filter: brightness(1.08); transform: translateY(-1px); }
-.ec-primary-button:disabled { opacity: .65; cursor: wait; transform: none; }
-.ec-icon-button { width: 42px; padding: 0; font-size: 21px; }
+    if (!file.type.startsWith("image/")) {
+      showNotice("Bitte wähle eine Bilddatei aus.");
+      return;
+    }
 
-.ec-profile-stats {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0,1fr));
-  gap: 10px;
-  padding-top: 18px;
-}
-.ec-profile-stats > div {
-  min-width: 0;
-  display: grid;
-  grid-template-columns: 28px 1fr;
-  grid-template-areas: "icon label" "icon value";
-  column-gap: 9px;
-  align-items: center;
-}
-.ec-profile-stats span { grid-area: icon; color: #cdd5de; font-size: 22px; }
-.ec-profile-stats small { grid-area: label; color: var(--ec-muted); font-size: 12px; }
-.ec-profile-stats strong { grid-area: value; color: #f3f6fa; font-size: 15px; margin-top: 3px; }
+    if (file.size > 5 * 1024 * 1024) {
+      showNotice("Das Profilbild darf maximal 5 MB groß sein.");
+      return;
+    }
 
-.ec-profile-tabs {
-  border-radius: 12px;
-  min-height: 58px;
-  display: flex;
-  align-items: stretch;
-  gap: 2px;
-  padding: 0 10px;
-  margin-bottom: 13px;
-  overflow-x: auto;
-}
-.ec-profile-tabs button {
-  position: relative;
-  border: 0;
-  color: #b7c0ca;
-  background: transparent;
-  padding: 0 18px;
-  min-width: max-content;
-  font: inherit;
-  cursor: pointer;
-}
-.ec-profile-tabs button:hover { color: white; }
-.ec-profile-tabs button.active { color: var(--ec-orange); font-weight: 700; }
-.ec-profile-tabs button.active::after {
-  content: "";
-  position: absolute;
-  left: 12px;
-  right: 12px;
-  bottom: 0;
-  height: 2px;
-  border-radius: 3px;
-  background: var(--ec-orange);
-}
-.ec-profile-tabs em {
-  margin-left: 7px;
-  display: inline-grid;
-  place-items: center;
-  min-width: 25px;
-  height: 25px;
-  border-radius: 13px;
-  background: rgba(255,255,255,.07);
-  color: #c5ced7;
-  font-style: normal;
-  font-size: 12px;
-}
+    const localPreview = URL.createObjectURL(file);
+    setAvatarPreview(localPreview);
 
-.ec-profile-content {
-  display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(320px, .95fr);
-  gap: 12px;
-  align-items: start;
-}
-.ec-profile-left,
-.ec-profile-right { display: grid; gap: 12px; }
+    if (!ownProfile) return;
 
-.ec-content-card {
-  border-radius: 13px;
-  padding: 21px;
-}
-.ec-content-card h2 {
-  margin: 0 0 14px;
-  font-size: 18px;
-  letter-spacing: -.01em;
-}
-.ec-bio {
-  margin: 0;
-  color: #d5dce4;
-  line-height: 1.75;
-  white-space: pre-line;
-}
-.ec-extra-info {
-  margin-top: 17px;
-  padding-top: 15px;
-  border-top: 1px solid var(--ec-line);
-  display: grid;
-  gap: 9px;
-}
-.ec-extra-info p { margin: 0; color: #b9c3ce; display: flex; gap: 10px; align-items: center; }
-.ec-extra-info span { color: var(--ec-orange); }
-.ec-extra-info a { color: #ff8a47; text-decoration: none; }
+    try {
+      setSaving(true);
+      const extension = file.name.split(".").pop() || "jpg";
+      const path = `${currentUserId}/avatar-${Date.now()}.${extension}`;
 
-.ec-card-heading { display: flex; justify-content: space-between; gap: 15px; align-items: center; }
-.ec-card-heading h2 { margin: 0; }
-.ec-card-heading button {
-  min-height: 34px;
-  padding: 0 10px;
-  color: #cdd5df;
-  font-size: 13px;
-}
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(path, file, { upsert: true });
 
-.ec-empty-state {
-  min-height: 145px;
-  border: 1px dashed rgba(148,163,184,.24);
-  border-radius: 10px;
-  display: grid;
-  place-content: center;
-  text-align: center;
-  padding: 22px;
-}
-.ec-empty-state strong { color: #e8edf4; }
-.ec-empty-state span { margin-top: 6px; color: #8e9aa8; font-size: 13px; }
+      if (uploadError) {
+        showNotice("Bildvorschau geändert. Für den Upload fehlt eventuell der Storage-Bucket „avatars“.");
+        return;
+      }
 
-.ec-personal-card dl { margin: 0; display: grid; gap: 0; }
-.ec-personal-card dl > div {
-  display: grid;
-  grid-template-columns: 115px minmax(0,1fr);
-  gap: 12px;
-  padding: 13px 0;
-  border-bottom: 1px solid var(--ec-line);
-}
-.ec-personal-card dl > div:last-child { border-bottom: 0; }
-.ec-personal-card dt { color: #9ca8b5; font-size: 13px; }
-.ec-personal-card dd { margin: 0; color: #e3e8ee; font-size: 13px; line-height: 1.55; }
-.ec-info-bio { white-space: pre-line; }
+      const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+      const avatar_url = data?.publicUrl;
 
-.ec-security-card { padding-bottom: 10px; }
-.ec-setting-row {
-  width: 100%;
-  min-height: 49px;
-  border: 0;
-  border-top: 1px solid var(--ec-line);
-  background: transparent;
-  color: #cfd7df;
-  text-align: left;
-  display: grid;
-  grid-template-columns: 25px 1fr auto auto;
-  align-items: center;
-  gap: 7px;
-  cursor: pointer;
-  font: inherit;
-}
-.ec-setting-row span { color: #b8c3ce; }
-.ec-setting-row em { color: #7bd480; font-style: normal; font-size: 12px; }
-.ec-setting-row b { font-size: 21px; font-weight: 400; color: #aab4bf; }
+      if (avatar_url) {
+        setAvatarPreview(avatar_url);
+        setForm((current) => ({ ...current, avatar_url }));
+        showNotice("Profilbild wurde hochgeladen.");
+      }
+    } catch {
+      showNotice("Das Profilbild konnte nicht hochgeladen werden.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
-.ec-profile-edit-card {
-  border-radius: 13px;
-  padding: 24px;
-}
-.ec-edit-heading { margin-bottom: 21px; }
-.ec-edit-heading span { color: var(--ec-orange); font-size: 10px; font-weight: 800; letter-spacing: .13em; }
-.ec-edit-heading h2 { margin: 6px 0; font-size: 25px; }
-.ec-edit-heading p { margin: 0; color: var(--ec-muted); }
+  const saveProfile = async (event) => {
+    event.preventDefault();
+    if (!ownProfile || !currentUserId) return;
 
-.ec-avatar-editor {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-  padding: 16px;
-  margin-bottom: 20px;
-  border: 1px solid var(--ec-line);
-  border-radius: 11px;
-  background: rgba(5, 10, 16, .16);
-}
-.ec-avatar-editor img {
-  width: 78px;
-  height: 78px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-.ec-avatar-editor strong,
-.ec-avatar-editor small { display: block; }
-.ec-avatar-editor small { color: var(--ec-muted); margin: 4px 0 10px; }
-.ec-upload-button {
-  display: inline-flex;
-  align-items: center;
-  min-height: 36px;
-  padding: 0 12px;
-  border-radius: 8px;
-  border: 1px solid rgba(255,107,22,.6);
-  color: #ff9b66;
-  cursor: pointer;
-  font-size: 13px;
-}
-.ec-upload-button input { display: none; }
+    const firstName = form.first_name.trim();
+    const lastName = form.last_name.trim();
 
-.ec-form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0,1fr));
-  gap: 15px;
-}
-.ec-form-grid label {
-  display: grid;
-  gap: 7px;
-  color: #b8c2cd;
-  font-size: 13px;
-}
-.ec-form-grid label.full { grid-column: 1 / -1; }
-.ec-form-grid input,
-.ec-form-grid select,
-.ec-form-grid textarea {
-  width: 100%;
-  border: 1px solid rgba(148,163,184,.26);
-  border-radius: 9px;
-  background: rgba(8,14,21,.38);
-  color: #edf2f7;
-  outline: none;
-  padding: 11px 12px;
-  font: inherit;
-}
-.ec-form-grid textarea { resize: vertical; min-height: 110px; }
-.ec-form-grid input:focus,
-.ec-form-grid select:focus,
-.ec-form-grid textarea:focus {
-  border-color: rgba(255,107,22,.85);
-  box-shadow: 0 0 0 3px rgba(255,107,22,.09);
-}
-.ec-form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 20px;
-}
+    if (!firstName || !lastName) {
+      showNotice("Vorname und Nachname dürfen nicht leer sein.");
+      return;
+    }
 
-.ec-tab-placeholder { min-height: 330px; }
-.ec-tab-placeholder p { color: var(--ec-muted); line-height: 1.7; }
+    try {
+      setSaving(true);
 
-.ec-profile-notice {
-  position: fixed;
-  z-index: 9999;
-  top: 88px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: min(520px, calc(100vw - 30px));
-  padding: 13px 16px;
-  border-radius: 10px;
-  border: 1px solid rgba(255,107,22,.45);
-  background: #1a2430;
-  color: #f6f8fb;
-  box-shadow: 0 16px 40px rgba(0,0,0,.35);
-}
+      const payload = {
+        nickname: form.nickname.trim() || `${firstName} ${lastName}`,
+        first_name: firstName,
+        last_name: lastName,
+        birth_date: form.birth_date || null,
+        gender: form.gender || null,
+        bio: form.bio.trim() || null,
+        location: form.location.trim() || null,
+        interests: form.interests.trim() || null,
+        website: form.website.trim() || null,
+        nickname_color: form.nickname_color || "#f4f7fb",
+        avatar_url: form.avatar_url || member?.avatar_url || null
+      };
 
-@media (max-width: 1100px) {
-  .ec-profile-content { grid-template-columns: 1fr; }
-  .ec-profile-right { grid-template-columns: repeat(2, minmax(0,1fr)); }
-}
-@media (max-width: 820px) {
-  .ec-profile-hero { grid-template-columns: 1fr; text-align: center; }
-  .ec-profile-avatar-wrap { margin: 0 auto; }
-  .ec-profile-name-row { align-items: center; flex-direction: column; }
-  .ec-profile-actions { justify-content: center; }
-  .ec-role-line, .ec-online-line { justify-content: center; }
-  .ec-profile-stats { grid-template-columns: repeat(2, minmax(0,1fr)); text-align: left; }
-  .ec-profile-right { grid-template-columns: 1fr; }
-}
-@media (max-width: 620px) {
-  .ec-profile-hero { padding: 20px 15px; }
-  .ec-profile-avatar-wrap, .ec-profile-avatar { width: 130px; height: 130px; }
-  .ec-profile-avatar-wrap { margin: 0 auto; }
-  .ec-online-dot { right: 5px; bottom: 7px; }
-  .ec-profile-stats { grid-template-columns: 1fr 1fr; }
-  .ec-profile-tabs { padding: 0 2px; }
-  .ec-profile-tabs button { padding: 0 12px; }
-  .ec-content-card, .ec-profile-edit-card { padding: 17px; }
-  .ec-form-grid { grid-template-columns: 1fr; }
-  .ec-form-grid label.full { grid-column: auto; }
-  .ec-personal-card dl > div { grid-template-columns: 1fr; gap: 4px; }
-  .ec-avatar-editor { align-items: flex-start; }
+      const { data, error } = await supabase
+        .from("profiles")
+        .update(payload)
+        .eq("id", currentUserId)
+        .select("*")
+        .single();
+
+      if (error) throw error;
+
+      onProfileSaved?.(data);
+      setEditing(false);
+      showNotice("Dein Profil wurde erfolgreich gespeichert.");
+    } catch (error) {
+      showNotice(error?.message || "Profil konnte nicht gespeichert werden.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const sendMessage = () => {
+    if (ownProfile) return;
+    onMessage?.(member);
+  };
+
+  return (
+    <section className="ec-profile-page">
+      {notice && <div className="ec-profile-notice">{notice}</div>}
+
+      <article className="ec-profile-hero">
+        <div className="ec-profile-avatar-wrap">
+          <img
+            className="ec-profile-avatar"
+            src={avatarPreview || DEFAULT_AVATAR}
+            alt={getName(member)}
+            onError={(event) => {
+              event.currentTarget.src = DEFAULT_AVATAR;
+            }}
+          />
+          <span className={`ec-online-dot ${member?.is_online ? "online" : ""}`} />
+        </div>
+
+        <div className="ec-profile-main">
+          <div className="ec-profile-name-row">
+            <div>
+              <h1 style={{ color: member?.nickname_color || undefined }}>
+                {getName(member)}
+              </h1>
+
+              <div className="ec-role-line">
+                <span className={`ec-role-star ${roleClass(member?.role)}`}>★</span>
+                <strong>{roleLabel(member?.role)}</strong>
+              </div>
+
+              <div className="ec-online-line">
+                <span className={member?.is_online ? "online" : ""} />
+                {member?.is_online ? "Online" : "Offline"}
+              </div>
+            </div>
+
+            <div className="ec-profile-actions">
+              {ownProfile ? (
+                <button
+                  type="button"
+                  className="ec-outline-button"
+                  onClick={() => setEditing((value) => !value)}
+                >
+                  ✎ {editing ? "Bearbeiten schließen" : "Profil bearbeiten"}
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="ec-primary-button"
+                    onClick={sendMessage}
+                  >
+                    💬 Nachricht
+                  </button>
+                  {onClose && (
+                    <button
+                      type="button"
+                      className="ec-icon-button"
+                      onClick={onClose}
+                      aria-label="Zurück"
+                    >
+                      ←
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+
+          <div className="ec-profile-stats">
+            <div>
+              <span>▣</span>
+              <small>Mitglied seit</small>
+              <strong>
+                {member?.created_at
+                  ? new Date(member.created_at).toLocaleDateString("de-AT")
+                  : "–"}
+              </strong>
+            </div>
+            <div>
+              <span>◌</span>
+              <small>Beiträge</small>
+              <strong>{stats.posts}</strong>
+            </div>
+            <div>
+              <span>♧</span>
+              <small>Freunde</small>
+              <strong>{stats.friends}</strong>
+            </div>
+            <div>
+              <span>◉</span>
+              <small>Profilbesuche</small>
+              <strong>{stats.visits}</strong>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <nav className="ec-profile-tabs">
+        {[
+          ["about", "Über mich"],
+          ["posts", "Beiträge", stats.posts],
+          ["photos", "Bilder", member?.photos_count || 0],
+          ["friends", "Freunde", stats.friends],
+          ["activity", "Aktivitäten"]
+        ].map(([id, label, count]) => (
+          <button
+            type="button"
+            key={id}
+            className={tab === id ? "active" : ""}
+            onClick={() => setTab(id)}
+          >
+            {label}
+            {count !== undefined && <em>{count}</em>}
+          </button>
+        ))}
+        {ownProfile && (
+          <button
+            type="button"
+            className={editing ? "active" : ""}
+            onClick={() => setEditing(true)}
+          >
+            Einstellungen
+          </button>
+        )}
+      </nav>
+
+      {editing && ownProfile && (
+        <form className="ec-profile-edit-card" onSubmit={saveProfile}>
+          <div className="ec-edit-heading">
+            <div>
+              <span>MEIN PROFIL</span>
+              <h2>Persönliche Informationen bearbeiten</h2>
+              <p>Ändere deine Angaben und speichere sie direkt in deinem Profil.</p>
+            </div>
+          </div>
+
+          <div className="ec-avatar-editor">
+            <img src={avatarPreview || DEFAULT_AVATAR} alt="" />
+            <div>
+              <strong>Profilbild</strong>
+              <small>JPG, PNG oder WebP · maximal 5 MB</small>
+              <label className="ec-upload-button">
+                Bild auswählen
+                <input type="file" accept="image/*" onChange={handleAvatar} />
+              </label>
+            </div>
+          </div>
+
+          <div className="ec-form-grid">
+            <label>
+              Vorname
+              <input name="first_name" value={form.first_name} onChange={changeField} />
+            </label>
+            <label>
+              Nachname
+              <input name="last_name" value={form.last_name} onChange={changeField} />
+            </label>
+            <label>
+              Anzeigename
+              <input name="nickname" value={form.nickname} onChange={changeField} />
+            </label>
+            <label>
+              Geburtsdatum
+              <input type="date" name="birth_date" value={form.birth_date} onChange={changeField} />
+            </label>
+            <label>
+              Geschlecht
+              <select name="gender" value={form.gender} onChange={changeField}>
+                <option value="">Nicht angegeben</option>
+                <option value="MALE">Männlich</option>
+                <option value="FEMALE">Weiblich</option>
+                <option value="DIVERSE">Divers</option>
+              </select>
+            </label>
+            <label>
+              Wohnort
+              <input name="location" value={form.location} onChange={changeField} />
+            </label>
+            <label>
+              Interessen
+              <input name="interests" value={form.interests} onChange={changeField} />
+            </label>
+            <label>
+              Website
+              <input name="website" value={form.website} onChange={changeField} />
+            </label>
+            <label className="full">
+              Über mich
+              <textarea name="bio" rows="5" value={form.bio} onChange={changeField} />
+            </label>
+          </div>
+
+          <div className="ec-form-actions">
+            <button
+              type="button"
+              className="ec-outline-button"
+              onClick={() => setEditing(false)}
+            >
+              Abbrechen
+            </button>
+            <button type="submit" className="ec-primary-button" disabled={saving}>
+              {saving ? "Speichert..." : "Änderungen speichern"}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {!editing && (
+        <div className="ec-profile-content">
+          <div className="ec-profile-left">
+            {tab === "about" && (
+              <>
+                <article className="ec-content-card">
+                  <h2>Über mich</h2>
+                  <p className="ec-bio">
+                    {member?.bio || "Dieses Mitglied hat noch keine Beschreibung hinterlegt."}
+                  </p>
+                  {(member?.location || member?.interests || member?.website) && (
+                    <div className="ec-extra-info">
+                      {member?.location && <p><span>⌖</span>{member.location}</p>}
+                      {member?.interests && <p><span>✦</span>{member.interests}</p>}
+                      {member?.website && (
+                        <p>
+                          <span>↗</span>
+                          <a href={member.website.startsWith("http") ? member.website : `https://${member.website}`} target="_blank" rel="noreferrer">
+                            {member.website}
+                          </a>
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </article>
+
+                <article className="ec-content-card">
+                  <div className="ec-card-heading">
+                    <h2>Neueste Beiträge</h2>
+                    <button type="button" onClick={() => setTab("posts")}>Alle anzeigen</button>
+                  </div>
+                  <div className="ec-empty-state">
+                    <strong>Noch keine Beiträge geladen</strong>
+                    <span>Beiträge dieses Mitglieds erscheinen hier, sobald deine Beitragsdaten verbunden sind.</span>
+                  </div>
+                </article>
+              </>
+            )}
+
+            {tab !== "about" && (
+              <article className="ec-content-card ec-tab-placeholder">
+                <h2>
+                  {tab === "posts" && "Beiträge"}
+                  {tab === "photos" && "Bilder"}
+                  {tab === "friends" && "Freunde"}
+                  {tab === "activity" && "Aktivitäten"}
+                </h2>
+                <p>
+                  Dieser Bereich gehört vollständig zum Profil von {getName(member)}.
+                  Die Daten können später direkt aus deinen vorhandenen Tabellen geladen werden.
+                </p>
+              </article>
+            )}
+          </div>
+
+          <aside className="ec-profile-right">
+            <article className="ec-content-card ec-personal-card">
+              <div className="ec-card-heading">
+                <h2>Persönliche Informationen</h2>
+                {ownProfile && (
+                  <button type="button" onClick={() => setEditing(true)}>
+                    Bearbeiten
+                  </button>
+                )}
+              </div>
+
+              <dl>
+                <div>
+                  <dt>Vorname</dt>
+                  <dd>{member?.first_name || "–"}</dd>
+                </div>
+                <div>
+                  <dt>Nachname</dt>
+                  <dd>{member?.last_name || "–"}</dd>
+                </div>
+                <div>
+                  <dt>Geburtsdatum</dt>
+                  <dd>
+                    {formatDate(member?.birth_date)}
+                    {age !== null ? ` (${age} Jahre)` : ""}
+                  </dd>
+                </div>
+                {ownProfile && (
+                  <div>
+                    <dt>E-Mail</dt>
+                    <dd>{member?.email || "In deinem Konto hinterlegt"}</dd>
+                  </div>
+                )}
+                <div>
+                  <dt>Über mich</dt>
+                  <dd className="ec-info-bio">
+                    {member?.bio || "Noch keine Beschreibung."}
+                  </dd>
+                </div>
+              </dl>
+            </article>
+
+            {ownProfile && (
+              <article className="ec-content-card ec-security-card">
+                <h2>Konto & Sicherheit</h2>
+                <button type="button" className="ec-setting-row">
+                  <span>⌑</span> Passwort ändern <b>›</b>
+                </button>
+                <button type="button" className="ec-setting-row">
+                  <span>✉</span> E-Mail ändern <b>›</b>
+                </button>
+                <button type="button" className="ec-setting-row">
+                  <span>◉</span> Zwei-Faktor-Authentifizierung <em>Aktiv</em><b>›</b>
+                </button>
+              </article>
+            )}
+          </aside>
+        </div>
+      )}
+    </section>
+  );
 }
