@@ -263,22 +263,47 @@ export default function App() {
      ========================================================= */
 
   useEffect(() => {
-    if (!user) return;
+    if (!user?.id) return;
 
-    const interval =
-      window.setInterval(async () => {
-        await supabase
-          .from("profiles")
-          .update({
-            is_online: true
-          })
-          .eq("id", user.id);
-      }, 60000);
+    let active = true;
+
+    const setOnlineState = async (isOnline) => {
+      if (!active && isOnline) return;
+      const { error } = await supabase
+        .from("profiles")
+        .update({ is_online: isOnline })
+        .eq("id", user.id);
+      if (error && active) {
+        console.warn("Online-Status konnte nicht aktualisiert werden:", error.message);
+      }
+    };
+
+    // Sofort online setzen – nicht erst nach der ersten Minute.
+    setOnlineState(true);
+
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === "visible") {
+        setOnlineState(true);
+      }
+    }, 60000);
+
+    const handleVisibility = () => {
+      setOnlineState(document.visibilityState === "visible");
+    };
+
+    window.addEventListener("visibilitychange", handleVisibility);
 
     return () => {
+      active = false;
       window.clearInterval(interval);
+      window.removeEventListener("visibilitychange", handleVisibility);
+      // Best effort: Benutzer beim Verlassen nicht dauerhaft online lassen.
+      supabase
+        .from("profiles")
+        .update({ is_online: false })
+        .eq("id", user.id);
     };
-  }, [user]);
+  }, [user?.id]);
 
   /* =========================================================
      NACHRICHTEN LIVE AKTUALISIEREN
