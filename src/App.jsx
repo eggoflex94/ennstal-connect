@@ -3024,10 +3024,109 @@ async function changePoints(event) {
             </section>
           )}
 
-          {page === "support-admin" && isAdmin(profile?.role) && (
-            <section className="support-page"><div className="page-heading"><div><span className="eyebrow">ADMIN</span><h1>Support-Anfragen</h1><p>Hier erscheinen alle direkt eingereichten Anliegen und Fehlermeldungen.</p></div></div>
-            <div className="support-ticket-list">{supportTickets.map(ticket => { const sender = members.find(m => m.id === ticket.user_id); return <article className="support-ticket" key={ticket.id}><div><strong>{ticket.subject}</strong><p>Von: {sender ? getName(sender) : ticket.user_id} · {ticket.category}</p><p>{ticket.description}</p></div><div className="support-ticket-actions"><span>{ticket.status === "OPEN" ? "Offen" : ticket.status === "IN_PROGRESS" ? "In Bearbeitung" : "Erledigt"}</span>{ticket.status === "OPEN" && <button className="secondary-button" onClick={() => updateSupportTicketStatus(ticket, "IN_PROGRESS")}>In Bearbeitung</button>}{ticket.status !== "RESOLVED" && <button className="primary-button" onClick={() => updateSupportTicketStatus(ticket, "RESOLVED")}>Erledigt</button>}</div></article>)}{!supportTickets.length && <div className="empty-card">Keine Support-Anfragen vorhanden.</div>}</div></section>
-          )}
+         {page === "support-admin" && isAdmin(profile?.role) && (
+  <section className="support-page">
+    <div className="page-heading">
+      <div>
+        <span className="eyebrow">ADMIN</span>
+
+        <h1>Support-Anfragen</h1>
+
+        <p>
+          Hier erscheinen alle direkt eingereichten Anliegen
+          und Fehlermeldungen.
+        </p>
+      </div>
+    </div>
+
+    <div className="support-ticket-list">
+      {supportTickets.length === 0 ? (
+        <div className="empty-card">
+          Keine Support-Anfragen vorhanden.
+        </div>
+      ) : (
+        supportTickets.map((ticket) => {
+          const sender = members.find(
+            (member) => member.id === ticket.user_id
+          );
+
+          const senderName = sender
+            ? getName(sender)
+            : "Unbekanntes Mitglied";
+
+          let statusLabel = "Offen";
+
+          if (ticket.status === "IN_PROGRESS") {
+            statusLabel = "In Bearbeitung";
+          }
+
+          if (ticket.status === "RESOLVED") {
+            statusLabel = "Erledigt";
+          }
+
+          return (
+            <article
+              className="support-ticket"
+              key={ticket.id}
+            >
+              <div className="support-ticket-content">
+                <strong>{ticket.subject}</strong>
+
+                <p>
+                  Von: {senderName}
+                </p>
+
+                <p>
+                  Kategorie: {ticket.category}
+                </p>
+
+                <p>
+                  {ticket.description}
+                </p>
+              </div>
+
+              <div className="support-ticket-actions">
+                <span className="support-ticket-status">
+                  {statusLabel}
+                </span>
+
+                {ticket.status === "OPEN" && (
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={() =>
+                      updateSupportTicketStatus(
+                        ticket,
+                        "IN_PROGRESS"
+                      )
+                    }
+                  >
+                    In Bearbeitung
+                  </button>
+                )}
+
+                {ticket.status !== "RESOLVED" && (
+                  <button
+                    type="button"
+                    className="primary-button"
+                    onClick={() =>
+                      updateSupportTicketStatus(
+                        ticket,
+                        "RESOLVED"
+                      )
+                    }
+                  >
+                    Erledigt
+                  </button>
+                )}
+              </div>
+            </article>
+          );
+        })
+      )}
+    </div>
+  </section>
+)}
 
           {page === "impressum" && (
             <section className="legal-page panel"><h1>Impressum</h1><p><strong>Ennstal Connect</strong></p><p>Waidbachstraße<br/>8700 Leoben<br/>Österreich</p><p>Verantwortlich für die Inhalte dieser Community: der jeweils eingetragene Hauptadministrator von Ennstal Connect.</p><p>Für Support-Anfragen und technische Fehlermeldungen nutze bitte den Bereich „Support“ innerhalb der Community.</p><button className="secondary-button" onClick={() => setPage("support")}>Zum Support</button></section>
