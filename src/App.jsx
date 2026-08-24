@@ -5154,11 +5154,6 @@ function MemberCard({
   );
 }
 
-function showFriendMessage() {
-  alert(
-    "Die Freundesfunktion wird über deine bestehende Freundschaftstabelle verbunden. Die Nachrichtenfunktion ist bereits aktiv."
-  );
-}
 
 
 /* =========================================================
