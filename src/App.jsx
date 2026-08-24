@@ -3024,99 +3024,10 @@ async function changePoints(event) {
                       <div>
                         <strong>{ticket.subject}</strong>
                         <p>
-                         {page === "support-admin" && isAdmin(profile?.role) && (
-  <section className="support-page">
-    <div className="page-heading">
-      <div>
-        <span className="eyebrow">ADMIN</span>
-        <h1>Support-Anfragen</h1>
-        <p>
-          Hier erscheinen alle direkt eingereichten Anliegen und
-          Fehlermeldungen.
-        </p>
-      </div>
-    </div>
-
-    <div className="support-ticket-list">
-      {supportTickets.length === 0 ? (
-        <div className="empty-card">
-          Keine Support-Anfragen vorhanden.
-        </div>
-      ) : (
-        supportTickets.map((ticket) => {
-          const sender = members.find(
-            (member) => member.id === ticket.user_id
-          );
-
-          const statusLabel =
-            ticket.status === "OPEN"
-              ? "Offen"
-              : ticket.status === "IN_PROGRESS"
-              ? "In Bearbeitung"
-              : "Erledigt";
-
-          return (
-            <article
-              className="support-ticket"
-              key={ticket.id}
-            >
-              <div>
-                <strong>{ticket.subject}</strong>
-
-                <p>
-                  Von:{" "}
-                  {sender
-                    ? getName(sender)
-                    : "Unbekanntes Mitglied"}
-                  {" · "}
-                  {ticket.category}
-                </p>
-
-                <p>{ticket.description}</p>
-
-                <span className="ticket-status">
-                  {statusLabel}
-                </span>
-              </div>
-
-              <div className="support-ticket-actions">
-                {ticket.status === "OPEN" && (
-                  <button
-                    type="button"
-                    className="secondary-button"
-                    onClick={() =>
-                      updateSupportTicketStatus(
-                        ticket,
-                        "IN_PROGRESS"
-                      )
-                    }
-                  >
-                    In Bearbeitung
-                  </button>
-                )}
-
-                {ticket.status !== "RESOLVED" && (
-                  <button
-                    type="button"
-                    className="primary-button"
-                    onClick={() =>
-                      updateSupportTicketStatus(
-                        ticket,
-                        "RESOLVED"
-                      )
-                    }
-                  >
-                    Erledigt
-                  </button>
-                )}
-              </div>
-            </article>
-          );
-        })
-      )}
-    </div>
-  </section>
-)}
+                          Von: {sender ? getName(sender) : ticket.user_id} · {ticket.category}
+                        </p>
+                        <p>{ticket.description}</p>
+                      </div>
 
                       <div className="support-ticket-actions">
                         <span>{statusLabel}</span>
