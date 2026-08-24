@@ -1285,7 +1285,7 @@
 
 
       /* =========================================================
-         RECHTE LEISTE Ã¢â‚¬â€œ TRANSPARENT + ROLLENRAHMEN
+         RECHTE LEISTE ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ TRANSPARENT + ROLLENRAHMEN
          ========================================================= */
 
       .quick-rail {
@@ -1928,7 +1928,7 @@
 
 
 /* =========================================================
-   ENNSTAL CONNECT Ã¢â‚¬â€œ LIGHT ORANGE / ANTHRACITE REDESIGN
+   ENNSTAL CONNECT ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ LIGHT ORANGE / ANTHRACITE REDESIGN
    Added last so existing JSX/RPC functions remain unchanged.
    ========================================================= */
 :root{--ec-orange:#ff6b12;--ec-orange-dark:#e95808;--ec-orange-soft:#fff0e5;--ec-anthracite:#202833;--ec-text:#293442;--ec-muted:#738092;--ec-bg:#edf1f6;--ec-card:#fff;--ec-line:#e1e6ed;--ec-green:#25a665;--ec-red:#f05252;--ec-shadow:0 12px 35px rgba(37,47,60,.09);--ec-radius:18px}
@@ -1936,11 +1936,11 @@
 .loading-screen,.auth-page,.suspended-page{background:linear-gradient(120deg,rgba(255,255,255,.95),rgba(245,247,250,.82)),url("/banner.png") center/cover!important;color:var(--ec-text)!important}.auth-box,.suspended-box{background:rgba(255,255,255,.94)!important;border:1px solid var(--ec-line)!important;border-radius:28px!important;box-shadow:var(--ec-shadow)!important}.auth-brand img,.loading-screen img,.suspended-box img{max-height:150px;object-fit:contain}.auth-box .panel{box-shadow:none!important;background:transparent!important}
 .app{min-height:100vh!important;padding-left:232px!important}
 .topbar{position:fixed!important;z-index:50!important;inset:0 auto 0 0!important;width:232px!important;height:100vh!important;min-height:100vh!important;padding:18px 12px!important;display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:14px!important;background:radial-gradient(circle at 100% 0%,rgba(255,107,18,.17),transparent 10rem),linear-gradient(180deg,#27313d,#202832 54%,#19212b)!important;border-right:1px solid rgba(255,255,255,.08)!important;box-shadow:8px 0 35px rgba(24,31,40,.12)!important;overflow-y:auto!important}
-.brand{width:100%!important;min-height:72px!important;display:flex!important;align-items:center!important;position:relative!important;cursor:pointer!important;padding:6px 10px!important}.brand img{display:none!important}.brand:before{content:"ENNSTAL";display:block;color:#fff;font-weight:900;letter-spacing:.035em;font-size:28px;line-height:1;text-shadow:0 2px 10px rgba(0,0,0,.18)}.brand:after{content:"CONNECT Ã‚Â· DEINE COMMUNITY";position:absolute;left:11px;bottom:8px;color:#ff8b42;font-size:9px;font-weight:800;letter-spacing:.11em}
-.topbar nav{display:flex!important;flex-direction:column!important;flex:0 0 auto!important;width:100%!important;gap:5px!important;flex-wrap:nowrap!important}.topbar nav button,.topbar nav button.active{width:100%!important;min-height:48px!important;text-align:left!important;display:flex!important;align-items:center!important;color:#dce2e8!important;background:transparent!important;border:1px solid transparent!important;border-radius:13px!important;padding:0 14px!important;font-size:14px!important;font-weight:650!important}.topbar nav button:before{width:25px;display:inline-block;color:#ff8a3b;font-size:17px}.topbar nav button:nth-child(1):before{content:"Ã¢Å’â€š"}.topbar nav button:nth-child(2):before{content:"Ã¢â„¢Å¸"}.topbar nav button:nth-child(3):before{content:"Ã¢Å“â€°"}.topbar nav button:nth-child(4):before{content:"Ã¢Å¡â„¢"}.topbar nav button:nth-child(5):before{content:"Ã¢Ëœâ€¦"}.topbar nav button:hover,.topbar nav button.active{color:#fff!important;background:linear-gradient(90deg,var(--ec-orange),#ff7a28)!important;border-color:rgba(255,255,255,.08)!important;box-shadow:0 10px 22px rgba(255,107,18,.22)!important}
+.brand{width:100%!important;min-height:72px!important;display:flex!important;align-items:center!important;position:relative!important;cursor:pointer!important;padding:6px 10px!important}.brand img{display:none!important}.brand:before{content:"ENNSTAL";display:block;color:#fff;font-weight:900;letter-spacing:.035em;font-size:28px;line-height:1;text-shadow:0 2px 10px rgba(0,0,0,.18)}.brand:after{content:"CONNECT Ãƒâ€šÃ‚Â· DEINE COMMUNITY";position:absolute;left:11px;bottom:8px;color:#ff8b42;font-size:9px;font-weight:800;letter-spacing:.11em}
+.topbar nav{display:flex!important;flex-direction:column!important;flex:0 0 auto!important;width:100%!important;gap:5px!important;flex-wrap:nowrap!important}.topbar nav button,.topbar nav button.active{width:100%!important;min-height:48px!important;text-align:left!important;display:flex!important;align-items:center!important;color:#dce2e8!important;background:transparent!important;border:1px solid transparent!important;border-radius:13px!important;padding:0 14px!important;font-size:14px!important;font-weight:650!important}.topbar nav button:before{width:25px;display:inline-block;color:#ff8a3b;font-size:17px}.topbar nav button:nth-child(1):before{content:"ÃƒÂ¢Ã…â€™Ã¢â‚¬Å¡"}.topbar nav button:nth-child(2):before{content:"ÃƒÂ¢Ã¢â€žÂ¢Ã…Â¸"}.topbar nav button:nth-child(3):before{content:"ÃƒÂ¢Ã…â€œÃ¢â‚¬Â°"}.topbar nav button:nth-child(4):before{content:"ÃƒÂ¢Ã…Â¡Ã¢â€žÂ¢"}.topbar nav button:nth-child(5):before{content:"ÃƒÂ¢Ã‹Å“Ã¢â‚¬Â¦"}.topbar nav button:hover,.topbar nav button.active{color:#fff!important;background:linear-gradient(90deg,var(--ec-orange),#ff7a28)!important;border-color:rgba(255,255,255,.08)!important;box-shadow:0 10px 22px rgba(255,107,18,.22)!important}
 .top-profile{margin-top:auto!important;width:100%!important;display:grid!important;grid-template-columns:1fr 40px!important;gap:8px!important;align-items:center!important;padding:12px 7px 2px!important;border-top:1px solid rgba(255,255,255,.09)!important}.top-profile-button{min-width:0!important;color:#fff!important;background:rgba(255,255,255,.06)!important;border:1px solid rgba(255,255,255,.1)!important;border-radius:14px!important;padding:11px!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}.top-profile-button.admin-border{border-color:#ffb648!important}.top-profile-button.supporter-border{border-color:#55d89a!important}.logout-button{width:40px!important;height:40px!important;padding:0!important;display:grid!important;place-items:center!important;border-radius:13px!important;color:#ff9b9b!important;background:rgba(255,255,255,.06)!important;border:1px solid rgba(255,255,255,.08)!important}
 main{width:100%!important;max-width:none!important;margin:0!important;padding:30px 30px 70px!important}main>section{max-width:1500px;margin:0 auto}.page-heading{display:flex!important;align-items:end!important;justify-content:space-between!important;gap:20px!important;margin:0 0 20px!important}.page-heading h1{margin:4px 0 6px!important;color:var(--ec-text)!important;font-size:32px!important;line-height:1.08!important}.page-heading p{margin:0!important;color:var(--ec-muted)!important}.eyebrow{color:var(--ec-orange)!important;font-weight:900!important;letter-spacing:.12em!important}
-.hero{position:relative!important;height:280px!important;margin:0 0 20px!important;overflow:hidden!important;border-radius:var(--ec-radius)!important;border:1px solid rgba(255,255,255,.7)!important;box-shadow:var(--ec-shadow)!important;background:#26313d!important}.hero:after{content:"Willkommen bei\A ENNSTAL CONNECT\A Unsere Region Ã‚Â· Unsere Community";white-space:pre-line;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:30px;color:#fff;font-size:18px;font-weight:700;line-height:1.45;text-shadow:0 3px 18px rgba(0,0,0,.65);background:linear-gradient(90deg,rgba(17,24,32,.56),rgba(17,24,32,.06))}.hero:before{content:"";position:absolute;z-index:2;left:0;bottom:0;width:100%;height:6px;background:linear-gradient(90deg,var(--ec-orange),#ff9a4d,transparent 72%)}.hero img{width:100%!important;height:100%!important;object-fit:cover!important;display:block!important}
+.hero{position:relative!important;height:280px!important;margin:0 0 20px!important;overflow:hidden!important;border-radius:var(--ec-radius)!important;border:1px solid rgba(255,255,255,.7)!important;box-shadow:var(--ec-shadow)!important;background:#26313d!important}.hero:after{content:"Willkommen bei\A ENNSTAL CONNECT\A Unsere Region Ãƒâ€šÃ‚Â· Unsere Community";white-space:pre-line;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:30px;color:#fff;font-size:18px;font-weight:700;line-height:1.45;text-shadow:0 3px 18px rgba(0,0,0,.65);background:linear-gradient(90deg,rgba(17,24,32,.56),rgba(17,24,32,.06))}.hero:before{content:"";position:absolute;z-index:2;left:0;bottom:0;width:100%;height:6px;background:linear-gradient(90deg,var(--ec-orange),#ff9a4d,transparent 72%)}.hero img{width:100%!important;height:100%!important;object-fit:cover!important;display:block!important}
 .admin-home-badge,.role-badge{background:var(--ec-orange-soft)!important;color:var(--ec-orange-dark)!important;border:1px solid #ffd3b8!important;border-radius:999px!important;padding:8px 12px!important;font-weight:800!important}
 .panel,.news-card,.group-card,.event-card,.homepage-frame,.points-overview,.member-card,.empty-card,.profile-card,.profile-modal,.admin-stat,.online-reward-panel,.admin-home-tools,.form-card{background:rgba(255,255,255,.95)!important;color:var(--ec-text)!important;border:1px solid var(--ec-line)!important;box-shadow:0 8px 26px rgba(43,52,64,.07)!important;border-radius:var(--ec-radius)!important}.panel,.form-card{padding:20px!important}.panel h2,.panel h3,.news-card h2,.group-card h2,.event-card h2,.homepage-frame h2{color:var(--ec-text)!important}
 .admin-home-tools{padding:20px!important;margin:0 0 20px!important}.admin-home-tools h2{margin:0 0 14px!important}.admin-tool-grid{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(180px,1fr))!important;gap:12px!important}.admin-tool-grid button{min-height:78px!important;display:flex!important;align-items:center!important;gap:10px!important;background:#f8fafc!important;color:var(--ec-text)!important;border:1px solid var(--ec-line)!important;border-radius:14px!important;padding:14px!important;font-weight:750!important}.admin-tool-grid button:hover{border-color:#ffb889!important;background:var(--ec-orange-soft)!important}.admin-tool-grid button span{font-size:22px}
@@ -1957,7 +1957,7 @@ input,textarea,select{width:100%!important;color:var(--ec-text)!important;backgr
 
 
 /* =========================================================
-   ENNSTAL CONNECT Ã¢â‚¬â€œ FINAL LIGHT ORANGE / ANTHRACITE LAYOUT
+   ENNSTAL CONNECT ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ FINAL LIGHT ORANGE / ANTHRACITE LAYOUT
    These rules intentionally override the legacy layout.
    ========================================================= */
 :root{
@@ -2035,10 +2035,427 @@ main>section{width:100%!important}
  .app{padding-left:0!important}.topbar{position:sticky!important;top:0!important;bottom:auto!important;width:100%!important;height:auto!important;max-height:70px!important;flex-direction:row!important;overflow:hidden!important;padding:6px 10px!important}.brand{width:120px!important;height:56px!important;flex:0 0 auto!important}.brand img{width:115px!important;height:50px!important}.topbar nav{flex-direction:row!important;overflow-x:auto!important}.topbar nav button{width:auto!important;min-width:max-content!important}.top-profile{display:none!important}main{padding:18px!important}.hero{height:160px!important}.page-heading{align-items:flex-start!important;flex-direction:column!important}
 }
 .support-page,.legal-page{max-width:900px;margin:0 auto;padding:24px}.support-form{display:flex;flex-direction:column;gap:10px}.support-form textarea{resize:vertical;min-height:150px}.support-ticket-list{display:grid;gap:14px}.support-ticket{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;background:#fff;border:1px solid rgba(33,43,54,.12);border-radius:16px;padding:18px;box-shadow:0 6px 18px rgba(30,40,50,.06)}.support-ticket p{margin:7px 0;color:#657181;white-space:pre-wrap}.support-ticket-actions{display:flex;flex-direction:column;gap:8px;min-width:150px}.support-ticket-actions button{margin-top:0!important}@media(max-width:700px){.support-ticket{flex-direction:column}.support-ticket-actions{width:100%}}
-/* ENNSTAL CONNECT Ã¢â‚¬â€œ eigenes modernes Logo */
+/* ENNSTAL CONNECT ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ eigenes modernes Logo */
 .brand{padding:4px 8px!important;justify-content:flex-start!important}
 .brand img{display:block!important;width:196px!important;height:68px!important;object-fit:contain!important;object-position:left center!important}
 .brand:before,.brand:after{content:none!important;display:none!important}
 .auth-brand img,.loading-screen img,.suspended-box>img{width:min(430px,88vw)!important;height:auto!important;object-fit:contain!important}
 .site-footer .footer-brand img{width:230px!important;max-width:100%!important;height:auto!important;display:block!important;object-fit:contain!important;object-position:left center!important}
 @media(max-width:900px){.brand img{width:128px!important;height:52px!important}.site-footer .footer-brand img{width:190px!important}}
+
+
+/* =========================================================
+   ENNSTAL CONNECT â€“ DASHBOARD LAYOUT (FINAL DESIGN OVERRIDE)
+   ========================================================= */
+
+:root {
+  --ec-orange: #ff6a00;
+  --ec-orange-2: #ff8126;
+  --ec-dark: #202a36;
+  --ec-dark-2: #283340;
+  --ec-line: rgba(57, 72, 89, .12);
+  --ec-card: rgba(255,255,255,.82);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background:
+    radial-gradient(circle at 65% 10%, rgba(255,125,37,.10), transparent 28%),
+    #eef2f7;
+  color: #283746;
+}
+
+.app {
+  min-height: 100vh;
+  padding-left: 220px;
+  padding-top: 92px;
+}
+
+.topbar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: 220px;
+  min-height: 100vh;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  padding: 18px 10px 16px;
+  overflow-y: auto;
+  background:
+    linear-gradient(180deg, rgba(38,49,62,.99), rgba(28,37,48,.99));
+  border-right: 1px solid rgba(255,255,255,.08);
+  box-shadow: 10px 0 30px rgba(17,25,35,.12);
+}
+
+.brand {
+  display: block;
+  color: white;
+  cursor: pointer;
+  padding: 10px 12px 24px;
+}
+
+.brand .text-logo {
+  color: #f5f7fa;
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: -.8px;
+}
+
+.brand .text-logo span { color: var(--ec-orange); }
+
+.brand small {
+  display: block;
+  margin-top: 4px;
+  color: #d9e0e8;
+  font-size: 10px;
+}
+
+.global-search {
+  position: fixed;
+  top: 18px;
+  left: 250px;
+  right: 510px;
+  max-width: 600px;
+  height: 54px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 18px;
+  border-radius: 28px;
+  background: rgba(240,243,247,.92);
+  border: 1px solid rgba(50,63,78,.08);
+  box-shadow: 0 8px 28px rgba(36,48,63,.07);
+}
+
+.global-search span { font-size: 28px; line-height: 1; color: #263746; }
+.global-search input {
+  width: 100%;
+  border: 0 !important;
+  outline: 0;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  color: #394958;
+}
+
+.header-actions {
+  position: fixed;
+  top: 18px;
+  right: 275px;
+  display: flex;
+  gap: 12px;
+}
+
+.header-icon {
+  position: relative;
+  width: 54px;
+  height: 54px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(245,247,250,.9);
+  color: #283746;
+  font-size: 20px;
+  box-shadow: 0 8px 25px rgba(40,55,70,.08);
+}
+
+.header-icon b {
+  position: absolute;
+  top: -5px;
+  right: -3px;
+  min-width: 21px;
+  height: 21px;
+  display: grid;
+  place-items: center;
+  padding: 0 5px;
+  border-radius: 20px;
+  background: var(--ec-orange);
+  color: white;
+  font-size: 10px;
+}
+
+.sidebar-nav {
+  display: flex !important;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
+  width: 100%;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.sidebar-nav button {
+  position: relative;
+  width: 100%;
+  min-height: 49px;
+  display: flex !important;
+  align-items: center;
+  gap: 13px;
+  padding: 0 14px !important;
+  border: 0 !important;
+  border-radius: 12px;
+  background: transparent !important;
+  color: #dbe2e9 !important;
+  text-align: left;
+  font-size: 14px;
+  box-shadow: none !important;
+}
+
+.sidebar-nav button:hover,
+.sidebar-nav button.active {
+  color: white !important;
+  background: linear-gradient(135deg, var(--ec-orange), #ff7b20) !important;
+  box-shadow: 0 10px 24px rgba(255,106,0,.22) !important;
+}
+
+.sidebar-nav button.support-nav { color: #47cf78 !important; }
+.sidebar-nav button.admin-nav { color: #ffc63d !important; }
+
+.sidebar-nav button em {
+  margin-left: auto;
+  min-width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 20px;
+  background: var(--ec-orange);
+  color: white;
+  font-style: normal;
+  font-size: 11px;
+}
+
+.sidebar-create {
+  margin-top: 16px;
+  padding: 10px 8px;
+  border-top: 1px solid rgba(255,255,255,.08);
+}
+
+.sidebar-create button {
+  width: 100%;
+  min-height: 45px;
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--ec-orange), #ff7b20);
+  color: white;
+  font-weight: 800;
+  box-shadow: 0 10px 22px rgba(255,106,0,.18);
+}
+
+.sidebar-friends {
+  margin-top: auto;
+  padding: 14px 8px 4px;
+  border-top: 1px solid rgba(255,255,255,.08);
+}
+
+.sidebar-online-count {
+  color: #e4ebf1;
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+
+.sidebar-online-count::first-letter { color: #24b86b; }
+
+.sidebar-friend-avatars {
+  display: flex;
+  align-items: center;
+}
+
+.sidebar-friend-avatars img,
+.top-profile-button img {
+  width: 33px;
+  height: 33px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 2px solid #dfe7ef;
+  cursor: pointer;
+  margin-right: -5px;
+  background: #2f3b48;
+}
+
+.sidebar-friend-avatars button {
+  width: 33px;
+  height: 33px;
+  margin-left: 8px;
+  border: 0;
+  border-radius: 50%;
+  background: #344150;
+  color: white;
+}
+
+.top-profile {
+  position: fixed !important;
+  top: 12px;
+  right: 16px;
+  width: 245px;
+  height: 66px;
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 12px !important;
+  border: 0 !important;
+  border-radius: 18px;
+  background: rgba(244,247,250,.9);
+  box-shadow: 0 8px 26px rgba(40,55,70,.08);
+}
+
+.top-profile-button {
+  min-width: 0 !important;
+  flex: 1;
+  display: flex !important;
+  align-items: center;
+  gap: 10px;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: #283746 !important;
+  box-shadow: none !important;
+}
+
+.top-profile-button img {
+  width: 46px;
+  height: 46px;
+  margin: 0;
+}
+
+.top-profile-copy { display: flex; flex-direction: column; align-items: flex-start; overflow: hidden; }
+.top-profile-copy strong { color: #293847; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px; }
+.top-profile-copy small { margin-top: 3px; color: var(--ec-orange); font-size: 10px; font-weight: 800; }
+
+.logout-button {
+  width: 30px !important;
+  height: 30px !important;
+  min-width: 30px !important;
+  overflow: hidden;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  background: #e8edf2 !important;
+  color: #59697a !important;
+  font-size: 0 !important;
+  box-shadow: none !important;
+}
+.logout-button::after { content: "âŒ„"; font-size: 19px; }
+
+main {
+  width: 100%;
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 18px 24px 35px !important;
+}
+
+section,
+.panel,
+.member-card,
+.news-card,
+.event-card,
+.group-card,
+.home-section,
+.admin-home-tools,
+.online-reward,
+.points-card {
+  border-color: var(--ec-line) !important;
+}
+
+.hero {
+  overflow: hidden;
+  min-height: 250px;
+  border-radius: 18px !important;
+  background: #263544;
+  box-shadow: 0 15px 35px rgba(38,53,68,.12);
+}
+
+.hero img {
+  width: 100%;
+  height: 100%;
+  min-height: 250px;
+  object-fit: cover;
+}
+
+.page-heading {
+  margin: 18px 0 14px !important;
+  padding: 0 !important;
+}
+
+.page-heading h1 {
+  font-size: clamp(28px, 4vw, 46px) !important;
+  letter-spacing: -.8px;
+}
+
+.page-heading p { color: #667484 !important; }
+
+.admin-home-tools,
+.panel,
+.member-card,
+.news-card,
+.event-card,
+.group-card,
+.home-section,
+.points-card,
+.online-reward {
+  background: var(--ec-card) !important;
+  backdrop-filter: blur(14px);
+  border-radius: 16px !important;
+  box-shadow: 0 10px 28px rgba(43,57,73,.07) !important;
+}
+
+.admin-tool-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px !important;
+}
+
+.admin-tool-grid button,
+.primary-button {
+  border-radius: 12px !important;
+}
+
+.site-footer {
+  margin: 0 !important;
+  padding: 18px 28px 18px 244px !important;
+  background: #222c37 !important;
+  color: #dbe3eb !important;
+}
+
+@media (max-width: 1050px) {
+  .app { padding-left: 74px; }
+  .topbar { width: 74px; padding-left: 7px; padding-right: 7px; }
+  .brand { padding-left: 4px; padding-right: 4px; }
+  .brand .text-logo { font-size: 0; }
+  .brand .text-logo::after { content: "EC"; font-size: 20px; }
+  .brand small,
+  .sidebar-nav span,
+  .sidebar-create,
+  .sidebar-friends { display: none; }
+  .sidebar-nav button { justify-content: center; font-size: 20px; padding: 0 !important; }
+  .sidebar-nav button em { position: absolute; right: 2px; top: 4px; transform: scale(.75); }
+  .global-search { left: 94px; right: 270px; }
+  .site-footer { padding-left: 95px !important; }
+}
+
+@media (max-width: 760px) {
+  .app { padding-left: 0; padding-top: 78px; }
+  .topbar {
+    inset: auto 0 0 0;
+    width: 100%;
+    min-height: 64px;
+    height: 64px;
+    flex-direction: row;
+    padding: 5px 6px;
+    overflow: visible;
+  }
+  .brand,
+  .sidebar-create,
+  .sidebar-friends,
+  .top-profile { display: none !important; }
+  .sidebar-nav {
+    flex-direction: row !important;
+    justify-content: space-around;
+    gap: 0;
+  }
+  .sidebar-nav button { min-height: 52px; flex: 1; font-size: 17px; }
+  .sidebar-nav button:nth-child(n+7) { display: none !important; }
+  .global-search { top: 12px; left: 12px; right: 12px; height: 48px; max-width: none; }
+  .header-actions { display: none; }
+  main { padding: 12px !important; }
+  .site-footer { padding: 20px 16px 80px !important; }
+}
