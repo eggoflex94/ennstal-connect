@@ -263,47 +263,22 @@ export default function App() {
      ========================================================= */
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user) return;
 
-    let active = true;
-
-    const setOnlineState = async (isOnline) => {
-      if (!active && isOnline) return;
-      const { error } = await supabase
-        .from("profiles")
-        .update({ is_online: isOnline })
-        .eq("id", user.id);
-      if (error && active) {
-        console.warn("Online-Status konnte nicht aktualisiert werden:", error.message);
-      }
-    };
-
-    // Sofort online setzen – nicht erst nach der ersten Minute.
-    setOnlineState(true);
-
-    const interval = window.setInterval(() => {
-      if (document.visibilityState === "visible") {
-        setOnlineState(true);
-      }
-    }, 60000);
-
-    const handleVisibility = () => {
-      setOnlineState(document.visibilityState === "visible");
-    };
-
-    window.addEventListener("visibilitychange", handleVisibility);
+    const interval =
+      window.setInterval(async () => {
+        await supabase
+          .from("profiles")
+          .update({
+            is_online: true
+          })
+          .eq("id", user.id);
+      }, 60000);
 
     return () => {
-      active = false;
       window.clearInterval(interval);
-      window.removeEventListener("visibilitychange", handleVisibility);
-      // Best effort: Benutzer beim Verlassen nicht dauerhaft online lassen.
-      supabase
-        .from("profiles")
-        .update({ is_online: false })
-        .eq("id", user.id);
     };
-  }, [user?.id]);
+  }, [user]);
 
   /* =========================================================
      NACHRICHTEN LIVE AKTUALISIEREN
@@ -3023,119 +2998,70 @@ async function changePoints(event) {
               <div className="support-ticket-list">{supportTickets.filter(t => t.user_id === user?.id).map(ticket => <article className="support-ticket" key={ticket.id}><div><strong>{ticket.subject}</strong><p>{ticket.category} · {ticket.status === "OPEN" ? "Offen" : ticket.status === "IN_PROGRESS" ? "In Bearbeitung" : "Erledigt"}</p><p>{ticket.description}</p></div></article>)}{!supportTickets.some(t => t.user_id === user?.id) && <div className="empty-card">Du hast noch keine Support-Anfrage gesendet.</div>}</div>
             </section>
           )}
-{page === "support-admin" && isAdmin(profile?.role) && (
-  <section className="support-page">
-    <div className="page-heading">
-      <div>
-        <span className="eyebrow">ADMIN</span>
-        <h1>Support-Anfragen</h1>
-        <p>
-          Hier erscheinen alle direkt eingereichten Anliegen und
-          Fehlermeldungen.
-        </p>
-      </div>
-    </div>
 
-    <div className="support-ticket-list">
-      {supportTickets.length === 0 ? (
-        <div className="empty-card">
-          Keine Support-Anfragen vorhanden.
-        </div>
-      ) : (
-        supportTickets.map((ticket) => {
-          const sender = members.find(
-            (member) => member.id === ticket.user_id
-          );
-
-          const senderName = sender
-            ? getName(sender)
-            : "Unbekanntes Mitglied";
-
-          const statusLabel =
-            ticket.status === "OPEN"
-              ? "Offen"
-              : ticket.status === "IN_PROGRESS"
-              ? "In Bearbeitung"
-              : ticket.status === "RESOLVED"
-              ? "Erledigt"
-              : ticket.status || "Offen";
-
-          return (
-            <article
-              className="support-ticket"
-              key={ticket.id}
-            >
-              <div className="support-ticket-content">
-                <strong>
-                  {ticket.subject || "Support-Anfrage"}
-                </strong>
-
-                <p>
-                  <strong>Von:</strong> {senderName}
-                </p>
-
-                <p>
-                  <strong>Kategorie:</strong>{" "}
-                  {ticket.category || "Allgemein"}
-                </p>
-
-                <p>
-                  {ticket.description ||
-                    "Keine Beschreibung vorhanden."}
-                </p>
-
-                {ticket.created_at && (
-                  <p className="support-ticket-date">
-                    {new Date(
-                      ticket.created_at
-                    ).toLocaleString("de-AT")}
-                  </p>
-                )}
+          {page === "support-admin" && isAdmin(profile?.role) && (
+            <section className="support-page">
+              <div className="page-heading">
+                <div>
+                  <span className="eyebrow">ADMIN</span>
+                  <h1>Support-Anfragen</h1>
+                  <p>Hier erscheinen alle direkt eingereichten Anliegen und Fehlermeldungen.</p>
+                </div>
               </div>
 
-              <div className="support-ticket-actions">
-                <span className="support-ticket-status">
-                  {statusLabel}
-                </span>
+              <div className="support-ticket-list">
+                {supportTickets.map((ticket) => {
+                  const sender = members.find((member) => member.id === ticket.user_id);
+                  const statusLabel =
+                    ticket.status === "OPEN"
+                      ? "Offen"
+                      : ticket.status === "IN_PROGRESS"
+                      ? "In Bearbeitung"
+                      : "Erledigt";
 
-                {ticket.status === "OPEN" && (
-                  <button
-                    type="button"
-                    className="secondary-button"
-                    onClick={() =>
-                      updateSupportTicketStatus(
-                        ticket,
-                        "IN_PROGRESS"
-                      )
-                    }
-                  >
-                    In Bearbeitung
-                  </button>
-                )}
+                  return (
+                    <article className="support-ticket" key={ticket.id}>
+                      <div>
+                        <strong>{ticket.subject}</strong>
+                        <p>
+                          Von: {sender ? getName(sender) : ticket.user_id} · {ticket.category}
+                        </p>
+                        <p>{ticket.description}</p>
+                      </div>
 
-                {ticket.status !== "RESOLVED" && (
-                  <button
-                    type="button"
-                    className="primary-button"
-                    onClick={() =>
-                      updateSupportTicketStatus(
-                        ticket,
-                        "RESOLVED"
-                      )
-                    }
-                  >
-                    Erledigt
-                  </button>
+                      <div className="support-ticket-actions">
+                        <span>{statusLabel}</span>
+
+                        {ticket.status === "OPEN" && (
+                          <button
+                            type="button"
+                            className="secondary-button"
+                            onClick={() => updateSupportTicketStatus(ticket, "IN_PROGRESS")}
+                          >
+                            In Bearbeitung
+                          </button>
+                        )}
+
+                        {ticket.status !== "RESOLVED" && (
+                          <button
+                            type="button"
+                            className="primary-button"
+                            onClick={() => updateSupportTicketStatus(ticket, "RESOLVED")}
+                          >
+                            Erledigt
+                          </button>
+                        )}
+                      </div>
+                    </article>
+                  );
+                })}
+
+                {!supportTickets.length && (
+                  <div className="empty-card">Keine Support-Anfragen vorhanden.</div>
                 )}
               </div>
-            </article>
-          );
-        })
-      )}
-    </div>
-  </section>
-)}
-         
+            </section>
+          )}
 
           {page === "impressum" && (
             <section className="legal-page panel"><h1>Impressum</h1><p><strong>Ennstal Connect</strong></p><p>Waidbachstraße<br/>8700 Leoben<br/>Österreich</p><p>Verantwortlich für die Inhalte dieser Community: der jeweils eingetragene Hauptadministrator von Ennstal Connect.</p><p>Für Support-Anfragen und technische Fehlermeldungen nutze bitte den Bereich „Support“ innerhalb der Community.</p><button className="secondary-button" onClick={() => setPage("support")}>Zum Support</button></section>
@@ -5005,6 +4931,7 @@ async function changePoints(event) {
           >
             ★ Zum Admin ernennen
           </button>
+        )}
 
         {selectedMember.id !== user?.id &&
           selectedMember.role !== "MEMBER" &&
@@ -5018,8 +4945,6 @@ async function changePoints(event) {
               ↩ Rolle entfernen · Zum Mitglied
             </button>
           )}
-
-        )}
 
      </div>
     </section>
@@ -5287,6 +5212,11 @@ function MemberCard({
   );
 }
 
+function showFriendMessage() {
+  alert(
+    "Die Freundesfunktion wird über deine bestehende Freundschaftstabelle verbunden. Die Nachrichtenfunktion ist bereits aktiv."
+  );
+}
 
 
 /* =========================================================
