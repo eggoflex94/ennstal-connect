@@ -1,30 +1,42 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../supabaseClient";
 import {
-  Search,
-  User,
-  Shield,
-  ShieldCheck,
-  Star,
-  UserRoundCog,
-  MessageCircle,
-  Ban,
-  Flag,
-  Trash2,
-  X,
-  Check,
-  Crown,
-  Users,
-  Circle,
+  Search, User, Shield, ShieldCheck, Star, Crown, Users,
+  Circle, MessageCircle, Ban, Flag, Trash2, X, Check,
+  Lock, Unlock, Settings2, RefreshCw
 } from "lucide-react";
 
+/*
+  ENNSTAL CONNECT – Mitgliederverwaltung
+  Neues Konzept:
+  MEMBER | SUPPORTER | ADMIN | HEAD_ADMIN
+  Keine alten Rollen owner/moderator/user und kein Punktesystem.
+*/
+
 const ROLE_LABELS = {
-  MEMBER: "Mitglied", member: "Mitglied", user: "Mitglied",
-  SUPPORTER: "Supporter", supporter: "Supporter",
-  MODERATOR: "Moderator", moderator: "Moderator",
-  ADMIN: "Admin", admin: "Admin",
-  HEAD_ADMIN: "Head Admin", head_admin: "Head Admin", owner: "Head Admin",
+  MEMBER: "Mitglied",
+  SUPPORTER: "Supporter",
+  ADMIN: "Admin",
+  HEAD_ADMIN: "Head Admin",
 };
+
+const ROLE_ORDER = {
+  MEMBER: 1,
+  SUPPORTER: 2,
+  ADMIN: 3,
+  HEAD_ADMIN: 4,
+};
+
+function normalizeRole(role) {
+  const value = String(role || "MEMBER").trim().toUpperCase();
+
+  // Übergang alter Daten zum neuen System
+  if (value === "USER") return "MEMBER";
+  if (value === "MODERATOR") return "ADMIN";
+  if (value === "OWNER") return "HEAD_ADMIN";
+
+  return ROLE_LABELS[value] ? value : "MEMBER";
+}
 
 function getDisplayName(member) {
   const fullName = [member.first_name, member.last_name]
@@ -32,43 +44,46 @@ function getDisplayName(member) {
     .join(" ")
     .trim();
 
-  return member.nickname || fullName || "Unbekannter Nutzer";
+  return member.nickname || fullName || "Unbekanntes Mitglied";
 }
 
-function getRole(member) {
-  return String(member.role || "user").toLowerCase();
-}
-
-function getRoleLabel(role) {
-  return ROLE_LABELS[String(role || "user").toLowerCase()] || "Mitglied";
-}
-
-function getRoleIcon(role) {
-  const currentRole = String(role || "user").toLowerCase();
-
-  if (currentRole === "admin" || currentRole === "owner") {
-    return <Crown size={16} />;
+function roleIcon(role) {
+  switch (normalizeRole(role)) {
+    case "HEAD_ADMIN":
+      return <Crown size={16} />;
+    case "ADMIN":
+      return <ShieldCheck size={16} />;
+    case "SUPPORTER":
+      return <Star size={16} />;
+    default:
+      return <User size={16} />;
   }
-
-  if (currentRole === "moderator") {
-    return <ShieldCheck size={16} />;
-  }
-
-  if (currentRole === "supporter") {
-    return <Star size={16} />;
-  }
-
-  return <User size={16} />;
 }
 
-export default function Members() {
+function Avatar({ member, size = "normal" }) {
+  const name = getDisplayName(member);
+
+  return (
+    <div className={`member-avatar member-avatar-${size}`}>
+      <img
+        src={member.avatar_url || "/default-avatar.svg"}
+        alt={name}
+        onError={(event) => {
+          event.currentTarget.src = "/default-avatar.svg";
+        }}
+      />
+    </div>
+  );
+}
+
+export default function Members({ onNavigate }) {
   const [members, setMembers] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [selectedMember, setSelectedMember] = useState(null);
-  const [currentUser, setCurrentUser] = useState(null);
-  const [actionLoading, setActionLoading] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState(null);
 
   useEffect(() => {
     loadData();
@@ -84,11 +99,8 @@ export default function Members() {
         error: authError,
       } = await supabase.auth.getUser();
 
-      if (authError) {
-        console.error(authError);
-      }
-
-      setCurrentUser(user);
+      if (authError) throw authError;
+      setCurrentUserId(user?.id || null);
 
       const { data, error: membersError } = await supabase
         .from("profiles")
@@ -100,265 +112,196 @@ export default function Members() {
           avatar_url,
           role,
           is_online,
-          bio
-        `)
-        .order("role", { ascending: false });
+          bio,
+          is_suspended,
+          suspension_reason
+        `);
 
-      if (membersError) {
-        throw membersError;
-      }
+      if (membersError) throw membersError;
 
-      setMembers(data || []);
+      const sorted = [...(data || [])].sort(
+        (a, b) =>
+          ROLE_ORDER[normalizeRole(b.role)] -
+          ROLE_ORDER[normalizeRole(a.role)]
+      );
+
+      setMembers(sorted);
     } catch (err) {
       console.error(err);
-      setError("Mitglieder konnten nicht geladen werden.");
+      setError(err.message || "Mitglieder konnten nicht geladen werden.");
     } finally {
       setLoading(false);
     }
   }
 
-  const currentProfile = useMemo(() => {
-    if (!currentUser) return null;
+  const currentProfile = useMemo(
+    () => members.find((member) => member.id === currentUserId) || null,
+    [members, currentUserId]
+  );
 
-    return members.find(
-      (member) => member.id === currentUser.id
-    );
-  }, [currentUser, members]);
+  const currentRole = normalizeRole(currentProfile?.role);
+  const isHeadAdmin = currentRole === "HEAD_ADMIN";
+  const isAdmin = currentRole === "ADMIN" || isHeadAdmin;
 
-  const isAdmin =
-    getRole(currentProfile) === "admin" ||
-    getRole(currentProfile) === "owner";
+  function canManage(target) {
+    if (!target || target.id === currentUserId) return false;
 
-  const isModerator =
-    getRole(currentProfile) === "moderator";
+    const targetRole = normalizeRole(target.role);
 
-  const canManage =
-    isAdmin || isModerator;
+    if (isHeadAdmin) return targetRole !== "HEAD_ADMIN";
+    if (currentRole === "ADMIN") {
+      return targetRole === "MEMBER" || targetRole === "SUPPORTER";
+    }
+
+    return false;
+  }
 
   const filteredMembers = useMemo(() => {
-    const query = search.toLowerCase().trim();
+    const query = search.trim().toLowerCase();
 
     if (!query) return members;
 
     return members.filter((member) => {
       const name = getDisplayName(member).toLowerCase();
-      const role = getRoleLabel(member.role).toLowerCase();
+      const role = ROLE_LABELS[normalizeRole(member.role)].toLowerCase();
 
-      return (
-        name.includes(query) ||
-        role.includes(query)
-      );
+      return name.includes(query) || role.includes(query);
     });
   }, [members, search]);
 
-  async function updateRole(member, newRole) {
-    if (!member || !canManage) return;
-
-    /*
-      Moderatoren dürfen keine Admins verwalten.
-    */
-    if (
-      isModerator &&
-      (
-        getRole(member) === "ADMIN" ||
-        getRole(member) === "HEAD_ADMIN"
-      )
-    ) {
-      alert("Du kannst keinen Administrator verwalten.");
+  async function updateMember(member, updates, logAction) {
+    if (!canManage(member)) {
+      alert("Du hast keine Berechtigung, dieses Mitglied zu verwalten.");
       return;
     }
 
-    setActionLoading(true);
+    setSaving(true);
 
     try {
-      const { error } = await supabase
+      const { error: updateError } = await supabase
         .from("profiles")
-        .update({
-          role: newRole,
-        })
+        .update(updates)
         .eq("id", member.id);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
 
-      setMembers((oldMembers) =>
-        oldMembers.map((item) =>
-          item.id === member.id
-            ? { ...item, role: newRole }
-            : item
-        )
+      // Admin-Log wird nur versucht, wenn die Tabelle vorhanden ist.
+      // Ein fehlendes Log blockiert die eigentliche Admin-Aktion nicht.
+      if (logAction && currentUserId) {
+        const { error: logError } = await supabase
+          .from("admin_logs")
+          .insert({
+            admin_id: currentUserId,
+            target_user_id: member.id,
+            action: logAction,
+          });
+
+        if (logError) console.warn("Admin-Log konnte nicht gespeichert werden:", logError.message);
+      }
+
+      setMembers((old) =>
+        old
+          .map((item) =>
+            item.id === member.id ? { ...item, ...updates } : item
+          )
+          .sort(
+            (a, b) =>
+              ROLE_ORDER[normalizeRole(b.role)] -
+              ROLE_ORDER[normalizeRole(a.role)]
+          )
       );
 
       setSelectedMember((old) =>
-        old
-          ? { ...old, role: newRole }
-          : old
+        old?.id === member.id ? { ...old, ...updates } : old
       );
     } catch (err) {
       console.error(err);
-      alert(
-        "Die Rolle konnte nicht geändert werden: " +
-          (err.message || "Unbekannter Fehler")
-      );
+      alert(err.message || "Die Änderung konnte nicht gespeichert werden.");
     } finally {
-      setActionLoading(false);
+      setSaving(false);
     }
   }
 
-  async function removeRole(member) {
-    if (!member || !canManage) return;
-
-    if (member.id === currentUser?.id) {
-      alert("Du kannst deine eigene Rolle nicht entfernen.");
+  async function changeRole(member, role) {
+    if (role === "HEAD_ADMIN") {
+      alert("Nur der bestehende Head Admin sollte einen weiteren Head Admin über die gesicherte Admin-Verwaltung festlegen.");
       return;
     }
 
-    const confirmed = window.confirm(
-      `Möchtest du die Rolle von "${getDisplayName(member)}" wirklich entfernen?`
+    await updateMember(
+      member,
+      { role },
+      `ROLE_CHANGED_TO_${role}`
+    );
+  }
+
+  async function toggleSuspension(member) {
+    if (!canManage(member)) return;
+
+    if (member.is_suspended) {
+      await updateMember(
+        member,
+        { is_suspended: false, suspension_reason: null },
+        "ACCOUNT_UNSUSPENDED"
+      );
+      return;
+    }
+
+    const reason = window.prompt(
+      `Grund für die Sperre von "${getDisplayName(member)}":`
     );
 
-    if (!confirmed) return;
+    if (!reason || !reason.trim()) {
+      alert("Eine Profilsperre benötigt einen triftigen Grund.");
+      return;
+    }
 
-    await updateRole(member, "MEMBER");
+    await updateMember(
+      member,
+      {
+        is_suspended: true,
+        suspension_reason: reason.trim(),
+      },
+      "ACCOUNT_SUSPENDED"
+    );
   }
 
   async function deleteAvatar(member) {
-    if (!member || !canManage) return;
-
     const confirmed = window.confirm(
       `Profilbild von "${getDisplayName(member)}" löschen?`
     );
 
     if (!confirmed) return;
 
-    setActionLoading(true);
+    await updateMember(member, { avatar_url: null }, "AVATAR_REMOVED");
+  }
 
-    try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          avatar_url: null,
-        })
-        .eq("id", member.id);
-
-      if (error) throw error;
-
-      setMembers((oldMembers) =>
-        oldMembers.map((item) =>
-          item.id === member.id
-            ? { ...item, avatar_url: null }
-            : item
-        )
-      );
-
-      setSelectedMember((old) =>
-        old
-          ? { ...old, avatar_url: null }
-          : old
-      );
-    } catch (err) {
-      console.error(err);
-      alert(
-        "Das Profilbild konnte nicht gelöscht werden: " +
-          (err.message || "Unbekannter Fehler")
-      );
-    } finally {
-      setActionLoading(false);
+  function openMessages(member) {
+    if (onNavigate) {
+      onNavigate("messages", member.id);
+    } else {
+      alert(`Nachrichten mit ${getDisplayName(member)} öffnen.`);
     }
-  }
-
-  async function sendMessage(member) {
-    if (!member) return;
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Bitte zuerst einloggen.");
-      const body = window.prompt(`Nachricht an ${getDisplayName(member)}:`);
-      if (!body?.trim()) return;
-      const { error } = await supabase.from("messages").insert({ sender_id: user.id, receiver_id: member.id, content: body.trim() });
-      if (error) throw error;
-      alert("Nachricht wurde gesendet.");
-    } catch (err) { alert(err.message || "Nachricht konnte nicht gesendet werden."); }
-  }
-
-  async function blockUser(member) {
-    if (!member || !window.confirm(`${getDisplayName(member)} wirklich blockieren?`)) return;
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Bitte zuerst einloggen.");
-      const { error } = await supabase.from("user_blocks").upsert({ blocker_id: user.id, blocked_id: member.id }, { onConflict: "blocker_id,blocked_id" });
-      if (error) throw error;
-      alert("Mitglied wurde blockiert.");
-    } catch (err) { alert(err.message || "Blockieren fehlgeschlagen."); }
-  }
-
-  async function reportUser(member) {
-    if (!member) return;
-    const reason = window.prompt(`Warum möchtest du ${getDisplayName(member)} melden?`);
-    if (!reason?.trim()) return;
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Bitte zuerst einloggen.");
-      const { error } = await supabase.from("user_reports").insert({ reporter_id: user.id, reported_user_id: member.id, reason: reason.trim(), status: "OPEN" });
-      if (error) throw error;
-      alert("Meldung wurde an das Admin-Team gesendet.");
-    } catch (err) { alert(err.message || "Meldung konnte nicht gesendet werden."); }
-  }
-
-  function MemberAvatar({ member, size = "normal" }) {
-    const name = getDisplayName(member);
-
-    return (
-      <div
-        className={`member-avatar member-avatar-${size}`}
-      >
-        {member.avatar_url ? (
-          <img
-            src={member.avatar_url}
-            alt={name}
-            onError={(event) => {
-              event.currentTarget.style.display = "none";
-            }}
-          />
-        ) : (
-          <img
-            src="/default-avatar.svg"
-            alt={name}
-            onError={(event) => {
-              event.currentTarget.style.display = "none";
-            }}
-          />
-        )}
-      </div>
-    );
   }
 
   if (loading) {
     return (
       <div className="members-page">
-        <div className="members-loading">
-          Mitglieder werden geladen...
-        </div>
+        <div className="members-loading">Mitglieder werden geladen...</div>
       </div>
     );
   }
 
   return (
     <div className="members-page">
-
-      {/* KOPFBEREICH */}
-
       <section className="members-header">
         <div>
           <div className="members-kicker">
             <Users size={16} />
             COMMUNITY
           </div>
-
           <h1>Mitglieder</h1>
-
-          <p>
-            Entdecke Mitglieder deiner Community und
-            verwalte Rollen und Berechtigungen.
-          </p>
+          <p>Entdecke die Community und verwalte Mitglieder, Rollen und Sperren.</p>
         </div>
 
         <div className="members-header-count">
@@ -370,61 +313,46 @@ export default function Members() {
         </div>
       </section>
 
-      {/* FEHLERMELDUNG */}
-
       {error && (
         <div className="members-error">
-          {error}
-          <button onClick={loadData}>
-            Erneut versuchen
+          <span>{error}</span>
+          <button type="button" onClick={loadData}>
+            <RefreshCw size={16} /> Erneut versuchen
           </button>
         </div>
       )}
 
-      {/* SUCHE */}
-
       <div className="members-toolbar">
         <div className="members-search">
           <Search size={20} />
-
           <input
-            type="text"
-            placeholder="Mitglieder suchen..."
             value={search}
-            onChange={(event) =>
-              setSearch(event.target.value)
-            }
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Mitglieder suchen..."
           />
-
           {search && (
             <button
+              type="button"
               className="clear-search"
               onClick={() => setSearch("")}
-              type="button"
+              aria-label="Suche löschen"
             >
               <X size={18} />
             </button>
           )}
         </div>
 
-        <button
-          className="members-refresh"
-          type="button"
-          onClick={loadData}
-        >
+        <button className="members-refresh" type="button" onClick={loadData}>
+          <RefreshCw size={17} />
           Aktualisieren
         </button>
       </div>
 
-      {/* MITGLIEDER */}
-
       <section className="members-section">
         <div className="section-heading">
           <div>
-            <h2>Mitglieder</h2>
-            <p>
-              {filteredMembers.length} von {members.length} Mitgliedern
-            </p>
+            <h2>Community-Mitglieder</h2>
+            <p>{filteredMembers.length} von {members.length} Mitgliedern</p>
           </div>
         </div>
 
@@ -432,25 +360,18 @@ export default function Members() {
           <div className="members-empty">
             <Users size={42} />
             <h3>Keine Mitglieder gefunden</h3>
-            <p>
-              Versuche einen anderen Suchbegriff.
-            </p>
+            <p>Versuche einen anderen Suchbegriff.</p>
           </div>
         ) : (
           <div className="members-grid">
             {filteredMembers.map((member) => {
-              const role = getRole(member);
+              const role = normalizeRole(member.role);
 
               return (
-                <article
-                  className="member-card"
-                  key={member.id}
-                >
+                <article className="member-card" key={member.id}>
                   <div className="member-card-top">
-
                     <div className="member-status-avatar">
-                      <MemberAvatar member={member} />
-
+                      <Avatar member={member} />
                       <span
                         className={
                           member.is_online
@@ -460,64 +381,53 @@ export default function Members() {
                       />
                     </div>
 
-                    <div
-                      className={`member-role role-${role}`}
-                    >
-                      {getRoleIcon(role)}
-                      {getRoleLabel(role)}
+                    <div className={`member-role role-${role.toLowerCase()}`}>
+                      {roleIcon(role)}
+                      {ROLE_LABELS[role]}
                     </div>
                   </div>
 
                   <div className="member-info">
-                    <h3>
-                      {getDisplayName(member)}
-                    </h3>
+                    <h3>{getDisplayName(member)}</h3>
 
                     <div className="member-online-status">
                       <Circle
                         size={9}
-                        fill={
-                          member.is_online
-                            ? "currentColor"
-                            : "currentColor"
-                        }
+                        fill="currentColor"
                       />
-
-                      {member.is_online
-                        ? "Online"
-                        : "Offline"}
+                      {member.is_online ? "Online" : "Offline"}
                     </div>
 
-                    {member.bio && (
-                      <p className="member-bio">
-                        {member.bio}
-                      </p>
+                    {member.is_suspended && (
+                      <div className="member-suspended-badge">
+                        <Lock size={14} />
+                        Profil gesperrt
+                      </div>
                     )}
+
+                    {member.bio && <p className="member-bio">{member.bio}</p>}
                   </div>
 
                   <div className="member-actions">
-
                     <button
                       className="member-message-button"
                       type="button"
-                      onClick={() =>
-                        sendMessage(member)
-                      }
+                      onClick={() => openMessages(member)}
                     >
                       <MessageCircle size={18} />
                       Nachricht
                     </button>
 
-                    <button
-                      className="member-manage-button"
-                      type="button"
-                      onClick={() =>
-                        setSelectedMember(member)
-                      }
-                    >
-                      Verwalten
-                    </button>
-
+                    {canManage(member) && (
+                      <button
+                        className="member-manage-button"
+                        type="button"
+                        onClick={() => setSelectedMember(member)}
+                      >
+                        <Settings2 size={17} />
+                        Verwalten
+                      </button>
+                    )}
                   </div>
                 </article>
               );
@@ -526,42 +436,27 @@ export default function Members() {
         )}
       </section>
 
-      {/* MODAL */}
-
       {selectedMember && (
         <div
           className="member-modal-backdrop"
-          onMouseDown={() =>
-            setSelectedMember(null)
-          }
+          onMouseDown={() => setSelectedMember(null)}
         >
           <div
             className="member-modal"
-            onMouseDown={(event) =>
-              event.stopPropagation()
-            }
+            onMouseDown={(event) => event.stopPropagation()}
           >
-
             <button
               className="member-modal-close"
               type="button"
-              onClick={() =>
-                setSelectedMember(null)
-              }
+              onClick={() => setSelectedMember(null)}
+              aria-label="Schließen"
             >
               <X size={22} />
             </button>
 
-            {/* PROFIL */}
-
             <div className="member-modal-profile">
-
               <div className="member-modal-avatar-wrap">
-                <MemberAvatar
-                  member={selectedMember}
-                  size="large"
-                />
-
+                <Avatar member={selectedMember} size="large" />
                 <span
                   className={
                     selectedMember.is_online
@@ -571,192 +466,126 @@ export default function Members() {
                 />
               </div>
 
-              <h2>
-                {getDisplayName(selectedMember)}
-              </h2>
+              <h2>{getDisplayName(selectedMember)}</h2>
 
-              <div
-                className={`member-role role-${getRole(
-                  selectedMember
-                )}`}
-              >
-                {getRoleIcon(
-                  getRole(selectedMember)
-                )}
-
-                {getRoleLabel(
-                  selectedMember.role
-                )}
+              <div className={`member-role role-${normalizeRole(selectedMember.role).toLowerCase()}`}>
+                {roleIcon(selectedMember.role)}
+                {ROLE_LABELS[normalizeRole(selectedMember.role)]}
               </div>
 
-              <p>
-                {selectedMember.is_online
-                  ? "● Online"
-                  : "● Offline"}
-              </p>
-
-            </div>
-
-            {/* ROLLENVERWALTUNG */}
-
-            {canManage &&
-              selectedMember.id !== currentUser?.id && (
-                <div className="member-admin-tools">
-
-                  <div className="admin-tools-label">
-                    <Shield size={16} />
-                    MODERATION
-                  </div>
-
-                  <h3>
-                    <Crown size={20} />
-                    Admin-Werkzeuge
-                  </h3>
-
-                  <div className="role-action-grid">
-
-                    {/* SUPPORTER */}
-
-                    <button
-                      type="button"
-                      className="role-action supporter-action"
-                      disabled={actionLoading}
-                      onClick={() =>
-                        updateRole(
-                          selectedMember,
-                          "supporter"
-                        )
-                      }
-                    >
-                      <Star size={20} />
-                      Supporter ernennen
-                    </button>
-
-                    {/* MODERATOR */}
-
-                    <button
-                      type="button"
-                      className="role-action moderator-action"
-                      disabled={
-                        actionLoading ||
-                        !isAdmin
-                      }
-                      onClick={() =>
-                        updateRole(
-                          selectedMember,
-                          "moderator"
-                        )
-                      }
-                    >
-                      <ShieldCheck size={20} />
-                      Zum Moderator ernennen
-                    </button>
-
-                    {/* ADMIN */}
-
-                    <button
-                      type="button"
-                      className="role-action admin-action"
-                      disabled={
-                        actionLoading ||
-                        !isAdmin
-                      }
-                      onClick={() =>
-                        updateRole(
-                          selectedMember,
-                          "admin"
-                        )
-                      }
-                    >
-                      <Crown size={20} />
-                      Zum Admin ernennen
-                    </button>
-
-                    {/* ROLLE ENTFERNEN */}
-
-                    <button
-                      type="button"
-                      className="role-action remove-role-action"
-                      disabled={
-                        actionLoading ||
-                        getRole(selectedMember) ===
-                          "user" ||
-                        getRole(selectedMember) ===
-                          "member"
-                      }
-                      onClick={() =>
-                        removeRole(selectedMember)
-                      }
-                    >
-                      <UserRoundCog size={20} />
-                      Rolle entfernen
-                    </button>
-
-                    {/* PROFILBILD */}
-
-                    <button
-                      type="button"
-                      className="role-action delete-avatar-action"
-                      disabled={actionLoading}
-                      onClick={() =>
-                        deleteAvatar(selectedMember)
-                      }
-                    >
-                      <Trash2 size={20} />
-                      Profilbild löschen
-                    </button>
-
+              {selectedMember.is_suspended && (
+                <div className="member-suspension-info">
+                  <Lock size={16} />
+                  <div>
+                    <strong>Profil gesperrt</strong>
+                    <span>{selectedMember.suspension_reason || "Kein Grund hinterlegt."}</span>
                   </div>
                 </div>
               )}
+            </div>
 
-            {/* NORMALE AKTIONEN */}
+            {canManage(selectedMember) && (
+              <div className="member-admin-tools">
+                <div className="admin-tools-label">
+                  <Shield size={16} />
+                  ADMIN-BEREICH
+                </div>
+
+                <h3>
+                  <Crown size={20} />
+                  Mitglied verwalten
+                </h3>
+
+                <div className="role-action-grid">
+                  <button
+                    type="button"
+                    className="role-action supporter-action"
+                    disabled={saving}
+                    onClick={() => changeRole(selectedMember, "SUPPORTER")}
+                  >
+                    <Star size={20} />
+                    Supporter setzen
+                  </button>
+
+                  {isHeadAdmin && (
+                    <button
+                      type="button"
+                      className="role-action admin-action"
+                      disabled={saving}
+                      onClick={() => changeRole(selectedMember, "ADMIN")}
+                    >
+                      <ShieldCheck size={20} />
+                      Zum Admin machen
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    className="role-action remove-role-action"
+                    disabled={saving}
+                    onClick={() => changeRole(selectedMember, "MEMBER")}
+                  >
+                    <User size={20} />
+                    Zum Mitglied machen
+                  </button>
+
+                  <button
+                    type="button"
+                    className="role-action delete-avatar-action"
+                    disabled={saving}
+                    onClick={() => deleteAvatar(selectedMember)}
+                  >
+                    <Trash2 size={20} />
+                    Profilbild löschen
+                  </button>
+
+                  <button
+                    type="button"
+                    className="role-action suspend-action"
+                    disabled={saving}
+                    onClick={() => toggleSuspension(selectedMember)}
+                  >
+                    {selectedMember.is_suspended ? (
+                      <>
+                        <Unlock size={20} />
+                        Sperre aufheben
+                      </>
+                    ) : (
+                      <>
+                        <Lock size={20} />
+                        Profil sperren
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
 
             <div className="member-modal-actions">
-
               <button
                 type="button"
                 className="modal-message"
-                onClick={() =>
-                  sendMessage(selectedMember)
-                }
+                onClick={() => openMessages(selectedMember)}
               >
                 <MessageCircle size={21} />
                 Nachricht senden
               </button>
 
-              <button
-                type="button"
-                className="modal-friend"
-              >
+              <button type="button" className="modal-friend">
                 <Check size={21} />
-                Bereits befreundet
+                Freundschaft verwalten
               </button>
 
-              <button
-                type="button"
-                className="modal-block"
-                onClick={() =>
-                  blockUser(selectedMember)
-                }
-              >
+              <button type="button" className="modal-block">
                 <Ban size={21} />
                 Nutzer blockieren
               </button>
 
-              <button
-                type="button"
-                className="modal-report"
-                onClick={() =>
-                  reportUser(selectedMember)
-                }
-              >
+              <button type="button" className="modal-report">
                 <Flag size={21} />
                 Nutzer melden
               </button>
-
             </div>
-
           </div>
         </div>
       )}
