@@ -4838,28 +4838,30 @@ async function changePoints(event) {
         )}
 
         {isHeadAdmin(profile?.role) && (
-          <button
-            type="button"
-            className="profile-admin-button admin"
-            onClick={() => changeMemberRole(selectedMember, "ADMIN")}
-          >
-            ★ Zum Admin ernennen
-          </button>
+  <button
+    type="button"
+    className="profile-admin-button admin"
+    onClick={() => changeMemberRole(selectedMember, "ADMIN")}
+  >
+    ★ Zum Admin ernennen
+  </button>
+)}
 
-        {selectedMember.id !== user?.id &&
-          selectedMember.role !== "MEMBER" &&
-          selectedMember.role !== "HEAD_ADMIN" &&
-          (isHeadAdmin(profile?.role) || myAdminPermission("manage_roles")) && (
-            <button
-              type="button"
-              className="profile-admin-button remove-role"
-              onClick={() => changeMemberRole(selectedMember, "MEMBER")}
-            >
-              ↩ Rolle entfernen · Zum Mitglied
-            </button>
-          )}
-
-        )}
+{selectedMember.id !== user?.id &&
+  selectedMember.role !== "MEMBER" &&
+  selectedMember.role !== "HEAD_ADMIN" &&
+  (isHeadAdmin(profile?.role) ||
+    myAdminPermission("manage_roles")) && (
+    <button
+      type="button"
+      className="profile-admin-button remove-role"
+      onClick={() =>
+        changeMemberRole(selectedMember, "MEMBER")
+      }
+    >
+      ↩ Rolle entfernen · Zum Mitglied
+    </button>
+  )}
 
      </div>
     </section>
