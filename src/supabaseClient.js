@@ -1,13 +1,8 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from "@supabase/supabase-js";
 
-const url = import.meta.env.VITE_SUPABASE_URL;
-const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const url = "https://eqfvhgiyrofjscvimvrc.supabase.co";
 
-if (!url || !key) {
-  throw new Error(
-    "Supabase ist nicht konfiguriert. Prüfe VITE_SUPABASE_URL und VITE_SUPABASE_ANON_KEY."
-  );
-}
+const key = "sb_publishable_Z0no3Kon-_LxYhEsDdwlrA_u5wU_lIs";
 
 export const supabase = createClient(url, key, {
   auth: {
