@@ -121,7 +121,6 @@ export default function App() {
 
   const [blockedUsers, setBlockedUsers] = useState([]);
   const [reports, setReports] = useState([]);
-  const [supportTickets, setSupportTickets] = useState([]);
   const [myPermissions, setMyPermissions] = useState({});
   const [suspendedUsers, setSuspendedUsers] = useState([]);
 
@@ -200,7 +199,6 @@ export default function App() {
         visitData,
         blockData,
         reportData,
-        supportTicketData,
         activityData,
         permissionData
       ] = await Promise.all([
@@ -216,7 +214,6 @@ export default function App() {
         safe("Profilbesuche", supabase.from("profile_visits").select("*").eq("profile_id", currentUser.id).order("visited_at", { ascending: false })),
         safe("Blockierungen", supabase.from("user_blocks").select("*").eq("blocker_id", currentUser.id)),
         safe("Meldungen", supabase.from("user_reports").select("*").order("created_at", { ascending: false })),
-        safe("Support-Anfragen", supabase.from("support_tickets").select("*").order("created_at", { ascending: false })),
         safe("Profilaktivitäten", supabase.from("profile_activity").select("*").order("created_at", { ascending: false }).limit(40)),
         safe("Berechtigungen", supabase.from("user_permissions").select("*").eq("user_id", currentUser.id).maybeSingle(), {})
       ]);
@@ -233,7 +230,6 @@ export default function App() {
       setProfileVisits(visitData);
       setBlockedUsers(blockData);
       setReports(reportData);
-      setSupportTickets(supportTicketData);
       setProfileActivities(activityData);
       setMyPermissions(permissionData || {});
     } catch (error) {
@@ -560,37 +556,6 @@ const sortedMembers = useMemo(() => {
       return;
     }
     showNotice("Freundschaft wurde entfernt.");
-    await loadAll();
-  }
-
-  async function submitSupportTicket(event) {
-    event.preventDefault();
-    if (!user) return;
-    const form = new FormData(event.currentTarget);
-    const subject = String(form.get("subject") || "").trim();
-    const category = String(form.get("category") || "ALLGEMEIN");
-    const description = String(form.get("description") || "").trim();
-    if (!subject || !description) {
-      showNotice("Bitte Betreff und Anliegen ausfüllen.");
-      return;
-    }
-    const { error } = await supabase.from("support_tickets").insert({
-      user_id: user.id,
-      subject,
-      category,
-      description,
-      status: "OPEN"
-    });
-    if (error) { showNotice(error.message); return; }
-    event.currentTarget.reset();
-    showNotice("Deine Support-Anfrage wurde direkt an das Admin-Team weitergeleitet.");
-    await loadAll();
-  }
-
-  async function updateSupportTicketStatus(ticket, status) {
-    const { error } = await supabase.from("support_tickets").update({ status, updated_at: new Date().toISOString() }).eq("id", ticket.id);
-    if (error) { showNotice(error.message); return; }
-    showNotice(status === "RESOLVED" ? "Anfrage als erledigt markiert." : "Status der Anfrage aktualisiert.");
     await loadAll();
   }
 
@@ -2987,100 +2952,12 @@ async function changePoints(event) {
             </section>
           )}
 
-          {page === "support" && (
-            <section className="support-page">
-              <div className="page-heading"><div><span className="eyebrow">DIREKT AN DAS ADMIN-TEAM</span><h1>Support & Fehlermeldung</h1><p>Beschreibe dein Anliegen. Die Anfrage wird in Supabase gespeichert und für Administratoren sichtbar.</p></div></div>
-              <form className="support-form panel" onSubmit={submitSupportTicket}>
-                <label>Betreff</label><input name="subject" maxLength={160} required placeholder="Worum geht es?" />
-                <label>Kategorie</label><select name="category" defaultValue="ALLGEMEIN"><option value="ALLGEMEIN">Allgemeine Anfrage</option><option value="FEHLER">Fehlermeldung</option><option value="KONTO">Konto / Anmeldung</option><option value="FUNKTION">Funktion funktioniert nicht</option><option value="DATENSCHUTZ">Datenschutz / Daten</option></select>
-                <label>Anliegen oder Fehlermeldung</label><textarea name="description" rows="8" required placeholder="Bitte so genau wie möglich beschreiben, was passiert ist und was du erwartet hast." />
-                <button className="primary-button" type="submit">An Admin-Team senden</button>
-              </form>
-              <h2 style={{marginTop:24}}>Meine Support-Anfragen</h2>
-              <div className="support-ticket-list">{supportTickets.filter(t => t.user_id === user?.id).map(ticket => <article className="support-ticket" key={ticket.id}><div><strong>{ticket.subject}</strong><p>{ticket.category} · {ticket.status === "OPEN" ? "Offen" : ticket.status === "IN_PROGRESS" ? "In Bearbeitung" : "Erledigt"}</p><p>{ticket.description}</p></div></article>)}{!supportTickets.some(t => t.user_id === user?.id) && <div className="empty-card">Du hast noch keine Support-Anfrage gesendet.</div>}</div>
-            </section>
-          )}
-
-          {page === "support-admin" && isAdmin(profile?.role) && (
-            <section className="support-page">
-              <div className="page-heading">
-                <div>
-                  <span className="eyebrow">ADMIN</span>
-                  <h1>Support-Anfragen</h1>
-                  <p>Hier erscheinen alle direkt eingereichten Anliegen und Fehlermeldungen.</p>
-                </div>
-              </div>
-
-              <div className="support-ticket-list">
-                {supportTickets.map((ticket) => {
-                  const sender = members.find(
-                    (member) => member.id === ticket.user_id
-                  );
-
-                  return (
-                    <article className="support-ticket" key={ticket.id}>
-                      <div>
-                        <strong>{ticket.subject}</strong>
-                        <p>
-                          Von: {sender ? getName(sender) : ticket.user_id}
-                          {" · "}
-                          {ticket.category}
-                        </p>
-                        <p>{ticket.description}</p>
-                      </div>
-
-                      <div className="support-ticket-actions">
-                        <span>
-                          {ticket.status === "OPEN"
-                            ? "Offen"
-                            : ticket.status === "IN_PROGRESS"
-                            ? "In Bearbeitung"
-                            : "Erledigt"}
-                        </span>
-
-                        {ticket.status === "OPEN" && (
-                          <button
-                            className="secondary-button"
-                            type="button"
-                            onClick={() =>
-                              updateSupportTicketStatus(ticket, "IN_PROGRESS")
-                            }
-                          >
-                            In Bearbeitung
-                          </button>
-                        )}
-
-                        {ticket.status !== "RESOLVED" && (
-                          <button
-                            className="primary-button"
-                            type="button"
-                            onClick={() =>
-                              updateSupportTicketStatus(ticket, "RESOLVED")
-                            }
-                          >
-                            Erledigt
-                          </button>
-                        )}
-                      </div>
-                    </article>
-                  );
-                })}
-
-                {!supportTickets.length && (
-                  <div className="empty-card">
-                    Keine Support-Anfragen vorhanden.
-                  </div>
-                )}
-              </div>
-            </section>
-          )}
-
           {page === "impressum" && (
-            <section className="legal-page panel"><h1>Impressum</h1><p><strong>Ennstal Connect</strong></p><p>Waidbachstraße<br/>8700 Leoben<br/>Österreich</p><p>Verantwortlich für die Inhalte dieser Community: der jeweils eingetragene Hauptadministrator von Ennstal Connect.</p><p>Für Support-Anfragen und technische Fehlermeldungen nutze bitte den Bereich „Support“ innerhalb der Community.</p><button className="secondary-button" onClick={() => setPage("support")}>Zum Support</button></section>
+            <section className="legal-page panel"><h1>Impressum</h1><p><strong>Ennstal Connect</strong></p><p>Waidbachstraße<br/>8700 Leoben<br/>Österreich</p><p>Verantwortlich für die Inhalte dieser Community: der jeweils eingetragene Hauptadministrator von Ennstal Connect.</p><p>Technische Funktionen und Community-Inhalte werden von der Administration verwaltet.</p></section>
           )}
 
           {page === "privacy" && (
-            <section className="legal-page panel"><h1>Datenschutzhinweise</h1><p>Ennstal Connect verarbeitet die Daten, die für Registrierung, Anmeldung und die Nutzung der Community erforderlich sind. Weitere Inhalte und konkrete Aufbewahrungsfristen hängen von den aktivierten Community-Funktionen und der Supabase-Konfiguration ab.</p><p>Bei Fragen zur Verarbeitung deiner Daten kannst du eine Anfrage über den Support-Bereich an das Admin-Team senden.</p><button className="secondary-button" onClick={() => setPage("support")}>Datenschutz-Anfrage senden</button></section>
+            <section className="legal-page panel"><h1>Datenschutzhinweise</h1><p>Ennstal Connect verarbeitet die Daten, die für Registrierung, Anmeldung und die Nutzung der Community erforderlich sind. Weitere Inhalte und konkrete Aufbewahrungsfristen hängen von den aktivierten Community-Funktionen und der Supabase-Konfiguration ab.</p><p>Fragen zur Datenverarbeitung können über die üblichen Kontaktmöglichkeiten der Community geklärt werden.</p></section>
           )}
 
           {page === "profile" && profile && (
