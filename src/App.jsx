@@ -35,12 +35,22 @@ export default function App() {
     return data ?? fallback;
   }
   async function loadAll() {
-    setLoading(true);
-    const {data:{session}}=await supabase.auth.getSession();
-    const current=session?.user||null; setUser(current);
-    if(!current){ setProfile(null); setLoading(false); return; }
-    await supabase.rpc("ensure_current_profile").catch(()=>{});
-    const [me, all, friends, msgs, newsRows, forumRows, perms, rest, logs, warns] = await Promise.all([
+  setLoading(true);
+
+  const { data: { session } } = await supabase.auth.getSession();
+  const current = session?.user || null;
+
+  setUser(current);
+
+  if (!current) {
+    setLoading(false);
+    return;
+  }
+
+  await supabase.rpc("ensure_current_profile");
+
+  const [me, all, friends, msgs, newsRows, forumRows, perms, rest, logs, warns] =
+    await Promise.all([
       safe("Profil",supabase.from("profiles").select("*").eq("id",current.id).maybeSingle(),null),
       safe("Mitglieder",supabase.from("profiles").select("*").neq("account_status","DELETED"),[]),
       safe("Freundschaften",supabase.from("friendships").select("*").or(`requester_id.eq.${current.id},receiver_id.eq.${current.id}`),[]),
