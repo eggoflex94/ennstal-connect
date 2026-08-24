@@ -140,9 +140,8 @@ export default function App() {
       }, 4000);
   };
 
-  // Eine einzige Quelle für den angezeigten Punktestand.
-  // Dadurch funktionieren alte Datensätze mit `points` genauso wie
-  // aktuelle Profile mit `community_points`.
+  // Kompatibilitätswert für ältere Profildaten.
+  // Wird nur noch für ältere Datenbankeinträge vorgehalten.
   const currentCommunityPoints = Number(
     profile?.community_points ?? profile?.points ?? 0
   ) || 0;
@@ -377,7 +376,7 @@ export default function App() {
       `🎁 ${data?.reward_label || "Neue Profilfunktion"} freigeschaltet!`
     );
 
-    // Sofort aktualisieren, damit Mein Bereich, Profil und Punkte-Seite
+    // Sofort aktualisieren, damit Mein Bereich, Profil und Belohnungen
     // gleichzeitig den neuen Stand zeigen.
     await loadAll();
   }
@@ -2121,10 +2120,9 @@ async function changePoints(event) {
             <button className={page === "members" ? "active" : ""} onClick={() => setPage("members")}>♙ <span>Mitglieder</span></button>
             <button className={page === "friends" ? "active" : ""} onClick={() => setPage("friends")}>♧ <span>Freunde</span></button>
             <button className={page === "groups" ? "active" : ""} onClick={() => setPage("groups")}>♚ <span>Forum</span></button>
-            <button className={page === "events" ? "active" : ""} onClick={() => setPage("events")}>▣ <span>News</span></button>
+            <button className={page === "news" ? "active" : ""} onClick={() => setPage("news")}>▤ <span>News</span></button>
             <button className={page === "messages" ? "active" : ""} onClick={() => setPage("messages")}>☏ <span>Nachrichten</span>{unreadMessages.length > 0 && <em>{unreadMessages.length}</em>}</button>
-            <button className={page === "news" ? "active" : ""} onClick={() => setPage("news")}>▤ <span>News & Beiträge</span></button>
-            <button className={page === "points" ? "active" : ""} onClick={() => setPage("points")}>◈ <span>Belohnungen</span></button>
+            <button className={page === "rewards" ? "active" : ""} onClick={() => setPage("rewards")}>🎁 <span>Belohnungen</span></button>
             {profile?.role === "SUPPORTER" && <button className={page === "profile" ? "support-nav" : ""} onClick={() => setPage("profile")}>★ <span>Supporter</span></button>}
             {isAdmin(profile?.role) && <button className={page === "admin" ? "admin-nav" : ""} onClick={() => setPage("admin")}>♛ <span>Admin-Bereich</span></button>}
             <button className={page === "settings" ? "active" : ""} onClick={() => setPage("settings")}>⚙ <span>Einstellungen</span></button>
@@ -2244,74 +2242,42 @@ async function changePoints(event) {
 
               {isAdmin(profile?.role) && (
                 <section className="admin-home-tools">
-
-                  <h2>
-                    Deine Admin-Übersicht
-                  </h2>
-
+                  <h2>Deine Admin-Übersicht</h2>
                   <div className="admin-tool-grid">
-
-                    <button
-                      onClick={() =>
-                        setPage("admin")
-                      }
-                    >
+                    <button type="button" onClick={() => setPage("admin")}>
                       <span>👥</span>
                       Mitglieder verwalten
                     </button>
-
-                    <button
-                      onClick={() =>
-                        setPage("admin")
-                      }
-                    >
-                      <span>⭐</span>
-                      Punkte verwalten
+                    <button type="button" onClick={() => setPage("admin")}>
+                      <span>🛡️</span>
+                      Moderation & Funktionen
+                    </button>
+                    <button type="button" onClick={() => setPage("news")}>
+                      <span>📰</span>
+                      News verwalten
+                    </button>
+                    <button type="button" onClick={() => setPage("groups")}>
+                      <span>💬</span>
+                      Forum verwalten
                     </button>
                     {isHeadAdmin(profile?.role) && (
-  <button
-    onClick={async () => {
-      const {
-        data,
-        error
-      } = await supabase.rpc(
-        "head_admin_get_suspended_users"
-      );
-
-      if (error) {
-        showNotice(error.message);
-        return;
-      }
-
-      setSuspendedUsers(data || []);
-      setPage("suspended-users");
-    }}
-  >
-    <span>🔒</span>
-    Gesperrte Konten
-  </button>
-)}
-
-                    <button
-                      onClick={() =>
-                        setPage("admin")
-                      }
-                    >
-                      <span>📰</span>
-                      Startseite bearbeiten
-                    </button>
-
-                    <button
-                      onClick={() =>
-                        setPage("events")
-                      }
-                    >
-                      <span>📅</span>
-                      Events bearbeiten
-                    </button>
-
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const { data, error } = await supabase.rpc("head_admin_get_suspended_users");
+                          if (error) {
+                            showNotice(error.message);
+                            return;
+                          }
+                          setSuspendedUsers(data || []);
+                          setPage("suspended-users");
+                        }}
+                      >
+                        <span>🔒</span>
+                        Gesperrte Konten
+                      </button>
+                    )}
                   </div>
-
                 </section>
               )}
 
@@ -2576,14 +2542,15 @@ async function changePoints(event) {
                   </span>
 
                   <h1>
-                    Gruppen
+                    Forum
                   </h1>
+                  <p>Diskutiere regionale Themen. Neue Bereiche werden von der Moderation freigegeben.</p>
 
                 </div>
 
               </div>
 
-              {user && (
+              {(isAdmin(profile?.role) || myAdminPermission("manage_groups")) && (
                 <form
                   className="panel"
                   onSubmit={createGroup}
@@ -2591,13 +2558,13 @@ async function changePoints(event) {
 
                   <input
                     name="name"
-                    placeholder="Gruppenname"
+                    placeholder="Thema / Forenbereich"
                     required
                   />
 
                   <textarea
                     name="description"
-                    placeholder="Beschreibung"
+                    placeholder="Beschreibung des Themas"
                   />
 
                   <input
@@ -2606,7 +2573,7 @@ async function changePoints(event) {
                   />
 
                   <button className="primary-button">
-                    Gruppe erstellen
+                    Forenbereich erstellen
                   </button>
 
                 </form>
@@ -2639,7 +2606,7 @@ async function changePoints(event) {
                       </p>
 
                       <small className="content-attribution">
-                        Gegründet von {actorLabel(group.created_by)}
+                        Erstellt von {actorLabel(group.created_by)}
                         {group.updated_by && group.updated_by !== group.created_by && (
                           <> · Bearbeitet von {actorLabel(group.updated_by)}{["ADMIN", "HEAD_ADMIN"].includes(memberById(group.updated_by)?.role) ? " ★" : ""}</>
                         )}
@@ -3193,19 +3160,12 @@ async function changePoints(event) {
                     <span />
                     Online
                   </div>
-
-                  <div className="profile-points">
-                    <button
-                      type="button"
-                      onClick={() => setPage("points")}
-                    >
-                      <span>⭐</span>
-                      <strong>
-                        {currentCommunityPoints}
-                      </strong>
-                      Punkte
+                  <div className="profile-rewards-card">
+                    <button type="button" onClick={() => setPage("rewards")}>
+                      <span>🎁</span>
+                      <strong>Belohnungen</strong>
                       <small>
-                        ({profile?.purchase_points || 0} KP)
+                        Stufe {profile?.reward_level || 0} · {totalOnlineHours.toFixed(2)} Std. online
                       </small>
                     </button>
                   </div>
@@ -3569,61 +3529,33 @@ async function changePoints(event) {
               PUNKTE
               ================================================= */}
 
-          {page === "points" && (
-            <section>
-
+          {page === "rewards" && (
+            <section className="rewards-page">
               <div className="page-heading">
-
                 <div>
-
-                  <button
-                    className="back-button"
-                    onClick={() =>
-                      setPage("profile")
-                    }
-                  >
-                    ← Zurück
-                  </button>
-
-                  <h1>
-                    Meine Belohnungen
-                  </h1>
-
-                  <p>
-                    Deine Onlinezeit und freigeschalteten Profilfunktionen.
-                  </p>
-
+                  <span className="eyebrow">DEINE AKTIVITÄT</span>
+                  <h1>Belohnungen</h1>
+                  <p>Mit deiner aktiven Zeit in der Community schaltest du schrittweise zusätzliche Profilfunktionen frei.</p>
                 </div>
-
               </div>
 
-              <div className="points-overview">
-
-                <div>
-
-                  <span>
-                    Belohnungsstufe
-                  </span>
-
-                  <strong>
-                    {
-                      profile?.reward_level ||
-                      0
-                    }
-                  </strong>
-
+              <div className="reward-hero panel">
+                <div className="reward-level">
+                  <span>Aktuelle Belohnungsstufe</span>
+                  <strong>{profile?.reward_level || 0}</strong>
                 </div>
-
-              </div>
-
-              <div className="panel online-reward-panel">
-                <h2>⏱ Online-Belohnung</h2>
-                <p>Gesamte gespeicherte Onlinezeit: <strong>{totalOnlineHours.toFixed(2)} Stunden</strong></p>
-                <p>
-                  {onlineHoursUntilReward <= 0
-                    ? "Du kannst jetzt deine nächste Belohnung freischalten!"
-                    : `Noch ${onlineHoursUntilReward.toFixed(2)} Stunden bis zur nächsten Belohnung.`}
-                </p>
+                <div className="reward-progress">
+                  <span>Gespeicherte Onlinezeit</span>
+                  <strong>{totalOnlineHours.toFixed(2)} Stunden</strong>
+                  <div className="reward-progress-track">
+                    <i style={{ width: `${Math.min(100, Math.max(0, ((5 - onlineHoursUntilReward) / 5) * 100))}%` }} />
+                  </div>
+                  <small>
+                    {onlineHoursUntilReward <= 0
+                      ? "Deine nächste Belohnung ist bereit."
+                      : `Noch ${onlineHoursUntilReward.toFixed(2)} Stunden bis zur nächsten Freischaltung.`}
+                  </small>
+                </div>
                 <button
                   className="primary-button"
                   disabled={onlineHoursUntilReward > 0}
@@ -3633,66 +3565,27 @@ async function changePoints(event) {
                 </button>
               </div>
 
-              <div className="point-list">
-
-                {history.map((item) => {
-
-                  const delta =
-                    item.delta ??
-                    item.community_points_change ??
-                    0;
-
-                  return (
-                    <article
-                      className={
-                        `point-row ${
-                          delta < 0
-                            ? "negative"
-                            : "positive"
-                        }`
-                      }
-                      key={item.id}
-                    >
-
-                      <strong>
-                        {delta > 0
-                          ? "+"
-                          : ""}
-                        {delta}
-                        {" "}
-                        Punkte
-                      </strong>
-
-                      <span>
-                        {item.reason}
-                      </span>
-
-                      <small>
-                        {
-                          new Date(
-                            item.created_at
-                          ).toLocaleString(
-                            "de-AT"
-                          )
-                        }
-                      </small>
-
-                    </article>
-                  );
-                })}
-
-                {!history.length && (
-                  <div className="empty-card">
-                    Noch keine Belohnungen freigeschaltet.
-                  </div>
-                )}
-
+              <div className="reward-info-grid">
+                <article className="panel">
+                  <span>01</span>
+                  <h2>Profil erweitern</h2>
+                  <p>Durch aktive Teilnahme können zusätzliche Profiloptionen freigeschaltet werden.</p>
+                </article>
+                <article className="panel">
+                  <span>02</span>
+                  <h2>Community-Funktionen</h2>
+                  <p>Belohnungen können neue persönliche Funktionen und Gestaltungsmöglichkeiten aktivieren.</p>
+                </article>
+                <article className="panel">
+                  <span>03</span>
+                  <h2>Ohne Punktesystem</h2>
+                  <p>Es gibt keine Kauf- oder Strafpunkte. Die Belohnung basiert ausschließlich auf aktiver Community-Zeit.</p>
+                </article>
               </div>
-
             </section>
           )}
 
-          {/* =================================================
+                    {/* =================================================
               ADMIN
               ================================================= */}
 
@@ -3773,63 +3666,6 @@ async function changePoints(event) {
                   </div>
 
                 </div>
-
-                <form
-                  className="panel"
-                  onSubmit={changePoints}
-                >
-
-                  <h2>
-                    ⭐ Punkte verwalten
-                  </h2>
-
-                  <select
-                    name="user_id"
-                    required
-                  >
-
-                    <option value="">
-                      Mitglied auswählen
-                    </option>
-
-                    {members.map((member) => (
-
-                      <option
-                        key={member.id}
-                        value={member.id}
-                      >
-                        {getName(member)}
-                      </option>
-                    ))}
-
-                  </select>
-
-                  <input
-                    type="number"
-                    name="points"
-                    placeholder="+ Punkte oder - Punkte"
-                    required
-                  />
-
-                  <textarea
-                    name="reason"
-                    placeholder="Grund für die Punkteänderung"
-                    required
-                  />
-
-                  <button className="primary-button">
-                    Punkte ändern
-                  </button>
-
-                  <small>
-                    Der Grund wird im
-                    Punkteverlauf gespeichert.
-                    Bei -10 Gesamtpunkten
-                    wird das Konto automatisch
-                    gesperrt.
-                  </small>
-
-                </form>
 
                 <section className="admin-members-panel">
   <div className="admin-members-heading">
@@ -3946,9 +3782,9 @@ async function changePoints(event) {
 
           <div className="admin-member-card-info">
             <div>
-              <span>Punkte</span>
+              <span>Rolle</span>
               <strong>
-                {member.community_points || 0}
+                {member.role === "HEAD_ADMIN" ? "Head Admin" : member.role === "ADMIN" ? "Admin" : member.role === "SUPPORTER" ? "Supporter" : "Mitglied"}
               </strong>
             </div>
 
@@ -3976,73 +3812,6 @@ async function changePoints(event) {
             >
               👤 Profil
             </button>
-
-            {(isHeadAdmin(profile?.role) ||
-              myAdminPermission("manage_points")) && (
-              <button
-                type="button"
-                onClick={async () => {
-                  const amount = Number(
-                    window.prompt(
-                      "Punkte, z. B. 5 oder -5:",
-                      "5"
-                    )
-                  );
-
-                  if (
-                    !Number.isFinite(amount) ||
-                    amount === 0
-                  ) return;
-
-                  const reason =
-                    window.prompt(
-                      "Begründung:"
-                    );
-
-                  if (
-                    !reason ||
-                    reason.trim().length < 3
-                  ) {
-                    showNotice(
-                      "Bitte eine Begründung angeben."
-                    );
-                    return;
-                  }
-
-                  const { error } =
-                    await supabase.rpc(
-                      "admin_change_points",
-                      {
-                        target_user:
-                          member.id,
-                        delta:
-                          Math.trunc(amount),
-                        change_kind:
-                          amount > 0
-                            ? "ADD"
-                            : "REMOVE",
-                        reason_text:
-                          reason.trim()
-                      }
-                    );
-
-                  if (error) {
-                    showNotice(
-                      error.message
-                    );
-                    return;
-                  }
-
-                  showNotice(
-                    "Punkte wurden geändert."
-                  );
-
-                  await loadAll();
-                }}
-              >
-                ⭐ Punkte
-              </button>
-            )}
 
             {(isHeadAdmin(profile?.role) ||
               myAdminPermission("manage_roles")) && (
@@ -4191,10 +3960,10 @@ async function changePoints(event) {
             )}
           </button>
 
-          <button onClick={() => setPage("points")}>
-            ⭐ {currentCommunityPoints} Punkte
+          <button onClick={() => setPage("rewards")}>
+            🎁 Belohnungen
             <span className="rail-subvalue">
-              ({profile?.purchase_points || 0} KP)
+              Stufe {profile?.reward_level || 0}
             </span>
           </button>
 
@@ -4360,10 +4129,10 @@ async function changePoints(event) {
 
               {(
                 isHeadAdmin(profile?.role) ||
-                myAdminPermission("manage_points")
+                myAdminPermission("manage_members")
               ) && (
                 <button onClick={() => setPage("admin")}>
-                  ⭐ Punkte verwalten
+                  🛡️ Moderation & Funktionen
                 </button>
               )}
 
@@ -4371,7 +4140,7 @@ async function changePoints(event) {
                 isHeadAdmin(profile?.role) ||
                 myAdminPermission("manage_news")
               ) && (
-                <button onClick={() => setPage("home")}>
+                <button onClick={() => setPage("news")}>
                   📰 News verwalten
                 </button>
               )}
@@ -4381,16 +4150,7 @@ async function changePoints(event) {
                 myAdminPermission("manage_groups")
               ) && (
                 <button onClick={() => setPage("groups")}>
-                  👥 Gruppen verwalten
-                </button>
-              )}
-
-              {(
-                isHeadAdmin(profile?.role) ||
-                myAdminPermission("manage_events")
-              ) && (
-                <button onClick={() => setPage("events")}>
-                  📅 Events verwalten
+                  💬 Forum verwalten
                 </button>
               )}
 
@@ -4459,16 +4219,13 @@ async function changePoints(event) {
                         <div className="permission-list">
                           {[
                             ["manage_members", "Mitglieder verwalten"],
-                            ["manage_points", "Punkte verwalten"],
                             ["manage_messages", "Nachrichten verwalten"],
                             ["manage_media", "Medien verwalten"],
                             ["manage_roles", "Rollen vergeben"],
                             ["manage_admins", "Admins verwalten"],
                             ["view_profile_visits", "Profilbesucher sehen"],
                             ["manage_news", "News verwalten"],
-                            ["manage_groups", "Gruppen verwalten"],
-                            ["manage_events", "Events verwalten"],
-                            ["manage_marketplace", "Marktplatz verwalten"],
+                            ["manage_groups", "Forum verwalten"],
                             ["manage_friend_requests", "Freundschaftsanfragen verwalten"],
                             ["manage_homepage", "Hauptseite gestalten"],
                             ["manage_reports", "Nutzer-Meldungen verwalten"]
@@ -4758,7 +4515,7 @@ async function changePoints(event) {
 
                 <div className="profile-memberships-grid">
                   <section className="profile-membership-box">
-                    <h3>👥 Gruppen</h3>
+                    <h3>💬 Forum</h3>
                     {selectedMemberGroups.length ? (
                       selectedMemberGroups.map((group) => (
                         <div className="profile-membership-card" key={group.id}>
@@ -4769,20 +4526,7 @@ async function changePoints(event) {
                         </div>
                       ))
                     ) : (
-                      <small>Noch keiner Gruppe beigetreten.</small>
-                    )}
-                  </section>
-
-                  <section className="profile-membership-box">
-                    <h3>📅 Events</h3>
-                    {selectedMemberEvents.length ? (
-                      selectedMemberEvents.map((event) => (
-                        <div className="profile-membership-card" key={event.id}>
-                          <span>{event.title}</span>
-                        </div>
-                      ))
-                    ) : (
-                      <small>Noch an keinem Event teilgenommen.</small>
+                      <small>Noch keinem Forenbereich gefolgt.</small>
                     )}
                   </section>
                 </div>
@@ -4799,86 +4543,6 @@ async function changePoints(event) {
       </div>
 
       <div className="profile-admin-tools-grid">
-
-        {(isHeadAdmin(profile?.role) ||
-          myAdminPermission("manage_points")) && (
-          <button
-            type="button"
-            className="profile-admin-button"
-            onClick={async () => {
-
-              const amount = Number(
-                window.prompt(
-                  "Punkte eingeben, z.B. 5 oder -5:",
-                  "5"
-                )
-              );
-
-              if (
-                !Number.isFinite(amount) ||
-                amount === 0
-              ) {
-                return;
-              }
-
-              const reason =
-                window.prompt(
-                  "Begründung:"
-                );
-
-              if (
-                !reason ||
-                reason.trim().length < 3
-              ) {
-                showNotice(
-                  "Eine Begründung ist erforderlich."
-                );
-                return;
-              }
-
-              const { error } =
-                await supabase.rpc(
-                  "admin_change_points",
-                  {
-                    target_user:
-                      selectedMember.id,
-
-                    delta:
-                      Math.trunc(amount),
-
-                    change_kind:
-                      amount > 0
-                        ? "ADD"
-                        : "REMOVE",
-
-                    reason_text:
-                      reason.trim()
-                  }
-                );
-
-              if (error) {
-                showNotice(
-                  error.message
-                );
-                return;
-              }
-
-              showNotice(
-                "Punkte wurden geändert."
-              );
-
-              await loadAll();
-
-              setSelectedMember(
-                memberById(
-                  selectedMember.id
-                )
-              );
-            }}
-          >
-            ⭐ Punkte vergeben
-          </button>
-        )}
 
         {(isHeadAdmin(profile?.role) ||
           myAdminPermission("manage_media")) && (
