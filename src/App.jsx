@@ -140,6 +140,13 @@ export default function App() {
       }, 4000);
   };
 
+  // Eine einzige Quelle für den angezeigten Punktestand.
+  // Dadurch funktionieren alte Datensätze mit `points` genauso wie
+  // aktuelle Profile mit `community_points`.
+  const currentCommunityPoints = Number(
+    profile?.community_points ?? profile?.points ?? 0
+  ) || 0;
+
   /* =========================================================
      ALLES LADEN
      ========================================================= */
@@ -342,13 +349,17 @@ export default function App() {
       return;
     }
 
-    if (data?.total_online_seconds !== undefined) {
+    if (data && typeof data === "object") {
       setProfile((current) => current ? { ...current, ...data } : current);
     }
   }
 
   async function claimOnlineReward() {
     if (!user?.id) return;
+
+    // Vor dem Abholen noch einmal synchronisieren, damit die letzte
+    // sichtbare Onlinezeit sicher mitgerechnet wird.
+    await syncOnlineTime();
 
     const { data, error } = await supabase.rpc("claim_online_reward");
     if (error) {
@@ -361,7 +372,13 @@ export default function App() {
       return;
     }
 
-    showNotice(data?.message || `${data?.points_added || 10} Punkte für deine Onlinezeit erhalten!`);
+    showNotice(
+      data?.message ||
+      `🎁 ${data?.reward_label || "Neue Profilfunktion"} freigeschaltet!`
+    );
+
+    // Sofort aktualisieren, damit Mein Bereich, Profil und Punkte-Seite
+    // gleichzeitig den neuen Stand zeigen.
     await loadAll();
   }
 
@@ -1943,12 +1960,12 @@ async function changePoints(event) {
             <div className="suspended-points">
 
               <span>
-                Aktueller Punktestand
+                Belohnungsstufe
               </span>
 
               <strong>
                 {
-                  profile.community_points ||
+                  profile.reward_level ||
                   0
                 }
               </strong>
@@ -2029,121 +2046,123 @@ async function changePoints(event) {
         message.receiver_id === user.id
     );
 
+  const unreadMessages =
+    inboxMessages.filter((message) => !message.is_read);
+
+  const friendIds =
+    friendships
+      .filter((friendship) => friendship.status === "ACCEPTED")
+      .map((friendship) =>
+        friendship.requester_id === user.id
+          ? friendship.receiver_id
+          : friendship.requester_id
+      );
+
+  const sidebarFriends =
+    members
+      .filter((member) => friendIds.includes(member.id))
+      .slice(0, 5);
+
   return (
     <>
       <div className="app">
 
-        {/* HEADER */}
+        {/* DASHBOARD-SHELL */}
 
         <header className="topbar">
 
           <div
             className="brand"
-            onClick={() =>
-              setPage("home")
-            }
+            onClick={() => setPage("home")}
           >
-            <div className="text-logo" aria-label="Ennstal Connect">ENNSTAL CONNECT</div>
+            <div className="text-logo" aria-label="Ennstal Connect">
+              ENNSTAL <span>connect</span>
+            </div>
+            <small>Unsere Region • Unsere Community ❤</small>
           </div>
 
-          <nav>
+          <div className="global-search">
+            <span>⌕</span>
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Mitglieder, Forum, News und Beiträge suchen..."
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  setPage("members");
+                }
+              }}
+            />
+          </div>
 
+          <div className="header-actions">
             <button
-              className={
-                page === "home"
-                  ? "active"
-                  : ""
-              }
-              onClick={() =>
-                setPage("home")
-              }
+              className="header-icon"
+              onClick={() => setPage("messages")}
+              aria-label="Nachrichten"
             >
-              Startseite
+              ✉
+              {unreadMessages.length > 0 && (
+                <b>{unreadMessages.length}</b>
+              )}
             </button>
 
             <button
-              className={
-                page === "members"
-                  ? "active"
-                  : ""
-              }
-              onClick={() =>
-                setPage("members")
-              }
+              className="header-icon"
+              onClick={() => setPage("profile")}
+              aria-label="Benachrichtigungen"
             >
-              Mitglieder
+              ♟
             </button>
+          </div>
 
-            <button
-              className={page === "online" ? "active" : ""}
-              onClick={() => setPage("online")}
-            >
-              ● Online ({onlineMembers.length})
-            </button>
-
-            <button
-              className={
-                page === "groups"
-                  ? "active"
-                  : ""
-              }
-              onClick={() =>
-                setPage("groups")
-              }
-            >
-              Gruppen
-            </button>
-
-            <button
-              className={
-                page === "events"
-                  ? "active"
-                  : ""
-              }
-              onClick={() =>
-                setPage("events")
-              }
-            >
-              Events
-            </button>
-
-           
-
-           
-
+          <nav className="sidebar-nav">
+            <button className={page === "home" ? "active" : ""} onClick={() => setPage("home")}>⌂ <span>Startseite</span></button>
+            <button className={page === "members" ? "active" : ""} onClick={() => setPage("members")}>♙ <span>Mitglieder</span></button>
+            <button className={page === "friends" ? "active" : ""} onClick={() => setPage("friends")}>♧ <span>Freunde</span></button>
+            <button className={page === "groups" ? "active" : ""} onClick={() => setPage("groups")}>♚ <span>Forum</span></button>
+            <button className={page === "events" ? "active" : ""} onClick={() => setPage("events")}>▣ <span>News</span></button>
+            <button className={page === "messages" ? "active" : ""} onClick={() => setPage("messages")}>☏ <span>Nachrichten</span>{unreadMessages.length > 0 && <em>{unreadMessages.length}</em>}</button>
+            <button className={page === "news" ? "active" : ""} onClick={() => setPage("news")}>▤ <span>News & Beiträge</span></button>
+            <button className={page === "points" ? "active" : ""} onClick={() => setPage("points")}>◈ <span>Belohnungen</span></button>
+            {profile?.role === "SUPPORTER" && <button className={page === "profile" ? "support-nav" : ""} onClick={() => setPage("profile")}>★ <span>Supporter</span></button>}
+            {isAdmin(profile?.role) && <button className={page === "admin" ? "admin-nav" : ""} onClick={() => setPage("admin")}>♛ <span>Admin-Bereich</span></button>}
+            <button className={page === "settings" ? "active" : ""} onClick={() => setPage("settings")}>⚙ <span>Einstellungen</span></button>
           </nav>
 
+          <div className="sidebar-create">
+            <button onClick={() => setPage("news")}>＋ Erstellen⌄</button>
+          </div>
+
           <div className="top-profile">
-
             <button
-              className={
-                `top-profile-button ${
-                  isAdmin(profile?.role)
-                    ? "admin-border"
-                    : profile?.role ===
-                      "SUPPORTER"
-                    ? "supporter-border"
-                    : ""
-                }`
-              }
-              onClick={() =>
-                setPage("profile")
-              }
+              className={`top-profile-button ${
+                isAdmin(profile?.role)
+                  ? "admin-border"
+                  : profile?.role === "SUPPORTER"
+                  ? "supporter-border"
+                  : ""
+              }`}
+              onClick={() => setPage("profile")}
             >
-              {isAdmin(profile?.role) && (
-                <span className="small-admin-star">
-                  ★
-                </span>
-              )}
-
-              <span
-                style={{
-                  color:
-                    profile?.nickname_color ||
-                    undefined
-                }}
-              >
-                {getName(profile)}
+              <img
+                src={profile?.avatar_url || DEFAULT_AVATAR}
+                alt=""
+                onError={(event) => { event.currentTarget.src = DEFAULT_AVATAR; }}
+              />
+              <span className="top-profile-copy">
+                <strong style={{ color: profile?.nickname_color || undefined }}>
+                  {getName(profile)}
+                </strong>
+                <small>
+                  {profile?.role === "HEAD_ADMIN"
+                    ? "★ HEAD ADMIN"
+                    : profile?.role === "ADMIN"
+                    ? "★ ADMIN"
+                    : profile?.role === "SUPPORTER"
+                    ? "★ SUPPORTER"
+                    : "Mitglied"}
+                </small>
               </span>
             </button>
 
@@ -2153,8 +2172,23 @@ async function changePoints(event) {
             >
               Abmelden
             </button>
-
           </div>
+
+          <aside className="sidebar-friends">
+            <div className="sidebar-online-count">● {onlineMembers.length} Online</div>
+            <div className="sidebar-friend-avatars">
+              {sidebarFriends.slice(0, 4).map((member) => (
+                <img
+                  key={member.id}
+                  src={member.avatar_url || DEFAULT_AVATAR}
+                  alt=""
+                  onError={(event) => { event.currentTarget.src = DEFAULT_AVATAR; }}
+                  onClick={() => openMember(member)}
+                />
+              ))}
+              <button onClick={() => setPage("friends")}>→</button>
+            </div>
+          </aside>
 
         </header>
 
@@ -3167,7 +3201,7 @@ async function changePoints(event) {
                     >
                       <span>⭐</span>
                       <strong>
-                        {profile?.community_points || 0}
+                        {currentCommunityPoints}
                       </strong>
                       Punkte
                       <small>
@@ -3552,12 +3586,11 @@ async function changePoints(event) {
                   </button>
 
                   <h1>
-                    Meine Punkte
+                    Meine Belohnungen
                   </h1>
 
                   <p>
-                    Dein vollständiger
-                    Punkteverlauf.
+                    Deine Onlinezeit und freigeschalteten Profilfunktionen.
                   </p>
 
                 </div>
@@ -3569,12 +3602,12 @@ async function changePoints(event) {
                 <div>
 
                   <span>
-                    Aktueller Punktestand
+                    Belohnungsstufe
                   </span>
 
                   <strong>
                     {
-                      profile?.community_points ||
+                      profile?.reward_level ||
                       0
                     }
                   </strong>
@@ -3588,15 +3621,15 @@ async function changePoints(event) {
                 <p>Gesamte gespeicherte Onlinezeit: <strong>{totalOnlineHours.toFixed(2)} Stunden</strong></p>
                 <p>
                   {onlineHoursUntilReward <= 0
-                    ? "Du kannst jetzt 10 Punkte abholen!"
-                    : `Noch ${onlineHoursUntilReward.toFixed(2)} Stunden bis zu den nächsten 10 Punkten.`}
+                    ? "Du kannst jetzt deine nächste Belohnung freischalten!"
+                    : `Noch ${onlineHoursUntilReward.toFixed(2)} Stunden bis zur nächsten Belohnung.`}
                 </p>
                 <button
                   className="primary-button"
                   disabled={onlineHoursUntilReward > 0}
                   onClick={claimOnlineReward}
                 >
-                  🎁 10 Punkte abholen
+                  🎁 Belohnung freischalten
                 </button>
               </div>
 
@@ -3650,8 +3683,7 @@ async function changePoints(event) {
 
                 {!history.length && (
                   <div className="empty-card">
-                    Noch keine
-                    Punkteänderungen.
+                    Noch keine Belohnungen freigeschaltet.
                   </div>
                 )}
 
@@ -4160,7 +4192,7 @@ async function changePoints(event) {
           </button>
 
           <button onClick={() => setPage("points")}>
-            ⭐ {profile?.community_points || 0} Punkte
+            ⭐ {currentCommunityPoints} Punkte
             <span className="rail-subvalue">
               ({profile?.purchase_points || 0} KP)
             </span>
