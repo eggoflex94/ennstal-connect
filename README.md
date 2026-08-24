@@ -1,11 +1,17 @@
-# ennstal connect
+# Ennstal Connect
 
-Die regionale Community für Ennstal & Obersteiermark.
+Community-Webseite für Ennstal & Obersteiermark.
 
-## Projektstatus
-Phase 1: Grundsystem und Community-Oberfläche.
+## Start
+1. `.env.example` nach `.env` kopieren.
+2. Supabase URL und Publishable Key eintragen.
+3. `npm install`
+4. `npm run dev`
 
-Geplant sind Registrierung mit E-Mail-Bestätigung und Admin-Freigabe, Mitgliederprofile, Rollen (Admin, Unterstützer, Mitglied), Gruppen, Events, Nachrichten, Punkte, Marktplatz, Meldesystem und ein Hauptadmin-Dashboard mit Protokollierung.
+## Hosting
+- Netlify: Build command `npm run build`, Publish directory `dist`
+- Vercel: Repository importieren; Vite wird erkannt.
+- In beiden Hostern dieselben `VITE_SUPABASE_*` Variablen setzen.
 
-## Datenschutz
-Sicherheits- und Moderationsdaten werden nur für die vorgesehenen Zwecke verarbeitet. Administrative Aktionen sollen nachvollziehbar protokolliert werden.
+## Datenbank
+`supabase.sql` ist ein sicherer Ausgangspunkt. Nicht blind über eine bestehende Produktionsdatenbank laufen lassen: Dein vorhandenes Frontend verwendet zusätzliche Tabellen und RPCs, die vor einer destruktiven Migration abgeglichen werden müssen.
