@@ -57,6 +57,8 @@ export default function App() {
   const [news, setNews] = useState([]);
   const [events, setEvents] = useState([]);
   const [groups, setGroups] = useState([]);
+  const [groupMemberships, setGroupMemberships] = useState([]);
+  const [eventMemberships, setEventMemberships] = useState([]);
 
   const [history, setHistory] = useState([]);
   const [messages, setMessages] = useState([]);
@@ -184,7 +186,9 @@ export default function App() {
         blockData,
         reportData,
         activityData,
-        permissionData
+        permissionData,
+        groupMembershipData,
+        eventMembershipData
       ] = await Promise.all([
         safe("Profil", supabase.from("profiles").select("*").eq("id", currentUser.id).maybeSingle(), null),
         safe("Mitglieder", supabase.from("profiles").select("*")),
@@ -199,7 +203,9 @@ export default function App() {
         safe("Blockierungen", supabase.from("user_blocks").select("*").eq("blocker_id", currentUser.id)),
         safe("Meldungen", supabase.from("user_reports").select("*").order("created_at", { ascending: false })),
         safe("Profilaktivitäten", supabase.from("profile_activity").select("*").order("created_at", { ascending: false }).limit(40)),
-        safe("Berechtigungen", supabase.from("user_permissions").select("*").eq("user_id", currentUser.id).maybeSingle(), {})
+        safe("Berechtigungen", supabase.from("user_permissions").select("*").eq("user_id", currentUser.id).maybeSingle(), {}),
+        safe("Gruppenmitgliedschaften", supabase.from("group_members").select("group_id").eq("user_id", currentUser.id)),
+        safe("Eventteilnahmen", supabase.from("event_members").select("event_id").eq("user_id", currentUser.id))
       ]);
 
       setProfile(myProfile);
@@ -216,6 +222,8 @@ export default function App() {
       setReports(reportData);
       setProfileActivities(activityData);
       setMyPermissions(permissionData || {});
+      setGroupMemberships(groupMembershipData || []);
+      setEventMemberships(eventMembershipData || []);
     } catch (error) {
       console.error("Fehler beim Starten von Ennstal Connect:", error);
       showNotice(`Fehler beim Laden: ${error?.message || "Unbekannter Fehler"}`);
@@ -517,6 +525,40 @@ const sortedMembers = useMemo(() => {
     }
 
     showNotice("Freundschaftsanfrage gesendet.");
+    await loadAll();
+  }
+
+  async function removeFriend(memberId) {
+    const friendship = friendshipWith(memberId);
+    if (!friendship || friendship.status !== "ACCEPTED") return;
+    if (!window.confirm("Freundschaft wirklich entfernen?")) return;
+    const { error } = await supabase.from("friendships").delete().eq("id", friendship.id);
+    if (error) { showNotice(error.message); return; }
+    showNotice("Freundschaft wurde entfernt.");
+    await loadAll();
+  }
+
+  async function toggleGroupMembership(groupId) {
+    if (!user) return;
+    const joined = groupMemberships.some((item) => item.group_id === groupId);
+    const query = joined
+      ? supabase.from("group_members").delete().eq("group_id", groupId).eq("user_id", user.id)
+      : supabase.from("group_members").insert({ group_id: groupId, user_id: user.id });
+    const { error } = await query;
+    if (error) { showNotice(error.message); return; }
+    showNotice(joined ? "Du hast die Gruppe verlassen." : "Du bist der Gruppe beigetreten.");
+    await loadAll();
+  }
+
+  async function toggleEventMembership(eventId) {
+    if (!user) return;
+    const joined = eventMemberships.some((item) => item.event_id === eventId);
+    const query = joined
+      ? supabase.from("event_members").delete().eq("event_id", eventId).eq("user_id", user.id)
+      : supabase.from("event_members").insert({ event_id: eventId, user_id: user.id });
+    const { error } = await query;
+    if (error) { showNotice(error.message); return; }
+    showNotice(joined ? "Deine Teilnahme wurde abgesagt." : "Du nimmst jetzt am Event teil.");
     await loadAll();
   }
 
@@ -2514,6 +2556,16 @@ async function changePoints(event) {
                         )}
                       </small>
 
+                      {user && (
+                        <button
+                          type="button"
+                          className={groupMemberships.some((item) => item.group_id === group.id) ? "secondary-button" : "primary-button"}
+                          onClick={() => toggleGroupMembership(group.id)}
+                        >
+                          {groupMemberships.some((item) => item.group_id === group.id) ? "✓ Gruppe verlassen" : "+ Gruppe beitreten"}
+                        </button>
+                      )}
+
                       {canManageGroupItem(group) && (
                         <div className="content-manage-actions">
                           <button type="button" onClick={() => editGroup(group)}>Bearbeiten</button>
@@ -2619,6 +2671,16 @@ async function changePoints(event) {
                         <> · Bearbeitet von {actorLabel(event.updated_by)}{["ADMIN", "HEAD_ADMIN"].includes(memberById(event.updated_by)?.role) ? " ★" : ""}</>
                       )}
                     </small>
+
+                    {user && (
+                      <button
+                        type="button"
+                        className={eventMemberships.some((item) => item.event_id === event.id) ? "secondary-button" : "primary-button"}
+                        onClick={() => toggleEventMembership(event.id)}
+                      >
+                        {eventMemberships.some((item) => item.event_id === event.id) ? "✓ Teilnahme absagen" : "✓ Am Event teilnehmen"}
+                      </button>
+                    )}
 
                     {canManageEventItem(event) && (
                       <div className="content-manage-actions">
@@ -4808,6 +4870,23 @@ async function changePoints(event) {
           </button>
         )}
 
+        {isHeadAdmin(profile?.role) && selectedMember.role !== "MEMBER" && (
+          <button
+            type="button"
+            className="profile-admin-button danger"
+            onClick={async () => {
+              if (!window.confirm(`Rolle von ${getName(selectedMember)} entfernen?`)) return;
+              const { error } = await supabase.rpc("admin_set_role", { target_user: selectedMember.id, new_role: "MEMBER" });
+              if (error) { showNotice(error.message); return; }
+              showNotice("Rolle wurde entfernt.");
+              await loadAll();
+              setSelectedMember((current) => current ? { ...current, role: "MEMBER" } : current);
+            }}
+          >
+            ↩ Rolle entfernen
+          </button>
+        )}
+
      </div>
     </section>
   )}
@@ -4834,6 +4913,11 @@ async function changePoints(event) {
                         ? "⏳ Anfrage vorhanden"
                         : "🤝 Freundschaftsanfrage senden"}
                     </button>
+                    {friendshipWith(selectedMember.id)?.status === "ACCEPTED" && (
+                      <button className="danger-button" onClick={() => removeFriend(selectedMember.id)}>
+                        Freund entfernen
+                      </button>
+                    )}
 
                     <button
                       className="secondary-button"
