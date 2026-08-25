@@ -1,1986 +1,445 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "./supabase";
+import {
+  Home, Users, MessageCircle, Newspaper, Gift, Settings, Shield,
+  Crown, Star, Lock, Unlock, Trash2, Edit3, Save, Plus, LogOut
+} from "lucide-react";
 
-const ROLE_LABELS = {
-  head_admin: "👑 Head Admin",
-  admin: "★ Admin",
-  supporter: "✦ Supporter",
+const ROLE_LABEL = {
   member: "Mitglied",
+  supporter: "Supporter",
+  admin: "Admin",
+  head_admin: "Head Admin"
 };
+
+const ROLE_ORDER = { member: 0, supporter: 1, admin: 2, head_admin: 3 };
 
 const DEFAULT_PERMISSIONS = {
   manage_members: false,
-  manage_roles: false,
-  manage_permissions: false,
-  manage_forum: false,
-  manage_news: false,
   manage_warnings: false,
   manage_restrictions: false,
-  view_admin_logs: false,
+  manage_roles: false,
+  manage_forum: false,
+  manage_news: false
 };
 
-function displayName(profile) {
-  if (!profile) return "Mitglied";
-
-  if (profile.nickname?.trim()) {
-    return profile.nickname;
-  }
-
-  const fullName = [
-    profile.first_name,
-    profile.last_name,
-  ]
-    .filter(Boolean)
-    .join(" ");
-
-  return fullName || "Mitglied";
+function displayName(p) {
+  if (!p) return "Unbekannt";
+  const full = [p.first_name, p.last_name].filter(Boolean).join(" ").trim();
+  return p.nickname || full || "Mitglied";
 }
 
-function getInitials(profile) {
-  const name = displayName(profile);
-
-  return name
-    .split(" ")
-    .map((part) => part.charAt(0))
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-}
-
-function Avatar({ profile, size = "normal" }) {
-  return (
-    <div className={`avatar avatar-${size}`}>
-      {profile?.avatar_url ? (
-        <img
-          src={profile.avatar_url}
-          alt={displayName(profile)}
-          onError={(event) => {
-            event.currentTarget.style.display = "none";
-          }}
-        />
-      ) : (
-        <span>{getInitials(profile)}</span>
-      )}
-    </div>
-  );
-}
-
-function RoleBadge({ role }) {
-  return (
-    <span className={`role-badge role-${role || "member"}`}>
-      {ROLE_LABELS[role] || "Mitglied"}
-    </span>
-  );
+function roleIcon(role) {
+  if (role === "head_admin") return <Crown size={15}/>;
+  if (role === "admin") return <Shield size={15}/>;
+  if (role === "supporter") return <Star size={15}/>;
+  return null;
 }
 
 export default function App() {
   const [session, setSession] = useState(null);
-  const [profile, setProfile] = useState(null);
-
+  const [me, setMe] = useState(null);
   const [members, setMembers] = useState([]);
-  const [forumPosts, setForumPosts] = useState([]);
-  const [newsPosts, setNewsPosts] = useState([]);
-  const [adminLogs, setAdminLogs] = useState([]);
-
-  const [permissions, setPermissions] =
-    useState(DEFAULT_PERMISSIONS);
-
+  const [posts, setPosts] = useState([]);
+  const [news, setNews] = useState([]);
+  const [permissions, setPermissions] = useState(DEFAULT_PERMISSIONS);
   const [restrictions, setRestrictions] = useState([]);
-
-  const [activePage, setActivePage] = useState("home");
+  const [logs, setLogs] = useState([]);
+  const [view, setView] = useState("home");
   const [loading, setLoading] = useState(true);
+  const [notice, setNotice] = useState("");
+  const [editingPost, setEditingPost] = useState(null);
 
-  const [forumTitle, setForumTitle] = useState("");
-  const [forumContent, setForumContent] = useState("");
+  const isHead = me?.role === "head_admin";
+  const isAdmin = ["head_admin", "admin"].includes(me?.role);
+  const privileged = ["head_admin", "admin", "supporter"].includes(me?.role);
 
-  const [newsTitle, setNewsTitle] = useState("");
-  const [newsContent, setNewsContent] = useState("");
+  const can = (name) => isHead || permissions?.[name] === true;
+  const restricted = (feature) => restrictions.some(r => r.feature === feature && r.active);
 
-  const [memberSearch, setMemberSearch] = useState("");
-
-  const isHeadAdmin = profile?.role === "head_admin";
-  const isAdmin = profile?.role === "admin";
-  const isSupporter = profile?.role === "supporter";
-
-  const canModerate =
-    isHeadAdmin ||
-    permissions.manage_members ||
-    permissions.manage_forum ||
-    permissions.manage_warnings ||
-    permissions.manage_restrictions;
-
-  const canManageRoles =
-    isHeadAdmin || permissions.manage_roles;
-
-  const canManageNews =
-    isHeadAdmin || permissions.manage_news;
-
-  const canViewLogs =
-    isHeadAdmin || permissions.view_admin_logs;
-
-  const canUseRewards =
-    isHeadAdmin ||
-    isAdmin ||
-    isSupporter ||
-    profile?.rewards_enabled === true;
-
-  function hasRestriction(feature) {
-    return restrictions.some(
-      (restriction) =>
-        restriction.feature === feature &&
-        restriction.is_active !== false
-    );
-  }
-
-  async function loadAll(currentUser) {
-    if (!currentUser) {
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-
-    const [
-      profileResult,
-      membersResult,
-      permissionsResult,
-      restrictionsResult,
-      forumResult,
-      newsResult,
-      logsResult,
-    ] = await Promise.all([
-      supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", currentUser.id)
-        .maybeSingle(),
-
-      supabase
-        .from("profiles")
-        .select("*")
-        .order("created_at", {
-          ascending: false,
-        }),
-
-      supabase
-        .from("admin_permissions")
-        .select("*")
-        .eq("user_id", currentUser.id)
-        .maybeSingle(),
-
-      supabase
-        .from("user_restrictions")
-        .select("*")
-        .eq("user_id", currentUser.id),
-
-      supabase
-        .from("forum_posts")
-        .select("*")
-        .order("created_at", {
-          ascending: false,
-        }),
-
-      supabase
-        .from("news")
-        .select("*")
-        .order("created_at", {
-          ascending: false,
-        }),
-
-      supabase
-        .from("admin_logs")
-        .select("*")
-        .order("created_at", {
-          ascending: false,
-        })
-        .limit(100),
-    ]);
-
-    if (profileResult.data) {
-      setProfile(profileResult.data);
-    }
-
-    setMembers(membersResult.data || []);
-
-    setPermissions({
-      ...DEFAULT_PERMISSIONS,
-      ...(permissionsResult.data || {}),
-    });
-
-    setRestrictions(
-      (restrictionsResult.data || []).filter(
-        (item) => item.is_active !== false
-      )
-    );
-
-    setForumPosts(forumResult.data || []);
-    setNewsPosts(newsResult.data || []);
-
-    if (isHeadAdmin || canViewLogs) {
-      setAdminLogs(logsResult.data || []);
-    }
-
-    setLoading(false);
-  }
+  const flash = (message) => {
+    setNotice(message);
+    window.setTimeout(() => setNotice(""), 3500);
+  };
 
   useEffect(() => {
-    async function init() {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      setSession(session);
-
-      if (session?.user) {
-        await loadAll(session.user);
-      } else {
-        setLoading(false);
-      }
-    }
-
-    init();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(
-      async (_event, newSession) => {
-        setSession(newSession);
-
-        if (newSession?.user) {
-          await loadAll(newSession.user);
-        } else {
-          setProfile(null);
-          setMembers([]);
-        }
-      }
-    );
-
+    supabase.auth.getSession().then(({data}) => setSession(data.session));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => setSession(s));
     return () => subscription.unsubscribe();
   }, []);
 
-  async function refresh() {
-    if (session?.user) {
-      await loadAll(session.user);
+  useEffect(() => {
+    if (!session?.user) {
+      setLoading(false);
+      return;
+    }
+    loadAll();
+  }, [session?.user?.id]);
+
+  async function rpc(name, args = {}) {
+    const { data, error } = await supabase.rpc(name, args);
+    if (error) throw error;
+    return data;
+  }
+
+  async function loadAll() {
+    try {
+      setLoading(true);
+      const [profile, memberData, forumData, newsData, access, logData] = await Promise.all([
+        supabase.from("profiles").select("*").eq("id", session.user.id).single(),
+        supabase.from("profiles").select("*").eq("account_status", "active").order("nickname"),
+        supabase.from("forum_posts").select("*, author:profiles!forum_posts_author_id_fkey(*)").order("created_at", {ascending:false}),
+        supabase.from("news").select("*, author:profiles!news_author_id_fkey(*)").order("created_at", {ascending:false}),
+        rpc("refresh_my_access"),
+        supabase.from("admin_logs").select("*").order("created_at", {ascending:false}).limit(100)
+      ]);
+
+      if (profile.error) throw profile.error;
+      setMe(profile.data);
+      setMembers(memberData.data || []);
+      setPosts(forumData.data || []);
+      setNews(newsData.data || []);
+      setPermissions(access?.permissions || DEFAULT_PERMISSIONS);
+      setRestrictions(access?.restrictions || []);
+      setLogs(logData.data || []);
+    } catch (e) {
+      console.error(e);
+      flash("Fehler beim Laden: " + e.message);
+    } finally {
+      setLoading(false);
     }
   }
 
-  async function writeAdminLog(
-    action,
-    targetUserId = null,
-    details = null
-  ) {
-    if (!session?.user) return;
-
-    await supabase.from("admin_logs").insert({
-      admin_id: session.user.id,
-      target_user_id: targetUserId,
-      action,
-      details,
-    });
+  async function reloadAccess() {
+    const access = await rpc("refresh_my_access");
+    setPermissions(access?.permissions || DEFAULT_PERMISSIONS);
+    setRestrictions(access?.restrictions || []);
+    const {data} = await supabase.from("profiles").select("*").eq("id", session.user.id).single();
+    if (data) setMe(data);
   }
 
-  async function createForumPost(event) {
-    event.preventDefault();
+  async function changeRole(userId, role) {
+    try {
+      await rpc("head_admin_set_role", { p_user_id: userId, p_role: role });
+      await loadAll();
+      flash("Rolle wurde aktualisiert.");
+    } catch(e) { flash(e.message); }
+  }
 
-    if (!session?.user) return;
-
-    if (hasRestriction("forum")) {
-      alert("Deine Forum-Funktion wurde gesperrt.");
-      return;
-    }
-
-    if (!forumTitle.trim() || !forumContent.trim()) {
-      alert("Bitte Titel und Inhalt eingeben.");
-      return;
-    }
-
-    const { error } = await supabase
-      .from("forum_posts")
-      .insert({
-        user_id: session.user.id,
-        title: forumTitle.trim(),
-        content: forumContent.trim(),
+  async function togglePermission(userId, permission, value) {
+    try {
+      await rpc("head_admin_set_permission", {
+        p_user_id: userId, p_permission: permission, p_allowed: value
       });
-
-    if (error) {
-      alert(error.message);
-      return;
-    }
-
-    setForumTitle("");
-    setForumContent("");
-
-    await refresh();
+      await loadAll();
+      flash("Berechtigung gespeichert.");
+    } catch(e) { flash(e.message); }
   }
 
-  async function deleteForumPost(post) {
-    const allowed =
-      isHeadAdmin ||
-      post.user_id === session?.user?.id ||
-      permissions.manage_forum;
-
-    if (!allowed) {
-      alert("Du hast keine Berechtigung.");
-      return;
-    }
-
-    if (!window.confirm("Beitrag wirklich löschen?")) {
-      return;
-    }
-
-    const { error } = await supabase
-      .from("forum_posts")
-      .delete()
-      .eq("id", post.id);
-
-    if (error) {
-      alert(error.message);
-      return;
-    }
-
-    await writeAdminLog(
-      "forum_post_deleted",
-      post.user_id,
-      {
-        post_id: post.id,
-        title: post.title,
-      }
-    );
-
-    await refresh();
-  }
-
-  async function editForumPost(post) {
-    const allowed =
-      isHeadAdmin ||
-      post.user_id === session?.user?.id ||
-      permissions.manage_forum;
-
-    if (!allowed) {
-      alert("Du hast keine Berechtigung.");
-      return;
-    }
-
-    const title = window.prompt(
-      "Titel bearbeiten:",
-      post.title
-    );
-
-    if (title === null) return;
-
-    const content = window.prompt(
-      "Beitrag bearbeiten:",
-      post.content
-    );
-
-    if (content === null) return;
-
-    const { error } = await supabase
-      .from("forum_posts")
-      .update({
-        title,
-        content,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", post.id);
-
-    if (error) {
-      alert(error.message);
-      return;
-    }
-
-    await writeAdminLog(
-      "forum_post_edited",
-      post.user_id,
-      {
-        post_id: post.id,
-      }
-    );
-
-    await refresh();
-  }
-
-  async function createNews(event) {
-    event.preventDefault();
-
-    if (!canManageNews) {
-      alert("Keine Berechtigung für News.");
-      return;
-    }
-
-    if (!newsTitle.trim() || !newsContent.trim()) {
-      alert("Bitte Titel und Inhalt eingeben.");
-      return;
-    }
-
-    const { error } = await supabase
-      .from("news")
-      .insert({
-        author_id: session.user.id,
-        title: newsTitle.trim(),
-        content: newsContent.trim(),
+  async function toggleMemberFeature(userId, feature, value) {
+    try {
+      await rpc("head_admin_set_member_feature", {
+        p_user_id: userId, p_feature: feature, p_allowed: value
       });
-
-    if (error) {
-      alert(error.message);
-      return;
-    }
-
-    setNewsTitle("");
-    setNewsContent("");
-
-    await writeAdminLog(
-      "news_created",
-      null,
-      {
-        title: newsTitle,
-      }
-    );
-
-    await refresh();
+      await loadAll();
+      flash("Freischaltung gespeichert.");
+    } catch(e) { flash(e.message); }
   }
 
-  async function deleteNews(post) {
-    if (!canManageNews) {
-      alert("Keine Berechtigung.");
-      return;
-    }
-
-    if (!window.confirm("News-Beitrag löschen?")) {
-      return;
-    }
-
-    const { error } = await supabase
-      .from("news")
-      .delete()
-      .eq("id", post.id);
-
-    if (error) {
-      alert(error.message);
-      return;
-    }
-
-    await writeAdminLog(
-      "news_deleted",
-      post.author_id,
-      {
-        news_id: post.id,
-      }
-    );
-
-    await refresh();
+  async function toggleRestriction(userId, feature, active) {
+    try {
+      if (!can("manage_restrictions")) throw new Error("Keine Berechtigung.");
+      await rpc("admin_set_restriction", {
+        p_user_id: userId, p_feature: feature, p_active: active
+      });
+      await loadAll();
+      flash(active ? "Funktion wurde gesperrt." : "Funktion wurde entsperrt.");
+    } catch(e) { flash(e.message); }
   }
 
-  async function changeRole(member, role) {
-    if (!canManageRoles) {
-      alert("Keine Berechtigung.");
-      return;
-    }
-
-    if (
-      member.role === "head_admin" &&
-      !isHeadAdmin
-    ) {
-      alert("Head Admin kann nur vom Head Admin geändert werden.");
-      return;
-    }
-
-    const { error } = await supabase
-      .from("profiles")
-      .update({
-        role,
-      })
-      .eq("id", member.id);
-
-    if (error) {
-      alert(error.message);
-      return;
-    }
-
-    await writeAdminLog(
-      "role_changed",
-      member.id,
-      {
-        old_role: member.role,
-        new_role: role,
-      }
-    );
-
-    await refresh();
-  }
-
-  async function toggleRestriction(member, feature) {
-    if (
-      !isHeadAdmin &&
-      !permissions.manage_restrictions
-    ) {
-      alert("Keine Berechtigung.");
-      return;
-    }
-
-    const { data: existing } = await supabase
-      .from("user_restrictions")
-      .select("*")
-      .eq("user_id", member.id)
-      .eq("feature", feature)
-      .maybeSingle();
-
-    if (existing) {
-      const { error } = await supabase
-        .from("user_restrictions")
-        .update({
-          is_active: !existing.is_active,
-        })
-        .eq("id", existing.id);
-
-      if (error) {
-        alert(error.message);
-        return;
-      }
-    } else {
-      const { error } = await supabase
-        .from("user_restrictions")
-        .insert({
-          user_id: member.id,
-          feature,
-          is_active: true,
+  async function savePost(post) {
+    try {
+      if (!post.title?.trim() || !post.content?.trim()) throw new Error("Titel und Inhalt sind erforderlich.");
+      if (editingPost?.id) {
+        const {error} = await supabase.from("forum_posts")
+          .update({title:post.title.trim(), content:post.content.trim(), updated_at:new Date().toISOString()})
+          .eq("id", editingPost.id);
+        if (error) throw error;
+      } else {
+        if (restricted("forum")) throw new Error("Deine Forum-Funktion ist derzeit gesperrt.");
+        const {error} = await supabase.from("forum_posts").insert({
+          author_id: session.user.id, title: post.title.trim(), content: post.content.trim()
         });
-
-      if (error) {
-        alert(error.message);
-        return;
+        if (error) throw error;
       }
-    }
-
-    await writeAdminLog(
-      "restriction_changed",
-      member.id,
-      {
-        feature,
-      }
-    );
-
-    await refresh();
+      setEditingPost(null);
+      await loadAll();
+      flash("Beitrag gespeichert.");
+    } catch(e) { flash(e.message); }
   }
 
-  async function updatePermission(
-    member,
-    permission,
-    value
-  ) {
-    if (!isHeadAdmin) {
-      alert(
-        "Nur der Head Admin darf Admin-Berechtigungen ändern."
-      );
-      return;
-    }
+  async function deletePost(id) {
+    if (!confirm("Beitrag wirklich löschen?")) return;
+    try {
+      const {error} = await supabase.from("forum_posts").delete().eq("id", id);
+      if (error) throw error;
+      await loadAll();
+      flash("Beitrag gelöscht.");
+    } catch(e) { flash(e.message); }
+  }
 
-    const { data: existing } = await supabase
-      .from("admin_permissions")
-      .select("*")
-      .eq("user_id", member.id)
-      .maybeSingle();
-
-    const data = {
-      ...DEFAULT_PERMISSIONS,
-      ...(existing || {}),
-      user_id: member.id,
-      [permission]: value,
-    };
-
-    const { error } = await supabase
-      .from("admin_permissions")
-      .upsert(data, {
-        onConflict: "user_id",
+  async function saveNews(item) {
+    try {
+      if (!can("manage_news")) throw new Error("Keine Berechtigung für News.");
+      const {error} = await supabase.from("news").insert({
+        author_id: session.user.id, title: item.title.trim(), content: item.content.trim()
       });
-
-    if (error) {
-      alert(error.message);
-      return;
-    }
-
-    await writeAdminLog(
-      "permission_changed",
-      member.id,
-      {
-        permission,
-        value,
-      }
-    );
-
-    await refresh();
-  }
-
-  async function toggleMemberRewards(member) {
-    if (!isHeadAdmin) {
-      alert(
-        "Nur der Head Admin kann Belohnungen freischalten."
-      );
-      return;
-    }
-
-    const { error } = await supabase
-      .from("profiles")
-      .update({
-        rewards_enabled: !member.rewards_enabled,
-      })
-      .eq("id", member.id);
-
-    if (error) {
-      alert(error.message);
-      return;
-    }
-
-    await writeAdminLog(
-      "rewards_changed",
-      member.id,
-      {
-        enabled: !member.rewards_enabled,
-      }
-    );
-
-    await refresh();
+      if (error) throw error;
+      await loadAll();
+      flash("News veröffentlicht.");
+    } catch(e) { flash(e.message); }
   }
 
   async function logout() {
     await supabase.auth.signOut();
-  }
-
-  const filteredMembers = useMemo(() => {
-    const search = memberSearch.toLowerCase();
-
-    return members.filter((member) => {
-      return [
-        member.first_name,
-        member.last_name,
-        member.nickname,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase()
-        .includes(search);
-    });
-  }, [members, memberSearch]);
-
-  if (loading) {
-    return (
-      <div className="loading-screen">
-        <div className="loading-logo">
-          ENNSTAL <span>CONNECT</span>
-        </div>
-
-        <p>Community wird geladen ...</p>
-      </div>
-    );
+    setMe(null);
   }
 
   if (!session) {
-    return (
-      <div className="login-screen">
-        <div className="login-card">
-          <h1>
-            ENNSTAL <span>CONNECT</span>
-          </h1>
-
-          <p>
-            Bitte melde dich an, um die Community zu nutzen.
-          </p>
-
-          <button
-            className="primary"
-            onClick={() =>
-              supabase.auth.signInWithOAuth({
-                provider: "google",
-              })
-            }
-          >
-            Anmelden
-          </button>
-        </div>
-      </div>
-    );
+    return <AuthScreen onDone={() => supabase.auth.getSession().then(({data}) => setSession(data.session)} />;
   }
+
+  const nav = [
+    ["home", Home, "Startseite"],
+    ["members", Users, "Mitglieder"],
+    ["forum", MessageCircle, "Forum"],
+    ["news", Newspaper, "News & Beiträge"],
+    ["rewards", Gift, "Belohnungen"],
+    ["profile", Settings, "Mein Profil"]
+  ];
+
+  if (isAdmin) nav.push(["admin", Shield, "Admin-Bereich"]);
+  if (isHead) nav.push(["logs", Crown, "Admin-Logbuch"]);
 
   return (
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand">
-          <div className="brand-icon">★</div>
-
-          <div>
-            <strong>
-              ENNSTAL <span>CONNECT</span>
-            </strong>
-
-            <small>DEINE COMMUNITY</small>
-          </div>
+          <div className="brand-mark"><Star fill="currentColor"/></div>
+          <div><b>ennstal</b><span>connect</span></div>
         </div>
 
-        <button
-          className="profile-summary"
-          onClick={() =>
-            setActivePage("profile")
-          }
-        >
-          <Avatar profile={profile} size="small" />
-
-          <div className="profile-summary-text">
-            <strong>{displayName(profile)}</strong>
-
-            <RoleBadge role={profile?.role} />
+        <button className={`identity-card role-${me?.role}`} onClick={() => setView("profile")}>
+          <Avatar profile={me}/>
+          <div className="identity-copy">
+            <strong>{displayName(me)}</strong>
+            <RoleBadge role={me?.role}/>
           </div>
         </button>
 
-        <nav className="navigation">
-          <button
-            className={
-              activePage === "home" ? "active" : ""
-            }
-            onClick={() =>
-              setActivePage("home")
-            }
-          >
-            ⌂ Startseite
-          </button>
-
-          <button
-            className={
-              activePage === "members" ? "active" : ""
-            }
-            onClick={() =>
-              setActivePage("members")
-            }
-          >
-            ♙ Mitglieder
-          </button>
-
-          <button
-            className={
-              activePage === "forum" ? "active" : ""
-            }
-            disabled={hasRestriction("forum")}
-            onClick={() =>
-              setActivePage("forum")
-            }
-          >
-            ☏ Forum
-          </button>
-
-          <button
-            className={
-              activePage === "news" ? "active" : ""
-            }
-            disabled={hasRestriction("news")}
-            onClick={() =>
-              setActivePage("news")
-            }
-          >
-            ▣ News & Beiträge
-          </button>
-
-          <button
-            className={
-              activePage === "rewards" ? "active" : ""
-            }
-            disabled={!canUseRewards}
-            onClick={() =>
-              setActivePage("rewards")
-            }
-          >
-            🎁 Belohnungen
-          </button>
-
-          <button
-            className={
-              activePage === "profile" ? "active" : ""
-            }
-            disabled={hasRestriction("profile")}
-            onClick={() =>
-              setActivePage("profile")
-            }
-          >
-            ⚙ Mein Profil
-          </button>
-
-          {canModerate && (
-            <button
-              className={
-                activePage === "admin"
-                  ? "active"
-                  : ""
-              }
-              onClick={() =>
-                setActivePage("admin")
-              }
-            >
-              ★ Admin-Bereich
+        <nav>
+          {nav.map(([id, Icon, label]) => (
+            <button key={id} className={view===id ? "active":""} onClick={() => setView(id)}>
+              <Icon size={18}/><span>{label}</span>
             </button>
-          )}
-
-          {canViewLogs && (
-            <button
-              className={
-                activePage === "logs"
-                  ? "active"
-                  : ""
-              }
-              onClick={() =>
-                setActivePage("logs")
-              }
-            >
-              👑 Admin-Logbuch
-            </button>
-          )}
+          ))}
         </nav>
 
-        <button
-          className="logout-button"
-          onClick={logout}
-        >
-          Abmelden
-        </button>
+        <button className="logout" onClick={logout}><LogOut size={18}/> Abmelden</button>
       </aside>
 
-      <main className="main-content">
-        {activePage === "home" && (
-          <HomePage
-            profile={profile}
-            forumPosts={forumPosts}
-            newsPosts={newsPosts}
-            onNavigate={setActivePage}
-          />
-        )}
-
-        {activePage === "members" && (
-          <section className="page">
-            <div className="page-header">
-              <div>
-                <span className="eyebrow">
-                  COMMUNITY
-                </span>
-
-                <h1>Mitglieder</h1>
-
-                <p>
-                  Entdecke die Menschen hinter
-                  Ennstal Connect.
-                </p>
-              </div>
-            </div>
-
-            <input
-              className="search-input"
-              placeholder="Mitglieder suchen ..."
-              value={memberSearch}
-              onChange={(event) =>
-                setMemberSearch(event.target.value)
-              }
-            />
-
-            <div className="member-grid">
-              {filteredMembers.map((member) => (
-                <MemberCard
-                  key={member.id}
-                  member={member}
-                  onOpenAdmin={() => {
-                    setActivePage("admin");
-                  }}
-                />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {activePage === "forum" && (
-          <ForumPage
-            profile={profile}
-            forumPosts={forumPosts}
-            title={forumTitle}
-            content={forumContent}
-            setTitle={setForumTitle}
-            setContent={setForumContent}
-            onCreate={createForumPost}
-            onDelete={deleteForumPost}
-            onEdit={editForumPost}
-            isHeadAdmin={isHeadAdmin}
-            canManageForum={
-              permissions.manage_forum
-            }
-          />
-        )}
-
-        {activePage === "news" && (
-          <NewsPage
-            profile={profile}
-            newsPosts={newsPosts}
-            title={newsTitle}
-            content={newsContent}
-            setTitle={setNewsTitle}
-            setContent={setNewsContent}
-            onCreate={createNews}
-            onDelete={deleteNews}
-            canManageNews={canManageNews}
-          />
-        )}
-
-        {activePage === "rewards" && (
-          <RewardsPage
-            canUseRewards={canUseRewards}
-          />
-        )}
-
-        {activePage === "profile" && (
-          <ProfilePage
-            profile={profile}
-            isHeadAdmin={isHeadAdmin}
-            onRefresh={refresh}
-          />
-        )}
-
-        {activePage === "admin" && (
-          <AdminPage
-            members={members}
-            isHeadAdmin={isHeadAdmin}
-            permissions={permissions}
-            onChangeRole={changeRole}
-            onToggleRestriction={
-              toggleRestriction
-            }
-            onUpdatePermission={
-              updatePermission
-            }
-            onToggleRewards={
-              toggleMemberRewards
-            }
-          />
-        )}
-
-        {activePage === "logs" && (
-          <AdminLogsPage
-            logs={adminLogs}
-            members={members}
-          />
+      <main className="content">
+        {notice && <div className="notice">{notice}</div>}
+        {loading ? <div className="loading">ENNSTAL CONNECT wird geladen…</div> : (
+          <>
+            {view === "home" && <HomeView me={me} members={members} posts={posts} news={news} setView={setView}/>}
+            {view === "members" && <MembersView members={members} me={me} isHead={isHead} can={can}
+              changeRole={changeRole} togglePermission={togglePermission}
+              toggleRestriction={toggleRestriction} toggleMemberFeature={toggleMemberFeature}/>}
+            {view === "forum" && <ForumView posts={posts} me={me} can={can} editingPost={editingPost}
+              setEditingPost={setEditingPost} savePost={savePost} deletePost={deletePost} restricted={restricted}/>}
+            {view === "news" && <NewsView news={news} me={me} can={can} saveNews={saveNews}/>}
+            {view === "rewards" && <RewardsView privileged={privileged} me={me}/>}
+            {view === "profile" && <ProfileView me={me} isHead={isHead} privileged={privileged} reload={loadAll} flash={flash}/>}
+            {view === "admin" && <AdminView members={members} me={me} isHead={isHead} can={can}
+              changeRole={changeRole} togglePermission={togglePermission} toggleRestriction={toggleRestriction}
+              toggleMemberFeature={toggleMemberFeature}/>}
+            {view === "logs" && <LogsView logs={logs}/>}
+          </>
         )}
       </main>
     </div>
   );
 }
 
-function HomePage({
-  profile,
-  forumPosts,
-  newsPosts,
-  onNavigate,
-}) {
-  return (
-    <section className="page">
-      <div className="hero">
-        <div className="hero-content">
-          <span className="eyebrow">
-            ENNSTAL CONNECT
-          </span>
+function AuthScreen() {
+  const [email,setEmail]=useState("");
+  const [password,setPassword]=useState("");
+  const [mode,setMode]=useState("login");
+  const [message,setMessage]=useState("");
 
-          <h1>
-            Willkommen zurück,
-            <br />
-            {displayName(profile)}
-          </h1>
-
-          <p>
-            Deine regionale Community für
-            Ennstal und Obersteiermark.
-          </p>
-
-          <div className="hero-actions">
-            <button
-              className="primary"
-              onClick={() =>
-                onNavigate("forum")
-              }
-            >
-              Zum Forum
-            </button>
-
-            <button
-              className="secondary"
-              onClick={() =>
-                onNavigate("members")
-              }
-            >
-              Mitglieder entdecken
-            </button>
-          </div>
-        </div>
-
-        <RoleBadge role={profile?.role} />
-      </div>
-
-      <div className="dashboard-grid">
-        <button
-          className="dashboard-card"
-          onClick={() =>
-            onNavigate("members")
-          }
-        >
-          <span className="dashboard-icon">
-            👥
-          </span>
-
-          <strong>Community</strong>
-
-          <p>
-            Mitglieder entdecken und verbinden.
-          </p>
-        </button>
-
-        <button
-          className="dashboard-card"
-          onClick={() =>
-            onNavigate("forum")
-          }
-        >
-          <span className="dashboard-icon">
-            💬
-          </span>
-
-          <strong>Forum</strong>
-
-          <p>
-            {forumPosts.length} Diskussionen
-            in der Community.
-          </p>
-        </button>
-
-        <button
-          className="dashboard-card"
-          onClick={() =>
-            onNavigate("news")
-          }
-        >
-          <span className="dashboard-icon">
-            📰
-          </span>
-
-          <strong>News</strong>
-
-          <p>
-            {newsPosts.length} aktuelle
-            Beiträge.
-          </p>
-        </button>
-
-        <button
-          className="dashboard-card"
-          onClick={() =>
-            onNavigate("rewards")
-          }
-        >
-          <span className="dashboard-icon">
-            🎁
-          </span>
-
-          <strong>Belohnungen</strong>
-
-          <p>
-            Entdecke deine verfügbaren Extras.
-          </p>
-        </button>
-      </div>
-
-      <div className="content-grid">
-        <section className="panel">
-          <div className="panel-header">
-            <h2>Aktuelle Diskussionen</h2>
-
-            <button
-              className="text-button"
-              onClick={() =>
-                onNavigate("forum")
-              }
-            >
-              Alle anzeigen →
-            </button>
-          </div>
-
-          {forumPosts.slice(0, 3).map((post) => (
-            <article
-              className="mini-post"
-              key={post.id}
-            >
-              <h3>{post.title}</h3>
-
-              <p>{post.content}</p>
-            </article>
-          ))}
-
-          {!forumPosts.length && (
-            <div className="empty-state">
-              Noch keine Diskussionen vorhanden.
-            </div>
-          )}
-        </section>
-
-        <section className="panel">
-          <div className="panel-header">
-            <h2>Neuigkeiten</h2>
-
-            <button
-              className="text-button"
-              onClick={() =>
-                onNavigate("news")
-              }
-            >
-              Alle anzeigen →
-            </button>
-          </div>
-
-          {newsPosts.slice(0, 3).map((post) => (
-            <article
-              className="mini-post"
-              key={post.id}
-            >
-              <h3>{post.title}</h3>
-
-              <p>{post.content}</p>
-            </article>
-          ))}
-
-          {!newsPosts.length && (
-            <div className="empty-state">
-              Noch keine News vorhanden.
-            </div>
-          )}
-        </section>
-      </div>
-    </section>
-  );
-}
-
-function MemberCard({ member }) {
-  return (
-    <article
-      className={`member-card member-role-${member.role}`}
-    >
-      <Avatar profile={member} />
-
-      <RoleBadge role={member.role} />
-
-      <h2>{displayName(member)}</h2>
-
-      <p className="member-real-name">
-        {[member.first_name, member.last_name]
-          .filter(Boolean)
-          .join(" ") ||
-          "Name nicht öffentlich"}
-      </p>
-
-      {member.birth_date && (
-        <small>
-          {calculateAge(member.birth_date)} Jahre
-        </small>
-      )}
-    </article>
-  );
-}
-
-function ForumPage({
-  profile,
-  forumPosts,
-  title,
-  content,
-  setTitle,
-  setContent,
-  onCreate,
-  onDelete,
-  onEdit,
-  isHeadAdmin,
-  canManageForum,
-}) {
-  return (
-    <section className="page">
-      <span className="eyebrow">
-        COMMUNITY
-      </span>
-
-      <h1>Forum</h1>
-
-      <p className="page-intro">
-        Diskutiere mit der Community.
-      </p>
-
-      <form
-        className="create-form panel"
-        onSubmit={onCreate}
-      >
-        <input
-          placeholder="Titel deiner Diskussion"
-          value={title}
-          onChange={(event) =>
-            setTitle(event.target.value)
-          }
-        />
-
-        <textarea
-          placeholder="Was möchtest du besprechen?"
-          value={content}
-          onChange={(event) =>
-            setContent(event.target.value)
-          }
-        />
-
-        <button className="primary">
-          Beitrag veröffentlichen
-        </button>
-      </form>
-
-      <div className="post-list">
-        {forumPosts.map((post) => {
-          const isOwn =
-            post.user_id === profile?.id;
-
-          const canEdit =
-            isHeadAdmin ||
-            canManageForum ||
-            isOwn;
-
-          return (
-            <article
-              className="post-card"
-              key={post.id}
-            >
-              <div className="post-card-header">
-                <div>
-                  <h2>{post.title}</h2>
-
-                  <small>
-                    {formatDate(post.created_at)}
-                  </small>
-                </div>
-
-                {canEdit && (
-                  <div className="post-actions">
-                    <button
-                      onClick={() =>
-                        onEdit(post)
-                      }
-                    >
-                      Bearbeiten
-                    </button>
-
-                    <button
-                      className="danger-button"
-                      onClick={() =>
-                        onDelete(post)
-                      }
-                    >
-                      Löschen
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              <p>{post.content}</p>
-            </article>
-          );
-        })}
-
-        {!forumPosts.length && (
-          <div className="empty-state panel">
-            Noch keine Beiträge vorhanden.
-          </div>
-        )}
-      </div>
-    </section>
-  );
-}
-
-function NewsPage({
-  newsPosts,
-  title,
-  content,
-  setTitle,
-  setContent,
-  onCreate,
-  onDelete,
-  canManageNews,
-}) {
-  return (
-    <section className="page">
-      <span className="eyebrow">
-        COMMUNITY NEWS
-      </span>
-
-      <h1>News & Beiträge</h1>
-
-      {canManageNews && (
-        <form
-          className="create-form panel"
-          onSubmit={onCreate}
-        >
-          <input
-            placeholder="Titel der News"
-            value={title}
-            onChange={(event) =>
-              setTitle(event.target.value)
-            }
-          />
-
-          <textarea
-            placeholder="Was gibt es Neues?"
-            value={content}
-            onChange={(event) =>
-              setContent(event.target.value)
-            }
-          />
-
-          <button className="primary">
-            News veröffentlichen
-          </button>
-        </form>
-      )}
-
-      <div className="post-list">
-        {newsPosts.map((post) => (
-          <article
-            className="post-card news-card"
-            key={post.id}
-          >
-            <div className="post-card-header">
-              <div>
-                <span className="eyebrow">
-                  NEWS
-                </span>
-
-                <h2>{post.title}</h2>
-
-                <small>
-                  {formatDate(post.created_at)}
-                </small>
-              </div>
-
-              {canManageNews && (
-                <button
-                  className="danger-button"
-                  onClick={() =>
-                    onDelete(post)
-                  }
-                >
-                  Löschen
-                </button>
-              )}
-            </div>
-
-            <p>{post.content}</p>
-          </article>
-        ))}
-
-        {!newsPosts.length && (
-          <div className="empty-state panel">
-            Noch keine News vorhanden.
-          </div>
-        )}
-      </div>
-    </section>
-  );
-}
-
-function RewardsPage({ canUseRewards }) {
-  if (!canUseRewards) {
-    return (
-      <section className="page">
-        <h1>Belohnungen</h1>
-
-        <div className="panel empty-state">
-          Diese Funktion wurde für dein Konto
-          noch nicht freigeschaltet.
-        </div>
-      </section>
-    );
+  async function submit(e) {
+    e.preventDefault();
+    const result = mode==="login"
+      ? await supabase.auth.signInWithPassword({email,password})
+      : await supabase.auth.signUp({email,password});
+    setMessage(result.error?.message || (mode==="login" ? "Angemeldet." : "Registrierung erfolgreich. Bitte E-Mail bestätigen."));
   }
 
-  return (
-    <section className="page">
-      <span className="eyebrow">
-        DEINE EXTRAS
-      </span>
-
-      <h1>Belohnungen</h1>
-
-      <div className="rewards-grid">
-        <article className="reward-card">
-          <span>🎨</span>
-          <h2>Profilgestaltung</h2>
-          <p>
-            Gestalte dein Profil individueller.
-          </p>
-        </article>
-
-        <article className="reward-card">
-          <span>🖼</span>
-          <h2>Profilbild</h2>
-          <p>
-            Personalisiere dein Community-Profil.
-          </p>
-        </article>
-
-        <article className="reward-card">
-          <span>⭐</span>
-          <h2>Community Extras</h2>
-          <p>
-            Entdecke zusätzliche Funktionen.
-          </p>
-        </article>
-      </div>
-    </section>
-  );
+  return <div className="auth-page"><form className="auth-card" onSubmit={submit}>
+    <div className="brand auth-brand"><b>ennstal</b><span>connect</span></div>
+    <h1>{mode==="login" ? "Willkommen zurück" : "Mitglied werden"}</h1>
+    <input type="email" placeholder="E-Mail" value={email} onChange={e=>setEmail(e.target.value)} required/>
+    <input type="password" placeholder="Passwort" value={password} onChange={e=>setPassword(e.target.value)} required/>
+    <button className="primary">{mode==="login" ? "Anmelden" : "Registrieren"}</button>
+    <button type="button" className="link-button" onClick={()=>setMode(mode==="login"?"signup":"login")}>
+      {mode==="login" ? "Noch kein Konto? Registrieren" : "Bereits Mitglied? Anmelden"}
+    </button>
+    {message && <p className="form-message">{message}</p>}
+  </form></div>
 }
 
-function ProfilePage({
-  profile,
-  isHeadAdmin,
-  onRefresh,
-}) {
-  const [draft, setDraft] = useState(profile || {});
+function HomeView({me,members,posts,news,setView}) {
+  return <div className="page">
+    <section className="hero">
+      <div className="hero-logo"><div className="brand-mark"><Star fill="currentColor"/></div><div><b>ennstal</b><span>connect</span></div></div>
+      <div className="hero-text"><p className="eyebrow">DEINE REGION · DEINE COMMUNITY</p><h1>Willkommen zurück, {displayName(me)}.</h1><p>Alles Wichtige aus der Community auf einen Blick.</p></div>
+      <RoleBadge role={me?.role}/>
+    </section>
 
-  useEffect(() => {
-    setDraft(profile || {});
-  }, [profile]);
+    <section className="stats-grid">
+      <Stat label="Mitglieder" value={members.length} icon={<Users/>}/>
+      <Stat label="Diskussionen" value={posts.length} icon={<MessageCircle/>}/>
+      <Stat label="Neuigkeiten" value={news.length} icon={<Newspaper/>}/>
+    </section>
 
-  async function save(event) {
-    event.preventDefault();
+    <section className="dashboard-grid">
+      <div className="panel"><div className="panel-head"><div><span className="eyebrow">COMMUNITY</span><h2>Aktuelle Diskussionen</h2></div><button onClick={()=>setView("forum")}>Alle ansehen</button></div>
+        {posts.slice(0,4).map(p=><article className="compact-post" key={p.id}><Avatar profile={p.author}/><div><strong>{p.title}</strong><span>{displayName(p.author)} · {new Date(p.created_at).toLocaleDateString("de-DE")}</span></div></article>)}
+        {!posts.length && <Empty text="Noch keine Diskussionen vorhanden."/>}
+      </div>
+      <div className="panel"><div className="panel-head"><div><span className="eyebrow">AKTUELL</span><h2>News</h2></div><button onClick={()=>setView("news")}>Alle ansehen</button></div>
+        {news.slice(0,4).map(n=><article className="compact-post" key={n.id}><div className="news-dot"><Newspaper size={16}/></div><div><strong>{n.title}</strong><span>{new Date(n.created_at).toLocaleDateString("de-DE")}</span></div></article>)}
+        {!news.length && <Empty text="Noch keine News veröffentlicht."/>}
+      </div>
+    </section>
+  </div>
+}
 
-    const update = {
-      nickname: draft.nickname || null,
-      bio: draft.bio || null,
-      avatar_url: draft.avatar_url || null,
-      profile_accent:
-        draft.profile_accent || "#ff6a00",
-    };
+function MembersView(props) {
+  const [search,setSearch]=useState("");
+  const filtered=props.members.filter(m=>displayName(m).toLowerCase().includes(search.toLowerCase()) || `${m.first_name||""} ${m.last_name||""}`.toLowerCase().includes(search.toLowerCase()));
+  return <div className="page">
+    <PageTitle eyebrow="COMMUNITY" title="Mitglieder" subtitle="Entdecke und verwalte die Community."/>
+    <input className="search" placeholder="Mitglieder suchen…" value={search} onChange={e=>setSearch(e.target.value)}/>
+    <div className="member-grid">{filtered.map(m=><MemberCard key={m.id} member={m} {...props}/>)}</div>
+  </div>
+}
 
-    if (isHeadAdmin) {
-      update.first_name = draft.first_name;
-      update.last_name = draft.last_name;
-      update.birth_date = draft.birth_date;
+function MemberCard({member,me,isHead,can,changeRole,togglePermission,toggleRestriction,toggleMemberFeature}) {
+  const [open,setOpen]=useState(false);
+  const isSelf=member.id===me?.id;
+  const showTools=!isSelf && (isHead || can("manage_members"));
+  return <article className={`member-card role-${member.role}`}>
+    <div className="member-top"><Avatar profile={member} size="xl"/><RoleBadge role={member.role}/></div>
+    <h2>{displayName(member)}</h2>
+    <p>{member.first_name && member.last_name ? `${member.first_name} ${member.last_name}` : "Community-Mitglied"}</p>
+    {showTools && <button className="secondary" onClick={()=>setOpen(!open)}>{open ? "Werkzeuge schließen" : "Admin-Werkzeuge"}</button>}
+    {open && <div className="admin-tools">
+      {isHead && <label>Rolle<select value={member.role} onChange={e=>changeRole(member.id,e.target.value)}>
+        <option value="member">Mitglied</option><option value="supporter">Supporter</option><option value="admin">Admin</option>
+      </select></label>}
+      {can("manage_restrictions") && <div className="tool-block"><b>Funktionen sperren</b>
+        {["messages","forum","profile_edit","news"].map(f=><Toggle key={f} label={f} checked={false} onChange={v=>toggleRestriction(member.id,f,v)}/>)}
+      </div>}
+      {isHead && member.role==="admin" && <div className="tool-block"><b>Admin-Berechtigungen</b>
+        {Object.keys(DEFAULT_PERMISSIONS).map(p=><Toggle key={p} label={p} checked={false} onChange={v=>togglePermission(member.id,p,v)}/>)}
+      </div>}
+      {isHead && member.role==="member" && <div className="tool-block"><b>Mitglied freischalten</b>
+        <Toggle label="Belohnungen" checked={false} onChange={v=>toggleMemberFeature(member.id,"rewards",v)}/>
+        <Toggle label="Profilbild-Upload" checked={false} onChange={v=>toggleMemberFeature(member.id,"avatar_upload",v)}/>
+      </div>}
+    </div>}
+  </article>
+}
+
+function ForumView({posts,me,can,editingPost,setEditingPost,savePost,deletePost,restricted}) {
+  const [draft,setDraft]=useState({title:"",content:""});
+  const isEditing=editingPost!==null;
+  const submit=e=>{e.preventDefault(); savePost(isEditing?{...draft,id:editingPost.id}:draft); setDraft({title:"",content:""});};
+  useEffect(()=>{if(editingPost)setDraft({title:editingPost.title,content:editingPost.content});},[editingPost]);
+
+  return <div className="page">
+    <PageTitle eyebrow="COMMUNITY" title="Forum" subtitle="Diskutiere mit der Community."/>
+    {!restricted("forum") && <form className="composer panel" onSubmit={submit}>
+      <input placeholder="Titel deiner Diskussion" value={draft.title} onChange={e=>setDraft({...draft,title:e.target.value})} required/>
+      <textarea placeholder="Was möchtest du besprechen?" value={draft.content} onChange={e=>setDraft({...draft,content:e.target.value})} required/>
+      <div className="row"><button className="primary">{isEditing?"Änderung speichern":"Beitrag veröffentlichen"}</button>{isEditing&&<button type="button" className="secondary" onClick={()=>setEditingPost(null)}>Abbrechen</button>}</div>
+    </form>}
+    {restricted("forum") && <div className="restriction"><Lock/> Deine Forum-Funktion wurde eingeschränkt.</div>}
+    <div className="post-list">{posts.map(p=>{
+      const owner=p.author_id===me.id;
+      const moderator=me.role==="head_admin" || (can("manage_forum") && ["admin","head_admin"].includes(me.role));
+      return <article className="post-card" key={p.id}><div className="post-author"><Avatar profile={p.author}/><div><b>{displayName(p.author)}</b><RoleBadge role={p.author?.role}/></div></div><h2>{p.title}</h2><p>{p.content}</p><div className="post-footer"><span>{new Date(p.created_at).toLocaleString("de-DE")}</span>{(owner||moderator)&&<div><button onClick={()=>setEditingPost(p)}><Edit3 size={15}/> Bearbeiten</button><button className="danger-text" onClick={()=>deletePost(p.id)}><Trash2 size={15}/> Löschen</button></div>}</div></article>
+    })}</div>
+    {!posts.length&&<Empty text="Starte die erste Diskussion."/>}
+  </div>
+}
+
+function NewsView({news,can,saveNews}) {
+  const [draft,setDraft]=useState({title:"",content:""});
+  return <div className="page"><PageTitle eyebrow="AKTUELL" title="News & Beiträge" subtitle="Neuigkeiten aus ENNSTAL CONNECT."/>
+    {can("manage_news")&&<form className="composer panel" onSubmit={e=>{e.preventDefault();saveNews(draft);setDraft({title:"",content:""});}}><input placeholder="Überschrift" value={draft.title} onChange={e=>setDraft({...draft,title:e.target.value})}/><textarea placeholder="Neuigkeit schreiben…" value={draft.content} onChange={e=>setDraft({...draft,content:e.target.value})}/><button className="primary">News veröffentlichen</button></form>}
+    <div className="news-list">{news.map(n=><article className="news-card" key={n.id}><span className="eyebrow">{new Date(n.created_at).toLocaleDateString("de-DE")}</span><h2>{n.title}</h2><p>{n.content}</p></article>)}</div>
+    {!news.length&&<Empty text="Noch keine News vorhanden."/>
     }
-
-    const { error } = await supabase
-      .from("profiles")
-      .update(update)
-      .eq("id", profile.id);
-
-    if (error) {
-      alert(error.message);
-      return;
-    }
-
-    alert("Profil gespeichert.");
-
-    await onRefresh();
-  }
-
-  return (
-    <section className="page">
-      <h1>Mein Profil</h1>
-
-      <form
-        className="profile-form panel"
-        onSubmit={save}
-      >
-        <div className="profile-preview">
-          <Avatar profile={draft} size="large" />
-
-          <div>
-            <h2>{displayName(draft)}</h2>
-
-            <RoleBadge role={profile?.role} />
-          </div>
-        </div>
-
-        {isHeadAdmin && (
-          <div className="form-grid">
-            <label>
-              Vorname
-              <input
-                required
-                value={draft.first_name || ""}
-                onChange={(event) =>
-                  setDraft({
-                    ...draft,
-                    first_name:
-                      event.target.value,
-                  })
-                }
-              />
-            </label>
-
-            <label>
-              Nachname
-              <input
-                required
-                value={draft.last_name || ""}
-                onChange={(event) =>
-                  setDraft({
-                    ...draft,
-                    last_name:
-                      event.target.value,
-                  })
-                }
-              />
-            </label>
-
-            <label>
-              Geburtsdatum
-              <input
-                type="date"
-                required
-                value={draft.birth_date || ""}
-                onChange={(event) =>
-                  setDraft({
-                    ...draft,
-                    birth_date:
-                      event.target.value,
-                  })
-                }
-              />
-            </label>
-          </div>
-        )}
-
-        {!isHeadAdmin && (
-          <div className="notice">
-            Vorname, Nachname und Geburtsdatum
-            können nach der Registrierung nur
-            vom Head Admin geändert werden.
-          </div>
-        )}
-
-        <label>
-          Benutzername
-          <input
-            value={draft.nickname || ""}
-            onChange={(event) =>
-              setDraft({
-                ...draft,
-                nickname: event.target.value,
-              })
-            }
-          />
-        </label>
-
-        <label>
-          Über mich
-          <textarea
-            value={draft.bio || ""}
-            onChange={(event) =>
-              setDraft({
-                ...draft,
-                bio: event.target.value,
-              })
-            }
-          />
-        </label>
-
-        <label>
-          Profilbild URL
-          <input
-            value={draft.avatar_url || ""}
-            onChange={(event) =>
-              setDraft({
-                ...draft,
-                avatar_url: event.target.value,
-              })
-            }
-          />
-        </label>
-
-        <label>
-          Akzentfarbe
-          <input
-            type="color"
-            value={
-              draft.profile_accent ||
-              "#ff6a00"
-            }
-            onChange={(event) =>
-              setDraft({
-                ...draft,
-                profile_accent:
-                  event.target.value,
-              })
-            }
-          />
-        </label>
-
-        <button className="primary">
-          Profil speichern
-        </button>
-      </form>
-    </section>
-  );
+  </div>
 }
 
-function AdminPage({
-  members,
-  isHeadAdmin,
-  permissions,
-  onChangeRole,
-  onToggleRestriction,
-  onUpdatePermission,
-  onToggleRewards,
-}) {
-  const [selectedMember, setSelectedMember] =
-    useState(null);
-
-  return (
-    <section className="page">
-      <span className="eyebrow">
-        MODERATION
-      </span>
-
-      <h1>Admin-Bereich</h1>
-
-      <div className="admin-layout">
-        <div className="panel">
-          <h2>Mitglieder verwalten</h2>
-
-          <div className="admin-member-list">
-            {members.map((member) => (
-              <button
-                className={`admin-member ${
-                  selectedMember?.id === member.id
-                    ? "selected"
-                    : ""
-                }`}
-                key={member.id}
-                onClick={() =>
-                  setSelectedMember(member)
-                }
-              >
-                <Avatar
-                  profile={member}
-                  size="small"
-                />
-
-                <div>
-                  <strong>
-                    {displayName(member)}
-                  </strong>
-
-                  <RoleBadge
-                    role={member.role}
-                  />
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="panel admin-control-panel">
-          {!selectedMember && (
-            <div className="empty-state">
-              Wähle ein Mitglied aus.
-            </div>
-          )}
-
-          {selectedMember && (
-            <>
-              <div className="selected-member">
-                <Avatar
-                  profile={selectedMember}
-                />
-
-                <div>
-                  <h2>
-                    {displayName(selectedMember)}
-                  </h2>
-
-                  <RoleBadge
-                    role={selectedMember.role}
-                  />
-                </div>
-              </div>
-
-              {canChangeRole(
-                isHeadAdmin,
-                permissions
-              ) && (
-                <>
-                  <h3>Rolle</h3>
-
-                  <div className="role-actions">
-                    <button
-                      onClick={() =>
-                        onChangeRole(
-                          selectedMember,
-                          "member"
-                        )
-                      }
-                    >
-                      Mitglied
-                    </button>
-
-                    <button
-                      onClick={() =>
-                        onChangeRole(
-                          selectedMember,
-                          "supporter"
-                        )
-                      }
-                    >
-                      ✦ Supporter
-                    </button>
-
-                    <button
-                      onClick={() =>
-                        onChangeRole(
-                          selectedMember,
-                          "admin"
-                        )
-                      }
-                    >
-                      ★ Admin
-                    </button>
-
-                    {isHeadAdmin && (
-                      <button
-                        onClick={() =>
-                          onChangeRole(
-                            selectedMember,
-                            "head_admin"
-                          )
-                        }
-                      >
-                        👑 Head Admin
-                      </button>
-                    )}
-                  </div>
-                </>
-              )}
-
-              <h3>Funktionen sperren</h3>
-
-              <div className="restriction-actions">
-                {[
-                  "forum",
-                  "news",
-                  "messages",
-                  "profile",
-                ].map((feature) => (
-                  <button
-                    key={feature}
-                    onClick={() =>
-                      onToggleRestriction(
-                        selectedMember,
-                        feature
-                      )
-                    }
-                  >
-                    🔒 {feature}
-                  </button>
-                ))}
-              </div>
-
-              {isHeadAdmin && (
-                <>
-                  <h3>
-                    Admin-Berechtigungen
-                  </h3>
-
-                  <AdminPermissionPanel
-                    member={selectedMember}
-                    onUpdate={
-                      onUpdatePermission
-                    }
-                  />
-
-                  <h3>Belohnungen</h3>
-
-                  <button
-                    className="primary"
-                    onClick={() =>
-                      onToggleRewards(
-                        selectedMember
-                      )
-                    }
-                  >
-                    {selectedMember.rewards_enabled
-                      ? "Belohnungen sperren"
-                      : "Belohnungen freischalten"}
-                  </button>
-                </>
-              )}
-            </>
-          )}
-        </div>
-      </div>
-    </section>
-  );
+function RewardsView({privileged,me}) {
+  return <div className="page"><PageTitle eyebrow="BONUS" title="Belohnungen" subtitle="Deine Vorteile und Community-Belohnungen."/>
+    {privileged||me?.member_features?.rewards ? <div className="reward-grid">
+      {["Community-Bonus","Exklusives Profil-Design","Event-Vorteile","Supporter-Bonus"].map((x,i)=><article className="reward-card" key={x}><Gift/><span>Belohnung {i+1}</span><h2>{x}</h2><button className="primary">Nutzen</button></article>)}
+    </div> : <div className="restriction"><Lock/> Diese Funktion wurde für dein Konto noch nicht freigeschaltet.</div>}
+  </div>
 }
 
-function AdminPermissionPanel({
-  member,
-  onUpdate,
-}) {
-  const [memberPermissions, setMemberPermissions] =
-    useState(DEFAULT_PERMISSIONS);
-
-  useEffect(() => {
-    async function load() {
-      const { data } = await supabase
-        .from("admin_permissions")
-        .select("*")
-        .eq("user_id", member.id)
-        .maybeSingle();
-
-      setMemberPermissions({
-        ...DEFAULT_PERMISSIONS,
-        ...(data || {}),
-      });
-    }
-
-    load();
-  }, [member.id]);
-
-  return (
-    <div className="permission-grid">
-      {Object.keys(
-        DEFAULT_PERMISSIONS
-      ).map((permission) => (
-        <label
-          className="permission-item"
-          key={permission}
-        >
-          <input
-            type="checkbox"
-            checked={
-              !!memberPermissions[permission]
-            }
-            onChange={async (event) => {
-              const value =
-                event.target.checked;
-
-              setMemberPermissions({
-                ...memberPermissions,
-                [permission]: value,
-              });
-
-              await onUpdate(
-                member,
-                permission,
-                value
-              );
-            }}
-          />
-
-          <span>
-            {permission
-              .replace("manage_", "")
-              .replace(
-                "view_",
-                ""
-              )
-              .replaceAll("_", " ")}
-          </span>
-        </label>
-      ))}
-    </div>
-  );
+function ProfileView({me,isHead,privileged,reload,flash}) {
+  const [draft,setDraft]=useState(me);
+  useEffect(()=>setDraft(me),[me]);
+  async function save(e){e.preventDefault();try{
+    const payload={nickname:draft.nickname||null,bio:draft.bio||null,avatar_url:draft.avatar_url||null};
+    if(isHead){payload.first_name=draft.first_name;payload.last_name=draft.last_name;payload.birth_date=draft.birth_date;}
+    const {error}=await supabase.from("profiles").update(payload).eq("id",me.id); if(error)throw error;
+    await reload();flash("Profil gespeichert.");
+  }catch(e){flash(e.message)}}
+  return <div className="page"><PageTitle eyebrow="KONTO" title="Mein Profil" subtitle="Deine persönlichen Einstellungen."/>
+    <form className="profile-form panel" onSubmit={save}><div className="profile-preview"><Avatar profile={{...me,...draft}} size="xl"/><RoleBadge role={me.role}/></div>
+      {isHead&&<div className="form-grid"><label>Vorname<input value={draft.first_name||""} onChange={e=>setDraft({...draft,first_name:e.target.value})} required/></label><label>Nachname<input value={draft.last_name||""} onChange={e=>setDraft({...draft,last_name:e.target.value})} required/></label><label>Geburtsdatum<input type="date" value={draft.birth_date||""} onChange={e=>setDraft({...draft,birth_date:e.target.value})} required/></label></div>}
+      <label>Benutzername<input value={draft.nickname||""} onChange={e=>setDraft({...draft,nickname:e.target.value})}/></label>
+      <label>Über mich<textarea value={draft.bio||""} onChange={e=>setDraft({...draft,bio:e.target.value})}/></label>
+      {privileged||me?.member_features?.avatar_upload?<label>Profilbild URL<input value={draft.avatar_url||""} onChange={e=>setDraft({...draft,avatar_url:e.target.value})}/></label>:<p className="hint">Der Profilbild-Upload wurde für dein Konto noch nicht freigeschaltet.</p>}
+      <button className="primary"><Save size={17}/> Speichern</button>
+      {!isHead&&<small>Vorname, Nachname und Geburtsdatum können nach der Registrierung nur vom Head Admin geändert werden.</small>}
+    </form></div>
 }
 
-function AdminLogsPage({
-  logs,
-  members,
-}) {
-  function getMemberName(id) {
-    return displayName(
-      members.find(
-        (member) => member.id === id
-      )
-    );
-  }
-
-  return (
-    <section className="page">
-      <span className="eyebrow">
-        SICHERHEIT
-      </span>
-
-      <h1>Admin-Logbuch</h1>
-
-      <div className="panel log-list">
-        {logs.map((log) => (
-          <article
-            className="log-entry"
-            key={log.id}
-          >
-            <div>
-              <strong>{log.action}</strong>
-
-              <p>
-                Ziel:{" "}
-                {log.target_user_id
-                  ? getMemberName(
-                      log.target_user_id
-                    )
-                  : "System"}
-              </p>
-            </div>
-
-            <small>
-              {formatDate(log.created_at)}
-            </small>
-          </article>
-        ))}
-
-        {!logs.length && (
-          <div className="empty-state">
-            Noch keine Einträge vorhanden.
-          </div>
-        )}
-      </div>
-    </section>
-  );
+function AdminView(props) {
+  return <div className="page"><PageTitle eyebrow="MODERATION" title="Admin-Bereich" subtitle="Mitglieder, Rollen, Berechtigungen und Einschränkungen verwalten."/>
+    <div className="panel admin-summary"><Shield/><div><h2>Verwaltung</h2><p>Änderungen werden serverseitig gespeichert und direkt nachgeladen.</p></div></div>
+    <div className="member-grid">{props.members.filter(m=>m.id!==props.me.id).map(m=><MemberCard key={m.id} member={m} {...props}/>)}</div>
+  </div>
 }
 
-function calculateAge(date) {
-  const birthDate = new Date(date);
-  const today = new Date();
-
-  let age =
-    today.getFullYear() -
-    birthDate.getFullYear();
-
-  const monthDifference =
-    today.getMonth() -
-    birthDate.getMonth();
-
-  if (
-    monthDifference < 0 ||
-    (monthDifference === 0 &&
-      today.getDate() <
-        birthDate.getDate())
-  ) {
-    age--;
-  }
-
-  return age;
+function LogsView({logs}) {
+  return <div className="page"><PageTitle eyebrow="HEAD ADMIN" title="Admin-Logbuch" subtitle="Alle wichtigen Verwaltungsaktionen."/>
+    <div className="panel log-list">{logs.map(l=><div className="log-row" key={l.id}><div><b>{l.action}</b><span>{l.target_id||"System"}</span></div><time>{new Date(l.created_at).toLocaleString("de-DE")}</time></div>)}{!logs.length&&<Empty text="Noch keine Einträge."/>)}</div>
+  </div>
 }
 
-function formatDate(date) {
-  if (!date) return "";
-
-  return new Intl.DateTimeFormat("de-AT", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(date));
-}
-
-function canChangeRole(
-  isHeadAdmin,
-  permissions
-) {
-  return (
-    isHeadAdmin ||
-    permissions.manage_roles
-  );
-}
+function PageTitle({eyebrow,title,subtitle}) { return <header className="page-title"><span className="eyebrow">{eyebrow}</span><h1>{title}</h1>{subtitle&&<p>{subtitle}</p>}</header> }
+function Stat({label,value,icon}) { return <div className="stat-card"><div>{icon}</div><strong>{value}</strong><span>{label}</span></div> }
+function Empty({text}) { return <div className="empty">{text}</div> }
+function Avatar({profile,size=""}) { return <div className={`avatar ${size}`}><img src={profile?.avatar_url||"https://placehold.co/160x160?text=EC"} alt={displayName(profile)} onError={e=>e.currentTarget.src="https://placehold.co/160x160?text=EC"}/></div> }
+function RoleBadge({role}) { if(!role)return null; return <span className={`role-badge ${role}`}>{roleIcon(role)} {ROLE_LABEL[role]||"Mitglied"}</span> }
+function Toggle({label,checked,onChange}) { const [value,setValue]=useState(checked); return <label className="toggle"><span>{label.replaceAll("_"," ")}</span><input type="checkbox" checked={value} onChange={e=>{setValue(e.target.checked);onChange(e.target.checked)}}/></label> }
