@@ -61,6 +61,7 @@ export default function App() {
   const [history, setHistory] = useState([]);
   const [messages, setMessages] = useState([]);
   const [profileActivities, setProfileActivities] = useState([]);
+  const [adminLogs, setAdminLogs] = useState([]);
 
   const [selectedMember, setSelectedMember] =
     useState(null);
@@ -120,7 +121,6 @@ export default function App() {
 
   const [blockedUsers, setBlockedUsers] = useState([]);
   const [reports, setReports] = useState([]);
-  const [supportTickets, setSupportTickets] = useState([]);
   const [myPermissions, setMyPermissions] = useState({});
   const [suspendedUsers, setSuspendedUsers] = useState([]);
 
@@ -205,7 +205,6 @@ export default function App() {
         visitData,
         blockData,
         reportData,
-        supportTicketData,
         activityData,
         permissionData
       ] = await Promise.all([
@@ -221,7 +220,6 @@ export default function App() {
         safe("Profilbesuche", supabase.from("profile_visits").select("*").eq("profile_id", currentUser.id).order("visited_at", { ascending: false })),
         safe("Blockierungen", supabase.from("user_blocks").select("*").eq("blocker_id", currentUser.id)),
         safe("Meldungen", supabase.from("user_reports").select("*").order("created_at", { ascending: false })),
-        safe("Support-Anfragen", supabase.from("support_tickets").select("*").order("created_at", { ascending: false })),
         safe("Profilaktivitäten", supabase.from("profile_activity").select("*").order("created_at", { ascending: false }).limit(40)),
         safe("Berechtigungen", supabase.from("user_permissions").select("*").eq("user_id", currentUser.id).maybeSingle(), {})
       ]);
@@ -238,9 +236,21 @@ export default function App() {
       setProfileVisits(visitData);
       setBlockedUsers(blockData);
       setReports(reportData);
-      setSupportTickets(supportTicketData);
       setProfileActivities(activityData);
       setMyPermissions(permissionData || {});
+
+      if (myProfile?.role === "HEAD_ADMIN") {
+        const { data: logData, error: logError } = await supabase
+          .rpc("get_admin_log", { p_limit: 100 });
+        if (logError) {
+          console.warn("Admin-Logbuch konnte nicht geladen werden:", logError.message);
+          setAdminLogs([]);
+        } else {
+          setAdminLogs(logData || []);
+        }
+      } else {
+        setAdminLogs([]);
+      }
     } catch (error) {
       console.error("Fehler beim Starten von Ennstal Connect:", error);
       showNotice(`Fehler beim Laden: ${error?.message || "Unbekannter Fehler"}`);
@@ -576,292 +586,6 @@ const sortedMembers = useMemo(() => {
     }
     showNotice("Freundschaft wurde entfernt.");
     await loadAll();
-  }
-
-  async function submitSupportTicket(event) {
-    event.preventDefault();
-    if (!user) return;
-    const form = new FormData(event.currentTarget);
-    const subject = String(form.get("subject") || "").trim();
-    const category = String(form.get("category") || "ALLGEMEIN");
-    const description = String(form.get("description") || "").trim();
-    if (!subject || !description) {
-      showNotice("Bitte Betreff und Anliegen ausfüllen.");
-      return;
-    }
-    const { error } = await supabase.from("support_tickets").insert({
-      user_id: user.id,
-      subject,
-      category,
-      description,
-      status: "OPEN"
-    });
-    if (error) { showNotice(error.message); return; }
-    event.currentTarget.reset();
-    showNotice("Deine Support-Anfrage wurde direkt an das Admin-Team weitergeleitet.");
-    await loadAll();
-  }
-
-  async function updateSupportTicketStatus(ticket, status) {
-    const { error } = await supabase.from("support_tickets").update({ status, updated_at: new Date().toISOString() }).eq("id", ticket.id);
-    if (error) { showNotice(error.message); return; }
-    showNotice(status === "RESOLVED" ? "Anfrage als erledigt markiert." : "Status der Anfrage aktualisiert.");
-    await loadAll();
-  }
-
-  async function changeMemberRole(member, newRole) {
-    if (!member?.id) return;
-    if (member.id === user?.id) {
-      showNotice("Die eigene Rolle kann hier nicht geändert werden.");
-      return;
-    }
-    if (member.role === "HEAD_ADMIN") {
-      showNotice("Die Rolle eines Hauptadmins kann nicht entfernt werden.");
-      return;
-    }
-    if (newRole === "ADMIN" && !isHeadAdmin(profile?.role)) {
-      showNotice("Nur der Hauptadmin kann Admins ernennen.");
-      return;
-    }
-
-    const { error } = await supabase.rpc("admin_set_role", {
-      target_user: member.id,
-      new_role: newRole
-    });
-
-    if (error) {
-      showNotice(error.message);
-      return;
-    }
-
-    const label = newRole === "MEMBER" ? "Mitglied" : newRole === "SUPPORTER" ? "Supporter" : "Admin";
-    showNotice(`${getName(member)} ist jetzt ${label}.`);
-    setSelectedMember(current =>
-      current?.id === member.id ? { ...current, role: newRole } : current
-    );
-    await loadAll();
-  }
-
-  const incomingFriendRequests = useMemo(
-    () => friendships.filter((item) => item.status === "PENDING" && item.receiver_id === user?.id),
-    [friendships, user?.id]
-  );
-
-  const sentFriendRequests = useMemo(
-    () => friendships.filter((item) => item.status === "PENDING" && item.requester_id === user?.id),
-    [friendships, user?.id]
-  );
-
-  async function cancelFriendRequest(request) {
-    if (!user || !request || request.requester_id !== user.id || request.status !== "PENDING") return;
-    const { error } = await supabase.from("friendships").delete().eq("id", request.id).eq("requester_id", user.id).eq("status", "PENDING");
-    if (error) { showNotice(error.message); return; }
-    showNotice("Freundschaftsanfrage wurde zurückgezogen.");
-    await loadAll();
-  }
-
-  async function respondToFriendRequest(request, accept) {
-    if (!user || request?.receiver_id !== user.id) return;
-
-    const { error } = await supabase
-      .from("friendships")
-      .update({ status: accept ? "ACCEPTED" : "DECLINED" })
-      .eq("id", request.id)
-      .eq("receiver_id", user.id)
-      .eq("status", "PENDING");
-
-    if (error) {
-      showNotice(error.message);
-      return;
-    }
-
-    showNotice(accept ? "Freundschaftsanfrage angenommen." : "Freundschaftsanfrage abgelehnt.");
-    await loadAll();
-  }
-
-  async function blockUser(member) {
-    if (!user || !member?.id || member.id === user.id) return;
-
-    if (!window.confirm(
-      `${getName(member)} wirklich blockieren?\n\nDer Nutzer wird aus deinen Kontakt- und Mitgliederansichten ausgeblendet.`
-    )) return;
-
-    const { error } = await supabase
-      .from("user_blocks")
-      .insert({
-        blocker_id: user.id,
-        blocked_id: member.id
-      });
-
-    if (error) {
-      showNotice(error.message);
-      return;
-    }
-
-    await supabase
-      .from("friendships")
-      .delete()
-      .or(
-        `and(requester_id.eq.${user.id},receiver_id.eq.${member.id}),and(requester_id.eq.${member.id},receiver_id.eq.${user.id})`
-      );
-
-    setSelectedMember(null);
-    showNotice(`${getName(member)} wurde blockiert.`);
-    await loadAll();
-  }
-
-  async function unblockUser(blockedId) {
-    const { error } = await supabase
-      .from("user_blocks")
-      .delete()
-      .eq("blocker_id", user.id)
-      .eq("blocked_id", blockedId);
-
-    if (error) {
-      showNotice(error.message);
-      return;
-    }
-
-    showNotice("Nutzer wurde entsperrt.");
-    await loadAll();
-  }
-
-  async function reportUser(member) {
-    if (!user || !member?.id || member.id === user.id) return;
-
-    const reason = window.prompt(
-      `Warum möchtest du ${getName(member)} melden?\n\nBitte nenne einen konkreten Grund.`
-    );
-
-    if (reason === null) return;
-
-    if (reason.trim().length < 10) {
-      showNotice(
-        "Eine Meldung muss begründet sein und mindestens 10 Zeichen enthalten."
-      );
-      return;
-    }
-
-    const { error } = await supabase.rpc(
-      "submit_user_report",
-      {
-        target_user: member.id,
-        reason_text: reason.trim()
-      }
-    );
-
-    if (error) {
-      showNotice(error.message);
-      return;
-    }
-
-    setSelectedMember(null);
-    showNotice("Meldung wurde an die Administration gesendet.");
-    await loadAll();
-  }
-
-  async function resolveReport(reportId, resolution) {
-    if (!myAdminPermission("manage_reports")) {
-      showNotice("Keine Berechtigung für Nutzer-Meldungen.");
-      return;
-    }
-
-    const note = window.prompt(
-      resolution === "UNFOUNDED"
-        ? "Warum ist die Meldung unbegründet?"
-        : "Begründung der Entscheidung:"
-    );
-
-    if (note === null || note.trim().length < 3) {
-      showNotice("Bitte eine begründete Entscheidung eingeben.");
-      return;
-    }
-
-    let penaltyPoints = 0;
-
-    if (resolution === "UNFOUNDED") {
-      const value = window.prompt(
-        "Wie viele Minuspunkte bekommt der Meldende?\nStandard: 2",
-        "2"
-      );
-
-      if (value === null) return;
-
-      penaltyPoints = Number(value);
-
-      if (!Number.isInteger(penaltyPoints) || penaltyPoints < 0) {
-        showNotice("Ungültige Minuspunkte.");
-        return;
-      }
-    }
-
-    const { error } = await supabase.rpc(
-      "admin_resolve_user_report",
-      {
-        report_id: reportId,
-        resolution,
-        admin_note: note.trim(),
-        penalty_points: penaltyPoints
-      }
-    );
-
-    if (error) {
-      showNotice(error.message);
-      return;
-    }
-
-    showNotice(
-      resolution === "UNFOUNDED"
-        ? `Meldung unbegründet. ${penaltyPoints} Minuspunkte wurden vergeben.`
-        : "Meldung wurde bearbeitet."
-    );
-
-    await loadAll();
-  }
-
-  async function openMember(member) {
-    setSelectedMember(member);
-
-    const [{ data: groupData }, { data: eventData }] =
-      await Promise.all([
-        supabase
-          .from("group_members")
-          .select("groups(*)")
-          .eq("user_id", member.id),
-
-        supabase
-          .from("event_members")
-          .select("events(*)")
-          .eq("user_id", member.id)
-      ]);
-
-    setSelectedMemberGroups(
-      (groupData || [])
-        .map((row) => row.groups)
-        .filter(Boolean)
-    );
-
-    setSelectedMemberEvents(
-      (eventData || [])
-        .map((row) => row.events)
-        .filter(Boolean)
-    );
-
-    if (user && member.id !== user.id) {
-      const { error } = await supabase.rpc(
-        "record_profile_visit",
-        { target_profile: member.id }
-      );
-
-      if (error) {
-        await supabase
-          .from("profile_visits")
-          .insert({
-            visitor_id: user.id,
-            profile_id: member.id
-          });
-      }
-    }
   }
 
   /* =========================================================
@@ -1677,12 +1401,29 @@ async function uploadProfileImage(file) {
 
     setMessages(data || []);
 
-    await supabase
-      .from("messages")
-      .update({ is_read: true })
-      .eq("receiver_id", user.id)
-      .eq("sender_id", member.id)
-      .eq("is_read", false);
+    const { error: readError } = await supabase.rpc(
+      "mark_messages_read",
+      { p_sender: member.id }
+    );
+
+    if (readError) {
+      console.warn("Nachrichten konnten nicht als gelesen markiert werden:", readError.message);
+      await supabase
+        .from("messages")
+        .update({ is_read: true })
+        .eq("receiver_id", user.id)
+        .eq("sender_id", member.id)
+        .eq("is_read", false);
+    }
+
+    setMessages((current) =>
+      current.map((message) =>
+        message.receiver_id === user.id &&
+        message.sender_id === member.id
+          ? { ...message, is_read: true }
+          : message
+      )
+    );
 
     setPage("messages");
   }
@@ -1861,6 +1602,50 @@ async function changePoints(event) {
 
     showNotice(
       "Mitglied gespeichert."
+    );
+
+    await loadAll();
+  }
+
+  async function toggleMemberSuspension(member) {
+    if (!member?.id || !isAdmin(profile?.role)) return;
+    if (member.role === "HEAD_ADMIN") {
+      showNotice("Der Head Admin kann nicht gesperrt werden.");
+      return;
+    }
+
+    const nextStatus =
+      member.account_status === "SUSPENDED"
+        ? "ACTIVE"
+        : "SUSPENDED";
+
+    const actionLabel =
+      nextStatus === "SUSPENDED" ? "sperren" : "freischalten";
+
+    if (!window.confirm(`${getName(member)} wirklich ${actionLabel}?`)) {
+      return;
+    }
+
+    const { error } = await supabase.rpc("admin_update_member", {
+      p_user_id: member.id,
+      p_nickname: member.nickname || "",
+      p_first_name: member.first_name || "",
+      p_last_name: member.last_name || "",
+      p_birth_date: member.birth_date || null,
+      p_gender: member.gender || null,
+      p_role: member.role || "MEMBER",
+      p_account_status: nextStatus
+    });
+
+    if (error) {
+      showNotice(error.message);
+      return;
+    }
+
+    showNotice(
+      nextStatus === "SUSPENDED"
+        ? `${getName(member)} wurde gesperrt.`
+        : `${getName(member)} wurde freigeschaltet.`
     );
 
     await loadAll();
@@ -2812,90 +2597,12 @@ async function changePoints(event) {
             </section>
           )}
 
-          {page === "support" && (
-            <section className="support-page">
-              <div className="page-heading"><div><span className="eyebrow">DIREKT AN DAS ADMIN-TEAM</span><h1>Support & Fehlermeldung</h1><p>Beschreibe dein Anliegen. Die Anfrage wird in Supabase gespeichert und für Administratoren sichtbar.</p></div></div>
-              <form className="support-form panel" onSubmit={submitSupportTicket}>
-                <label>Betreff</label><input name="subject" maxLength={160} required placeholder="Worum geht es?" />
-                <label>Kategorie</label><select name="category" defaultValue="ALLGEMEIN"><option value="ALLGEMEIN">Allgemeine Anfrage</option><option value="FEHLER">Fehlermeldung</option><option value="KONTO">Konto / Anmeldung</option><option value="FUNKTION">Funktion funktioniert nicht</option><option value="DATENSCHUTZ">Datenschutz / Daten</option></select>
-                <label>Anliegen oder Fehlermeldung</label><textarea name="description" rows="8" required placeholder="Bitte so genau wie möglich beschreiben, was passiert ist und was du erwartet hast." />
-                <button className="primary-button" type="submit">An Admin-Team senden</button>
-              </form>
-              <h2 style={{marginTop:24}}>Meine Support-Anfragen</h2>
-              <div className="support-ticket-list">{supportTickets.filter(t => t.user_id === user?.id).map(ticket => <article className="support-ticket" key={ticket.id}><div><strong>{ticket.subject}</strong><p>{ticket.category} · {ticket.status === "OPEN" ? "Offen" : ticket.status === "IN_PROGRESS" ? "In Bearbeitung" : "Erledigt"}</p><p>{ticket.description}</p></div></article>)}{!supportTickets.some(t => t.user_id === user?.id) && <div className="empty-card">Du hast noch keine Support-Anfrage gesendet.</div>}</div>
-            </section>
-          )}
-
-          {page === "support-admin" && isAdmin(profile?.role) && (
-            <section className="support-page">
-              <div className="page-heading">
-                <div>
-                  <span className="eyebrow">ADMIN</span>
-                  <h1>Support-Anfragen</h1>
-                  <p>Hier erscheinen alle direkt eingereichten Anliegen und Fehlermeldungen.</p>
-                </div>
-              </div>
-
-              <div className="support-ticket-list">
-                {supportTickets.length === 0 ? (
-                  <div className="empty-card">Keine Support-Anfragen vorhanden.</div>
-                ) : (
-                  supportTickets.map((ticket) => {
-                    const sender = members.find((member) => member.id === ticket.user_id);
-                    const statusLabel =
-                      ticket.status === "OPEN"
-                        ? "Offen"
-                        : ticket.status === "IN_PROGRESS"
-                        ? "In Bearbeitung"
-                        : "Erledigt";
-
-                    return (
-                      <article className="support-ticket" key={ticket.id}>
-                        <div>
-                          <strong>{ticket.subject}</strong>
-                          <p>
-                            Von: {sender ? getName(sender) : ticket.user_id} · {ticket.category}
-                          </p>
-                          <p>{ticket.description}</p>
-                        </div>
-
-                        <div className="support-ticket-actions">
-                          <span>{statusLabel}</span>
-
-                          {ticket.status === "OPEN" && (
-                            <button
-                              type="button"
-                              className="secondary-button"
-                              onClick={() => updateSupportTicketStatus(ticket, "IN_PROGRESS")}
-                            >
-                              In Bearbeitung
-                            </button>
-                          )}
-
-                          {ticket.status !== "RESOLVED" && (
-                            <button
-                              type="button"
-                              className="primary-button"
-                              onClick={() => updateSupportTicketStatus(ticket, "RESOLVED")}
-                            >
-                              Erledigt
-                            </button>
-                          )}
-                        </div>
-                      </article>
-                    );
-                  })
-                )}
-              </div>
-            </section>
-          )}
-
           {page === "impressum" && (
-            <section className="legal-page panel"><h1>Impressum</h1><p><strong>Ennstal Connect</strong></p><p>Waidbachstraße<br/>8700 Leoben<br/>Österreich</p><p>Verantwortlich für die Inhalte dieser Community: der jeweils eingetragene Hauptadministrator von Ennstal Connect.</p><p>Für Support-Anfragen und technische Fehlermeldungen nutze bitte den Bereich „Support“ innerhalb der Community.</p><button className="secondary-button" onClick={() => setPage("support")}>Zum Support</button></section>
+            <section className="legal-page panel"><h1>Impressum</h1><p><strong>Ennstal Connect</strong></p><p>Waidbachstraße<br/>8700 Leoben<br/>Österreich</p><p>Verantwortlich für die Inhalte dieser Community ist der jeweils eingetragene Hauptadministrator.</p></section>
           )}
 
           {page === "privacy" && (
-            <section className="legal-page panel"><h1>Datenschutzhinweise</h1><p>Ennstal Connect verarbeitet die Daten, die für Registrierung, Anmeldung und die Nutzung der Community erforderlich sind. Weitere Inhalte und konkrete Aufbewahrungsfristen hängen von den aktivierten Community-Funktionen und der Supabase-Konfiguration ab.</p><p>Bei Fragen zur Verarbeitung deiner Daten kannst du eine Anfrage über den Support-Bereich an das Admin-Team senden.</p><button className="secondary-button" onClick={() => setPage("support")}>Datenschutz-Anfrage senden</button></section>
+            <section className="legal-page panel"><h1>Datenschutzhinweise</h1><p>Ennstal Connect verarbeitet die Daten, die für Registrierung, Anmeldung und die Nutzung der Community erforderlich sind. Weitere Inhalte und konkrete Aufbewahrungsfristen hängen von den aktivierten Community-Funktionen und der Supabase-Konfiguration ab.</p></section>
           )}
 
           {page === "profile" && (
@@ -3717,6 +3424,11 @@ async function changePoints(event) {
                 ★ Admin
               </button>
             )}
+            {isAdmin(profile?.role) && member.id !== user.id && member.role !== "HEAD_ADMIN" && (
+              <button type="button" onClick={() => toggleMemberSuspension(member)}>
+                {member.account_status === "SUSPENDED" ? "🔓 Freischalten" : "🔒 Sperren"}
+              </button>
+            )}
           </div>
         </article>
       ))}
@@ -3740,6 +3452,42 @@ async function changePoints(event) {
             PROFIL MODAL
             ===================================================== */}
 
+        {page === "suspended-users" && isHeadAdmin(profile?.role) && (
+          <section>
+            <div className="page-heading">
+              <div>
+                <span className="eyebrow">HEAD ADMIN</span>
+                <h1>Gesperrte Konten</h1>
+                <p>Hier können gesperrte Mitglieder direkt wieder freigeschaltet werden.</p>
+              </div>
+            </div>
+            <div className="admin-member-cards">
+              {suspendedUsers.length === 0 ? (
+                <div className="empty-card">Keine gesperrten Konten vorhanden.</div>
+              ) : (
+                suspendedUsers.map((member) => (
+                  <article className="admin-member-card" key={member.id}>
+                    <div className="admin-member-card-top">
+                      <div className="admin-member-person-button">
+                        <img className="admin-member-avatar" src={member.avatar_url || DEFAULT_AVATAR} alt="" />
+                        <span><strong>{getName(member)}</strong><small>{member.role || "Mitglied"}</small></span>
+                      </div>
+                    </div>
+                    <div className="admin-member-card-info">
+                      <div><span>Status</span><strong>Gesperrt</strong></div>
+                      <div><span>Vorname</span><strong>{member.first_name || "—"}</strong></div>
+                      <div><span>Nachname</span><strong>{member.last_name || "—"}</strong></div>
+                    </div>
+                    <div className="admin-member-card-actions">
+                      <button type="button" onClick={() => toggleMemberSuspension(member)}>🔓 Freischalten</button>
+                    </div>
+                  </article>
+                ))
+              )}
+            </div>
+          </section>
+        )}
+
         {page === "logs" && isHeadAdmin(profile?.role) && (
           <section>
             <div className="page-heading">
@@ -3760,17 +3508,17 @@ async function changePoints(event) {
                   <button type="button" className="secondary" onClick={loadAll}>Aktualisieren</button>
                 </div>
 
-                {profileActivities.length === 0 ? (
-                  <div className="empty-card">Noch keine Aktivitäten vorhanden.</div>
+                {adminLogs.length === 0 ? (
+                  <div className="empty-card">Noch keine Admin-Aktivitäten vorhanden.</div>
                 ) : (
                   <div className="admin-log-list">
-                    {profileActivities.slice(0, 40).map((item) => {
-                      const actor = memberById(item.user_id || item.actor_id || item.profile_id);
+                    {adminLogs.slice(0, 100).map((item) => {
+                      const actor = memberById(item.actor_id || item.user_id || item.profile_id);
                       return (
                         <div className="admin-log-row" key={item.id}>
                           <div>
                             <strong>{actor ? getName(actor) : "System"}</strong>
-                            <span>{item.action || item.activity_type || item.type || "Profilaktivität"}</span>
+                            <span>{item.action || item.activity_type || item.type || "Admin-Aktivität"}</span>
                             {item.details && <small>{typeof item.details === "string" ? item.details : JSON.stringify(item.details)}</small>}
                           </div>
                           <time>{item.created_at ? new Date(item.created_at).toLocaleString("de-AT") : "—"}</time>
@@ -4233,7 +3981,7 @@ async function changePoints(event) {
           </div>
         )}
 
-        <footer className="site-footer"><div className="footer-brand"><div className="text-logo">ENNSTAL CONNECT</div></div><div><strong>Rechtliches</strong><p>Alle rechtlichen Hinweise sind direkt in der Community aufrufbar.</p></div><div><strong>Support</strong><p>Fragen und Fehlermeldungen können direkt an das Admin-Team gesendet werden.</p></div><div className="footer-links"><button onClick={() => setPage("impressum")}>Impressum</button><button onClick={() => setPage("privacy")}>Datenschutzhinweise</button><button onClick={() => setPage("support")}>Support / Fehlermeldung</button>{isAdmin(profile?.role) && <button onClick={() => setPage("support-admin")}>Admin: Support-Anfragen</button>}</div></footer>
+        <footer className="site-footer"><div className="footer-brand"><div className="text-logo">ENNSTAL CONNECT</div></div><div><strong>Rechtliches</strong><p>Alle rechtlichen Hinweise sind direkt in der Community aufrufbar.</p></div><div className="footer-links"><button onClick={() => setPage("impressum")}>Impressum</button><button onClick={() => setPage("privacy")}>Datenschutzhinweise</button></div></footer>
       </div>
     </>
   );
