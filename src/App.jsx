@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { supabase } from "./supabase";
+import { supabase } from "./supabaseClient";
 import {
   Home, Users, MessageCircle, Newspaper, Gift, Settings, Shield,
   Crown, Star, Lock, Unlock, Trash2, Edit3, Save, Plus, LogOut
