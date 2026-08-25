@@ -206,8 +206,15 @@ export default function App() {
   }
 
   if (!session) {
-    return <AuthScreen onDone={() => supabase.auth.getSession().then(({data}) => setSession(data.session)} />;
-  }
+  return (
+    <AuthScreen
+      onDone={async () => {
+        const { data } = await supabase.auth.getSession();
+        setSession(data.session);
+      }}
+    />
+  );
+}
 
   const nav = [
     ["home", Home, "Startseite"],
