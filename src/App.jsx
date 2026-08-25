@@ -140,6 +140,31 @@ export default function App() {
       }, 4000);
   };
 
+  // Öffnet ein Mitgliederprofil zentral. Dadurch funktionieren Mitglieder,
+  // Freunde, Profilbesucher und Admin-Listen mit derselben Profilansicht.
+  const openMember = async (member) => {
+    if (!member) return;
+
+    setSelectedMember(member);
+
+    // Eigenes Profil nicht als Besuch speichern.
+    if (!user?.id || member.id === user.id) return;
+
+    try {
+      await supabase
+        .from("profile_visits")
+        .insert({
+          profile_id: member.id,
+          visitor_id: user.id,
+          visited_at: new Date().toISOString()
+        });
+    } catch (error) {
+      // Profil darf trotzdem geöffnet werden, falls die Besuchstabelle
+      // oder deren Policy noch nicht vorhanden ist.
+      console.warn("Profilbesuch konnte nicht gespeichert werden:", error?.message);
+    }
+  };
+
   // Kompatibilitätswert für ältere Profildaten.
   // Wird nur noch für ältere Datenbankeinträge vorgehalten.
   const currentCommunityPoints = Number(
