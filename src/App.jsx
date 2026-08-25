@@ -2107,7 +2107,7 @@ async function changePoints(event) {
           </div>
         )}
 
-        <main>
+        <div className="content-root">
 
           {/* =================================================
               STARTSEITE
@@ -2246,7 +2246,7 @@ async function changePoints(event) {
                   Neuigkeiten
                 </h2>
 
-                {(user && (isAdmin(profile?.role) || true)) && (
+                {(user && (isAdmin(profile?.role) || myAdminPermission("manage_news"))) && (
 
                   <form
                     className="panel"
@@ -2434,6 +2434,37 @@ async function changePoints(event) {
                 friendships={friendships}
                 onFriend={requestFriend}
               />
+            </section>
+          )}
+
+          {page === "friends" && (
+            <section>
+              <div className="page-heading"><div><span className="eyebrow">COMMUNITY</span><h1>Freunde</h1><p>Deine Freundschaften und Kontakte auf einen Blick.</p></div></div>
+              {!sidebarFriends.length ? <div className="empty-card">Noch keine Freunde. Öffne ein Mitglied und sende eine Freundschaftsanfrage.</div> : (
+                <MemberSection title="Meine Freunde" members={sidebarFriends} profile={profile} onOpen={openMember} onMessage={openChat} friendships={friendships} onFriend={requestFriend} />
+              )}
+            </section>
+          )}
+
+          {page === "news" && (
+            <section>
+              <div className="page-heading"><div><span className="eyebrow">COMMUNITY</span><h1>News & Beiträge</h1><p>Aktuelle Informationen und Beiträge aus deiner Community.</p></div></div>
+              {(isAdmin(profile?.role) || myAdminPermission("manage_news")) && (
+                <form className="panel" onSubmit={createNews}>
+                  <h2>Neue News veröffentlichen</h2>
+                  <input name="title" placeholder="Überschrift" required />
+                  <textarea name="content" placeholder="Text" required />
+                  <button className="primary-button">Veröffentlichen</button>
+                </form>
+              )}
+              <div className="news-grid">
+                {news.map((item) => <article className="news-card" key={item.id}>
+                  <h2>{item.title}</h2><p>{item.content}</p>
+                  <small>Erstellt von {actorLabel(item.author_id)}<br />{new Date(item.created_at).toLocaleString("de-AT")}</small>
+                  {canManageNewsItem(item) && <div className="content-manage-actions"><button type="button" onClick={() => editNews(item)}>Bearbeiten</button><button type="button" className="danger-link" onClick={() => deleteNews(item)}>Löschen</button></div>}
+                </article>)}
+                {!news.length && <div className="empty-card">Noch keine Beiträge veröffentlicht.</div>}
+              </div>
             </section>
           )}
 
@@ -3701,7 +3732,8 @@ async function changePoints(event) {
               </section>
             )}
 
-          </main>
+          </div>
+        </main>
         </div>
 
         {/* =====================================================
