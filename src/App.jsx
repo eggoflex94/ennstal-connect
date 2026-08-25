@@ -120,7 +120,6 @@ export default function App() {
 
   const [blockedUsers, setBlockedUsers] = useState([]);
   const [reports, setReports] = useState([]);
-  const [supportTickets, setSupportTickets] = useState([]);
   const [myPermissions, setMyPermissions] = useState({});
   const [suspendedUsers, setSuspendedUsers] = useState([]);
 
@@ -155,25 +154,21 @@ export default function App() {
       const currentUser = session?.user || null;
       setUser(currentUser);
 
-      if (currentUser) {
-        // Stellt sicher, dass nach E-Mail-Bestätigung immer ein Profil existiert.
-        const { error: profileBootstrapError } = await supabase.rpc("ensure_current_profile");
-        if (profileBootstrapError) {
-          console.warn("Profil-Bootstrap konnte nicht ausgeführt werden:", profileBootstrapError.message);
-        }
-
-        // Beim ersten Hauptadmin wird genau einmal automatisch die Besitzerrolle vergeben.
-        // Die Prüfung passiert serverseitig in Supabase, nicht im Browser.
-        const { error: headAdminError } = await supabase.rpc("claim_initial_head_admin");
-        if (headAdminError) {
-          console.warn("HEAD_ADMIN-Prüfung konnte nicht ausgeführt werden:", headAdminError.message);
-        }
-      }
-
       if (!currentUser) {
         setProfile(null);
         setMembers([]);
         setFriendships([]);
+        setNews([]);
+        setEvents([]);
+        setGroups([]);
+        setHomepageSections([]);
+        setHistory([]);
+        setMessages([]);
+        setProfileVisits([]);
+        setBlockedUsers([]);
+        setReports([]);
+        setProfileActivities([]);
+        setMyPermissions({});
         return;
       }
 
@@ -199,7 +194,6 @@ export default function App() {
         visitData,
         blockData,
         reportData,
-        supportTicketData,
         activityData,
         permissionData
       ] = await Promise.all([
@@ -215,7 +209,6 @@ export default function App() {
         safe("Profilbesuche", supabase.from("profile_visits").select("*").eq("profile_id", currentUser.id).order("visited_at", { ascending: false })),
         safe("Blockierungen", supabase.from("user_blocks").select("*").eq("blocker_id", currentUser.id)),
         safe("Meldungen", supabase.from("user_reports").select("*").order("created_at", { ascending: false })),
-        safe("Support-Anfragen", supabase.from("support_tickets").select("*").order("created_at", { ascending: false })),
         safe("Profilaktivitäten", supabase.from("profile_activity").select("*").order("created_at", { ascending: false }).limit(40)),
         safe("Berechtigungen", supabase.from("user_permissions").select("*").eq("user_id", currentUser.id).maybeSingle(), {})
       ]);
@@ -232,7 +225,6 @@ export default function App() {
       setProfileVisits(visitData);
       setBlockedUsers(blockData);
       setReports(reportData);
-      setSupportTickets(supportTicketData);
       setProfileActivities(activityData);
       setMyPermissions(permissionData || {});
     } catch (error) {
@@ -295,10 +287,11 @@ export default function App() {
           event: "INSERT",
           schema: "public",
           table: "messages",
-          filter: `receiver_id=eq.${user.id}`
         },
-        () => {
-          loadAll();
+        (payload) => {
+          if (payload.new?.receiver_id === user.id || payload.new?.sender_id === user.id) {
+            loadAll();
+          }
         }
       )
       .subscribe();
@@ -536,93 +529,6 @@ const sortedMembers = useMemo(() => {
     }
 
     showNotice("Freundschaftsanfrage gesendet.");
-    await loadAll();
-  }
-
-
-  async function removeFriend(member) {
-    if (!user || !member?.id) return;
-    const relation = friendshipWith(member.id);
-    if (!relation) {
-      showNotice("Keine Freundschaft vorhanden.");
-      return;
-    }
-    if (!window.confirm(`Freundschaft mit ${getName(member)} wirklich entfernen?`)) return;
-
-    const { error } = await supabase
-      .from("friendships")
-      .delete()
-      .eq("id", relation.id);
-
-    if (error) {
-      showNotice(error.message);
-      return;
-    }
-    showNotice("Freundschaft wurde entfernt.");
-    await loadAll();
-  }
-
-  async function submitSupportTicket(event) {
-    event.preventDefault();
-    if (!user) return;
-    const form = new FormData(event.currentTarget);
-    const subject = String(form.get("subject") || "").trim();
-    const category = String(form.get("category") || "ALLGEMEIN");
-    const description = String(form.get("description") || "").trim();
-    if (!subject || !description) {
-      showNotice("Bitte Betreff und Anliegen ausfüllen.");
-      return;
-    }
-    const { error } = await supabase.from("support_tickets").insert({
-      user_id: user.id,
-      subject,
-      category,
-      description,
-      status: "OPEN"
-    });
-    if (error) { showNotice(error.message); return; }
-    event.currentTarget.reset();
-    showNotice("Deine Support-Anfrage wurde direkt an das Admin-Team weitergeleitet.");
-    await loadAll();
-  }
-
-  async function updateSupportTicketStatus(ticket, status) {
-    const { error } = await supabase.from("support_tickets").update({ status, updated_at: new Date().toISOString() }).eq("id", ticket.id);
-    if (error) { showNotice(error.message); return; }
-    showNotice(status === "RESOLVED" ? "Anfrage als erledigt markiert." : "Status der Anfrage aktualisiert.");
-    await loadAll();
-  }
-
-  async function changeMemberRole(member, newRole) {
-    if (!member?.id) return;
-    if (member.id === user?.id) {
-      showNotice("Die eigene Rolle kann hier nicht geändert werden.");
-      return;
-    }
-    if (member.role === "HEAD_ADMIN") {
-      showNotice("Die Rolle eines Hauptadmins kann nicht entfernt werden.");
-      return;
-    }
-    if (newRole === "ADMIN" && !isHeadAdmin(profile?.role)) {
-      showNotice("Nur der Hauptadmin kann Admins ernennen.");
-      return;
-    }
-
-    const { error } = await supabase.rpc("admin_set_role", {
-      target_user: member.id,
-      new_role: newRole
-    });
-
-    if (error) {
-      showNotice(error.message);
-      return;
-    }
-
-    const label = newRole === "MEMBER" ? "Mitglied" : newRole === "SUPPORTER" ? "Supporter" : "Admin";
-    showNotice(`${getName(member)} ist jetzt ${label}.`);
-    setSelectedMember(current =>
-      current?.id === member.id ? { ...current, role: newRole } : current
-    );
     await loadAll();
   }
 
@@ -890,9 +796,6 @@ const sortedMembers = useMemo(() => {
         password: form.get("password"),
 
         options: {
-          // Wichtig für Vercel: Bestätigungslinks gehen zurück zur aktuell geöffneten
-          // Deployment-Domain und nicht mehr auf localhost:3000.
-          emailRedirectTo: `${window.location.origin}/`,
           data: {
             nickname:
               form.get("nickname"),
@@ -942,6 +845,8 @@ const sortedMembers = useMemo(() => {
 
     setUser(null);
     setProfile(null);
+    setMessages([]);
+    setFriendships([]);
     setPage("home");
   }
 
@@ -1862,7 +1767,10 @@ async function changePoints(event) {
   if (loading) {
     return (
       <div className="loading-screen">
-        <div className="text-logo" aria-label="Ennstal Connect">ENNSTAL CONNECT</div>
+        <img
+          src="/banner.png"
+          alt="Ennstal Connect"
+        />
 
         <p>
           Ennstal Connect wird geladen …
@@ -1881,7 +1789,10 @@ async function changePoints(event) {
         <div className="auth-page">
 
           <div className="auth-brand">
-            <div className="text-logo" aria-label="Ennstal Connect">ENNSTAL CONNECT</div>
+            <img
+              src="/banner.png"
+              alt="Ennstal Connect"
+            />
           </div>
 
           <Auth
@@ -1914,7 +1825,10 @@ async function changePoints(event) {
 
           <div className="suspended-box">
 
-            <div className="text-logo" aria-label="Ennstal Connect">ENNSTAL CONNECT</div>
+            <img
+              src="/banner.png"
+              alt="Ennstal Connect"
+            />
 
             <h1>
               Konto gesperrt
@@ -2043,7 +1957,10 @@ async function changePoints(event) {
               setPage("home")
             }
           >
-            <div className="text-logo" aria-label="Ennstal Connect">ENNSTAL CONNECT</div>
+            <img
+              src="/banner.png"
+              alt="Ennstal Connect"
+            />
           </div>
 
           <nav>
@@ -2177,7 +2094,7 @@ async function changePoints(event) {
 
                 <img
                   src="/banner.png"
-                  alt="Ennstal Connect – Panorama"
+                  alt="Ennstal Connect"
                 />
 
               </div>
@@ -2973,92 +2890,6 @@ async function changePoints(event) {
             </section>
           )}
 
-          {page === "support" && (
-            <section className="support-page">
-              <div className="page-heading"><div><span className="eyebrow">DIREKT AN DAS ADMIN-TEAM</span><h1>Support & Fehlermeldung</h1><p>Beschreibe dein Anliegen. Die Anfrage wird in Supabase gespeichert und für Administratoren sichtbar.</p></div></div>
-              <form className="support-form panel" onSubmit={submitSupportTicket}>
-                <label>Betreff</label><input name="subject" maxLength={160} required placeholder="Worum geht es?" />
-                <label>Kategorie</label><select name="category" defaultValue="ALLGEMEIN"><option value="ALLGEMEIN">Allgemeine Anfrage</option><option value="FEHLER">Fehlermeldung</option><option value="KONTO">Konto / Anmeldung</option><option value="FUNKTION">Funktion funktioniert nicht</option><option value="DATENSCHUTZ">Datenschutz / Daten</option></select>
-                <label>Anliegen oder Fehlermeldung</label><textarea name="description" rows="8" required placeholder="Bitte so genau wie möglich beschreiben, was passiert ist und was du erwartet hast." />
-                <button className="primary-button" type="submit">An Admin-Team senden</button>
-              </form>
-              <h2 style={{marginTop:24}}>Meine Support-Anfragen</h2>
-              <div className="support-ticket-list">{supportTickets.filter(t => t.user_id === user?.id).map(ticket => <article className="support-ticket" key={ticket.id}><div><strong>{ticket.subject}</strong><p>{ticket.category} · {ticket.status === "OPEN" ? "Offen" : ticket.status === "IN_PROGRESS" ? "In Bearbeitung" : "Erledigt"}</p><p>{ticket.description}</p></div></article>)}{!supportTickets.some(t => t.user_id === user?.id) && <div className="empty-card">Du hast noch keine Support-Anfrage gesendet.</div>}</div>
-            </section>
-          )}
-
-          {page === "support-admin" && isAdmin(profile?.role) && (
-            <section className="support-page">
-              <div className="page-heading">
-                <div>
-                  <span className="eyebrow">ADMIN</span>
-                  <h1>Support-Anfragen</h1>
-                  <p>Hier erscheinen alle direkt eingereichten Anliegen und Fehlermeldungen.</p>
-                </div>
-              </div>
-
-              <div className="support-ticket-list">
-                {supportTickets.length === 0 ? (
-                  <div className="empty-card">Keine Support-Anfragen vorhanden.</div>
-                ) : (
-                  supportTickets.map((ticket) => {
-                    const sender = members.find((member) => member.id === ticket.user_id);
-                    const statusLabel =
-                      ticket.status === "OPEN"
-                        ? "Offen"
-                        : ticket.status === "IN_PROGRESS"
-                        ? "In Bearbeitung"
-                        : "Erledigt";
-
-                    return (
-                      <article className="support-ticket" key={ticket.id}>
-                        <div>
-                          <strong>{ticket.subject}</strong>
-                          <p>
-                            Von: {sender ? getName(sender) : ticket.user_id} · {ticket.category}
-                          </p>
-                          <p>{ticket.description}</p>
-                        </div>
-
-                        <div className="support-ticket-actions">
-                          <span>{statusLabel}</span>
-
-                          {ticket.status === "OPEN" && (
-                            <button
-                              type="button"
-                              className="secondary-button"
-                              onClick={() => updateSupportTicketStatus(ticket, "IN_PROGRESS")}
-                            >
-                              In Bearbeitung
-                            </button>
-                          )}
-
-                          {ticket.status !== "RESOLVED" && (
-                            <button
-                              type="button"
-                              className="primary-button"
-                              onClick={() => updateSupportTicketStatus(ticket, "RESOLVED")}
-                            >
-                              Erledigt
-                            </button>
-                          )}
-                        </div>
-                      </article>
-                    );
-                  })
-                )}
-              </div>
-            </section>
-          )}
-
-          {page === "impressum" && (
-            <section className="legal-page panel"><h1>Impressum</h1><p><strong>Ennstal Connect</strong></p><p>Waidbachstraße<br/>8700 Leoben<br/>Österreich</p><p>Verantwortlich für die Inhalte dieser Community: der jeweils eingetragene Hauptadministrator von Ennstal Connect.</p><p>Für Support-Anfragen und technische Fehlermeldungen nutze bitte den Bereich „Support“ innerhalb der Community.</p><button className="secondary-button" onClick={() => setPage("support")}>Zum Support</button></section>
-          )}
-
-          {page === "privacy" && (
-            <section className="legal-page panel"><h1>Datenschutzhinweise</h1><p>Ennstal Connect verarbeitet die Daten, die für Registrierung, Anmeldung und die Nutzung der Community erforderlich sind. Weitere Inhalte und konkrete Aufbewahrungsfristen hängen von den aktivierten Community-Funktionen und der Supabase-Konfiguration ab.</p><p>Bei Fragen zur Verarbeitung deiner Daten kannst du eine Anfrage über den Support-Bereich an das Admin-Team senden.</p><button className="secondary-button" onClick={() => setPage("support")}>Datenschutz-Anfrage senden</button></section>
-          )}
-
           {page === "profile" && (
             <section>
               <div
@@ -3094,7 +2925,7 @@ async function changePoints(event) {
 
                   <div className="my-profile-top">
                     {isAdmin(profile?.role) && (
-                      <span className="role-stack"><img className="role-symbol role-symbol-large" src="/Admin-star.png" alt="Admin" /><img className="friend-symbol" src="/freunde-logo" alt="Freund" /></span>
+                      <span className="role-stack"><img className="role-symbol role-symbol-large" src="/Admin-star.png" alt="Admin" /><img className="friend-symbol" src="/freunde-logo.png" alt="Freund" /></span>
                     )}
 
                     {profile?.role === "SUPPORTER" && (
@@ -4905,7 +4736,42 @@ async function changePoints(event) {
           <button
             type="button"
             className="profile-admin-button supporter"
-            onClick={() => changeMemberRole(selectedMember, "SUPPORTER")}
+            onClick={async () => {
+
+              const { error } =
+                await supabase.rpc(
+                  "admin_set_role",
+                  {
+                    target_user:
+                      selectedMember.id,
+                    new_role:
+                      "SUPPORTER"
+                  }
+                );
+
+              if (error) {
+                showNotice(
+                  error.message
+                );
+                return;
+              }
+
+              showNotice(
+                `${getName(selectedMember)} ist jetzt Supporter.`
+              );
+
+              await loadAll();
+
+              setSelectedMember(
+                (current) =>
+                  current
+                    ? {
+                        ...current,
+                        role: "SUPPORTER"
+                      }
+                    : current
+              );
+            }}
           >
             🟢 Supporter ernennen
           </button>
@@ -4915,24 +4781,46 @@ async function changePoints(event) {
           <button
             type="button"
             className="profile-admin-button admin"
-            onClick={() => changeMemberRole(selectedMember, "ADMIN")}
+            onClick={async () => {
+
+              const { error } =
+                await supabase.rpc(
+                  "admin_set_role",
+                  {
+                    target_user:
+                      selectedMember.id,
+                    new_role:
+                      "ADMIN"
+                  }
+                );
+
+              if (error) {
+                showNotice(
+                  error.message
+                );
+                return;
+              }
+
+              showNotice(
+                `${getName(selectedMember)} ist jetzt Admin.`
+              );
+
+              await loadAll();
+
+              setSelectedMember(
+                (current) =>
+                  current
+                    ? {
+                        ...current,
+                        role: "ADMIN"
+                      }
+                    : current
+              );
+            }}
           >
             ★ Zum Admin ernennen
           </button>
         )}
-
-        {selectedMember.id !== user?.id &&
-          selectedMember.role !== "MEMBER" &&
-          selectedMember.role !== "HEAD_ADMIN" &&
-          (isHeadAdmin(profile?.role) || myAdminPermission("manage_roles")) && (
-            <button
-              type="button"
-              className="profile-admin-button remove-role"
-              onClick={() => changeMemberRole(selectedMember, "MEMBER")}
-            >
-              ↩ Rolle entfernen · Zum Mitglied
-            </button>
-          )}
 
      </div>
     </section>
@@ -4961,15 +4849,6 @@ async function changePoints(event) {
                         : "🤝 Freundschaftsanfrage senden"}
                     </button>
 
-                    {friendshipWith(selectedMember.id)?.status === "ACCEPTED" && (
-                      <button
-                        className="secondary-button remove-friend-button"
-                        onClick={() => removeFriend(selectedMember)}
-                      >
-                        ✕ Freund entfernen
-                      </button>
-                    )}
-
                     <button
                       className="secondary-button"
                       onClick={() => blockUser(selectedMember)}
@@ -4993,7 +4872,7 @@ async function changePoints(event) {
           </div>
         )}
 
-        <footer className="site-footer"><div className="footer-brand"><div className="text-logo">ENNSTAL CONNECT</div></div><div><strong>Rechtliches</strong><p>Alle rechtlichen Hinweise sind direkt in der Community aufrufbar.</p></div><div><strong>Support</strong><p>Fragen und Fehlermeldungen können direkt an das Admin-Team gesendet werden.</p></div><div className="footer-links"><button onClick={() => setPage("impressum")}>Impressum</button><button onClick={() => setPage("privacy")}>Datenschutzhinweise</button><button onClick={() => setPage("support")}>Support / Fehlermeldung</button>{isAdmin(profile?.role) && <button onClick={() => setPage("support-admin")}>Admin: Support-Anfragen</button>}</div></footer>
+        <footer className="site-footer"><div className="footer-brand"><img src="/banner.png" alt="Ennstal Connect" /></div><div><strong>Impressum</strong><p>Ennstal Connect<br/>Waidbachstraße<br/>8700 Leoben<br/>Verantwortlich für die Webseite: Hauptadmin.</p></div><div><strong>Datenschutzhinweise</strong><p>Informationen zur Verarbeitung deiner Daten und deinen Rechten.</p></div><div className="footer-links"><button onClick={() => showNotice("Impressum: Ennstal Connect, Waidbachstraße, 8700 Leoben. Verantwortlich für die Webseite: Hauptadmin.")}>Impressum</button><button onClick={() => showNotice("Datenschutzhinweise werden im Datenschutzbereich angezeigt.")}>Datenschutzhinweise</button></div></footer>
       </div>
     </>
   );
@@ -5125,7 +5004,7 @@ function MemberCard({
                 onFriend?.(member);
               }}
             >
-              {isFriend ? "♥" : "♡"}
+              {isFriend ? <img src="/friend.png" alt="Freund" /> : "♡"}
             </button>
           )}
 
@@ -5200,6 +5079,11 @@ function MemberCard({
   );
 }
 
+function showFriendMessage() {
+  alert(
+    "Die Freundesfunktion wird über deine bestehende Freundschaftstabelle verbunden. Die Nachrichtenfunktion ist bereits aktiv."
+  );
+}
 
 
 /* =========================================================
