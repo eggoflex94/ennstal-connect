@@ -4919,6 +4919,7 @@ async function changePoints(event) {
           >
             ★ Zum Admin ernennen
           </button>
+        )}
 
         {selectedMember.id !== user?.id &&
           selectedMember.role !== "MEMBER" &&
@@ -4932,8 +4933,6 @@ async function changePoints(event) {
               ↩ Rolle entfernen · Zum Mitglied
             </button>
           )}
-
-        )}
 
      </div>
     </section>
