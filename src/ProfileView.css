@@ -1,1 +1,174 @@
 .profile-view{max-width:1050px;margin:auto}.back{border:0;background:transparent;color:#b9c1ca;margin-bottom:14px}.profile-hero{border:1px solid #3b424b;border-radius:28px;padding:28px;display:grid;grid-template-columns:170px 1fr auto;gap:25px;align-items:center;color:#f5f6f7}.profile-avatar-wrap img{width:150px;height:150px;border-radius:24px;object-fit:cover;background:#303741;display:block;margin-bottom:10px}.profile-title h1{margin:6px 0;font-size:36px}.real-name{color:#c2c8cf;margin-bottom:10px}.profile-title p{color:#aeb6bf}.profile-buttons{display:grid;gap:8px}.profile-form{display:grid;gap:12px;margin-top:18px}.profile-form label{display:grid;gap:6px;color:#c6ccd3}.admin-data{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.admin-tools{margin-top:18px}.admin-tool-grid{display:flex;flex-wrap:wrap;gap:8px}.admin-tool-grid button{border:1px solid #47505b;background:#303741;color:#edf0f2;padding:10px 13px;border-radius:12px}.admin-tool-grid .danger{background:#5b3034;border-color:#7b464c}@media(max-width:700px){.profile-hero{grid-template-columns:1fr}.admin-data{grid-template-columns:1fr}}
+
+
+/* =========================================================
+   ENNSTAL CONNECT â€“ DESIGN-SCHONENDE FUNKTIONSFIXES
+   ========================================================= */
+
+/* Kleine Profilbilder auf Mitgliederkarten */
+.member-card .member-avatar,
+.member-avatar {
+  width: 74px !important;
+  height: 74px !important;
+  max-width: 74px !important;
+  max-height: 74px !important;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
+}
+
+/* Admin-Stern kleiner, transparenter Hintergrund */
+.member-card .role-symbol,
+.role-symbol:not(.role-symbol-large) {
+  width: 24px !important;
+  height: 24px !important;
+  object-fit: contain;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  opacity: .92;
+}
+.role-symbol-large {
+  width: 34px !important;
+  height: 34px !important;
+  object-fit: contain;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Rollenrahmen: Admin orange, Supporter grÃ¼n, Mitglied Standard */
+.member-card.admin,
+.member-card.head-admin,
+.member-profile-inline.role-admin-frame {
+  border-color: var(--orange, #ff6700) !important;
+  box-shadow: 0 0 0 1px rgba(255,103,0,.12), var(--shadow);
+}
+.member-card.supporter,
+.member-profile-inline.role-supporter-frame {
+  border-color: var(--green, #31a866) !important;
+  box-shadow: 0 0 0 1px rgba(49,168,102,.12), var(--shadow);
+}
+.member-card.member,
+.member-profile-inline.role-member-frame {
+  border-color: var(--line, #d9e0e7) !important;
+}
+
+.head-admin-crown {
+  width: 26px;
+  height: 26px;
+  display: inline-grid;
+  place-items: center;
+  color: #e9b82d;
+  background: transparent;
+  font-size: 21px;
+  line-height: 1;
+}
+.head-admin-label,
+.admin-label,
+.supporter-label,
+.member-label {
+  display: inline-flex;
+  width: max-content;
+  padding: 7px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  letter-spacing: 1px;
+  font-weight: 900;
+}
+.head-admin-label,
+.admin-label { background: rgba(255,103,0,.12); color: #d75a00; border: 1px solid rgba(255,103,0,.35); }
+.supporter-label { background: rgba(49,168,102,.12); color: #24804e; border: 1px solid rgba(49,168,102,.35); }
+.member-label { background: rgba(110,120,132,.1); color: var(--muted, #74808e); }
+
+/* Eingebundenes Mitgliederprofil statt Popup */
+.member-profile-page { display: grid; gap: 18px; }
+.member-profile-inline {
+  background: var(--surface, #fff);
+  border: 1px solid var(--line, #d9e0e7);
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.member-profile-inline-hero {
+  padding: 28px;
+  display: grid;
+  grid-template-columns: 110px minmax(0,1fr) minmax(220px, .8fr);
+  gap: 24px;
+  align-items: center;
+  background: linear-gradient(135deg, rgba(35,43,53,.98), rgba(42,51,63,.94));
+  color: #fff;
+}
+.member-profile-inline-avatar img {
+  width: 104px;
+  height: 104px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--profile-accent, #ff6b25);
+}
+.member-profile-inline-title h2 { margin: 8px 0 6px; font-size: clamp(28px,4vw,42px); }
+.member-profile-inline-title .member-status { margin: 0 0 12px; }
+.member-profile-bio { margin: 0; color: #d6dde4; max-width: 680px; line-height: 1.6; }
+.member-profile-inline-actions { display: grid; gap: 9px; }
+.member-profile-inline-actions button { width: 100%; }
+.member-profile-details-grid {
+  padding: 22px 28px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+.member-profile-details-grid > div {
+  border: 1px solid var(--line, #d9e0e7);
+  border-radius: 14px;
+  padding: 13px 15px;
+  display: grid;
+  gap: 5px;
+}
+.member-profile-details-grid span { color: var(--muted, #74808e); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+.inline-admin-tools {
+  margin: 0 28px 28px;
+  padding: 20px;
+  border: 1px solid rgba(255,103,0,.55);
+  border-radius: 18px;
+  background: rgba(255,103,0,.05);
+}
+.inline-admin-tools h3 { margin: 6px 0 16px; }
+.inline-admin-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.inline-admin-actions button {
+  border: 1px solid #566270;
+  background: #2a333e;
+  color: #f3f6f8;
+  border-radius: 12px;
+  padding: 11px 14px;
+  cursor: pointer;
+}
+.inline-admin-actions .lock { border-color: #d07a2b; }
+.inline-admin-actions .unlock { border-color: #31a866; }
+.suspension-reason-box {
+  margin-top: 14px;
+  display: grid;
+  gap: 5px;
+  border-left: 3px solid #d07a2b;
+  padding: 10px 12px;
+  background: rgba(255,255,255,.55);
+  border-radius: 8px;
+}
+
+/* Hauptseite: breiter, mittiger News-Bereich und editierbare Rahmen */
+.homepage-sections,
+.news-grid {
+  width: min(100%, 1080px);
+  margin-left: auto;
+  margin-right: auto;
+}
+.news-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); }
+.news-card { min-height: 100%; resize: both; overflow: auto; }
+.homepage-frame { resize: both; overflow: auto; min-width: 260px; min-height: 150px; }
+
+/* Gesperrte Nutzer klar markieren */
+.member-suspended,
+.suspension-reason-box { color: #7b3c1f; }
+
+@media (max-width: 850px) {
+  .member-profile-inline-hero { grid-template-columns: 1fr; }
+  .member-profile-inline-avatar { justify-self: start; }
+}
