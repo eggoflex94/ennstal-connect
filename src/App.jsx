@@ -145,7 +145,10 @@ export default function App() {
   const openMember = async (member) => {
     if (!member) return;
 
+    // Mitgliederprofile werden nicht mehr als Popup geöffnet.
+    // Die Profilansicht ist direkt in die Hauptansicht eingebunden.
     setSelectedMember(member);
+    setPage("member-profile");
 
     // Eigenes Profil nicht als Besuch speichern.
     if (!user?.id || member.id === user.id) return;
@@ -453,7 +456,8 @@ export default function App() {
           (block) =>
             block.blocked_id === member.id
         ) &&
-        member.account_status !== "SUSPENDED"
+        member.account_status !== "SUSPENDED" &&
+        member.is_suspended !== true
     ),
   [members, blockedUsers]
 );
@@ -685,8 +689,10 @@ const sortedMembers = useMemo(() => {
     event.currentTarget.reset();
 
     showNotice(
-      "Registrierung erfolgreich."
+      "Registrierung erfolgreich. Prüfe bei aktivierter E-Mail-Bestätigung dein Postfach und bestätige dein Konto."
     );
+
+    await loadAll();
   }
 
   /* =========================================================
@@ -1581,6 +1587,57 @@ async function changePoints(event) {
 }
 
   /* =========================================================
+     BLOCKIEREN / FREIGEBEN
+     ========================================================= */
+
+  async function blockUser(member) {
+    if (!user?.id || !member?.id || member.id === user.id) return;
+
+    if (blockedUsers.some((item) => item.blocked_id === member.id)) {
+      showNotice("Dieses Mitglied ist bereits blockiert.");
+      return;
+    }
+
+    const { error } = await supabase
+      .from("user_blocks")
+      .insert({ blocker_id: user.id, blocked_id: member.id });
+
+    if (error) {
+      showNotice(error.message);
+      return;
+    }
+
+    setBlockedUsers((current) => [
+      ...current,
+      { id: `${user.id}-${member.id}`, blocker_id: user.id, blocked_id: member.id }
+    ]);
+    setSelectedMember(null);
+    setPage("blocked");
+    showNotice(`${getName(member)} wurde blockiert.`);
+  }
+
+  async function unblockUser(memberId) {
+    if (!user?.id || !memberId) return;
+
+    const { error } = await supabase
+      .from("user_blocks")
+      .delete()
+      .eq("blocker_id", user.id)
+      .eq("blocked_id", memberId);
+
+    if (error) {
+      showNotice(error.message);
+      return;
+    }
+
+    setBlockedUsers((current) =>
+      current.filter((item) => item.blocked_id !== memberId)
+    );
+    showNotice("Mitglied wurde wieder freigegeben.");
+    await loadAll();
+  }
+
+  /* =========================================================
      ADMIN MITGLIED SPEICHERN
      ========================================================= */
 
@@ -1634,32 +1691,36 @@ async function changePoints(event) {
 
   async function toggleMemberSuspension(member) {
     if (!member?.id || !isAdmin(profile?.role)) return;
-    if (member.role === "HEAD_ADMIN") {
-      showNotice("Der Head Admin kann nicht gesperrt werden.");
+
+    if (member.id === user?.id || member.role === "HEAD_ADMIN") {
+      showNotice("Dieses Konto kann nicht über diese Funktion gesperrt werden.");
       return;
     }
 
-    const nextStatus =
-      member.account_status === "SUSPENDED"
-        ? "ACTIVE"
-        : "SUSPENDED";
+    const isSuspended =
+      member.account_status === "SUSPENDED" || member.is_suspended === true;
 
-    const actionLabel =
-      nextStatus === "SUSPENDED" ? "sperren" : "freischalten";
+    let reason = null;
 
-    if (!window.confirm(`${getName(member)} wirklich ${actionLabel}?`)) {
-      return;
+    if (!isSuspended) {
+      reason = window.prompt(
+        `Grund für die Sperre von "${getName(member)}":`
+      );
+
+      if (!reason || !reason.trim()) {
+        showNotice("Eine Sperre benötigt einen Grund.");
+        return;
+      }
+
+      if (!window.confirm(`${getName(member)} wirklich sperren?`)) return;
+    } else {
+      if (!window.confirm(`${getName(member)} wirklich wieder freischalten?`)) return;
     }
 
-    const { error } = await supabase.rpc("admin_update_member", {
-      p_user_id: member.id,
-      p_nickname: member.nickname || "",
-      p_first_name: member.first_name || "",
-      p_last_name: member.last_name || "",
-      p_birth_date: member.birth_date || null,
-      p_gender: member.gender || null,
-      p_role: member.role || "MEMBER",
-      p_account_status: nextStatus
+    const { error } = await supabase.rpc("admin_set_account_status", {
+      target_user: member.id,
+      new_status: isSuspended ? "ACTIVE" : "SUSPENDED",
+      reason_text: isSuspended ? null : reason.trim()
     });
 
     if (error) {
@@ -1667,10 +1728,37 @@ async function changePoints(event) {
       return;
     }
 
+    setMembers((current) =>
+      current.map((item) =>
+        item.id === member.id
+          ? {
+              ...item,
+              account_status: isSuspended ? "ACTIVE" : "SUSPENDED",
+              is_suspended: !isSuspended,
+              suspension_reason: isSuspended ? null : reason.trim()
+            }
+          : item
+      )
+    );
+
+    setSuspendedUsers((current) =>
+      isSuspended
+        ? current.filter((item) => item.id !== member.id)
+        : [
+            ...current.filter((item) => item.id !== member.id),
+            {
+              ...member,
+              account_status: "SUSPENDED",
+              is_suspended: true,
+              suspension_reason: reason.trim()
+            }
+          ]
+    );
+
     showNotice(
-      nextStatus === "SUSPENDED"
-        ? `${getName(member)} wurde gesperrt.`
-        : `${getName(member)} wurde freigeschaltet.`
+      isSuspended
+        ? `${getName(member)} wurde freigeschaltet.`
+        : `${getName(member)} wurde gesperrt.`
     );
 
     await loadAll();
@@ -1995,7 +2083,7 @@ async function changePoints(event) {
                         }}
                       >
                         <span>🔒</span>
-                        Gesperrte Konten
+                        Gesperrte Nutzer
                       </button>
                     )}
                   </div>
@@ -2964,6 +3052,56 @@ async function changePoints(event) {
               BLOCKIERTE NUTZER
               ================================================= */}
 
+          {page === "member-profile" && selectedMember && (
+            <section className="member-profile-page">
+              <div className="page-heading">
+                <div>
+                  <button className="back-button" type="button" onClick={() => setPage("members")}>← Zurück zu Mitgliedern</button>
+                  <span className="eyebrow">MITGLIEDSPROFIL</span>
+                  <h1>{getName(selectedMember)}</h1>
+                  <p>Alle Angaben, die dieses Mitglied für die Community freigegeben hat.</p>
+                </div>
+              </div>
+              <article className={`member-profile-inline ${isAdmin(selectedMember.role) ? "role-admin-frame" : selectedMember.role === "SUPPORTER" ? "role-supporter-frame" : "role-member-frame"}`}>
+                <div className="member-profile-inline-hero">
+                  <div className="member-profile-inline-avatar"><img src={selectedMember.avatar_url || DEFAULT_AVATAR} alt={getName(selectedMember)} onError={(event)=>{event.currentTarget.src=DEFAULT_AVATAR;}} /></div>
+                  <div className="member-profile-inline-title">
+                    {selectedMember.role === "HEAD_ADMIN" && <span className="head-admin-label">♕ HEAD ADMIN</span>}
+                    {selectedMember.role === "ADMIN" && <span className="admin-label">★ ADMIN</span>}
+                    {selectedMember.role === "SUPPORTER" && <span className="supporter-label">✦ SUPPORTER</span>}
+                    {selectedMember.role === "MEMBER" && <span className="member-label">MITGLIED</span>}
+                    <h2 style={{color:selectedMember.nickname_color || undefined}}>{getName(selectedMember)}</h2>
+                    <p className={`member-status ${selectedMember.is_online ? "online":"offline"}`}><span />{selectedMember.is_online ? "Online":"Offline"}</p>
+                    {selectedMember.bio && <p className="member-profile-bio">{selectedMember.bio}</p>}
+                  </div>
+                  {selectedMember.id !== user?.id && <div className="member-profile-inline-actions">
+                    <button type="button" className="primary-button" onClick={()=>openChat(selectedMember)}>💬 Nachricht senden</button>
+                    <button type="button" className="secondary-button" onClick={()=>requestFriend(selectedMember)}>🤝 Freundschaftsanfrage</button>
+                    <button type="button" className="secondary-button" onClick={()=>blockUser(selectedMember)}>🚫 Nutzer blockieren</button>
+                    <button type="button" className="danger-button" onClick={()=>reportUser(selectedMember)}>🚩 Nutzer melden</button>
+                  </div>}
+                </div>
+                <div className="member-profile-details-grid">
+                  {selectedMember.first_name && <div><span>Vorname</span><strong>{selectedMember.first_name}</strong></div>}
+                  {selectedMember.last_name && <div><span>Nachname</span><strong>{selectedMember.last_name}</strong></div>}
+                  {selectedMember.location && <div><span>Wohnort</span><strong>{selectedMember.location}</strong></div>}
+                  {selectedMember.interests && <div><span>Interessen</span><strong>{selectedMember.interests}</strong></div>}
+                  {selectedMember.website && <div><span>Website</span><strong>{selectedMember.website}</strong></div>}
+                </div>
+                {isAdmin(profile?.role) && selectedMember.id !== user?.id && selectedMember.role !== "HEAD_ADMIN" && <div className="inline-admin-tools">
+                  <span className="eyebrow">MODERATION</span><h3>Admin-Werkzeuge</h3>
+                  <div className="inline-admin-actions">
+                    {isHeadAdmin(profile?.role) && <button type="button" onClick={()=>changeMemberRole(selectedMember,"SUPPORTER")}>● Supporter ernennen</button>}
+                    {isHeadAdmin(profile?.role) && <button type="button" onClick={()=>changeMemberRole(selectedMember,"ADMIN")}>★ Zum Admin ernennen</button>}
+                    {selectedMember.role !== "MEMBER" && <button type="button" onClick={()=>changeMemberRole(selectedMember,"MEMBER")}>↩ Rolle entfernen</button>}
+                    <button type="button" className={selectedMember.account_status==="SUSPENDED" || selectedMember.is_suspended ? "unlock":"lock"} onClick={()=>toggleMemberSuspension(selectedMember)}>{selectedMember.account_status==="SUSPENDED" || selectedMember.is_suspended ? "🔓 Nutzer freischalten":"🔒 Nutzer sperren"}</button>
+                  </div>
+                  {(selectedMember.account_status==="SUSPENDED" || selectedMember.is_suspended) && <div className="suspension-reason-box"><strong>Sperrgrund</strong><span>{selectedMember.suspension_reason || "Kein Grund hinterlegt."}</span></div>}
+                </div>}
+              </article>
+            </section>
+          )}
+
           {page === "blocked" && (
             <section>
               <div className="page-heading">
@@ -3477,12 +3615,12 @@ async function changePoints(event) {
             PROFIL MODAL
             ===================================================== */}
 
-        {page === "suspended-users" && isHeadAdmin(profile?.role) && (
+        {page === "suspended-users" && isAdmin(profile?.role) && (
           <section>
             <div className="page-heading">
               <div>
                 <span className="eyebrow">HEAD ADMIN</span>
-                <h1>Gesperrte Konten</h1>
+                <h1>Gesperrte Nutzer</h1>
                 <p>Hier können gesperrte Mitglieder direkt wieder freigeschaltet werden.</p>
               </div>
             </div>
@@ -3586,7 +3724,7 @@ async function changePoints(event) {
           </section>
         )}
 
-        {selectedMember && (
+        {selectedMember && page !== "member-profile" && (
 
           <div
             className="modal-overlay"
@@ -4093,11 +4231,13 @@ function MemberCard({
     <article
       className={
         `member-card ${
-          admin
+          headAdmin
+            ? "head-admin"
+            : admin
             ? "admin"
             : supporter
             ? "supporter"
-            : ""
+            : "member"
         }`
       }
       onClick={() =>
@@ -4109,7 +4249,8 @@ function MemberCard({
 
         <div className="member-left">
 
-          {admin && <img className="role-symbol" src="/Admin-star.png" alt="Admin" />}
+          {headAdmin && <span className="head-admin-crown" title="Head Admin">♕</span>}
+          {!headAdmin && admin && <img className="role-symbol" src="/Admin-star.png" alt="Admin" />}
           {supporter && <img className="role-symbol" src="/supporter-star.png" alt="Supporter" />}
 
         </div>
