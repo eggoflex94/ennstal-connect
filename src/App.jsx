@@ -4219,7 +4219,7 @@ function MemberCard({
 
         <div className="member-left">
 
-          {admin && <img className="role-symbol" src="/Admin-star.png" alt="Admin" />}
+          {admin && <span className="role-symbol role-symbol-star" aria-label={member.role === "HEAD_ADMIN" ? "Head Admin" : "Admin"}>★</span>}
           {supporter && <img className="role-symbol" src="/supporter-star.png" alt="Supporter" />}
 
         </div>
