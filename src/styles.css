@@ -1285,7 +1285,7 @@
 
 
       /* =========================================================
-         RECHTE LEISTE ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ TRANSPARENT + ROLLENRAHMEN
+         RECHTE LEISTE ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ TRANSPARENT + ROLLENRAHMEN
          ========================================================= */
 
       .quick-rail {
@@ -1926,33 +1926,231 @@
         }
       }
 
-/* ============================================================
-   ENNSTAL CONNECT â€“ FINAL VISUAL PATCH
-   Bestehendes Design bleibt erhalten
-   ============================================================ */
-.member-avatar {
-  width: 68px;
-  height: 68px;
-  margin: 4px 0 10px;
+
+/* Head-Admin-Logbuch */
+.admin-log-grid{display:grid;grid-template-columns:1.25fr .85fr;gap:22px;align-items:start}.admin-log-panel{min-height:420px}.admin-log-list{display:grid;gap:10px}.admin-log-row,.admin-report-row{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:14px 0;border-top:1px solid rgba(148,163,184,.18)}.admin-log-row:first-child,.admin-report-row:first-child{border-top:0}.admin-log-row strong,.admin-log-row span,.admin-log-row small{display:block}.admin-log-row span{margin-top:4px;font-weight:700}.admin-log-row small{margin-top:5px;color:var(--muted,#718096);word-break:break-word}.admin-log-row time{white-space:nowrap;color:var(--muted,#718096);font-size:12px}.admin-report-row{width:100%;border:0;border-top:1px solid rgba(148,163,184,.18);background:transparent;text-align:left;color:inherit;cursor:pointer}.admin-report-row strong,.admin-report-row small{display:block}.admin-report-row small{margin-top:5px;color:var(--muted,#718096)}.admin-report-row em{font-style:normal;color:var(--orange,#ff6b00);white-space:nowrap;font-size:12px;font-weight:800}@media(max-width:980px){.admin-log-grid{grid-template-columns:1fr}.admin-log-row{flex-direction:column}.admin-log-row time{white-space:normal}}
+
+/* ===== CLEAN MODERN SHELL ===== */
+:root{--orange:#ff6b25;--ink:#27384a;--sidebar:#243446;--line:#d8e0e8;--paper:#f6f8fb;--text:#405166}
+body{background:#edf1f6!important;color:var(--text)!important}.app{background:#edf1f6;min-height:100vh}.modern-topbar{position:fixed!important;inset:0 0 auto 0;height:92px!important;min-height:92px!important;padding:0 34px!important;background:rgba(250,251,253,.97)!important;border-bottom:1px solid #d9e0e8!important;color:#314155!important;z-index:100!important;display:flex!important}.topbar-brand{display:flex;align-items:center;gap:12px;width:290px;cursor:pointer}.brand-mark{width:58px;height:58px;border-radius:18px;background:linear-gradient(135deg,#ff8a3d,#ff5a12);display:grid;place-items:center;color:#fff;font-size:30px;box-shadow:0 10px 25px rgba(255,107,37,.25)}.topbar-brand strong{font-size:27px;letter-spacing:.2px}.topbar-brand span{font-size:27px;color:var(--orange);margin-left:4px;font-weight:800}.breadcrumb{font-size:14px;letter-spacing:.12em;font-weight:700;color:#788697;flex:1}.breadcrumb b{margin:0 12px;color:#a6b1be}.topbar-user{display:flex;align-items:center;gap:10px;cursor:pointer}.topbar-user img{width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid #ff7a2e}.dashboard-layout{display:flex;padding-top:92px;min-height:100vh}.modern-sidebar{position:fixed;left:0;top:92px;bottom:0;width:322px;background:linear-gradient(180deg,#2c3d50,#202e3d);padding:26px 22px;display:flex;flex-direction:column;z-index:50;border-right:1px solid rgba(255,255,255,.08)}.sidebar-profile{background:#fff;border-radius:24px;padding:14px;display:flex;gap:13px;align-items:center;color:#2c3a4a;cursor:pointer;box-shadow:0 15px 30px rgba(0,0,0,.08);margin-bottom:32px}.sidebar-profile img{width:58px;height:58px;border-radius:50%;object-fit:cover;border:2px solid #ff7a2e}.sidebar-profile strong{display:block;font-size:18px;margin-bottom:6px}.role-badge{display:inline-block;padding:7px 13px;border-radius:999px;background:#e8edf3;font-size:12px;font-weight:800}.role-badge.head,.role-badge.admin{background:linear-gradient(135deg,#ff913d,#ff5b12);color:#fff}.role-badge.supporter{background:#daf5e4;color:#177846}.modern-nav{display:grid!important;gap:8px!important;flex:0!important}.modern-nav button,.sidebar-logout{width:100%;border:0!important;background:transparent!important;color:#c9d1da!important;text-align:left!important;padding:17px 16px!important;border-radius:16px!important;font-weight:750!important;font-size:17px!important;display:flex!important;align-items:center!important;gap:16px!important}.modern-nav button:hover,.modern-nav button.active{background:linear-gradient(135deg,#ff8a3d,#ff5b12)!important;color:#fff!important;box-shadow:0 10px 24px rgba(255,107,37,.25)}.modern-nav em{margin-left:auto;background:#fff;color:#ff6420;border-radius:999px;padding:2px 7px;font-style:normal;font-size:12px}.modern-nav .admin-link{color:#ffd1b9!important}.sidebar-logout{margin-top:auto!important;border:1px solid rgba(255,255,255,.12)!important;background:rgba(255,255,255,.04)!important}.modern-main{margin-left:322px!important;width:calc(100% - 322px)!important;max-width:none!important;padding:58px 52px 80px!important;color:#405166!important}.modern-main .page-heading{margin-bottom:28px}.modern-main .page-heading h1{color:#33465b!important;font-size:clamp(46px,5vw,72px)!important;letter-spacing:-.045em}.modern-main .page-heading p{color:#66788b!important}.modern-main .panel,.modern-main .empty-card,.modern-main .member-card,.modern-main .news-card,.modern-main .content-card,.modern-main .home-section{background:#fff!important;color:#405166!important;border:1px solid var(--line)!important;box-shadow:0 14px 36px rgba(42,59,78,.08)!important;border-radius:22px!important}.modern-main input,.modern-main textarea,.modern-main select{background:#fff!important;color:#405166!important;border-color:#d6dee8!important}.modern-main .hero{border-radius:28px;border:1px solid #d8e0e8;box-shadow:0 18px 40px rgba(42,59,78,.12)}.modern-main .primary-button,.modern-main button.primary-button{background:linear-gradient(135deg,#ff8436,#ff5b12)!important;border-color:#ff6b25!important;color:#fff!important}.modern-main .eyebrow{color:#e76b20!important}.modern-main h1,.modern-main h2,.modern-main h3,.modern-main strong{color:inherit}.modern-main .empty-card{min-height:260px;display:grid;place-items:center;font-size:17px;color:#718196}.topbar,.sidebar-nav,.quick-rail,.top-profile,.header-actions,.global-search,.sidebar-create,.sidebar-friends{box-sizing:border-box}.quick-rail{display:none!important}@media(max-width:1050px){.modern-sidebar{width:86px;padding:18px 10px}.sidebar-profile{padding:8px;justify-content:center}.sidebar-profile>div{display:none}.modern-nav button span,.sidebar-logout span{display:none}.modern-nav button,.sidebar-logout{justify-content:center;font-size:20px!important;padding:16px!important}.modern-main{margin-left:86px!important;width:calc(100% - 86px)!important;padding:42px 28px!important}.topbar-brand{width:auto}.topbar-brand>div:last-child,.breadcrumb{display:none}}@media(max-width:680px){.modern-topbar{height:70px!important;min-height:70px!important;padding:0 14px!important}.dashboard-layout{padding-top:70px}.modern-sidebar{top:70px;width:68px}.modern-main{margin-left:68px!important;width:calc(100% - 68px)!important;padding:30px 16px!important}.brand-mark{width:44px;height:44px;font-size:22px}.topbar-user strong{display:none}.topbar-user img{width:42px;height:42px}}
+
+
+/* ===== HOTFIX: FUNKTIONALE MODERNE OBERFLÃƒÆ’Ã¢â‚¬Å¾CHE ===== */
+html,body,#root{min-height:100%;width:100%;overflow-x:hidden}
+body{margin:0!important;background:#eef2f6!important;color:#405166!important}
+.app{min-height:100vh!important;background:#eef2f6!important}
+/* Old top navigation and right rail must never take layout space. */
+.topbar:not(.modern-topbar),.quick-rail{display:none!important}
+.modern-topbar{position:fixed!important;top:0;left:0;right:0;width:100%!important;height:92px!important;display:flex!important;align-items:center!important;justify-content:space-between!important}
+.dashboard-layout{display:block!important;padding-top:92px!important;min-height:100vh!important}
+.modern-sidebar{position:fixed!important;left:0!important;top:92px!important;bottom:0!important;width:286px!important;overflow-y:auto!important;z-index:90!important}
+.modern-main{display:block!important;margin-left:286px!important;width:calc(100% - 286px)!important;max-width:none!important;padding:46px 48px 72px!important;min-height:calc(100vh - 92px)!important}
+.content-root{width:100%!important;max-width:1280px!important;margin:0 auto!important}
+.content-root>section{width:100%!important}
+.content-root .page-heading{display:flex!important;align-items:flex-end!important;justify-content:space-between!important;margin:0 0 28px!important}
+.content-root .page-heading h1{font-size:clamp(42px,5vw,64px)!important;line-height:1.04!important;margin:8px 0 10px!important;color:#33465b!important}
+/* Prevent legacy main rules from creating duplicate constrained areas. */
+.modern-main main{width:100%!important;max-width:none!important;margin:0!important;padding:0!important}
+/* Cards and content grids */
+.modern-main .panel,.modern-main .member-card,.modern-main .group-card,.modern-main .news-card,.modern-main .empty-card,.modern-main .home-section,.modern-main .homepage-frame{background:#fff!important;color:#405166!important;border:1px solid #d8e0e8!important;border-radius:22px!important;box-shadow:0 12px 30px rgba(40,58,80,.08)!important}
+.modern-main .member-grid,.modern-main .cards,.modern-main .news-grid{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(280px,1fr))!important;gap:18px!important}
+.modern-main .member-card,.modern-main .group-card,.modern-main .news-card{overflow:hidden!important;padding:18px!important}
+/* Stop avatars from stretching to full viewport height/width. */
+.modern-main img.member-avatar,.modern-main .member-card img,.modern-main .member-mini img,.modern-main .member-section img,.modern-main .profile-visitor img{width:58px!important;height:58px!important;max-width:58px!important;max-height:58px!important;object-fit:cover!important;border-radius:50%!important;display:block!important}
+.modern-main .group-card>img{width:100%!important;height:170px!important;max-width:none!important;max-height:none!important;border-radius:14px!important;object-fit:cover!important;margin-bottom:14px!important}
+.modern-main .hero img{width:100%!important;height:auto!important;max-height:420px!important;object-fit:cover!important;display:block!important}
+.modern-main .news-card p,.modern-main .group-card p{color:#66788b!important;line-height:1.6!important}
+.modern-main input,.modern-main textarea,.modern-main select{background:#fff!important;color:#405166!important;border:1px solid #d6dee8!important}
+.modern-main .primary-button{background:linear-gradient(135deg,#ff8a3d,#ff5b12)!important;color:#fff!important;border:0!important}
+.site-footer{margin-left:286px!important;width:calc(100% - 286px)!important;background:#fff!important;color:#405166!important;border-top:1px solid #d8e0e8!important}
+/* Global modal images stay contained. */
+.public-profile-modal img,.profile-modal img,.profile-showcase img{max-width:260px!important;max-height:260px!important;width:100%!important;height:auto!important;object-fit:cover!important}
+/* The old global nav selector must not style sidebar buttons. */
+.modern-sidebar nav button{white-space:nowrap!important}
+@media(max-width:1050px){.modern-sidebar{width:82px!important}.modern-main{margin-left:82px!important;width:calc(100% - 82px)!important;padding:34px 26px 64px!important}.site-footer{margin-left:82px!important;width:calc(100% - 82px)!important}}
+@media(max-width:680px){.modern-sidebar{width:68px!important}.modern-main{margin-left:68px!important;width:calc(100% - 68px)!important;padding:26px 14px 56px!important}.site-footer{margin-left:68px!important;width:calc(100% - 68px)!important}.modern-main .member-grid,.modern-main .cards,.modern-main .news-grid{grid-template-columns:1fr!important}}
+
+/* ENNSTAL CONNECT Ã¢â‚¬â€œ Hotfix-ErgÃƒÂ¤nzungen: gleich groÃƒÅ¸e Profilbilder + Sperrverwaltung */
+img.member-avatar,
+.member-avatar,
+.admin-member-avatar,
+.member-mini img,
+.member-card img.avatar,
+.topbar-user img,
+.sidebar-profile img {
+  width: 58px !important;
+  height: 58px !important;
+  min-width: 58px !important;
+  min-height: 58px !important;
+  max-width: 58px !important;
+  max-height: 58px !important;
+  object-fit: cover !important;
+  object-position: center !important;
 }
-.member-card { min-height: 250px; }
-.role-symbol.role-star-transparent,
-.role-star-transparent {
+.admin-member-avatar { width:42px !important; height:42px !important; min-width:42px !important; min-height:42px !important; }
+.modal-avatar { width: 210px; height: 210px; object-fit: cover; object-position:center; }
+.admin-member-card-actions button { cursor:pointer; }
+.admin-member-card-actions button:last-child { border-color:#d68a2d; }
+.suspended-page,.suspended-box{box-sizing:border-box}
+
+
+/* =========================================================
+   ENNSTAL CONNECT â€“ FINAL STABILIZATION
+   Design-Hotfix: bestehende Gestaltung bleibt erhalten.
+   ========================================================= */
+
+/* Kleine, einheitliche Profilbilder */
+.member-avatar,
+img.member-avatar,
+.modern-main img.member-avatar,
+.admin-member-avatar {
+  object-fit: cover !important;
+  object-position: center !important;
+}
+.member-avatar,
+img.member-avatar {
+  width: 58px !important;
+  height: 58px !important;
+  min-width: 58px !important;
+  min-height: 58px !important;
+  max-width: 58px !important;
+  max-height: 58px !important;
+}
+.modal-avatar {
+  width: 140px !important;
+  height: 140px !important;
+  min-width: 140px !important;
+  min-height: 140px !important;
+  max-width: 140px !important;
+  max-height: 140px !important;
+  border-radius: 50% !important;
+}
+
+/* Rollen: kleiner Stern, transparenter Hintergrund */
+.role-symbol,
+.inline-role-symbol,
+.small-admin-star {
+  width: 17px !important;
+  height: 17px !important;
+  max-width: 17px !important;
+  max-height: 17px !important;
+  object-fit: contain !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  vertical-align: middle;
+}
+.role-symbol-large {
+  width: 22px !important;
+  height: 22px !important;
+  background: transparent !important;
+}
+.head-admin-badge {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  background: transparent !important;
-  color: #ff7a1a;
-  font-size: 18px;
-  line-height: 1;
-  text-shadow: 0 0 8px rgba(255,122,26,.28);
+  gap: 5px;
+  padding: 4px 8px;
+  border: 1px solid rgba(255, 122, 35, .65);
+  border-radius: 999px;
+  color: #ff8a3d;
+  background: rgba(255, 122, 35, .08);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .12em;
 }
-.role-symbol-large.role-star-transparent { width: 21px; height: 21px; font-size: 21px; }
-.admin-star-large.role-star-transparent { font-size: 22px; line-height: 1; color:#ff7a1a; background:transparent !important; }
-.member-card.admin { border-color:#ff7a1a; background:linear-gradient(145deg,#3a2a1b,#1d2128); }
-.member-card.supporter { border-color:#42d878; background:linear-gradient(145deg,#193825,#1d2128); }
-.suspended-card { border-color:#b53b3b !important; background:linear-gradient(145deg,#311f24,#1d2128) !important; cursor:default; }
-.suspension-reason { width:100%; min-height:42px; color:#f0c2c2; font-size:12px; line-height:1.45; overflow-wrap:anywhere; }
-.success-button { border-color:#42d878 !important; color:#9cf0b8 !important; margin-top:10px; }
+
+/* GewÃ¼nschte Rollen-HintergrÃ¼nde */
+.member-card.admin,
+.admin-member-card.admin-card,
+.admin-member-card.head-admin-card {
+  border-color: #ff7a25 !important;
+  background:
+    linear-gradient(145deg, rgba(255,122,37,.20), rgba(39,35,29,.98)) !important;
+}
+.member-card.supporter,
+.admin-member-card.supporter-card {
+  border-color: #36c978 !important;
+  background:
+    linear-gradient(145deg, rgba(54,201,120,.18), rgba(28,45,35,.98)) !important;
+}
+.member-card:not(.admin):not(.supporter) {
+  background: inherit;
+}
+
+/* Profil ist keine stÃ¶rende Popup-Ansicht mehr, sondern eine Seite */
+.member-profile-page.modal-overlay {
+  position: static !important;
+  inset: auto !important;
+  z-index: auto !important;
+  display: block !important;
+  padding: 0 0 42px !important;
+  background: transparent !important;
+}
+.member-profile-page .profile-modal {
+  width: min(1120px, calc(100% - 36px)) !important;
+  max-height: none !important;
+  overflow: visible !important;
+  margin: 0 auto !important;
+  box-shadow: 0 24px 70px rgba(0,0,0,.28);
+}
+.member-profile-page .modal-close {
+  position: sticky !important;
+  top: 12px !important;
+  margin: 12px 12px -50px auto !important;
+  display: grid;
+  place-items: center;
+  font-size: 18px !important;
+}
+
+/* Sperrverwaltung */
+.admin-member-card-actions button.suspend-action,
+.profile-admin-button.danger {
+  border-color: rgba(255, 91, 91, .7);
+}
+.suspended-user-reason {
+  margin: 10px 0;
+  padding: 10px 12px;
+  border-left: 3px solid #ff7a25;
+  border-radius: 10px;
+  background: rgba(255,122,37,.08);
+  color: #d7dde7;
+}
+
+/* Flexible Startseite fÃ¼r den Head Admin */
+.homepage-sections {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 18px;
+}
+.homepage-frame {
+  grid-column: span 6;
+}
+.homepage-frame.size-small {
+  grid-column: span 4;
+}
+.homepage-frame.size-medium {
+  grid-column: span 6;
+}
+.homepage-frame.size-large,
+.homepage-frame.size-wide {
+  grid-column: span 12;
+}
+.homepage-frame.size-large {
+  min-height: 250px;
+}
+.homepage-frame.size-wide {
+  min-height: 180px;
+}
+@media (max-width: 850px) {
+  .homepage-sections,
+  .homepage-frame,
+  .homepage-frame.size-small,
+  .homepage-frame.size-medium,
+  .homepage-frame.size-large,
+  .homepage-frame.size-wide {
+    display: block;
+    width: 100%;
+  }
+  .homepage-frame + .homepage-frame {
+    margin-top: 16px;
+  }
+}
