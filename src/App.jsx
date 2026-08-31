@@ -145,8 +145,6 @@ export default function App() {
   const openMember = async (member) => {
     if (!member) return;
 
-    // Mitgliederprofile werden in die Hauptansicht eingebunden und nicht mehr
-    // als separates Popup geöffnet.
     setSelectedMember(member);
     setPage("member-profile");
 
@@ -237,7 +235,7 @@ export default function App() {
         permissionData
       ] = await Promise.all([
         safe("Profil", supabase.from("profiles").select("*").eq("id", currentUser.id).maybeSingle(), null),
-        safe("Mitglieder", supabase.from("profiles").select("*")),
+        safe("Mitglieder", supabase.rpc("get_visible_profiles")),
         safe("Neuigkeiten", supabase.from("news").select("*").order("created_at", { ascending: false })),
         safe("Events", supabase.from("events").select("*").order("created_at", { ascending: false })),
         safe("Gruppen", supabase.from("groups").select("*").order("created_at", { ascending: false })),
@@ -246,9 +244,7 @@ export default function App() {
         safe("Nachrichten", supabase.from("messages").select("*").or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`).order("created_at", { ascending: false })),
         safe("Freundschaften", supabase.from("friendships").select("*").or(`requester_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`)),
         safe("Profilbesuche", supabase.from("profile_visits").select("*").eq("profile_id", currentUser.id).order("visited_at", { ascending: false })),
-        // Beide Richtungen laden: Wenn ich jemanden blockiere ODER mich jemand
-        // blockiert, sollen sich beide Nutzer gegenseitig nicht mehr sehen.
-        safe("Blockierungen", supabase.from("user_blocks").select("*").or(`blocker_id.eq.${currentUser.id},blocked_id.eq.${currentUser.id}`)),
+        safe("Blockierungen", supabase.from("user_blocks").select("*").eq("blocker_id", currentUser.id)),
         safe("Meldungen", supabase.from("user_reports").select("*").order("created_at", { ascending: false })),
         safe("Profilaktivitäten", supabase.from("profile_activity").select("*").order("created_at", { ascending: false }).limit(40)),
         safe("Berechtigungen", supabase.from("user_permissions").select("*").eq("user_id", currentUser.id).maybeSingle(), {})
@@ -445,27 +441,23 @@ export default function App() {
 
   const blockedIds = useMemo(
     () => new Set(
-      blockedUsers
-        .map((item) =>
-          item.blocker_id === user?.id
-            ? item.blocked_id
-            : item.blocker_id
-        )
-        .filter(Boolean)
+      blockedUsers.map((item) => item.blocked_id)
     ),
-    [blockedUsers, user?.id]
+    [blockedUsers]
   );
 
-  // Sichtbare Mitglieder: gegenseitige Blockierungen gelten in beide Richtungen.
-  // Gesperrte Konten bleiben vollständig aus den normalen Community-Ansichten entfernt.
   const visibleMembers = useMemo(
-    () =>
-      members.filter((member) =>
-        !blockedIds.has(member.id) &&
+  () =>
+    members.filter(
+      (member) =>
+        !blockedUsers.some(
+          (block) =>
+            block.blocked_id === member.id
+        ) &&
         member.account_status !== "SUSPENDED"
-      ),
-    [members, blockedIds]
-  );
+    ),
+  [members, blockedUsers]
+);
 
 const sortedMembers = useMemo(() => {
   const query =
@@ -818,6 +810,7 @@ const sortedMembers = useMemo(() => {
         title: String(form.get("title") || "").trim(),
         content: String(form.get("content") || "").trim(),
         frame_style: form.get("frame_style") || "standard",
+        display_size: form.get("display_size") || "medium",
         created_by: user.id,
         updated_by: user.id,
         sort_order: homepageSections.length
@@ -857,6 +850,39 @@ const sortedMembers = useMemo(() => {
     }
 
     showNotice("Hauptrahmen wurde gespeichert.");
+    await loadAll();
+  }
+
+  async function moveHomepageSection(section, direction) {
+    if (!isHeadAdmin(profile?.role) && !myAdminPermission("manage_homepage")) return;
+    const ordered = [...homepageSections].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+    const index = ordered.findIndex((item) => item.id === section.id);
+    const targetIndex = index + direction;
+    if (index < 0 || targetIndex < 0 || targetIndex >= ordered.length) return;
+    const other = ordered[targetIndex];
+    const updates = [
+      supabase.from("homepage_sections").update({ sort_order: other.sort_order ?? targetIndex, updated_by: user.id }).eq("id", section.id),
+      supabase.from("homepage_sections").update({ sort_order: section.sort_order ?? index, updated_by: user.id }).eq("id", other.id)
+    ];
+    const results = await Promise.all(updates);
+    const failed = results.find((result) => result.error);
+    if (failed?.error) {
+      showNotice(failed.error.message);
+      return;
+    }
+    await loadAll();
+  }
+
+  async function changeHomepageSize(section, displaySize) {
+    if (!isHeadAdmin(profile?.role) && !myAdminPermission("manage_homepage")) return;
+    const { error } = await supabase
+      .from("homepage_sections")
+      .update({ display_size: displaySize, updated_by: user.id, updated_at: new Date().toISOString() })
+      .eq("id", section.id);
+    if (error) {
+      showNotice(error.message);
+      return;
+    }
     await loadAll();
   }
 
@@ -1596,103 +1622,38 @@ async function changePoints(event) {
   async function adminSaveMember(event) {
     event.preventDefault();
 
-    const form = new FormData(event.currentTarget);
-    const targetId = form.get("user_id");
-    const firstName = form.get("first_name") || "";
-    const lastName = form.get("last_name") || "";
-    const birthDate = form.get("birth_date") || null;
-    const nextRole = form.get("role") || "MEMBER";
-    const nextStatus = form.get("account_status") || "ACTIVE";
+    const form =
+      new FormData(event.currentTarget);
 
-    const { error: memberError } = await supabase.rpc(
-      "admin_update_member",
-      {
-        p_user_id: targetId,
-        p_first_name: firstName,
-        p_last_name: lastName,
-        p_birth_date: birthDate
-      }
-    );
+    const { error } =
+      await supabase.rpc(
+        "admin_update_member",
+        {
+          p_user_id:
+            form.get("user_id"),
 
-    if (memberError) {
-      showNotice(memberError.message);
-      return;
-    }
+          p_nickname:
+            form.get("nickname"),
 
-    // Rollen und Kontostatus laufen bewusst über eigene RPCs. Dadurch gibt es
-    // keine Signaturkonflikte mit älteren admin_update_member-Versionen.
-    if (isHeadAdmin(profile?.role)) {
-      const target = members.find((member) => member.id === targetId);
+          p_first_name:
+            form.get("first_name"),
 
-      if (target && target.role !== nextRole && target.role !== "HEAD_ADMIN") {
-        const { error: roleError } = await supabase.rpc("admin_set_role", {
-          target_user: targetId,
-          new_role: nextRole
-        });
-        if (roleError) {
-          showNotice(roleError.message);
-          return;
+          p_last_name:
+            form.get("last_name"),
+
+          p_birth_date:
+            form.get("birth_date"),
+
+          p_gender:
+            form.get("gender"),
+
+          p_role:
+            form.get("role"),
+
+          p_account_status:
+            form.get("account_status")
         }
-      }
-
-      if (target && target.account_status !== nextStatus && target.role !== "HEAD_ADMIN") {
-        const { error: statusError } = await supabase.rpc(
-          "set_member_account_status",
-          {
-            target_user_id: targetId,
-            new_status: nextStatus,
-            reason: "Status im Admin-Bereich geändert"
-          }
-        );
-        if (statusError) {
-          showNotice(statusError.message);
-          return;
-        }
-      }
-    }
-
-    showNotice("Mitglied gespeichert.");
-    await loadAll();
-  }
-
-  async function toggleMemberSuspension(member) {
-    if (!member?.id || !isHeadAdmin(profile?.role)) {
-      showNotice("Nur der Head Admin darf Konten sperren oder freischalten.");
-      return;
-    }
-
-    if (member.id === user?.id || member.role === "HEAD_ADMIN") {
-      showNotice("Der Head Admin kann nicht gesperrt werden.");
-      return;
-    }
-
-    const isSuspended = member.account_status === "SUSPENDED";
-    let reason = "";
-
-    if (!isSuspended) {
-      reason = window.prompt(
-        `Grund für die Sperre von ${getName(member)}:`
       );
-
-      if (reason === null) return;
-      reason = reason.trim();
-
-      if (!reason) {
-        showNotice("Bitte einen Sperrgrund angeben.");
-        return;
-      }
-    } else if (!window.confirm(`${getName(member)} wirklich freischalten?`)) {
-      return;
-    }
-
-    const { error } = await supabase.rpc(
-      "set_member_account_status",
-      {
-        target_user_id: member.id,
-        new_status: isSuspended ? "ACTIVE" : "SUSPENDED",
-        reason: isSuspended ? "Freigeschaltet durch Head Admin" : reason
-      }
-    );
 
     if (error) {
       showNotice(error.message);
@@ -1700,19 +1661,51 @@ async function changePoints(event) {
     }
 
     showNotice(
-      isSuspended
-        ? `${getName(member)} wurde freigeschaltet.`
-        : `${getName(member)} wurde gesperrt.`
+      "Mitglied gespeichert."
     );
 
     await loadAll();
+  }
 
-    if (page === "suspended-users") {
-      const { data, error: suspendedError } = await supabase.rpc(
-        "head_admin_get_suspended_users"
-      );
-      if (!suspendedError) setSuspendedUsers(data || []);
+  async function toggleMemberSuspension(member) {
+    if (!member?.id || !isAdmin(profile?.role)) return;
+    if (member.role === "HEAD_ADMIN") {
+      showNotice("Der Head Admin kann nicht gesperrt werden.");
+      return;
     }
+
+    const isSuspended = member.account_status === "SUSPENDED";
+
+    if (isSuspended) {
+      if (!window.confirm(`${getName(member)} wirklich freischalten?`)) return;
+      const { error } = await supabase.rpc("admin_unsuspend_member", {
+        p_user_id: member.id
+      });
+      if (error) {
+        showNotice(error.message);
+        return;
+      }
+      showNotice(`${getName(member)} wurde freigeschaltet.`);
+    } else {
+      const reason = window.prompt(`Sperrgrund für ${getName(member)}:`);
+      if (reason === null) return;
+      if (reason.trim().length < 3) {
+        showNotice("Bitte einen Sperrgrund mit mindestens 3 Zeichen angeben.");
+        return;
+      }
+      const { error } = await supabase.rpc("admin_suspend_member", {
+        p_user_id: member.id,
+        p_reason: reason.trim()
+      });
+      if (error) {
+        showNotice(error.message);
+        return;
+      }
+      showNotice(`${getName(member)} wurde gesperrt.`);
+    }
+
+    setSelectedMember(null);
+    await loadAll();
   }
 
   function myAdminPermission(permission) {
@@ -2060,6 +2053,12 @@ async function changePoints(event) {
                       <option value="soft">Soft</option>
                       <option value="dark">Dunkel</option>
                     </select>
+                    <select name="display_size" defaultValue="medium">
+                      <option value="small">Klein</option>
+                      <option value="medium">Mittel</option>
+                      <option value="large">Groß</option>
+                      <option value="wide">Breit</option>
+                    </select>
                     <button className="primary-button">Rahmen veröffentlichen</button>
                   </form>
                 </section>
@@ -2068,7 +2067,7 @@ async function changePoints(event) {
               {homepageSections.length > 0 && (
                 <section className="homepage-sections">
                   {homepageSections.map((section) => (
-                    <article className={`homepage-frame ${section.frame_style || "standard"}`} key={section.id}>
+                    <article className={`homepage-frame ${section.frame_style || "standard"} homepage-size-${section.display_size || "medium"}`} key={section.id}>
                       <h2>{section.title}</h2>
                       <p>{section.content}</p>
                       <small>
@@ -2080,6 +2079,11 @@ async function changePoints(event) {
 
                       {(isHeadAdmin(profile?.role) || myAdminPermission("manage_homepage")) && (
                         <div className="content-manage-actions">
+                          <button type="button" onClick={() => moveHomepageSection(section, -1)}>← Verschieben</button>
+                          <button type="button" onClick={() => moveHomepageSection(section, 1)}>Verschieben →</button>
+                          <select value={section.display_size || "medium"} onChange={(event) => changeHomepageSize(section, event.target.value)}>
+                            <option value="small">Klein</option><option value="medium">Mittel</option><option value="large">Groß</option><option value="wide">Breit</option>
+                          </select>
                           <button type="button" onClick={() => editHomepageSection(section)}>Bearbeiten</button>
                           <button type="button" onClick={() => deleteHomepageSection(section)} className="danger-link">Löschen</button>
                         </div>
@@ -2696,7 +2700,7 @@ async function changePoints(event) {
                       "#1b1f26",
                     borderColor:
                       isAdmin(profile?.role)
-                        ? "#dd5c5c"
+                        ? "#ff7a2e"
                         : profile?.profile_accent ||
                           "#58616d"
                   }}
@@ -2704,15 +2708,11 @@ async function changePoints(event) {
 
                   <div className="my-profile-top">
                     {isAdmin(profile?.role) && (
-                      <span className="role-stack"><img className="role-symbol role-symbol-large" src="/Admin-star.png" alt="Admin" /><img className="friend-symbol" src="/freunde-logo" alt="Freund" /></span>
+                      <span className="role-stack"><span className="role-symbol role-symbol-large admin-star-symbol" aria-label="Admin">★</span><img className="friend-symbol" src="/freunde-logo" alt="Freund" /></span>
                     )}
 
                     {profile?.role === "SUPPORTER" && (
-                      <img
-                        className="role-symbol role-symbol-large"
-                        src="/supporter-star.png"
-                        alt="Supporter"
-                      />
+                      <span className="role-symbol role-symbol-large supporter-star-symbol" aria-label="Supporter">★</span>
                     )}
 
                     <h1
@@ -3343,11 +3343,11 @@ async function changePoints(event) {
               <span>
                 <strong>
                   {isAdmin(member.role) && (
-                    <span className="inline-role-symbol admin-star-icon" aria-hidden="true">★</span>
+                    <span className="inline-role-symbol admin-star-symbol" aria-hidden="true">★</span>
                   )}
 
                   {member.role === "SUPPORTER" && (
-                    <span className="inline-role-symbol supporter-star-icon" aria-hidden="true">★</span>
+                    <span className="inline-role-symbol supporter-star-symbol" aria-hidden="true">★</span>
                   )}
 
                   {getName(member)}
@@ -3480,7 +3480,7 @@ async function changePoints(event) {
                 ★ Admin
               </button>
             )}
-            {isHeadAdmin(profile?.role) && member.id !== user.id && member.role !== "HEAD_ADMIN" && (
+            {isAdmin(profile?.role) && member.id !== user.id && member.role !== "HEAD_ADMIN" && (
               <button type="button" onClick={() => toggleMemberSuspension(member)}>
                 {member.account_status === "SUSPENDED" ? "🔓 Freischalten" : "🔒 Sperren"}
               </button>
@@ -3617,9 +3617,14 @@ async function changePoints(event) {
           </section>
         )}
 
-        {selectedMember && page === "member-profile" && (
+        {selectedMember && (
 
-          <section className="member-profile-page">
+          <div
+            className="modal-overlay"
+            onClick={() =>
+              setSelectedMember(null)
+            }
+          >
 
             <div
               className={`profile-modal ${
@@ -3644,10 +3649,9 @@ async function changePoints(event) {
 
               <button
                 className="modal-close"
-                onClick={() => {
-                  setSelectedMember(null);
-                  setPage("members");
-                }}
+                onClick={() =>
+                  setSelectedMember(null)
+                }
               >
                 ×
               </button>
@@ -3672,12 +3676,12 @@ async function changePoints(event) {
                   {isAdmin(
                     selectedMember.role
                   ) && (
-                    <img className="role-symbol" src="/Admin-star.png" alt="Admin" />
+                    <span className="role-symbol admin-star-symbol" aria-label="Admin">★</span>
                   )}
 
                   {selectedMember.role ===
                     "SUPPORTER" && (
-                    <img className="role-symbol" src="/supporter-star.png" alt="Supporter" />
+                    <span className="role-symbol supporter-star-symbol" aria-label="Supporter">★</span>
                   )}
 
                   <h1
@@ -4030,7 +4034,7 @@ async function changePoints(event) {
 
             </div>
 
-          </section>
+          </div>
         )}
 
         <footer className="site-footer"><div className="footer-brand"><div className="text-logo">ENNSTAL CONNECT</div></div><div><strong>Rechtliches</strong><p>Alle rechtlichen Hinweise sind direkt in der Community aufrufbar.</p></div><div className="footer-links"><button onClick={() => setPage("impressum")}>Impressum</button><button onClick={() => setPage("privacy")}>Datenschutzhinweise</button></div></footer>
@@ -4136,15 +4140,8 @@ function MemberCard({
 
         <div className="member-left">
 
-          {member.role === "HEAD_ADMIN" && (
-            <span className="role-symbol head-admin-star-icon" aria-label="Head Admin" title="Head Admin">★</span>
-          )}
-          {member.role === "ADMIN" && (
-            <span className="role-symbol admin-star-icon" aria-label="Admin" title="Admin">★</span>
-          )}
-          {supporter && (
-            <span className="role-symbol supporter-star-icon" aria-label="Supporter" title="Supporter">★</span>
-          )}
+          {admin && <span className="role-symbol admin-star-symbol" aria-label="Admin">★</span>}
+          {supporter && <span className="role-symbol supporter-star-symbol" aria-label="Supporter">★</span>}
 
         </div>
 
@@ -4212,18 +4209,6 @@ function MemberCard({
         )}
 
       </div>
-
-      {member.role === "HEAD_ADMIN" && (
-        <div className="member-role-label head-admin-label">Head Admin</div>
-      )}
-
-      {member.role === "ADMIN" && (
-        <div className="member-role-label admin-label">Admin</div>
-      )}
-
-      {supporter && (
-        <div className="member-role-label supporter-label">Supporter</div>
-      )}
 
       <div
         className={
