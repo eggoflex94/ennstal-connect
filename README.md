@@ -15,3 +15,8 @@ Community-Webseite für Ennstal & Obersteiermark.
 
 ## Datenbank
 `supabase.sql` ist ein sicherer Ausgangspunkt. Nicht blind über eine bestehende Produktionsdatenbank laufen lassen: Dein vorhandenes Frontend verwendet zusätzliche Tabellen und RPCs, die vor einer destruktiven Migration abgeglichen werden müssen.
+
+
+## Final Community Fix
+
+Für die reparierten Funktionen liegt jetzt **`supabase/final_community_fix.sql`** im Repository. Dieses SQL einmal vollständig im Supabase SQL Editor ausführen. Es repariert/erstellt die Funktionen für Registrierung, Head Admin, Sperren/Freischalten mit Grund, gesperrte Nutzer, Nachrichten als gelesen, Onlinezeit/Belohnungen, Rollen, Admin-Berechtigungen und Admin-Logbuch.
