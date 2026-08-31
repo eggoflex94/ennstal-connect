@@ -146,8 +146,6 @@ export default function App() {
     if (!member) return;
 
     setSelectedMember(member);
-    setPage("member-profile");
-    window.setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 0);
 
     // Eigenes Profil nicht als Besuch speichern.
     if (!user?.id || member.id === user.id) return;
@@ -811,7 +809,6 @@ const sortedMembers = useMemo(() => {
         title: String(form.get("title") || "").trim(),
         content: String(form.get("content") || "").trim(),
         frame_style: form.get("frame_style") || "standard",
-        frame_size: form.get("frame_size") || "medium",
         created_by: user.id,
         updated_by: user.id,
         sort_order: homepageSections.length
@@ -824,44 +821,6 @@ const sortedMembers = useMemo(() => {
 
     event.currentTarget.reset();
     showNotice("Hauptrahmen wurde erstellt.");
-    await loadAll();
-  }
-
-  async function moveHomepageSection(section, direction) {
-    if (!isHeadAdmin(profile?.role) && !myAdminPermission("manage_homepage")) return;
-
-    const ordered = [...homepageSections].sort(
-      (a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0)
-    );
-    const index = ordered.findIndex((item) => item.id === section.id);
-    const targetIndex = index + direction;
-
-    if (index < 0 || targetIndex < 0 || targetIndex >= ordered.length) return;
-
-    const first = ordered[index];
-    const second = ordered[targetIndex];
-
-    const firstOrder = Number(first.sort_order || index);
-    const secondOrder = Number(second.sort_order || targetIndex);
-
-    const [a, b] = await Promise.all([
-      supabase.from("homepage_sections").update({
-        sort_order: secondOrder,
-        updated_by: user.id,
-        updated_at: new Date().toISOString()
-      }).eq("id", first.id),
-      supabase.from("homepage_sections").update({
-        sort_order: firstOrder,
-        updated_by: user.id,
-        updated_at: new Date().toISOString()
-      }).eq("id", second.id)
-    ]);
-
-    if (a.error || b.error) {
-      showNotice((a.error || b.error).message);
-      return;
-    }
-
     await loadAll();
   }
 
@@ -1673,90 +1632,48 @@ async function changePoints(event) {
     await loadAll();
   }
 
-  async function loadSuspendedUsers() {
-    if (!isAdmin(profile?.role)) return;
-
-    const { data, error } = await supabase.rpc(
-      "admin_get_suspended_users"
-    );
-
-    if (error) {
-      showNotice(error.message);
-      return;
-    }
-
-    setSuspendedUsers(data || []);
-  }
-
   async function toggleMemberSuspension(member) {
     if (!member?.id || !isAdmin(profile?.role)) return;
-
-    if (member.id === user?.id) {
-      showNotice("Du kannst dein eigenes Konto nicht sperren.");
-      return;
-    }
-
     if (member.role === "HEAD_ADMIN") {
       showNotice("Der Head Admin kann nicht gesperrt werden.");
       return;
     }
 
-    const isSuspended = member.account_status === "SUSPENDED";
+    const nextStatus =
+      member.account_status === "SUSPENDED"
+        ? "ACTIVE"
+        : "SUSPENDED";
 
-    if (isSuspended) {
-      if (!window.confirm(`${getName(member)} wirklich freischalten?`)) {
-        return;
-      }
+    const actionLabel =
+      nextStatus === "SUSPENDED" ? "sperren" : "freischalten";
 
-      const { error } = await supabase.rpc(
-        "admin_unsuspend_member",
-        { target_user: member.id }
-      );
-
-      if (error) {
-        showNotice(error.message);
-        return;
-      }
-
-      showNotice(`${getName(member)} wurde freigeschaltet.`);
-      await loadAll();
-      await loadSuspendedUsers();
+    if (!window.confirm(`${getName(member)} wirklich ${actionLabel}?`)) {
       return;
     }
 
-    const reason = window.prompt(
-      `Warum soll ${getName(member)} gesperrt werden?\n\nDer Sperrgrund wird dem Mitglied angezeigt.`
-    );
-
-    if (reason === null) return;
-
-    if (reason.trim().length < 5) {
-      showNotice("Bitte einen konkreten Sperrgrund mit mindestens 5 Zeichen angeben.");
-      return;
-    }
-
-    if (!window.confirm(`${getName(member)} jetzt sperren?`)) {
-      return;
-    }
-
-    const { error } = await supabase.rpc(
-      "admin_suspend_member",
-      {
-        target_user: member.id,
-        reason_text: reason.trim()
-      }
-    );
+    const { error } = await supabase.rpc("admin_update_member", {
+      p_user_id: member.id,
+      p_nickname: member.nickname || "",
+      p_first_name: member.first_name || "",
+      p_last_name: member.last_name || "",
+      p_birth_date: member.birth_date || null,
+      p_gender: member.gender || null,
+      p_role: member.role || "MEMBER",
+      p_account_status: nextStatus
+    });
 
     if (error) {
       showNotice(error.message);
       return;
     }
 
-    showNotice(`${getName(member)} wurde gesperrt.`);
-    setSelectedMember(null);
-    setPage("admin");
+    showNotice(
+      nextStatus === "SUSPENDED"
+        ? `${getName(member)} wurde gesperrt.`
+        : `${getName(member)} wurde freigeschaltet.`
+    );
+
     await loadAll();
-    await loadSuspendedUsers();
   }
 
   function myAdminPermission(permission) {
@@ -2064,11 +1981,16 @@ async function changePoints(event) {
                       <span>💬</span>
                       Forum verwalten
                     </button>
-                    {isAdmin(profile?.role) && (
+                    {isHeadAdmin(profile?.role) && (
                       <button
                         type="button"
                         onClick={async () => {
-                          await loadSuspendedUsers();
+                          const { data, error } = await supabase.rpc("head_admin_get_suspended_users");
+                          if (error) {
+                            showNotice(error.message);
+                            return;
+                          }
+                          setSuspendedUsers(data || []);
                           setPage("suspended-users");
                         }}
                       >
@@ -2099,12 +2021,6 @@ async function changePoints(event) {
                       <option value="soft">Soft</option>
                       <option value="dark">Dunkel</option>
                     </select>
-                    <select name="frame_size" defaultValue="medium">
-                      <option value="small">Klein</option>
-                      <option value="medium">Mittel</option>
-                      <option value="large">Groß</option>
-                      <option value="wide">Breit</option>
-                    </select>
                     <button className="primary-button">Rahmen veröffentlichen</button>
                   </form>
                 </section>
@@ -2113,7 +2029,7 @@ async function changePoints(event) {
               {homepageSections.length > 0 && (
                 <section className="homepage-sections">
                   {homepageSections.map((section) => (
-                    <article className={`homepage-frame ${section.frame_style || "standard"} size-${section.frame_size || "medium"}`} key={section.id}>
+                    <article className={`homepage-frame ${section.frame_style || "standard"}`} key={section.id}>
                       <h2>{section.title}</h2>
                       <p>{section.content}</p>
                       <small>
@@ -2125,8 +2041,6 @@ async function changePoints(event) {
 
                       {(isHeadAdmin(profile?.role) || myAdminPermission("manage_homepage")) && (
                         <div className="content-manage-actions">
-                          <button type="button" onClick={() => moveHomepageSection(section, -1)}>↑ Hoch</button>
-                          <button type="button" onClick={() => moveHomepageSection(section, 1)}>↓ Runter</button>
                           <button type="button" onClick={() => editHomepageSection(section)}>Bearbeiten</button>
                           <button type="button" onClick={() => deleteHomepageSection(section)} className="danger-link">Löschen</button>
                         </div>
@@ -3563,12 +3477,12 @@ async function changePoints(event) {
             PROFIL MODAL
             ===================================================== */}
 
-        {page === "suspended-users" && isAdmin(profile?.role) && (
+        {page === "suspended-users" && isHeadAdmin(profile?.role) && (
           <section>
             <div className="page-heading">
               <div>
-                <span className="eyebrow">MODERATION</span>
-                <h1>Gesperrte Nutzer</h1>
+                <span className="eyebrow">HEAD ADMIN</span>
+                <h1>Gesperrte Konten</h1>
                 <p>Hier können gesperrte Mitglieder direkt wieder freigeschaltet werden.</p>
               </div>
             </div>
@@ -3588,9 +3502,6 @@ async function changePoints(event) {
                       <div><span>Status</span><strong>Gesperrt</strong></div>
                       <div><span>Vorname</span><strong>{member.first_name || "—"}</strong></div>
                       <div><span>Nachname</span><strong>{member.last_name || "—"}</strong></div>
-                    </div>
-                    <div className="suspended-user-reason">
-                      <strong>Sperrgrund:</strong> {member.suspension_reason || "Kein Grund hinterlegt."}
                     </div>
                     <div className="admin-member-card-actions">
                       <button type="button" onClick={() => toggleMemberSuspension(member)}>🔓 Freischalten</button>
@@ -3677,8 +3588,11 @@ async function changePoints(event) {
 
         {selectedMember && (
 
-          <section
-            className="modal-overlay member-profile-page"
+          <div
+            className="modal-overlay"
+            onClick={() =>
+              setSelectedMember(null)
+            }
           >
 
             <div
@@ -3704,12 +3618,11 @@ async function changePoints(event) {
 
               <button
                 className="modal-close"
-                onClick={() => {
-                  setSelectedMember(null);
-                  setPage("members");
-                }}
+                onClick={() =>
+                  setSelectedMember(null)
+                }
               >
-                ←
+                ×
               </button>
 
               <div
@@ -3733,10 +3646,6 @@ async function changePoints(event) {
                     selectedMember.role
                   ) && (
                     <img className="role-symbol" src="/Admin-star.png" alt="Admin" />
-                  )}
-
-                  {selectedMember.role === "HEAD_ADMIN" && (
-                    <span className="head-admin-badge">HEAD ADMIN</span>
                   )}
 
                   {selectedMember.role ===
@@ -4038,25 +3947,6 @@ async function changePoints(event) {
       ↩ Rolle entfernen · Zum Mitglied
     </button>
   )}
-
-  {selectedMember.id !== user?.id &&
-    selectedMember.role !== "HEAD_ADMIN" && (
-      <button
-        type="button"
-        className={
-          `profile-admin-button ${
-            selectedMember.account_status === "SUSPENDED"
-              ? "supporter"
-              : "danger"
-          }`
-        }
-        onClick={() => toggleMemberSuspension(selectedMember)}
-      >
-        {selectedMember.account_status === "SUSPENDED"
-          ? "🔓 Nutzer freischalten"
-          : "🔒 Nutzer sperren"}
-      </button>
-    )}
      </div>
     </section>
   )}
@@ -4113,7 +4003,7 @@ async function changePoints(event) {
 
             </div>
 
-          </section>
+          </div>
         )}
 
         <footer className="site-footer"><div className="footer-brand"><div className="text-logo">ENNSTAL CONNECT</div></div><div><strong>Rechtliches</strong><p>Alle rechtlichen Hinweise sind direkt in der Community aufrufbar.</p></div><div className="footer-links"><button onClick={() => setPage("impressum")}>Impressum</button><button onClick={() => setPage("privacy")}>Datenschutzhinweise</button></div></footer>
@@ -4187,11 +4077,10 @@ function MemberCard({
   const age =
     getAge(member.birth_date);
 
-  const admin =
-    isAdmin(member.role);
-
-  const supporter =
-    member.role === "SUPPORTER";
+  const normalizedRole = String(member.role || "MEMBER").toUpperCase();
+  const headAdmin = normalizedRole === "HEAD_ADMIN";
+  const admin = isAdmin(normalizedRole);
+  const supporter = normalizedRole === "SUPPORTER";
 
   const friendship = friendships.find((item) =>
     (item.requester_id === profile?.id && item.receiver_id === member.id) ||
@@ -4203,11 +4092,13 @@ function MemberCard({
     <article
       className={
         `member-card ${
-          admin
+          headAdmin
+            ? "head-admin"
+            : admin
             ? "admin"
             : supporter
             ? "supporter"
-            : ""
+            : "member"
         }`
       }
       onClick={() =>
@@ -4219,8 +4110,9 @@ function MemberCard({
 
         <div className="member-left">
 
-          {admin && <span className="role-symbol role-symbol-star" aria-label={member.role === "HEAD_ADMIN" ? "Head Admin" : "Admin"}>★</span>}
-          {supporter && <img className="role-symbol" src="/supporter-star.png" alt="Supporter" />}
+          {headAdmin && <span className="compact-role-symbol head-admin-symbol" title="Head Admin">★</span>}
+          {!headAdmin && admin && <span className="compact-role-symbol admin-symbol" title="Admin">★</span>}
+          {supporter && <span className="compact-role-symbol supporter-symbol" title="Supporter">●</span>}
 
         </div>
 
