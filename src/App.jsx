@@ -456,18 +456,16 @@ export default function App() {
     [blockedUsers, user?.id]
   );
 
+  // Sichtbare Mitglieder: gegenseitige Blockierungen gelten in beide Richtungen.
+  // Gesperrte Konten bleiben vollständig aus den normalen Community-Ansichten entfernt.
   const visibleMembers = useMemo(
-  () =>
-    members.filter(
-      (member) =>
-        !blockedUsers.some(
-          (block) =>
-            block.blocked_id === member.id
-        ) &&
+    () =>
+      members.filter((member) =>
+        !blockedIds.has(member.id) &&
         member.account_status !== "SUSPENDED"
-    ),
-  [members, blockedUsers]
-);
+      ),
+    [members, blockedIds]
+  );
 
 const sortedMembers = useMemo(() => {
   const query =
@@ -3482,7 +3480,7 @@ async function changePoints(event) {
                 ★ Admin
               </button>
             )}
-            {isAdmin(profile?.role) && member.id !== user.id && member.role !== "HEAD_ADMIN" && (
+            {isHeadAdmin(profile?.role) && member.id !== user.id && member.role !== "HEAD_ADMIN" && (
               <button type="button" onClick={() => toggleMemberSuspension(member)}>
                 {member.account_status === "SUSPENDED" ? "🔓 Freischalten" : "🔒 Sperren"}
               </button>
@@ -4138,8 +4136,15 @@ function MemberCard({
 
         <div className="member-left">
 
-          {admin && <span className="role-symbol admin-star-icon" aria-label="Admin">★</span>}
-          {supporter && <span className="role-symbol supporter-star-icon" aria-label="Supporter">★</span>}
+          {member.role === "HEAD_ADMIN" && (
+            <span className="role-symbol head-admin-star-icon" aria-label="Head Admin" title="Head Admin">★</span>
+          )}
+          {member.role === "ADMIN" && (
+            <span className="role-symbol admin-star-icon" aria-label="Admin" title="Admin">★</span>
+          )}
+          {supporter && (
+            <span className="role-symbol supporter-star-icon" aria-label="Supporter" title="Supporter">★</span>
+          )}
 
         </div>
 
@@ -4207,6 +4212,18 @@ function MemberCard({
         )}
 
       </div>
+
+      {member.role === "HEAD_ADMIN" && (
+        <div className="member-role-label head-admin-label">Head Admin</div>
+      )}
+
+      {member.role === "ADMIN" && (
+        <div className="member-role-label admin-label">Admin</div>
+      )}
+
+      {supporter && (
+        <div className="member-role-label supporter-label">Supporter</div>
+      )}
 
       <div
         className={
