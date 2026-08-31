@@ -2154,3 +2154,110 @@ img.member-avatar {
     margin-top: 16px;
   }
 }
+
+
+/* =========================================================
+   FINAL COMMUNITY VISUAL FIX – keeps existing design
+   ========================================================= */
+
+.member-card {
+  overflow: hidden;
+}
+
+.member-card.admin {
+  border: 2px solid #ff7a1a !important;
+  background: linear-gradient(145deg, rgba(255,122,26,.13), rgba(255,255,255,.02)) !important;
+}
+
+.member-card.supporter {
+  border: 2px solid #38c978 !important;
+  background: linear-gradient(145deg, rgba(56,201,120,.12), rgba(255,255,255,.02)) !important;
+}
+
+.member-card:not(.admin):not(.supporter) {
+  border-color: #344252 !important;
+}
+
+.member-card .member-avatar {
+  width: 74px !important;
+  height: 74px !important;
+  min-width: 74px !important;
+  min-height: 74px !important;
+  object-fit: cover;
+}
+
+.member-card .role-symbol {
+  width: 22px !important;
+  height: 22px !important;
+  min-width: 22px !important;
+  min-height: 22px !important;
+  display: inline-grid !important;
+  place-items: center;
+  background: transparent !important;
+  object-fit: contain;
+}
+
+.member-card .role-symbol-star {
+  color: #f4a62a;
+  font-size: 19px;
+  line-height: 1;
+  text-shadow: 0 0 10px rgba(244,166,42,.22);
+}
+
+.member-card.admin .member-nickname {
+  color: #ff9a43;
+}
+
+.member-card.supporter .member-nickname {
+  color: #61d998;
+}
+
+.member-profile-role-head-admin,
+.head-admin-badge,
+.profile-head-admin {
+  color: #ff9a43 !important;
+  border-color: #ff7a1a !important;
+}
+
+.profile-actions .admin-tools,
+.admin-tools {
+  border-color: #ff7a1a !important;
+  background: rgba(255,122,26,.08) !important;
+}
+
+.profile-actions .supporter-tools,
+.supporter-tools {
+  border-color: #38c978 !important;
+  background: rgba(56,201,120,.08) !important;
+}
+
+.news-grid,
+.homepage-news-grid {
+  align-items: start;
+}
+
+.news-card,
+.homepage-news-card {
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.news-card:hover,
+.homepage-news-card:hover {
+  transform: translateY(-2px);
+}
+
+@media (max-width: 700px) {
+  .member-card .member-avatar {
+    width: 66px !important;
+    height: 66px !important;
+    min-width: 66px !important;
+    min-height: 66px !important;
+  }
+
+  .member-card .role-symbol {
+    width: 19px !important;
+    height: 19px !important;
+    min-width: 19px !important;
+    min-height: 19px !important;
+  }
+}
