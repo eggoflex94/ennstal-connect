@@ -61,7 +61,6 @@ export default function App() {
   const [history, setHistory] = useState([]);
   const [messages, setMessages] = useState([]);
   const [profileActivities, setProfileActivities] = useState([]);
-  const [adminLogs, setAdminLogs] = useState([]);
 
   const [selectedMember, setSelectedMember] =
     useState(null);
@@ -140,38 +139,6 @@ export default function App() {
       }, 4000);
   };
 
-  // Öffnet ein Mitgliederprofil zentral. Dadurch funktionieren Mitglieder,
-  // Freunde, Profilbesucher und Admin-Listen mit derselben Profilansicht.
-  const openMember = async (member) => {
-    if (!member) return;
-
-    setSelectedMember(member);
-    setPage("member-profile");
-
-    // Eigenes Profil nicht als Besuch speichern.
-    if (!user?.id || member.id === user.id) return;
-
-    try {
-      await supabase
-        .from("profile_visits")
-        .insert({
-          profile_id: member.id,
-          visitor_id: user.id,
-          visited_at: new Date().toISOString()
-        });
-    } catch (error) {
-      // Profil darf trotzdem geöffnet werden, falls die Besuchstabelle
-      // oder deren Policy noch nicht vorhanden ist.
-      console.warn("Profilbesuch konnte nicht gespeichert werden:", error?.message);
-    }
-  };
-
-  // Kompatibilitätswert für ältere Profildaten.
-  // Wird nur noch für ältere Datenbankeinträge vorgehalten.
-  const currentCommunityPoints = Number(
-    profile?.community_points ?? profile?.points ?? 0
-  ) || 0;
-
   /* =========================================================
      ALLES LADEN
      ========================================================= */
@@ -187,25 +154,21 @@ export default function App() {
       const currentUser = session?.user || null;
       setUser(currentUser);
 
-      if (currentUser) {
-        // Stellt sicher, dass nach E-Mail-Bestätigung immer ein Profil existiert.
-        const { error: profileBootstrapError } = await supabase.rpc("ensure_current_profile");
-        if (profileBootstrapError) {
-          console.warn("Profil-Bootstrap konnte nicht ausgeführt werden:", profileBootstrapError.message);
-        }
-
-        // Beim ersten Hauptadmin wird genau einmal automatisch die Besitzerrolle vergeben.
-        // Die Prüfung passiert serverseitig in Supabase, nicht im Browser.
-        const { error: headAdminError } = await supabase.rpc("claim_initial_head_admin");
-        if (headAdminError) {
-          console.warn("HEAD_ADMIN-Prüfung konnte nicht ausgeführt werden:", headAdminError.message);
-        }
-      }
-
       if (!currentUser) {
         setProfile(null);
         setMembers([]);
         setFriendships([]);
+        setNews([]);
+        setEvents([]);
+        setGroups([]);
+        setHomepageSections([]);
+        setHistory([]);
+        setMessages([]);
+        setProfileVisits([]);
+        setBlockedUsers([]);
+        setReports([]);
+        setProfileActivities([]);
+        setMyPermissions({});
         return;
       }
 
@@ -235,7 +198,7 @@ export default function App() {
         permissionData
       ] = await Promise.all([
         safe("Profil", supabase.from("profiles").select("*").eq("id", currentUser.id).maybeSingle(), null),
-        safe("Mitglieder", supabase.rpc("get_visible_profiles")),
+        safe("Mitglieder", supabase.from("profiles").select("*")),
         safe("Neuigkeiten", supabase.from("news").select("*").order("created_at", { ascending: false })),
         safe("Events", supabase.from("events").select("*").order("created_at", { ascending: false })),
         safe("Gruppen", supabase.from("groups").select("*").order("created_at", { ascending: false })),
@@ -264,19 +227,6 @@ export default function App() {
       setReports(reportData);
       setProfileActivities(activityData);
       setMyPermissions(permissionData || {});
-
-      if (myProfile?.role === "HEAD_ADMIN") {
-        const { data: logData, error: logError } = await supabase
-          .rpc("get_admin_log", { p_limit: 100 });
-        if (logError) {
-          console.warn("Admin-Logbuch konnte nicht geladen werden:", logError.message);
-          setAdminLogs([]);
-        } else {
-          setAdminLogs(logData || []);
-        }
-      } else {
-        setAdminLogs([]);
-      }
     } catch (error) {
       console.error("Fehler beim Starten von Ennstal Connect:", error);
       showNotice(`Fehler beim Laden: ${error?.message || "Unbekannter Fehler"}`);
@@ -337,10 +287,11 @@ export default function App() {
           event: "INSERT",
           schema: "public",
           table: "messages",
-          filter: `receiver_id=eq.${user.id}`
         },
-        () => {
-          loadAll();
+        (payload) => {
+          if (payload.new?.receiver_id === user.id || payload.new?.sender_id === user.id) {
+            loadAll();
+          }
         }
       )
       .subscribe();
@@ -384,17 +335,13 @@ export default function App() {
       return;
     }
 
-    if (data && typeof data === "object") {
+    if (data?.total_online_seconds !== undefined) {
       setProfile((current) => current ? { ...current, ...data } : current);
     }
   }
 
   async function claimOnlineReward() {
     if (!user?.id) return;
-
-    // Vor dem Abholen noch einmal synchronisieren, damit die letzte
-    // sichtbare Onlinezeit sicher mitgerechnet wird.
-    await syncOnlineTime();
 
     const { data, error } = await supabase.rpc("claim_online_reward");
     if (error) {
@@ -407,13 +354,7 @@ export default function App() {
       return;
     }
 
-    showNotice(
-      data?.message ||
-      `🎁 ${data?.reward_label || "Neue Profilfunktion"} freigeschaltet!`
-    );
-
-    // Sofort aktualisieren, damit Mein Bereich, Profil und Belohnungen
-    // gleichzeitig den neuen Stand zeigen.
+    showNotice(data?.message || `${data?.points_added || 10} Punkte für deine Onlinezeit erhalten!`);
     await loadAll();
   }
 
@@ -591,27 +532,288 @@ const sortedMembers = useMemo(() => {
     await loadAll();
   }
 
+  const incomingFriendRequests = useMemo(
+    () => friendships.filter((item) => item.status === "PENDING" && item.receiver_id === user?.id),
+    [friendships, user?.id]
+  );
 
-  async function removeFriend(member) {
-    if (!user || !member?.id) return;
-    const relation = friendshipWith(member.id);
-    if (!relation) {
-      showNotice("Keine Freundschaft vorhanden.");
-      return;
-    }
-    if (!window.confirm(`Freundschaft mit ${getName(member)} wirklich entfernen?`)) return;
+  const sentFriendRequests = useMemo(
+    () => friendships.filter((item) => item.status === "PENDING" && item.requester_id === user?.id),
+    [friendships, user?.id]
+  );
+
+  async function cancelFriendRequest(request) {
+    if (!user || !request || request.requester_id !== user.id || request.status !== "PENDING") return;
+    const { error } = await supabase.from("friendships").delete().eq("id", request.id).eq("requester_id", user.id).eq("status", "PENDING");
+    if (error) { showNotice(error.message); return; }
+    showNotice("Freundschaftsanfrage wurde zurückgezogen.");
+    await loadAll();
+  }
+
+  async function respondToFriendRequest(request, accept) {
+    if (!user || request?.receiver_id !== user.id) return;
 
     const { error } = await supabase
       .from("friendships")
-      .delete()
-      .eq("id", relation.id);
+      .update({ status: accept ? "ACCEPTED" : "DECLINED" })
+      .eq("id", request.id)
+      .eq("receiver_id", user.id)
+      .eq("status", "PENDING");
 
     if (error) {
       showNotice(error.message);
       return;
     }
-    showNotice("Freundschaft wurde entfernt.");
+
+    showNotice(accept ? "Freundschaftsanfrage angenommen." : "Freundschaftsanfrage abgelehnt.");
     await loadAll();
+  }
+
+  async function blockUser(member) {
+    if (!user || !member?.id || member.id === user.id) return;
+
+    if (!window.confirm(
+      `${getName(member)} wirklich blockieren?\n\nDer Nutzer wird aus deinen Kontakt- und Mitgliederansichten ausgeblendet.`
+    )) return;
+
+    const { error } = await supabase
+      .from("user_blocks")
+      .insert({
+        blocker_id: user.id,
+        blocked_id: member.id
+      });
+
+    if (error) {
+      showNotice(error.message);
+      return;
+    }
+
+    await supabase
+      .from("friendships")
+      .delete()
+      .or(
+        `and(requester_id.eq.${user.id},receiver_id.eq.${member.id}),and(requester_id.eq.${member.id},receiver_id.eq.${user.id})`
+      );
+
+    setSelectedMember(null);
+    showNotice(`${getName(member)} wurde blockiert.`);
+    await loadAll();
+  }
+
+  async function unblockUser(blockedId) {
+    const { error } = await supabase
+      .from("user_blocks")
+      .delete()
+      .eq("blocker_id", user.id)
+      .eq("blocked_id", blockedId);
+
+    if (error) {
+      showNotice(error.message);
+      return;
+    }
+
+    showNotice("Nutzer wurde entsperrt.");
+    await loadAll();
+  }
+
+  async function suspendMember(member) {
+    if (!user || !member?.id) return;
+
+    const reason = window.prompt(
+      `Sperrgrund für ${getName(member)}:
+
+Bitte beschreibe den Regelverstoß konkret.`
+    );
+
+    if (reason === null) return;
+    if (reason.trim().length < 5) {
+      showNotice("Bitte gib einen Sperrgrund mit mindestens 5 Zeichen an.");
+      return;
+    }
+
+    const { error } = await supabase.rpc("admin_set_account_status", {
+      target_user: member.id,
+      p_status: "SUSPENDED",
+      p_reason: reason.trim()
+    });
+
+    if (error) {
+      showNotice(error.message);
+      return;
+    }
+
+    setSelectedMember(null);
+    showNotice(`${getName(member)} wurde gesperrt.`);
+    await loadAll();
+  }
+
+  async function unsuspendMember(member) {
+    if (!member?.id) return;
+
+    if (!window.confirm(`${getName(member)} wirklich wieder freischalten?`)) return;
+
+    const { error } = await supabase.rpc("admin_set_account_status", {
+      target_user: member.id,
+      p_status: "ACTIVE",
+      p_reason: null
+    });
+
+    if (error) {
+      showNotice(error.message);
+      return;
+    }
+
+    showNotice(`${getName(member)} wurde wieder freigeschaltet.`);
+    await loadAll();
+    await loadSuspendedUsers();
+  }
+
+  async function loadSuspendedUsers() {
+    const { data, error } = await supabase.rpc("head_admin_get_suspended_users");
+    if (error) {
+      showNotice(error.message);
+      return;
+    }
+    setSuspendedUsers(data || []);
+    setPage("suspended-users");
+  }
+
+  async function reportUser(member) {
+    if (!user || !member?.id || member.id === user.id) return;
+
+    const reason = window.prompt(
+      `Warum möchtest du ${getName(member)} melden?\n\nBitte nenne einen konkreten Grund.`
+    );
+
+    if (reason === null) return;
+
+    if (reason.trim().length < 10) {
+      showNotice(
+        "Eine Meldung muss begründet sein und mindestens 10 Zeichen enthalten."
+      );
+      return;
+    }
+
+    const { error } = await supabase.rpc(
+      "submit_user_report",
+      {
+        target_user: member.id,
+        reason_text: reason.trim()
+      }
+    );
+
+    if (error) {
+      showNotice(error.message);
+      return;
+    }
+
+    setSelectedMember(null);
+    showNotice("Meldung wurde an die Administration gesendet.");
+    await loadAll();
+  }
+
+  async function resolveReport(reportId, resolution) {
+    if (!myAdminPermission("manage_reports")) {
+      showNotice("Keine Berechtigung für Nutzer-Meldungen.");
+      return;
+    }
+
+    const note = window.prompt(
+      resolution === "UNFOUNDED"
+        ? "Warum ist die Meldung unbegründet?"
+        : "Begründung der Entscheidung:"
+    );
+
+    if (note === null || note.trim().length < 3) {
+      showNotice("Bitte eine begründete Entscheidung eingeben.");
+      return;
+    }
+
+    let penaltyPoints = 0;
+
+    if (resolution === "UNFOUNDED") {
+      const value = window.prompt(
+        "Wie viele Minuspunkte bekommt der Meldende?\nStandard: 2",
+        "2"
+      );
+
+      if (value === null) return;
+
+      penaltyPoints = Number(value);
+
+      if (!Number.isInteger(penaltyPoints) || penaltyPoints < 0) {
+        showNotice("Ungültige Minuspunkte.");
+        return;
+      }
+    }
+
+    const { error } = await supabase.rpc(
+      "admin_resolve_user_report",
+      {
+        report_id: reportId,
+        resolution,
+        admin_note: note.trim(),
+        penalty_points: penaltyPoints
+      }
+    );
+
+    if (error) {
+      showNotice(error.message);
+      return;
+    }
+
+    showNotice(
+      resolution === "UNFOUNDED"
+        ? `Meldung unbegründet. ${penaltyPoints} Minuspunkte wurden vergeben.`
+        : "Meldung wurde bearbeitet."
+    );
+
+    await loadAll();
+  }
+
+  async function openMember(member) {
+    setSelectedMember(member);
+
+    const [{ data: groupData }, { data: eventData }] =
+      await Promise.all([
+        supabase
+          .from("group_members")
+          .select("groups(*)")
+          .eq("user_id", member.id),
+
+        supabase
+          .from("event_members")
+          .select("events(*)")
+          .eq("user_id", member.id)
+      ]);
+
+    setSelectedMemberGroups(
+      (groupData || [])
+        .map((row) => row.groups)
+        .filter(Boolean)
+    );
+
+    setSelectedMemberEvents(
+      (eventData || [])
+        .map((row) => row.events)
+        .filter(Boolean)
+    );
+
+    if (user && member.id !== user.id) {
+      const { error } = await supabase.rpc(
+        "record_profile_visit",
+        { target_profile: member.id }
+      );
+
+      if (error) {
+        await supabase
+          .from("profile_visits")
+          .insert({
+            visitor_id: user.id,
+            profile_id: member.id
+          });
+      }
+    }
   }
 
   /* =========================================================
@@ -656,9 +858,6 @@ const sortedMembers = useMemo(() => {
         password: form.get("password"),
 
         options: {
-          // Wichtig für Vercel: Bestätigungslinks gehen zurück zur aktuell geöffneten
-          // Deployment-Domain und nicht mehr auf localhost:3000.
-          emailRedirectTo: `${window.location.origin}/`,
           data: {
             nickname:
               form.get("nickname"),
@@ -708,6 +907,8 @@ const sortedMembers = useMemo(() => {
 
     setUser(null);
     setProfile(null);
+    setMessages([]);
+    setFriendships([]);
     setPage("home");
   }
 
@@ -810,7 +1011,6 @@ const sortedMembers = useMemo(() => {
         title: String(form.get("title") || "").trim(),
         content: String(form.get("content") || "").trim(),
         frame_style: form.get("frame_style") || "standard",
-        display_size: form.get("display_size") || "medium",
         created_by: user.id,
         updated_by: user.id,
         sort_order: homepageSections.length
@@ -850,39 +1050,6 @@ const sortedMembers = useMemo(() => {
     }
 
     showNotice("Hauptrahmen wurde gespeichert.");
-    await loadAll();
-  }
-
-  async function moveHomepageSection(section, direction) {
-    if (!isHeadAdmin(profile?.role) && !myAdminPermission("manage_homepage")) return;
-    const ordered = [...homepageSections].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
-    const index = ordered.findIndex((item) => item.id === section.id);
-    const targetIndex = index + direction;
-    if (index < 0 || targetIndex < 0 || targetIndex >= ordered.length) return;
-    const other = ordered[targetIndex];
-    const updates = [
-      supabase.from("homepage_sections").update({ sort_order: other.sort_order ?? targetIndex, updated_by: user.id }).eq("id", section.id),
-      supabase.from("homepage_sections").update({ sort_order: section.sort_order ?? index, updated_by: user.id }).eq("id", other.id)
-    ];
-    const results = await Promise.all(updates);
-    const failed = results.find((result) => result.error);
-    if (failed?.error) {
-      showNotice(failed.error.message);
-      return;
-    }
-    await loadAll();
-  }
-
-  async function changeHomepageSize(section, displaySize) {
-    if (!isHeadAdmin(profile?.role) && !myAdminPermission("manage_homepage")) return;
-    const { error } = await supabase
-      .from("homepage_sections")
-      .update({ display_size: displaySize, updated_by: user.id, updated_at: new Date().toISOString() })
-      .eq("id", section.id);
-    if (error) {
-      showNotice(error.message);
-      return;
-    }
     await loadAll();
   }
 
@@ -1461,29 +1628,12 @@ async function uploadProfileImage(file) {
 
     setMessages(data || []);
 
-    const { error: readError } = await supabase.rpc(
-      "mark_messages_read",
-      { p_sender: member.id }
-    );
-
-    if (readError) {
-      console.warn("Nachrichten konnten nicht als gelesen markiert werden:", readError.message);
-      await supabase
-        .from("messages")
-        .update({ is_read: true })
-        .eq("receiver_id", user.id)
-        .eq("sender_id", member.id)
-        .eq("is_read", false);
-    }
-
-    setMessages((current) =>
-      current.map((message) =>
-        message.receiver_id === user.id &&
-        message.sender_id === member.id
-          ? { ...message, is_read: true }
-          : message
-      )
-    );
+    await supabase
+      .from("messages")
+      .update({ is_read: true })
+      .eq("receiver_id", user.id)
+      .eq("sender_id", member.id)
+      .eq("is_read", false);
 
     setPage("messages");
   }
@@ -1667,47 +1817,6 @@ async function changePoints(event) {
     await loadAll();
   }
 
-  async function toggleMemberSuspension(member) {
-    if (!member?.id || !isAdmin(profile?.role)) return;
-    if (member.role === "HEAD_ADMIN") {
-      showNotice("Der Head Admin kann nicht gesperrt werden.");
-      return;
-    }
-
-    const isSuspended = member.account_status === "SUSPENDED";
-
-    if (isSuspended) {
-      if (!window.confirm(`${getName(member)} wirklich freischalten?`)) return;
-      const { error } = await supabase.rpc("admin_unsuspend_member", {
-        p_user_id: member.id
-      });
-      if (error) {
-        showNotice(error.message);
-        return;
-      }
-      showNotice(`${getName(member)} wurde freigeschaltet.`);
-    } else {
-      const reason = window.prompt(`Sperrgrund für ${getName(member)}:`);
-      if (reason === null) return;
-      if (reason.trim().length < 3) {
-        showNotice("Bitte einen Sperrgrund mit mindestens 3 Zeichen angeben.");
-        return;
-      }
-      const { error } = await supabase.rpc("admin_suspend_member", {
-        p_user_id: member.id,
-        p_reason: reason.trim()
-      });
-      if (error) {
-        showNotice(error.message);
-        return;
-      }
-      showNotice(`${getName(member)} wurde gesperrt.`);
-    }
-
-    setSelectedMember(null);
-    await loadAll();
-  }
-
   function myAdminPermission(permission) {
     if (profile?.role === "HEAD_ADMIN") return true;
     return !!myPermissions?.[permission];
@@ -1720,7 +1829,10 @@ async function changePoints(event) {
   if (loading) {
     return (
       <div className="loading-screen">
-        <div className="text-logo" aria-label="Ennstal Connect">ENNSTAL CONNECT</div>
+        <img
+          src="/banner.png"
+          alt="Ennstal Connect"
+        />
 
         <p>
           Ennstal Connect wird geladen …
@@ -1739,7 +1851,10 @@ async function changePoints(event) {
         <div className="auth-page">
 
           <div className="auth-brand">
-            <div className="text-logo" aria-label="Ennstal Connect">ENNSTAL CONNECT</div>
+            <img
+              src="/banner.png"
+              alt="Ennstal Connect"
+            />
           </div>
 
           <Auth
@@ -1772,7 +1887,10 @@ async function changePoints(event) {
 
           <div className="suspended-box">
 
-            <div className="text-logo" aria-label="Ennstal Connect">ENNSTAL CONNECT</div>
+            <img
+              src="/banner.png"
+              alt="Ennstal Connect"
+            />
 
             <h1>
               Konto gesperrt
@@ -1801,12 +1919,12 @@ async function changePoints(event) {
             <div className="suspended-points">
 
               <span>
-                Belohnungsstufe
+                Aktueller Punktestand
               </span>
 
               <strong>
                 {
-                  profile.reward_level ||
+                  profile.community_points ||
                   0
                 }
               </strong>
@@ -1887,69 +2005,145 @@ async function changePoints(event) {
         message.receiver_id === user.id
     );
 
-  const unreadMessages =
-    inboxMessages.filter((message) => !message.is_read);
-
-  const friendIds =
-    friendships
-      .filter((friendship) => friendship.status === "ACCEPTED")
-      .map((friendship) =>
-        friendship.requester_id === user.id
-          ? friendship.receiver_id
-          : friendship.requester_id
-      );
-
-  const sidebarFriends =
-    members
-      .filter((member) => friendIds.includes(member.id))
-      .slice(0, 5);
-
   return (
     <>
       <div className="app">
 
-        {/* DASHBOARD-SHELL */}
+        {/* HEADER */}
 
-        <header className="topbar modern-topbar">
-          <div className="topbar-brand" onClick={() => setPage("home")}>
-            <div className="brand-mark">★</div>
-            <div><strong>ennstal</strong><span>connect</span></div>
+        <header className="topbar">
+
+          <div
+            className="brand"
+            onClick={() =>
+              setPage("home")
+            }
+          >
+            <img
+              src="/banner.png"
+              alt="Ennstal Connect"
+            />
           </div>
-          <div className="breadcrumb">ENNSTAL.CONNECT <b>›</b> {page === "home" ? "Startseite" : page === "members" ? "Mitglieder" : page === "forum" ? "Forum" : page === "news" ? "News & Beiträge" : page === "admin" ? "Admin-Bereich" : page === "logs" ? "Admin-Logbuch" : page === "rewards" ? "Belohnungen" : "Community"}</div>
-          <div className="topbar-user" onClick={() => setPage("profile")}>
-            <img src={profile?.avatar_url || DEFAULT_AVATAR} alt="" onError={(e) => { e.currentTarget.src = DEFAULT_AVATAR; }} />
-            <strong>{getName(profile)}</strong>
+
+          <nav>
+
+            <button
+              className={
+                page === "home"
+                  ? "active"
+                  : ""
+              }
+              onClick={() =>
+                setPage("home")
+              }
+            >
+              Startseite
+            </button>
+
+            <button
+              className={
+                page === "members"
+                  ? "active"
+                  : ""
+              }
+              onClick={() =>
+                setPage("members")
+              }
+            >
+              Mitglieder
+            </button>
+
+            <button
+              className={page === "online" ? "active" : ""}
+              onClick={() => setPage("online")}
+            >
+              ● Online ({onlineMembers.length})
+            </button>
+
+            <button
+              className={
+                page === "groups"
+                  ? "active"
+                  : ""
+              }
+              onClick={() =>
+                setPage("groups")
+              }
+            >
+              Gruppen
+            </button>
+
+            <button
+              className={
+                page === "events"
+                  ? "active"
+                  : ""
+              }
+              onClick={() =>
+                setPage("events")
+              }
+            >
+              Events
+            </button>
+
+           
+
+           
+
+          </nav>
+
+          <div className="top-profile">
+
+            <button
+              className={
+                `top-profile-button ${
+                  isAdmin(profile?.role)
+                    ? "admin-border"
+                    : profile?.role ===
+                      "SUPPORTER"
+                    ? "supporter-border"
+                    : ""
+                }`
+              }
+              onClick={() =>
+                setPage("profile")
+              }
+            >
+              {isAdmin(profile?.role) && (
+                <span className="small-admin-star">
+                  ★
+                </span>
+              )}
+
+              <span
+                style={{
+                  color:
+                    profile?.nickname_color ||
+                    undefined
+                }}
+              >
+                {getName(profile)}
+              </span>
+            </button>
+
+            <button
+              className="logout-button"
+              onClick={logout}
+            >
+              Abmelden
+            </button>
+
           </div>
+
         </header>
 
-        <div className="dashboard-layout">
-          <aside className="modern-sidebar">
-            <div className="sidebar-profile" onClick={() => setPage("profile")}>
-              <img src={profile?.avatar_url || DEFAULT_AVATAR} alt="" onError={(e) => { e.currentTarget.src = DEFAULT_AVATAR; }} />
-              <div><strong>{getName(profile)}</strong><span className={isHeadAdmin(profile?.role) ? "role-badge head" : profile?.role === "ADMIN" ? "role-badge admin" : profile?.role === "SUPPORTER" ? "role-badge supporter" : "role-badge"}>{isHeadAdmin(profile?.role) ? "♕ Head Admin" : profile?.role === "ADMIN" ? "★ Admin" : profile?.role === "SUPPORTER" ? "★ Supporter" : "Mitglied"}</span></div>
-            </div>
-            <nav className="modern-nav">
-              <button className={page === "home" ? "active" : ""} onClick={() => setPage("home")}>⌂ <span>Startseite</span></button>
-              <button className={page === "members" ? "active" : ""} onClick={() => setPage("members")}>♙ <span>Mitglieder</span></button>
-              <button className={page === "friends" ? "active" : ""} onClick={() => setPage("friends")}>♧ <span>Freunde</span></button>
-              <button className={page === "forum" ? "active" : ""} onClick={() => setPage("forum")}>◯ <span>Forum</span></button>
-              <button className={page === "news" ? "active" : ""} onClick={() => setPage("news")}>▤ <span>News & Beiträge</span></button>
-              <button className={page === "messages" ? "active" : ""} onClick={() => setPage("messages")}>☏ <span>Nachrichten</span>{unreadMessages.length > 0 && <em>{unreadMessages.length}</em>}</button>
-              <button className={page === "rewards" ? "active" : ""} onClick={() => setPage("rewards")}>♜ <span>Belohnungen</span></button>
-              <button className={page === "profile" ? "active" : ""} onClick={() => setPage("profile")}>⚙ <span>Mein Profil</span></button>
-              {isAdmin(profile?.role) && <button className={page === "admin" ? "active admin-link" : "admin-link"} onClick={() => setPage("admin")}>♛ <span>Admin-Bereich</span></button>}
-              {isHeadAdmin(profile?.role) && <button className={page === "logs" ? "active admin-link" : "admin-link"} onClick={() => setPage("logs")}>♕ <span>Admin-Logbuch</span></button>}
-            </nav>
-            <button className="sidebar-logout" onClick={logout}>⇥ <span>Abmelden</span></button>
-          </aside>
-          <main className="modern-main">
         {notice && (
           <div className="toast">
             {notice}
           </div>
         )}
 
-        <div className="content-root">
+        <main>
 
           {/* =================================================
               STARTSEITE
@@ -1962,7 +2156,7 @@ async function changePoints(event) {
 
                 <img
                   src="/banner.png"
-                  alt="Ennstal Connect – Panorama"
+                  alt="Ennstal Connect"
                 />
 
               </div>
@@ -1995,42 +2189,59 @@ async function changePoints(event) {
 
               {isAdmin(profile?.role) && (
                 <section className="admin-home-tools">
-                  <h2>Deine Admin-Übersicht</h2>
+
+                  <h2>
+                    Deine Admin-Übersicht
+                  </h2>
+
                   <div className="admin-tool-grid">
-                    <button type="button" onClick={() => setPage("admin")}>
+
+                    <button
+                      onClick={() =>
+                        setPage("admin")
+                      }
+                    >
                       <span>👥</span>
                       Mitglieder verwalten
                     </button>
-                    <button type="button" onClick={() => setPage("admin")}>
-                      <span>🛡️</span>
-                      Moderation & Funktionen
-                    </button>
-                    <button type="button" onClick={() => setPage("news")}>
-                      <span>📰</span>
-                      News verwalten
-                    </button>
-                    <button type="button" onClick={() => setPage("forum")}>
-                      <span>💬</span>
-                      Forum verwalten
+
+                    <button
+                      onClick={() =>
+                        setPage("admin")
+                      }
+                    >
+                      <span>⭐</span>
+                      Punkte verwalten
                     </button>
                     {isHeadAdmin(profile?.role) && (
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          const { data, error } = await supabase.rpc("head_admin_get_suspended_users");
-                          if (error) {
-                            showNotice(error.message);
-                            return;
-                          }
-                          setSuspendedUsers(data || []);
-                          setPage("suspended-users");
-                        }}
-                      >
-                        <span>🔒</span>
-                        Gesperrte Konten
-                      </button>
-                    )}
+  <button
+    onClick={loadSuspendedUsers}
+  >
+    <span>🔒</span>
+    Gesperrte Konten
+  </button>
+)}
+
+                    <button
+                      onClick={() =>
+                        setPage("admin")
+                      }
+                    >
+                      <span>📰</span>
+                      Startseite bearbeiten
+                    </button>
+
+                    <button
+                      onClick={() =>
+                        setPage("events")
+                      }
+                    >
+                      <span>📅</span>
+                      Events bearbeiten
+                    </button>
+
                   </div>
+
                 </section>
               )}
 
@@ -2053,12 +2264,6 @@ async function changePoints(event) {
                       <option value="soft">Soft</option>
                       <option value="dark">Dunkel</option>
                     </select>
-                    <select name="display_size" defaultValue="medium">
-                      <option value="small">Klein</option>
-                      <option value="medium">Mittel</option>
-                      <option value="large">Groß</option>
-                      <option value="wide">Breit</option>
-                    </select>
                     <button className="primary-button">Rahmen veröffentlichen</button>
                   </form>
                 </section>
@@ -2067,7 +2272,7 @@ async function changePoints(event) {
               {homepageSections.length > 0 && (
                 <section className="homepage-sections">
                   {homepageSections.map((section) => (
-                    <article className={`homepage-frame ${section.frame_style || "standard"} homepage-size-${section.display_size || "medium"}`} key={section.id}>
+                    <article className={`homepage-frame ${section.frame_style || "standard"}`} key={section.id}>
                       <h2>{section.title}</h2>
                       <p>{section.content}</p>
                       <small>
@@ -2079,11 +2284,6 @@ async function changePoints(event) {
 
                       {(isHeadAdmin(profile?.role) || myAdminPermission("manage_homepage")) && (
                         <div className="content-manage-actions">
-                          <button type="button" onClick={() => moveHomepageSection(section, -1)}>← Verschieben</button>
-                          <button type="button" onClick={() => moveHomepageSection(section, 1)}>Verschieben →</button>
-                          <select value={section.display_size || "medium"} onChange={(event) => changeHomepageSize(section, event.target.value)}>
-                            <option value="small">Klein</option><option value="medium">Mittel</option><option value="large">Groß</option><option value="wide">Breit</option>
-                          </select>
                           <button type="button" onClick={() => editHomepageSection(section)}>Bearbeiten</button>
                           <button type="button" onClick={() => deleteHomepageSection(section)} className="danger-link">Löschen</button>
                         </div>
@@ -2099,7 +2299,7 @@ async function changePoints(event) {
                   Neuigkeiten
                 </h2>
 
-                {(user && (isAdmin(profile?.role) || myAdminPermission("manage_news"))) && (
+                {(user && (isAdmin(profile?.role) || true)) && (
 
                   <form
                     className="panel"
@@ -2290,42 +2490,11 @@ async function changePoints(event) {
             </section>
           )}
 
-          {page === "friends" && (
-            <section>
-              <div className="page-heading"><div><span className="eyebrow">COMMUNITY</span><h1>Freunde</h1><p>Deine Freundschaften und Kontakte auf einen Blick.</p></div></div>
-              {!sidebarFriends.length ? <div className="empty-card">Noch keine Freunde. Öffne ein Mitglied und sende eine Freundschaftsanfrage.</div> : (
-                <MemberSection title="Meine Freunde" members={sidebarFriends} profile={profile} onOpen={openMember} onMessage={openChat} friendships={friendships} onFriend={requestFriend} />
-              )}
-            </section>
-          )}
-
-          {page === "news" && (
-            <section>
-              <div className="page-heading"><div><span className="eyebrow">COMMUNITY</span><h1>News & Beiträge</h1><p>Aktuelle Informationen und Beiträge aus deiner Community.</p></div></div>
-              {(isAdmin(profile?.role) || myAdminPermission("manage_news")) && (
-                <form className="panel" onSubmit={createNews}>
-                  <h2>Neue News veröffentlichen</h2>
-                  <input name="title" placeholder="Überschrift" required />
-                  <textarea name="content" placeholder="Text" required />
-                  <button className="primary-button">Veröffentlichen</button>
-                </form>
-              )}
-              <div className="news-grid">
-                {news.map((item) => <article className="news-card" key={item.id}>
-                  <h2>{item.title}</h2><p>{item.content}</p>
-                  <small>Erstellt von {actorLabel(item.author_id)}<br />{new Date(item.created_at).toLocaleString("de-AT")}</small>
-                  {canManageNewsItem(item) && <div className="content-manage-actions"><button type="button" onClick={() => editNews(item)}>Bearbeiten</button><button type="button" className="danger-link" onClick={() => deleteNews(item)}>Löschen</button></div>}
-                </article>)}
-                {!news.length && <div className="empty-card">Noch keine Beiträge veröffentlicht.</div>}
-              </div>
-            </section>
-          )}
-
           {/* =================================================
               GRUPPEN
               ================================================= */}
 
-          {page === "forum" && (
+          {page === "groups" && (
             <section>
 
               <div className="page-heading">
@@ -2337,15 +2506,14 @@ async function changePoints(event) {
                   </span>
 
                   <h1>
-                    Forum
+                    Gruppen
                   </h1>
-                  <p>Diskutiere regionale Themen. Neue Bereiche werden von der Moderation freigegeben.</p>
 
                 </div>
 
               </div>
 
-              {(isAdmin(profile?.role) || myAdminPermission("manage_groups")) && (
+              {user && (
                 <form
                   className="panel"
                   onSubmit={createGroup}
@@ -2353,13 +2521,13 @@ async function changePoints(event) {
 
                   <input
                     name="name"
-                    placeholder="Thema / Forenbereich"
+                    placeholder="Gruppenname"
                     required
                   />
 
                   <textarea
                     name="description"
-                    placeholder="Beschreibung des Themas"
+                    placeholder="Beschreibung"
                   />
 
                   <input
@@ -2368,7 +2536,7 @@ async function changePoints(event) {
                   />
 
                   <button className="primary-button">
-                    Forenbereich erstellen
+                    Gruppe erstellen
                   </button>
 
                 </form>
@@ -2401,7 +2569,7 @@ async function changePoints(event) {
                       </p>
 
                       <small className="content-attribution">
-                        Erstellt von {actorLabel(group.created_by)}
+                        Gegründet von {actorLabel(group.created_by)}
                         {group.updated_by && group.updated_by !== group.created_by && (
                           <> · Bearbeitet von {actorLabel(group.updated_by)}{["ADMIN", "HEAD_ADMIN"].includes(memberById(group.updated_by)?.role) ? " ★" : ""}</>
                         )}
@@ -2415,6 +2583,110 @@ async function changePoints(event) {
                       )}
 
                     </div>
+
+                  </article>
+                ))}
+
+              </div>
+
+            </section>
+          )}
+
+          {/* =================================================
+              EVENTS
+              ================================================= */}
+
+          {page === "events" && (
+            <section>
+
+              <div className="page-heading">
+
+                <div>
+
+                  <span className="eyebrow">
+                    COMMUNITY
+                  </span>
+
+                  <h1>
+                    Events
+                  </h1>
+
+                </div>
+
+              </div>
+
+              {isAdmin(profile?.role) && (
+                <form
+                  className="panel"
+                  onSubmit={createEvent}
+                >
+
+                  <input
+                    name="title"
+                    placeholder="Titel"
+                    required
+                  />
+
+                  <textarea
+                    name="description"
+                    placeholder="Beschreibung"
+                  />
+
+                  <input
+                    name="location"
+                    placeholder="Ort"
+                  />
+
+                  <input
+                    type="datetime-local"
+                    name="event_date"
+                    required
+                  />
+
+                  <button className="primary-button">
+                    Event erstellen
+                  </button>
+
+                </form>
+              )}
+
+              <div className="news-grid">
+
+                {events.map((event) => (
+
+                  <article
+                    className="news-card"
+                    key={event.id}
+                  >
+
+                    <h2>
+                      {event.title}
+                    </h2>
+
+                    <p>
+                      {event.description}
+                    </p>
+
+                    <strong>
+                      {event.location ||
+                        "Ort offen"}
+                    </strong>
+
+                    <small>
+                      {new Date(event.event_date || event.starts_at).toLocaleString("de-AT")}
+                      <br />
+                      Erstellt von {actorLabel(event.creator_id || event.created_by)}
+                      {event.updated_by && event.updated_by !== (event.creator_id || event.created_by) && (
+                        <> · Bearbeitet von {actorLabel(event.updated_by)}{["ADMIN", "HEAD_ADMIN"].includes(memberById(event.updated_by)?.role) ? " ★" : ""}</>
+                      )}
+                    </small>
+
+                    {canManageEventItem(event) && (
+                      <div className="content-manage-actions">
+                        <button type="button" onClick={() => editEvent(event)}>Bearbeiten</button>
+                        <button type="button" onClick={() => deleteEvent(event)} className="danger-link">Löschen</button>
+                      </div>
+                    )}
 
                   </article>
                 ))}
@@ -2665,14 +2937,6 @@ async function changePoints(event) {
             </section>
           )}
 
-          {page === "impressum" && (
-            <section className="legal-page panel"><h1>Impressum</h1><p><strong>Ennstal Connect</strong></p><p>Waidbachstraße<br/>8700 Leoben<br/>Österreich</p><p>Verantwortlich für die Inhalte dieser Community ist der jeweils eingetragene Hauptadministrator.</p></section>
-          )}
-
-          {page === "privacy" && (
-            <section className="legal-page panel"><h1>Datenschutzhinweise</h1><p>Ennstal Connect verarbeitet die Daten, die für Registrierung, Anmeldung und die Nutzung der Community erforderlich sind. Weitere Inhalte und konkrete Aufbewahrungsfristen hängen von den aktivierten Community-Funktionen und der Supabase-Konfiguration ab.</p></section>
-          )}
-
           {page === "profile" && (
             <section>
               <div
@@ -2700,7 +2964,7 @@ async function changePoints(event) {
                       "#1b1f26",
                     borderColor:
                       isAdmin(profile?.role)
-                        ? "#ff7a2e"
+                        ? "#dd5c5c"
                         : profile?.profile_accent ||
                           "#58616d"
                   }}
@@ -2708,11 +2972,15 @@ async function changePoints(event) {
 
                   <div className="my-profile-top">
                     {isAdmin(profile?.role) && (
-                      <span className="role-stack"><span className="role-symbol role-symbol-large admin-star-symbol" aria-label="Admin">★</span><img className="friend-symbol" src="/freunde-logo" alt="Freund" /></span>
+                      <span className="role-stack"><span className="role-symbol role-star-transparent" title="Admin">★</span><img className="friend-symbol" src="/freunde-logo.png" alt="Freund" /></span>
                     )}
 
                     {profile?.role === "SUPPORTER" && (
-                      <span className="role-symbol role-symbol-large supporter-star-symbol" aria-label="Supporter">★</span>
+                      <img
+                        className="role-symbol role-symbol-large"
+                        src="/supporter-star.png"
+                        alt="Supporter"
+                      />
                     )}
 
                     <h1
@@ -2769,12 +3037,19 @@ async function changePoints(event) {
                     <span />
                     Online
                   </div>
-                  <div className="profile-rewards-card">
-                    <button type="button" onClick={() => setPage("rewards")}>
-                      <span>🎁</span>
-                      <strong>Belohnungen</strong>
+
+                  <div className="profile-points">
+                    <button
+                      type="button"
+                      onClick={() => setPage("points")}
+                    >
+                      <span>⭐</span>
+                      <strong>
+                        {profile?.community_points || 0}
+                      </strong>
+                      Punkte
                       <small>
-                        Stufe {profile?.reward_level || 0} · {totalOnlineHours.toFixed(2)} Std. online
+                        ({profile?.purchase_points || 0} KP)
                       </small>
                     </button>
                   </div>
@@ -3048,6 +3323,39 @@ async function changePoints(event) {
           )}
 
           {/* =================================================
+              GESPERRTE NUTZER – NUR ADMIN
+              ================================================= */}
+          {page === "suspended-users" && isAdmin(profile?.role) && (
+            <section className="admin-page">
+              <div className="page-heading">
+                <div>
+                  <span className="eyebrow">MODERATION</span>
+                  <h1>Gesperrte Nutzer</h1>
+                  <p>Konten mit Regelverstoß verwalten und bei Bedarf wieder freischalten.</p>
+                </div>
+                <button className="secondary-button" onClick={loadSuspendedUsers}>↻ Aktualisieren</button>
+              </div>
+
+              {!suspendedUsers.length ? (
+                <div className="empty-card">Aktuell sind keine Nutzer gesperrt.</div>
+              ) : (
+                <div className="member-grid">
+                  {suspendedUsers.map((member) => (
+                    <article className="member-card suspended-card" key={member.id}>
+                      <img src={member.avatar_url || DEFAULT_AVATAR} alt={getName(member)} className="member-avatar" />
+                      <div className="member-name">{getName(member)}</div>
+                      <div className="member-role">{member.role || "MEMBER"}</div>
+                      <p className="suspension-reason"><strong>Grund:</strong> {member.suspension_reason || "Kein Grund hinterlegt"}</p>
+                      <small>{member.suspended_at ? new Date(member.suspended_at).toLocaleString("de-AT") : ""}</small>
+                      <button className="secondary-button success-button" onClick={() => unsuspendMember(member)}>🔓 Freischalten</button>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* =================================================
               NUTZER-MELDUNGEN
               ================================================= */}
 
@@ -3138,63 +3446,132 @@ async function changePoints(event) {
               PUNKTE
               ================================================= */}
 
-          {page === "rewards" && (
-            <section className="rewards-page">
+          {page === "points" && (
+            <section>
+
               <div className="page-heading">
+
                 <div>
-                  <span className="eyebrow">DEINE AKTIVITÄT</span>
-                  <h1>Belohnungen</h1>
-                  <p>Mit deiner aktiven Zeit in der Community schaltest du schrittweise zusätzliche Profilfunktionen frei.</p>
+
+                  <button
+                    className="back-button"
+                    onClick={() =>
+                      setPage("profile")
+                    }
+                  >
+                    ← Zurück
+                  </button>
+
+                  <h1>
+                    Meine Punkte
+                  </h1>
+
+                  <p>
+                    Dein vollständiger
+                    Punkteverlauf.
+                  </p>
+
                 </div>
+
               </div>
 
-              <div className="reward-hero panel">
-                <div className="reward-level">
-                  <span>Aktuelle Belohnungsstufe</span>
-                  <strong>{profile?.reward_level || 0}</strong>
+              <div className="points-overview">
+
+                <div>
+
+                  <span>
+                    Aktueller Punktestand
+                  </span>
+
+                  <strong>
+                    {
+                      profile?.community_points ||
+                      0
+                    }
+                  </strong>
+
                 </div>
-                <div className="reward-progress">
-                  <span>Gespeicherte Onlinezeit</span>
-                  <strong>{totalOnlineHours.toFixed(2)} Stunden</strong>
-                  <div className="reward-progress-track">
-                    <i style={{ width: `${Math.min(100, Math.max(0, ((5 - onlineHoursUntilReward) / 5) * 100))}%` }} />
-                  </div>
-                  <small>
-                    {onlineHoursUntilReward <= 0
-                      ? "Deine nächste Belohnung ist bereit."
-                      : `Noch ${onlineHoursUntilReward.toFixed(2)} Stunden bis zur nächsten Freischaltung.`}
-                  </small>
-                </div>
+
+              </div>
+
+              <div className="panel online-reward-panel">
+                <h2>⏱ Online-Belohnung</h2>
+                <p>Gesamte gespeicherte Onlinezeit: <strong>{totalOnlineHours.toFixed(2)} Stunden</strong></p>
+                <p>
+                  {onlineHoursUntilReward <= 0
+                    ? "Du kannst jetzt 10 Punkte abholen!"
+                    : `Noch ${onlineHoursUntilReward.toFixed(2)} Stunden bis zu den nächsten 10 Punkten.`}
+                </p>
                 <button
                   className="primary-button"
                   disabled={onlineHoursUntilReward > 0}
                   onClick={claimOnlineReward}
                 >
-                  🎁 Belohnung freischalten
+                  🎁 10 Punkte abholen
                 </button>
               </div>
 
-              <div className="reward-info-grid">
-                <article className="panel">
-                  <span>01</span>
-                  <h2>Profil erweitern</h2>
-                  <p>Durch aktive Teilnahme können zusätzliche Profiloptionen freigeschaltet werden.</p>
-                </article>
-                <article className="panel">
-                  <span>02</span>
-                  <h2>Community-Funktionen</h2>
-                  <p>Belohnungen können neue persönliche Funktionen und Gestaltungsmöglichkeiten aktivieren.</p>
-                </article>
-                <article className="panel">
-                  <span>03</span>
-                  <h2>Ohne Punktesystem</h2>
-                  <p>Es gibt keine Kauf- oder Strafpunkte. Die Belohnung basiert ausschließlich auf aktiver Community-Zeit.</p>
-                </article>
+              <div className="point-list">
+
+                {history.map((item) => {
+
+                  const delta =
+                    item.delta ??
+                    item.community_points_change ??
+                    0;
+
+                  return (
+                    <article
+                      className={
+                        `point-row ${
+                          delta < 0
+                            ? "negative"
+                            : "positive"
+                        }`
+                      }
+                      key={item.id}
+                    >
+
+                      <strong>
+                        {delta > 0
+                          ? "+"
+                          : ""}
+                        {delta}
+                        {" "}
+                        Punkte
+                      </strong>
+
+                      <span>
+                        {item.reason}
+                      </span>
+
+                      <small>
+                        {
+                          new Date(
+                            item.created_at
+                          ).toLocaleString(
+                            "de-AT"
+                          )
+                        }
+                      </small>
+
+                    </article>
+                  );
+                })}
+
+                {!history.length && (
+                  <div className="empty-card">
+                    Noch keine
+                    Punkteänderungen.
+                  </div>
+                )}
+
               </div>
+
             </section>
           )}
 
-                    {/* =================================================
+          {/* =================================================
               ADMIN
               ================================================= */}
 
@@ -3276,6 +3653,63 @@ async function changePoints(event) {
 
                 </div>
 
+                <form
+                  className="panel"
+                  onSubmit={changePoints}
+                >
+
+                  <h2>
+                    ⭐ Punkte verwalten
+                  </h2>
+
+                  <select
+                    name="user_id"
+                    required
+                  >
+
+                    <option value="">
+                      Mitglied auswählen
+                    </option>
+
+                    {members.map((member) => (
+
+                      <option
+                        key={member.id}
+                        value={member.id}
+                      >
+                        {getName(member)}
+                      </option>
+                    ))}
+
+                  </select>
+
+                  <input
+                    type="number"
+                    name="points"
+                    placeholder="+ Punkte oder - Punkte"
+                    required
+                  />
+
+                  <textarea
+                    name="reason"
+                    placeholder="Grund für die Punkteänderung"
+                    required
+                  />
+
+                  <button className="primary-button">
+                    Punkte ändern
+                  </button>
+
+                  <small>
+                    Der Grund wird im
+                    Punkteverlauf gespeichert.
+                    Bei -10 Gesamtpunkten
+                    wird das Konto automatisch
+                    gesperrt.
+                  </small>
+
+                </form>
+
                 <section className="admin-members-panel">
   <div className="admin-members-heading">
     <div>
@@ -3343,11 +3777,19 @@ async function changePoints(event) {
               <span>
                 <strong>
                   {isAdmin(member.role) && (
-                    <span className="inline-role-symbol admin-star-symbol" aria-hidden="true">★</span>
+                    <img
+                      className="inline-role-symbol"
+                      src="/Admin-star.png"
+                      alt=""
+                    />
                   )}
 
                   {member.role === "SUPPORTER" && (
-                    <span className="inline-role-symbol supporter-star-symbol" aria-hidden="true">★</span>
+                    <img
+                      className="inline-role-symbol"
+                      src="/supporter-star.png"
+                      alt=""
+                    />
                   )}
 
                   {getName(member)}
@@ -3383,9 +3825,9 @@ async function changePoints(event) {
 
           <div className="admin-member-card-info">
             <div>
-              <span>Rolle</span>
+              <span>Punkte</span>
               <strong>
-                {member.role === "HEAD_ADMIN" ? "Head Admin" : member.role === "ADMIN" ? "Admin" : member.role === "SUPPORTER" ? "Supporter" : "Mitglied"}
+                {member.community_points || 0}
               </strong>
             </div>
 
@@ -3413,6 +3855,73 @@ async function changePoints(event) {
             >
               👤 Profil
             </button>
+
+            {(isHeadAdmin(profile?.role) ||
+              myAdminPermission("manage_points")) && (
+              <button
+                type="button"
+                onClick={async () => {
+                  const amount = Number(
+                    window.prompt(
+                      "Punkte, z. B. 5 oder -5:",
+                      "5"
+                    )
+                  );
+
+                  if (
+                    !Number.isFinite(amount) ||
+                    amount === 0
+                  ) return;
+
+                  const reason =
+                    window.prompt(
+                      "Begründung:"
+                    );
+
+                  if (
+                    !reason ||
+                    reason.trim().length < 3
+                  ) {
+                    showNotice(
+                      "Bitte eine Begründung angeben."
+                    );
+                    return;
+                  }
+
+                  const { error } =
+                    await supabase.rpc(
+                      "admin_change_points",
+                      {
+                        target_user:
+                          member.id,
+                        delta:
+                          Math.trunc(amount),
+                        change_kind:
+                          amount > 0
+                            ? "ADD"
+                            : "REMOVE",
+                        reason_text:
+                          reason.trim()
+                      }
+                    );
+
+                  if (error) {
+                    showNotice(
+                      error.message
+                    );
+                    return;
+                  }
+
+                  showNotice(
+                    "Punkte wurden geändert."
+                  );
+
+                  await loadAll();
+                }}
+              >
+                ⭐ Punkte
+              </button>
+            )}
 
             {(isHeadAdmin(profile?.role) ||
               myAdminPermission("manage_roles")) && (
@@ -3480,11 +3989,6 @@ async function changePoints(event) {
                 ★ Admin
               </button>
             )}
-            {isAdmin(profile?.role) && member.id !== user.id && member.role !== "HEAD_ADMIN" && (
-              <button type="button" onClick={() => toggleMemberSuspension(member)}>
-                {member.account_status === "SUSPENDED" ? "🔓 Freischalten" : "🔒 Sperren"}
-              </button>
-            )}
           </div>
         </article>
       ))}
@@ -3500,122 +4004,391 @@ async function changePoints(event) {
               </section>
             )}
 
-          </div>
         </main>
-        </div>
+
+        <aside className={`quick-rail ${isAdmin(profile?.role) ? "quick-rail-admin" : ""}`}>
+          <button
+            className={`quick-profile ${isAdmin(profile?.role) ? "admin" : profile?.role === "SUPPORTER" ? "supporter" : ""}`}
+            onClick={() => setPage("profile")}
+          >
+            <img
+              src={profile?.avatar_url || DEFAULT_AVATAR}
+              alt=""
+              onError={(e) => {
+                e.currentTarget.src = DEFAULT_AVATAR;
+              }}
+            />
+
+            <span>
+              <strong style={{ color: profile?.nickname_color || undefined }}>
+                {isAdmin(profile?.role) && (
+                  <img
+                    className="inline-role-symbol"
+                    src="/Admin-star.png"
+                    alt=""
+                  />
+                )}
+
+                {profile?.role === "SUPPORTER" && (
+                  <img
+                    className="inline-role-symbol"
+                    src="/supporter-star.png"
+                    alt=""
+                  />
+                )}
+
+                {getName(profile)}
+              </strong>
+
+              <small>
+                {profile?.is_online ? "● Online" : "● Offline"}
+              </small>
+            </span>
+          </button>
+
+          <div className="quick-section-title">
+            MEIN BEREICH
+          </div>
+
+          <button onClick={() => setPage("profile")}>
+            👤 Mein Profil
+          </button>
+
+          <button onClick={() => setPage("profile")}>
+            ⚙ Einstellungen
+          </button>
+
+          <button
+            onClick={() => setPage("messages")}
+            className="rail-message-button"
+          >
+            💬 Nachrichten
+            {inboxMessages.length > 0 && (
+              <span className="rail-badge">
+                {inboxMessages.length}
+              </span>
+            )}
+          </button>
+
+          <button onClick={() => setPage("points")}>
+            ⭐ {profile?.community_points || 0} Punkte
+            <span className="rail-subvalue">
+              ({profile?.purchase_points || 0} KP)
+            </span>
+          </button>
+
+          <button
+            onClick={() =>
+              setFriendsExpanded((value) => !value)
+            }
+            className="rail-expand-button"
+          >
+            🤝 Freunde
+            <span>
+              {acceptedFriendIds.length}
+            </span>
+            <b>{friendsExpanded ? "⌃" : "⌄"}</b>
+          </button>
+
+          {friendsExpanded && (
+            <div className="rail-subpanel">
+              <div className="rail-subtitle">
+                Freunde online ({onlineFriends.length})
+              </div>
+
+              {onlineFriends.map((friend) => (
+                <button
+                  key={friend.id}
+                  className="rail-member"
+                  onClick={() => openMember(friend)}
+                >
+                  <img
+                    src={friend.avatar_url || DEFAULT_AVATAR}
+                    alt=""
+                  />
+
+                  <span>
+                    <strong>
+                      {isAdmin(friend.role) && (
+                        <span className="rail-mini-star">
+                          ★
+                        </span>
+                      )}
+                      {friend.nickname || getName(friend)}
+                    </strong>
+
+                    <small className="online-text">
+                      ● Online
+                    </small>
+                  </span>
+                </button>
+              ))}
+
+              {!onlineFriends.length && (
+                <small className="rail-empty">
+                  Gerade keine Freunde online.
+                </small>
+              )}
+
+              <button
+                className="rail-link"
+                onClick={() => setPage("online")}
+              >
+                Alle Online-Mitglieder →
+              </button>
+            </div>
+          )}
+
+          <button
+            onClick={() => setPage("friend-requests")}
+          >
+            🤝 Freundschaftsanfragen
+            {incomingFriendRequests.length > 0 && <span className="rail-badge">{incomingFriendRequests.length}</span>}
+          </button>
+
+          <button onClick={() => setPage("blocked")}>
+            🚫 Blockierte Nutzer ({blockedUsers.length})
+          </button>
+
+          <button onClick={() => setPage("profile-visits")}>👁 Profilbesucher ({profileVisits.length})</button>
+
+          <section className="rail-activity-panel">
+            <div className="quick-section-title">
+              AKTIVITÄTEN
+            </div>
+
+            <div className="rail-activity-list">
+              {profileActivities.slice(0, 14).map((activity) => {
+                const actor =
+                  memberById(activity.actor_id);
+
+                if (!actor) return null;
+
+                return (
+                  <button
+                    key={activity.id}
+                    type="button"
+                    className="rail-activity-item"
+                    onClick={() => openMember(actor)}
+                  >
+                    <img
+                      src={
+                        actor.avatar_url ||
+                        DEFAULT_AVATAR
+                      }
+                      alt=""
+                    />
+
+                    <span>
+                      <strong>
+                        {isAdmin(actor.role) && (
+                          <img
+                            className="inline-role-symbol"
+                            src="/Admin-star.png"
+                            alt=""
+                          />
+                        )}
+
+                        {actor.role === "SUPPORTER" && (
+                          <img
+                            className="inline-role-symbol"
+                            src="/supporter-star.png"
+                            alt=""
+                          />
+                        )}
+
+                        {getName(actor)}
+                      </strong>
+
+                      <small>
+                        {activity.text}
+                      </small>
+
+                      <em>
+                        {new Date(
+                          activity.created_at
+                        ).toLocaleString("de-AT")}
+                      </em>
+                    </span>
+                  </button>
+                );
+              })}
+
+              {!profileActivities.length && (
+                <small className="rail-empty">
+                  Noch keine Profilupdates.
+                </small>
+              )}
+            </div>
+          </section>
+
+          {isAdmin(profile?.role) && (
+            <>
+              <div className="quick-section-title admin-section-title">
+                ★ ADMIN-BEREICH
+              </div>
+
+              {(
+                isHeadAdmin(profile?.role) ||
+                myAdminPermission("manage_members")
+              ) && (
+                <button onClick={() => setPage("admin")}>
+                  👥 Mitglieder verwalten
+                </button>
+              )}
+
+              {(
+                isHeadAdmin(profile?.role) ||
+                myAdminPermission("manage_points")
+              ) && (
+                <button onClick={() => setPage("admin")}>
+                  ⭐ Punkte verwalten
+                </button>
+              )}
+
+              {(
+                isHeadAdmin(profile?.role) ||
+                myAdminPermission("manage_news")
+              ) && (
+                <button onClick={() => setPage("home")}>
+                  📰 News verwalten
+                </button>
+              )}
+
+              {(
+                isHeadAdmin(profile?.role) ||
+                myAdminPermission("manage_groups")
+              ) && (
+                <button onClick={() => setPage("groups")}>
+                  👥 Gruppen verwalten
+                </button>
+              )}
+
+              {(
+                isHeadAdmin(profile?.role) ||
+                myAdminPermission("manage_events")
+              ) && (
+                <button onClick={() => setPage("events")}>
+                  📅 Events verwalten
+                </button>
+              )}
+
+              {(
+                isHeadAdmin(profile?.role) ||
+                myAdminPermission("manage_marketplace")
+              ) && (
+                <button onClick={() => setPage("admin")}>
+                  🛒 Marktplatz verwalten
+                </button>
+              )}
+
+              {(
+                isHeadAdmin(profile?.role) ||
+                myAdminPermission("manage_reports")
+              ) && (
+                <button onClick={() => setPage("reports")}>
+                  🚩 Meldungen ({reports.filter((item) => item.status === "PENDING").length})
+                </button>
+              )}
+
+              {isHeadAdmin(profile?.role) && (
+                <section className="admin-permission-panel">
+                  <button
+                    className="permission-heading"
+                    onClick={() =>
+                      setPermissionsExpanded((value) => !value)
+                    }
+                  >
+                    <span>★ Rechte & Rollen</span>
+                    <b>
+                      {permissionsExpanded ? "⌃" : "⌄"}
+                    </b>
+                  </button>
+
+                  {permissionsExpanded && (
+                    <>
+                      <select
+                        value={permissionTarget}
+                        onChange={(event) =>
+                          loadPermissionDraft(
+                            event.target.value
+                          )
+                        }
+                      >
+                        <option value="">
+                          Admin auswählen
+                        </option>
+
+                        {members
+                          .filter(
+                            (member) =>
+                              member.role === "ADMIN"
+                          )
+                          .map((member) => (
+                            <option
+                              key={member.id}
+                              value={member.id}
+                            >
+                              {getName(member)}
+                            </option>
+                          ))}
+                      </select>
+
+                      {permissionTarget && (
+                        <div className="permission-list">
+                          {[
+                            ["manage_members", "Mitglieder verwalten"],
+                            ["manage_points", "Punkte verwalten"],
+                            ["manage_messages", "Nachrichten verwalten"],
+                            ["manage_media", "Medien verwalten"],
+                            ["manage_roles", "Rollen vergeben"],
+                            ["manage_admins", "Admins verwalten"],
+                            ["view_profile_visits", "Profilbesucher sehen"],
+                            ["manage_news", "News verwalten"],
+                            ["manage_groups", "Gruppen verwalten"],
+                            ["manage_events", "Events verwalten"],
+                            ["manage_marketplace", "Marktplatz verwalten"],
+                            ["manage_friend_requests", "Freundschaftsanfragen verwalten"],
+                            ["manage_homepage", "Hauptseite gestalten"],
+                            ["manage_reports", "Nutzer-Meldungen verwalten"]
+                          ].map(([key, label]) => (
+                            <label
+                              className="permission-toggle"
+                              key={key}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={!!permissionDraft[key]}
+                                onChange={(event) =>
+                                  setPermissionDraft({
+                                    ...permissionDraft,
+                                    [key]: event.target.checked
+                                  })
+                                }
+                              />
+                              <span>{label}</span>
+                            </label>
+                          ))}
+
+                          <button
+                            className="primary-button"
+                            onClick={saveAdminPermissions}
+                          >
+                            Rechte speichern
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </section>
+              )}
+            </>
+          )}
+        </aside>
 
         {/* =====================================================
             PROFIL MODAL
             ===================================================== */}
-
-        {page === "suspended-users" && isHeadAdmin(profile?.role) && (
-          <section>
-            <div className="page-heading">
-              <div>
-                <span className="eyebrow">HEAD ADMIN</span>
-                <h1>Gesperrte Konten</h1>
-                <p>Hier können gesperrte Mitglieder direkt wieder freigeschaltet werden.</p>
-              </div>
-            </div>
-            <div className="admin-member-cards">
-              {suspendedUsers.length === 0 ? (
-                <div className="empty-card">Keine gesperrten Konten vorhanden.</div>
-              ) : (
-                suspendedUsers.map((member) => (
-                  <article className="admin-member-card" key={member.id}>
-                    <div className="admin-member-card-top">
-                      <div className="admin-member-person-button">
-                        <img className="admin-member-avatar" src={member.avatar_url || DEFAULT_AVATAR} alt="" />
-                        <span><strong>{getName(member)}</strong><small>{member.role || "Mitglied"}</small></span>
-                      </div>
-                    </div>
-                    <div className="admin-member-card-info">
-                      <div><span>Status</span><strong>Gesperrt</strong></div>
-                      <div><span>Vorname</span><strong>{member.first_name || "—"}</strong></div>
-                      <div><span>Nachname</span><strong>{member.last_name || "—"}</strong></div>
-                    </div>
-                    <div className="admin-member-card-actions">
-                      <button type="button" onClick={() => toggleMemberSuspension(member)}>🔓 Freischalten</button>
-                    </div>
-                  </article>
-                ))
-              )}
-            </div>
-          </section>
-        )}
-
-        {page === "logs" && isHeadAdmin(profile?.role) && (
-          <section>
-            <div className="page-heading">
-              <div>
-                <span className="eyebrow">HEAD ADMIN</span>
-                <h1>Admin-Logbuch</h1>
-                <p>Übersicht über wichtige Aktivitäten, Profiländerungen und offene Meldungen.</p>
-              </div>
-            </div>
-
-            <div className="admin-log-grid">
-              <article className="panel admin-log-panel">
-                <div className="panel-head">
-                  <div>
-                    <span className="eyebrow">AKTIVITÄTEN</span>
-                    <h2>Letzte Änderungen</h2>
-                  </div>
-                  <button type="button" className="secondary" onClick={loadAll}>Aktualisieren</button>
-                </div>
-
-                {adminLogs.length === 0 ? (
-                  <div className="empty-card">Noch keine Admin-Aktivitäten vorhanden.</div>
-                ) : (
-                  <div className="admin-log-list">
-                    {adminLogs.slice(0, 100).map((item) => {
-                      const actor = memberById(item.actor_id || item.user_id || item.profile_id);
-                      return (
-                        <div className="admin-log-row" key={item.id}>
-                          <div>
-                            <strong>{actor ? getName(actor) : "System"}</strong>
-                            <span>{item.action || item.activity_type || item.type || "Admin-Aktivität"}</span>
-                            {item.details && <small>{typeof item.details === "string" ? item.details : JSON.stringify(item.details)}</small>}
-                          </div>
-                          <time>{item.created_at ? new Date(item.created_at).toLocaleString("de-AT") : "—"}</time>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </article>
-
-              <article className="panel admin-log-panel">
-                <div className="panel-head">
-                  <div>
-                    <span className="eyebrow">MODERATION</span>
-                    <h2>Offene Meldungen</h2>
-                  </div>
-                  <strong>{reports.filter((item) => item.status === "PENDING").length}</strong>
-                </div>
-
-                {reports.filter((item) => item.status === "PENDING").length === 0 ? (
-                  <div className="empty-card">Keine offenen Meldungen.</div>
-                ) : (
-                  <div className="admin-log-list">
-                    {reports.filter((item) => item.status === "PENDING").map((item) => {
-                      const target = memberById(item.reported_id || item.target_id || item.user_id);
-                      return (
-                        <button type="button" className="admin-report-row" key={item.id} onClick={() => setPage("admin")}>
-                          <span>
-                            <strong>{target ? getName(target) : "Gemeldetes Mitglied"}</strong>
-                            <small>{item.reason || item.description || "Meldung ohne Begründung"}</small>
-                          </span>
-                          <em>Im Admin-Bereich öffnen →</em>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </article>
-            </div>
-          </section>
-        )}
 
         {selectedMember && (
 
@@ -3676,12 +4449,12 @@ async function changePoints(event) {
                   {isAdmin(
                     selectedMember.role
                   ) && (
-                    <span className="role-symbol admin-star-symbol" aria-label="Admin">★</span>
+                    <span className="role-symbol role-star-transparent" title="Admin">★</span>
                   )}
 
                   {selectedMember.role ===
                     "SUPPORTER" && (
-                    <span className="role-symbol supporter-star-symbol" aria-label="Supporter">★</span>
+                    <img className="role-symbol" src="/supporter-star.png" alt="Supporter" />
                   )}
 
                   <h1
@@ -3864,7 +4637,7 @@ async function changePoints(event) {
 
                 <div className="profile-memberships-grid">
                   <section className="profile-membership-box">
-                    <h3>💬 Forum</h3>
+                    <h3>👥 Gruppen</h3>
                     {selectedMemberGroups.length ? (
                       selectedMemberGroups.map((group) => (
                         <div className="profile-membership-card" key={group.id}>
@@ -3875,7 +4648,20 @@ async function changePoints(event) {
                         </div>
                       ))
                     ) : (
-                      <small>Noch keinem Forenbereich gefolgt.</small>
+                      <small>Noch keiner Gruppe beigetreten.</small>
+                    )}
+                  </section>
+
+                  <section className="profile-membership-box">
+                    <h3>📅 Events</h3>
+                    {selectedMemberEvents.length ? (
+                      selectedMemberEvents.map((event) => (
+                        <div className="profile-membership-card" key={event.id}>
+                          <span>{event.title}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <small>Noch an keinem Event teilgenommen.</small>
                     )}
                   </section>
                 </div>
@@ -3892,6 +4678,86 @@ async function changePoints(event) {
       </div>
 
       <div className="profile-admin-tools-grid">
+
+        {(isHeadAdmin(profile?.role) ||
+          myAdminPermission("manage_points")) && (
+          <button
+            type="button"
+            className="profile-admin-button"
+            onClick={async () => {
+
+              const amount = Number(
+                window.prompt(
+                  "Punkte eingeben, z.B. 5 oder -5:",
+                  "5"
+                )
+              );
+
+              if (
+                !Number.isFinite(amount) ||
+                amount === 0
+              ) {
+                return;
+              }
+
+              const reason =
+                window.prompt(
+                  "Begründung:"
+                );
+
+              if (
+                !reason ||
+                reason.trim().length < 3
+              ) {
+                showNotice(
+                  "Eine Begründung ist erforderlich."
+                );
+                return;
+              }
+
+              const { error } =
+                await supabase.rpc(
+                  "admin_change_points",
+                  {
+                    target_user:
+                      selectedMember.id,
+
+                    delta:
+                      Math.trunc(amount),
+
+                    change_kind:
+                      amount > 0
+                        ? "ADD"
+                        : "REMOVE",
+
+                    reason_text:
+                      reason.trim()
+                  }
+                );
+
+              if (error) {
+                showNotice(
+                  error.message
+                );
+                return;
+              }
+
+              showNotice(
+                "Punkte wurden geändert."
+              );
+
+              await loadAll();
+
+              setSelectedMember(
+                memberById(
+                  selectedMember.id
+                )
+              );
+            }}
+          >
+            ⭐ Punkte vergeben
+          </button>
+        )}
 
         {(isHeadAdmin(profile?.role) ||
           myAdminPermission("manage_media")) && (
@@ -3950,39 +4816,107 @@ async function changePoints(event) {
           <button
             type="button"
             className="profile-admin-button supporter"
-            onClick={() => changeMemberRole(selectedMember, "SUPPORTER")}
+            onClick={async () => {
+
+              const { error } =
+                await supabase.rpc(
+                  "admin_set_role",
+                  {
+                    target_user:
+                      selectedMember.id,
+                    new_role:
+                      "SUPPORTER"
+                  }
+                );
+
+              if (error) {
+                showNotice(
+                  error.message
+                );
+                return;
+              }
+
+              showNotice(
+                `${getName(selectedMember)} ist jetzt Supporter.`
+              );
+
+              await loadAll();
+
+              setSelectedMember(
+                (current) =>
+                  current
+                    ? {
+                        ...current,
+                        role: "SUPPORTER"
+                      }
+                    : current
+              );
+            }}
           >
             🟢 Supporter ernennen
           </button>
         )}
 
-       {isHeadAdmin(profile?.role) && (
-  <button
-    type="button"
-    className="profile-admin-button admin"
-    onClick={() => changeMemberRole(selectedMember, "ADMIN")}
-  >
-    ★ Zum Admin ernennen
-  </button>
-)}
+        {(isHeadAdmin(profile?.role) || myAdminPermission("manage_members")) && selectedMember.id !== user?.id && selectedMember.role !== "HEAD_ADMIN" && (
+          <button
+            type="button"
+            className="profile-admin-button danger"
+            onClick={() => suspendMember(selectedMember)}
+          >
+            🔒 Nutzer sperren (mit Grund)
+          </button>
+        )}
 
-{selectedMember.id !== user?.id &&
-  selectedMember.role !== "MEMBER" &&
-  selectedMember.role !== "HEAD_ADMIN" &&
-  (isHeadAdmin(profile?.role) || myAdminPermission("manage_roles")) && (
-    <button
-      type="button"
-      className="profile-admin-button remove-role"
-      onClick={() => changeMemberRole(selectedMember, "MEMBER")}
-    >
-      ↩ Rolle entfernen · Zum Mitglied
-    </button>
-  )}
+        {isHeadAdmin(profile?.role) && (
+          <button
+            type="button"
+            className="profile-admin-button admin"
+            onClick={async () => {
+
+              const { error } =
+                await supabase.rpc(
+                  "admin_set_role",
+                  {
+                    target_user:
+                      selectedMember.id,
+                    new_role:
+                      "ADMIN"
+                  }
+                );
+
+              if (error) {
+                showNotice(
+                  error.message
+                );
+                return;
+              }
+
+              showNotice(
+                `${getName(selectedMember)} ist jetzt Admin.`
+              );
+
+              await loadAll();
+
+              setSelectedMember(
+                (current) =>
+                  current
+                    ? {
+                        ...current,
+                        role: "ADMIN"
+                      }
+                    : current
+              );
+            }}
+          >
+            ★ Zum Admin ernennen
+          </button>
+        )}
+
      </div>
     </section>
   )}
 
- {selectedMember.id !== user?.id && (
+  {selectedMember.id !== user.id && (
     <div className="profile-actions">
                     <button
                       className="primary-button"
@@ -4004,15 +4938,6 @@ async function changePoints(event) {
                         ? "⏳ Anfrage vorhanden"
                         : "🤝 Freundschaftsanfrage senden"}
                     </button>
-
-                    {friendshipWith(selectedMember.id)?.status === "ACCEPTED" && (
-                      <button
-                        className="secondary-button remove-friend-button"
-                        onClick={() => removeFriend(selectedMember)}
-                      >
-                        ✕ Freund entfernen
-                      </button>
-                    )}
 
                     <button
                       className="secondary-button"
@@ -4037,7 +4962,7 @@ async function changePoints(event) {
           </div>
         )}
 
-        <footer className="site-footer"><div className="footer-brand"><div className="text-logo">ENNSTAL CONNECT</div></div><div><strong>Rechtliches</strong><p>Alle rechtlichen Hinweise sind direkt in der Community aufrufbar.</p></div><div className="footer-links"><button onClick={() => setPage("impressum")}>Impressum</button><button onClick={() => setPage("privacy")}>Datenschutzhinweise</button></div></footer>
+        <footer className="site-footer"><div className="footer-brand"><img src="/banner.png" alt="Ennstal Connect" /></div><div><strong>Impressum</strong><p>Ennstal Connect<br/>Waidbachstraße<br/>8700 Leoben<br/>Verantwortlich für die Webseite: Hauptadmin.</p></div><div><strong>Datenschutzhinweise</strong><p>Informationen zur Verarbeitung deiner Daten und deinen Rechten.</p></div><div className="footer-links"><button onClick={() => showNotice("Impressum: Ennstal Connect, Waidbachstraße, 8700 Leoben. Verantwortlich für die Webseite: Hauptadmin.")}>Impressum</button><button onClick={() => showNotice("Datenschutzhinweise werden im Datenschutzbereich angezeigt.")}>Datenschutzhinweise</button></div></footer>
       </div>
     </>
   );
@@ -4140,8 +5065,8 @@ function MemberCard({
 
         <div className="member-left">
 
-          {admin && <span className="role-symbol admin-star-symbol" aria-label="Admin">★</span>}
-          {supporter && <span className="role-symbol supporter-star-symbol" aria-label="Supporter">★</span>}
+          {admin && <span className="role-symbol role-star-transparent" title="Admin">★</span>}
+          {supporter && <img className="role-symbol" src="/supporter-star.png" alt="Supporter" />}
 
         </div>
 
@@ -4169,7 +5094,7 @@ function MemberCard({
                 onFriend?.(member);
               }}
             >
-              {isFriend ? "♥" : "♡"}
+              {isFriend ? <img src="/friend.png" alt="Freund" /> : "♡"}
             </button>
           )}
 
@@ -4244,6 +5169,11 @@ function MemberCard({
   );
 }
 
+function showFriendMessage() {
+  alert(
+    "Die Freundesfunktion wird über deine bestehende Freundschaftstabelle verbunden. Die Nachrichtenfunktion ist bereits aktiv."
+  );
+}
 
 
 /* =========================================================
