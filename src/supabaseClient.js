@@ -1,7 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 
 // Supabase configuration is supplied by the Vite/Cloudflare build variables.
-// Do not keep a stale project fallback in the client bundle.
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
@@ -43,15 +42,8 @@ supabase.rpc = async (fn, args = {}, options) => {
     const reason = String(args?.reason_text || "").trim();
     if (!user?.id) return { data: null, error: new Error("Nicht eingeloggt.") };
     if (!target || target === user.id) return { data: null, error: new Error("Ungültiger Nutzer.") };
-    if (reason.length < 3) return { data: null, error: new Error("Bitte einen Meldegrund angeben.");
-    }
-    const { error } = await supabase.from("user_reports").insert({
-      reporter_id: user.id,
-      reported_user_id: target,
-      reason,
-      status: "PENDING",
-      created_at: new Date().toISOString()
-    });
+    if (reason.length < 3) return { data: null, error: new Error("Bitte einen Meldegrund angeben.") };
+    const { error } = await supabase.from("user_reports").insert({ reporter_id: user.id, reported_user_id: target, reason, status: "PENDING", created_at: new Date().toISOString() });
     return { data: null, error };
   }
 
