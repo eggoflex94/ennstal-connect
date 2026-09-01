@@ -5,6 +5,7 @@ import "./styles.css";
 import "./release-final.css";
 import "./profile-admin-tools.js";
 import "./legal-overlay.js";
+import "./profile-customization.js";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
