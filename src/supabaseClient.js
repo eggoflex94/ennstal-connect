@@ -4,18 +4,21 @@ import { createClient } from "@supabase/supabase-js";
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl) throw new Error("VITE_SUPABASE_URL wurde nicht geladen.");
-if (!supabaseUrl.startsWith("https://")) throw new Error(`VITE_SUPABASE_URL ist ungültig: ${supabaseUrl}`);
-if (!supabaseAnonKey) throw new Error("VITE_SUPABASE_ANON_KEY wurde nicht geladen.");
+// Configuration problems must not prevent the public login screen from rendering.
+// The app displays a helpful message when a login is attempted instead.
+export const isSupabaseConfigured = Boolean(
+  supabaseUrl?.startsWith("https://") && supabaseAnonKey
+);
+export const supabaseUnavailableMessage =
+  "Die Anmeldung ist momentan nicht erreichbar. Bitte versuche es später erneut.";
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = isSupabaseConfigured
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : null;
 
-// Never leave the whole SPA on "wird geladen", even if the auth endpoint is unreachable.
-const originalGetSession = supabase.auth.getSession.bind(supabase.auth);
-supabase.auth.getSession = async (...args) => {
-  const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("Supabase-Verbindung antwortet nicht.")), 10000));
-  return Promise.race([originalGetSession(...args), timeout]);
-};
+if (!supabase) {
+  // The missing configuration is deliberately not logged: it may contain deployment details.
+} else {
 
 const originalRpc = supabase.rpc.bind(supabase);
 supabase.rpc = async (fn, args = {}, options) => {
@@ -96,3 +99,4 @@ supabase.rpc = async (fn, args = {}, options) => {
 
   return originalRpc(fn, args, options);
 };
+}

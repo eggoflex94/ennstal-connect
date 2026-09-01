@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { supabase } from "./supabaseClient";
+import { supabase, supabaseUnavailableMessage } from "./supabaseClient";
 
 const DEFAULT_AVATAR = "/default-avatar.svg";
 const PERMISSIONS = [
@@ -49,7 +49,6 @@ export default function App() {
   const [chatMember, setChatMember] = useState(null);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState("home");
-  const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState("");
   const [messageText, setMessageText] = useState("");
   const [adminTarget, setAdminTarget] = useState("");
@@ -77,10 +76,24 @@ export default function App() {
     return [...filtered].sort((a, b) => rank(a) - rank(b) || getName(a).localeCompare(getName(b), "de"));
   }, [visibleMembers, search]);
 
+  const withTimeout = (promise, message) => new Promise((resolve, reject) => {
+    const timer = window.setTimeout(() => reject(new Error(message)), 5000);
+    Promise.resolve(promise).then(
+      (value) => { window.clearTimeout(timer); resolve(value); },
+      (error) => { window.clearTimeout(timer); reject(error); }
+    );
+  });
+
   const loadAll = async () => {
-    setLoading(true);
+    if (!supabase) {
+      setUser(null); setProfile(null); setMembers([]); setFriendships([]);
+      return;
+    }
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await withTimeout(
+        supabase.auth.getSession(),
+        supabaseUnavailableMessage
+      );
       const currentUser = session?.user || null;
       setUser(currentUser);
       if (!currentUser) {
@@ -108,31 +121,35 @@ export default function App() {
       ]);
       setProfile(p); setMembers(ms); setFriendships(fs); setMessages(msgs); setHomepageSections(hs); setReports(rs); setBlockedUsers(bs); setNews(ns); setEvents(es); setGroups(gs); setProfileVisits(visits);
     } catch (e) { console.error(e); showNotice(e?.message || "Fehler beim Laden"); }
-    finally { setLoading(false); }
   };
 
   useEffect(() => {
+    if (!supabase) return undefined;
     loadAll();
     const { data: { subscription } } = supabase.auth.onAuthStateChange(() => loadAll());
     return () => subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (!supabase || !user?.id) return;
     const messageChannel = supabase.channel(`ec-messages-${user.id}`).on("postgres_changes", { event: "*", schema: "public", table: "messages", filter: `receiver_id=eq.${user.id}` }, loadAll).subscribe();
     const friendChannel = supabase.channel(`ec-friends-${user.id}`).on("postgres_changes", { event: "*", schema: "public", table: "friendships", filter: `receiver_id=eq.${user.id}` }, loadAll).subscribe();
     return () => { supabase.removeChannel(messageChannel); supabase.removeChannel(friendChannel); };
   }, [user?.id]);
 
   async function login(e) {
-    e.preventDefault(); const f = new FormData(e.currentTarget);
-    const { error } = await supabase.auth.signInWithPassword({ email: f.get("email"), password: f.get("password") });
-    if (error) return showNotice(error.message); await loadAll();
+    e.preventDefault(); if (!supabase) return showNotice(supabaseUnavailableMessage); const f = new FormData(e.currentTarget);
+    try {
+      const { error } = await withTimeout(supabase.auth.signInWithPassword({ email: f.get("email"), password: f.get("password") }), supabaseUnavailableMessage);
+      if (error) return showNotice(error.message); await loadAll();
+    } catch (error) { showNotice(error?.message || supabaseUnavailableMessage); }
   }
   async function register(e) {
-    e.preventDefault(); const f = new FormData(e.currentTarget);
-    const { error } = await supabase.auth.signUp({ email: f.get("email"), password: f.get("password"), options: { emailRedirectTo: `${location.origin}/`, data: { nickname: f.get("nickname"), first_name: f.get("first_name"), last_name: f.get("last_name"), birth_date: f.get("birth_date"), gender: f.get("gender") } } });
-    if (error) return showNotice(error.message); showNotice("Registrierung erfolgreich. Bitte E-Mail bestätigen.");
+    e.preventDefault(); if (!supabase) return showNotice(supabaseUnavailableMessage); const f = new FormData(e.currentTarget);
+    try {
+      const { error } = await withTimeout(supabase.auth.signUp({ email: f.get("email"), password: f.get("password"), options: { emailRedirectTo: `${location.origin}/`, data: { nickname: f.get("nickname"), first_name: f.get("first_name"), last_name: f.get("last_name"), birth_date: f.get("birth_date"), gender: f.get("gender") } } }), supabaseUnavailableMessage);
+      if (error) return showNotice(error.message); showNotice("Registrierung erfolgreich. Bitte E-Mail bestätigen.");
+    } catch (error) { showNotice(error?.message || supabaseUnavailableMessage); }
   }
   async function logout() { if (user) await supabase.from("profiles").update({ is_online: false }).eq("id", user.id); await supabase.auth.signOut(); setUser(null); setProfile(null); }
 
@@ -200,7 +217,7 @@ export default function App() {
 
   async function saveProfile(e) {
     e.preventDefault(); const f = new FormData(e.currentTarget);
-    const payload = { nickname: String(f.get("nickname") || "").trim(), gender: f.get("gender") || null, bio: String(f.get("bio") || "").trim(), location: String(f.get("location") || "").trim(), interests: String(f.get("interests") || "").trim(), website: String(f.get("website") || "").trim(), profile_accent: f.get("profile_accent") || "#ff6b25", profile_background: f.get("profile_background") || "#f6f9fc", profile_layout: f.get("profile_layout") || "standard" };
+    const payload = { nickname: String(f.get("nickname") || "").trim(), gender: f.get("gender") || null, bio: String(f.get("bio") || "").trim(), location: String(f.get("location") || "").trim(), interests: String(f.get("interests") || "").split(",").map((interest) => interest.trim()).filter(Boolean), website: String(f.get("website") || "").trim(), profile_accent: f.get("profile_accent") || "#ff6b25", profile_background: f.get("profile_background") || "#f6f9fc", profile_layout: f.get("profile_layout") || "standard" };
     const { error } = await supabase.from("profiles").update(payload).eq("id", user.id); if (error) return showNotice(error.message); showNotice("Profil wurde gespeichert."); await loadAll();
   }
   async function uploadProfileImage(file) {
@@ -223,7 +240,6 @@ export default function App() {
   async function openChat(m) { setChatMember(m); setPage("messages"); const { data, error } = await supabase.from("messages").select("*").or(`and(sender_id.eq.${user.id},receiver_id.eq.${m.id}),and(sender_id.eq.${m.id},receiver_id.eq.${user.id})`).order("created_at", { ascending: true }); if (error) return showNotice(error.message); setMessages(data || []); await supabase.rpc("mark_messages_read", { from_user: m.id }); }
   async function openMember(m) { if (!m) return; setSelectedMember(m); if (m.id !== user.id) await supabase.from("profile_visits").insert({ profile_id: m.id, visitor_id: user.id, visited_at: new Date().toISOString() }); }
 
-  if (loading) return <div className="loading-screen"><div className="text-logo">ENNSTAL CONNECT</div><p>Ennstal Connect wird geladen …</p></div>;
   if (!user) return <div className="auth-page"><div className="text-logo">ENNSTAL CONNECT</div><Auth login={login} register={register}/>{notice && <div className="toast">{notice}</div>}</div>;
 
   const unread = messages.filter((m) => m.receiver_id === user.id && !m.is_read).length;
