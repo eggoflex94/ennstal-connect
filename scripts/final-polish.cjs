@@ -24,7 +24,3 @@ if (start >= 0 && end > start) {
 }
 
 fs.writeFileSync(file,s);
-`;
-}
-
-fs.writeFileSync(file,s);
