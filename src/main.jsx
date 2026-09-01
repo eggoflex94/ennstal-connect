@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App.jsx";
 import "./styles.css";
 import "./release-final.css";
+import "./launch-fixes.css";
 import "./profile-admin-tools.js";
 import "./legal-overlay.js";
 import "./profile-customization.js";
