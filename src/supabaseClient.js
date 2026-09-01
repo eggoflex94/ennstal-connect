@@ -53,16 +53,12 @@ supabase.rpc = async (fn, args = {}, options) => {
 
   if (fn === "create_user_block") {
     const rpcResult = await originalRpc(fn, args, options);
-    if (rpcResult.error?.code === "23505") return { data: null, error: null };
     if (!rpcResult.error || !canUseClientFallback(rpcResult.error)) return rpcResult;
     const { data: { user } } = await supabase.auth.getUser();
     const target = args?.target_user;
     if (!user?.id) return { data: null, error: new Error("Nicht eingeloggt.") };
     if (!target || target === user.id) return { data: null, error: new Error("Ungültiger Nutzer.") };
     const { error } = await supabase.from("user_blocks").insert({ blocker_id: user.id, blocked_id: target });
-    // A repeated click must be harmless: the unique constraint already proves
-    // that the requested block is active.
-    if (error?.code === "23505") return { data: null, error: null };
     return { data: null, error };
   }
 
@@ -138,23 +134,6 @@ supabase.rpc = async (fn, args = {}, options) => {
     const target = args?.target_user || args?.p_user_id;
     const changes = fn === "admin_set_role" ? { role: args?.new_role } : fn === "admin_set_account_status" ? { account_status: args?.new_status } : { nickname: args?.p_nickname, first_name: args?.p_first_name, last_name: args?.p_last_name, birth_date: args?.p_birth_date, gender: args?.p_gender, role: args?.p_role, account_status: args?.p_account_status };
     const { error } = await supabase.from("profiles").update(changes).eq("id", target);
-    return { data: null, error };
-  }
-
-  if (fn === "send_private_message") {
-    const rpcResult = await originalRpc(fn, args, options);
-    if (!rpcResult.error || !canUseClientFallback(rpcResult.error)) return rpcResult;
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user?.id || !args?.target_user || !String(args?.message_text || "").trim()) return { data: null, error: new Error("Nachricht ist ungültig.") };
-    const { error } = await supabase.from("messages").insert({ sender_id: user.id, receiver_id: args.target_user, content: String(args.message_text).trim(), is_read: false });
-    return { data: null, error };
-  }
-
-  if (fn === "mark_messages_read") {
-    const rpcResult = await originalRpc(fn, args, options);
-    if (!rpcResult.error || !canUseClientFallback(rpcResult.error)) return rpcResult;
-    const { data: { user } } = await supabase.auth.getUser();
-    const { error } = await supabase.from("messages").update({ is_read: true }).eq("receiver_id", user?.id).eq("sender_id", args?.from_user);
     return { data: null, error };
   }
 
