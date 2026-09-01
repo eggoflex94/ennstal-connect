@@ -8,8 +8,6 @@ import "./profile-simple.css";
 import "./profile-admin-tools.js";
 import "./legal-overlay.js";
 import "./profile-customization.js";
-import "./homepage-media.js";
-import "./homepage-enhancements.js";
 import "./homepage-author.css";
 import "./profile-tools.css";
 
