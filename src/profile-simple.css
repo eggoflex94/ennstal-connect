@@ -1,0 +1,103 @@
+/* Simple profile presentation: compact header, small photo top-right, role icon in orange field. */
+.my-profile-card.profile-showcase{
+  position:relative!important;
+  display:block!important;
+  min-height:270px!important;
+  padding:22px!important;
+  text-align:left!important;
+  overflow:hidden!important;
+}
+.my-profile-card.profile-showcase .profile-role-mark{
+  position:absolute!important;
+  top:22px!important;
+  left:22px!important;
+  z-index:5!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:42px!important;
+  height:42px!important;
+  margin:0!important;
+  border-radius:10px!important;
+  background:#f28a24!important;
+  border:1px solid #ffc36b!important;
+  color:#fff!important;
+  font-size:25px!important;
+  font-weight:950!important;
+  line-height:1!important;
+  box-shadow:0 5px 16px rgba(0,0,0,.3)!important;
+}
+.my-profile-card.profile-showcase .profile-nickname-line{
+  position:relative!important;
+  z-index:3!important;
+  display:block!important;
+  width:calc(100% - 105px)!important;
+  min-height:46px!important;
+  margin:0!important;
+  padding:5px 0 0 55px!important;
+  text-align:left!important;
+}
+.my-profile-card.profile-showcase .profile-nickname-line .profile-inline-star{display:none!important}
+.my-profile-card.profile-showcase .profile-nickname-line h1{
+  margin:0!important;
+  font-size:26px!important;
+  line-height:1.15!important;
+  text-align:left!important;
+}
+.my-profile-card.profile-showcase .profile-role-label,
+.my-profile-card.profile-showcase .head-admin-profile-badge{display:none!important}
+.my-profile-card.profile-showcase .my-avatar{
+  position:absolute!important;
+  top:18px!important;
+  right:18px!important;
+  z-index:4!important;
+  width:78px!important;
+  height:78px!important;
+  max-width:78px!important;
+  max-height:78px!important;
+  margin:0!important;
+  object-fit:cover!important;
+  border-radius:50%!important;
+  border:4px solid #f4a33a!important;
+  box-shadow:0 5px 18px rgba(0,0,0,.4)!important;
+}
+.my-profile-card.profile-showcase.admin-profile .my-avatar,
+.my-profile-card.profile-showcase.head-admin .my-avatar{border-color:#ffd34f!important}
+.my-profile-card.profile-showcase.supporter-profile .my-avatar,
+.my-profile-card.profile-showcase.supporter .my-avatar{border-color:#61e598!important}
+.my-profile-card.profile-showcase>h2{
+  margin:22px 0 7px!important;
+  padding-top:72px!important;
+  font-size:15px!important;
+  text-align:left!important;
+}
+.my-profile-card.profile-showcase>p{
+  margin:0!important;
+  max-width:100%!important;
+  font-size:14px!important;
+  line-height:1.5!important;
+  text-align:left!important;
+  color:#d6e1e9!important;
+}
+.my-profile-card.profile-showcase.head-admin .profile-role-mark,
+.my-profile-card.profile-showcase.admin .profile-role-mark{background:#f28a24!important;border-color:#ffd36a!important}
+.my-profile-card.profile-showcase.supporter .profile-role-mark{background:#17864b!important;border-color:#79e8a3!important}
+
+/* Make profile editor calmer and shorter without removing saved fields. */
+.profile-form{gap:9px!important;padding:18px!important}
+.profile-form .eyebrow{margin-bottom:0!important}
+.profile-form h2{margin:0 0 4px!important}
+.profile-form label{margin-top:2px!important;font-size:13px!important;font-weight:800!important}
+.profile-form input,.profile-form select,.profile-form textarea{padding:10px 12px!important}
+.profile-form textarea{min-height:80px!important}
+.profile-form .form-grid{gap:10px!important}
+.profile-form .profile-file-input{padding:9px!important}
+
+@media(max-width:760px){
+  .my-profile-card.profile-showcase{min-height:245px!important;padding:18px!important}
+  .my-profile-card.profile-showcase .profile-role-mark{left:18px!important;top:18px!important;width:38px!important;height:38px!important}
+  .my-profile-card.profile-showcase .profile-nickname-line{padding-left:48px!important;width:calc(100% - 88px)!important}
+  .my-profile-card.profile-showcase .profile-nickname-line h1{font-size:22px!important}
+  .my-profile-card.profile-showcase .my-avatar{top:16px!important;right:16px!important;width:68px!important;height:68px!important}
+  .my-profile-card.profile-showcase>h2{padding-top:58px!important}
+}
