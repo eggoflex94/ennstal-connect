@@ -1,0 +1,61 @@
+/* Final launch fixes: unmistakable roles, visible nicknames, clean profile images, permission UI. */
+.member-card{position:relative!important;overflow:hidden!important}
+.member-card .member-role-line{position:absolute!important;top:10px!important;left:10px!important;right:10px!important;z-index:8!important;display:flex!important;align-items:center!important;justify-content:center!important;min-height:34px!important;pointer-events:none!important}
+.member-card .member-role-line .role-chip{display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:5px!important;padding:7px 13px!important;min-height:31px!important;border-radius:999px!important;font-size:13px!important;font-weight:950!important;line-height:1!important;color:#fff!important;text-shadow:0 1px 3px rgba(0,0,0,.75)!important;box-shadow:0 3px 12px rgba(0,0,0,.35)!important}
+.member-card.head-admin,.member-card.admin{background:linear-gradient(145deg,#6e4811,#c17d0d)!important;border-color:#ffc83d!important}
+.member-card.supporter{background:linear-gradient(145deg,#12572f,#267d48)!important;border-color:#59e18b!important}
+.member-card.member{background:linear-gradient(145deg,#26394d,#1d2c3d)!important;border-color:#466078!important}
+.member-card .role-chip.head-admin,.member-card .role-chip.admin{background:#a76508!important;border:1px solid #ffe07a!important;color:#fff8dd!important}
+.member-card .role-chip.supporter{background:#08703a!important;border:1px solid #86f0ad!important;color:#edfff3!important}
+.member-card .role-chip.member{background:#334b61!important;border:1px solid #8ba0b2!important;color:#fff!important}
+.member-card .member-avatar{width:96px!important;height:96px!important;min-width:96px!important;min-height:96px!important;margin:47px auto 9px!important;border-width:4px!important;border-style:solid!important;box-shadow:0 0 0 3px rgba(255,255,255,.12),0 7px 18px rgba(0,0,0,.38)!important}
+.member-card.head-admin .member-avatar,.member-card.admin .member-avatar{border-color:#ffd34f!important;box-shadow:0 0 0 3px rgba(255,211,79,.24),0 7px 20px rgba(0,0,0,.42)!important}
+.member-card.supporter .member-avatar{border-color:#62e99a!important;box-shadow:0 0 0 3px rgba(98,233,154,.22),0 7px 20px rgba(0,0,0,.42)!important}
+.member-card.member .member-avatar{border-color:#a8b6c4!important}
+.member-card .member-nickname{display:block!important;width:100%!important;max-width:100%!important;min-width:0!important;box-sizing:border-box!important;margin:0 auto!important;overflow:visible!important;text-overflow:clip!important;white-space:normal!important;word-break:break-word!important;font-size:17px!important;line-height:1.2!important;font-weight:950!important;color:#fff!important;text-align:center!important;text-shadow:0 1px 3px rgba(0,0,0,.55)!important}
+.member-card .member-name{display:block!important;width:100%!important;max-width:100%!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;color:#f5f9fc!important;font-weight:900!important}
+.member-card .member-status{color:#d7e0e7!important}
+.member-card .friend-indicator{color:#ff8298!important;font-size:21px!important;text-shadow:0 1px 4px #000!important}
+
+/* Own profile: one crown beside nickname, role directly below. */
+.my-profile-card h1{display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:8px!important;color:#fff!important}
+.my-profile-card .profile-role-mark,.my-profile-card .head-admin-profile-badge{display:none!important}
+.my-profile-card.head-admin h1:after{content:"♛";font-size:26px;color:#ffd65a;text-shadow:0 1px 4px #000}
+.my-profile-card.admin h1:after{content:"★";font-size:25px;color:#ffd65a;text-shadow:0 1px 4px #000}
+.my-profile-card.supporter h1:after{content:"★";font-size:25px;color:#71e49a;text-shadow:0 1px 4px #000}
+.my-profile-card .profile-role-label{display:inline-flex!important;visibility:visible!important;opacity:1!important;margin:4px auto 9px!important;padding:6px 13px!important;border-radius:999px!important;font-weight:950!important}
+.my-profile-card.head-admin .profile-role-label{background:#a76508!important;border:1px solid #ffd55d!important;color:#fff5d1!important}
+.my-profile-card.admin .profile-role-label{background:#8d6417!important;border:1px solid #ffd55d!important;color:#fff4cf!important}
+.my-profile-card.supporter .profile-role-label{background:#12643a!important;border:1px solid #69e69b!important;color:#e9fff1!important}
+.my-profile-card .my-avatar{width:132px!important;height:132px!important;max-width:132px!important;max-height:132px!important;object-fit:cover!important;border-radius:50%!important}
+.my-profile-card.head-admin .my-avatar,.my-profile-card.admin .my-avatar{border:4px solid #ffd34f!important}
+.my-profile-card.supporter .my-avatar{border:4px solid #61e598!important}
+
+/* Modal profile: role once, photo with role border. */
+.profile-modal .modal-profile-header{align-items:center!important;text-align:center!important}
+.profile-modal .modal-profile-role{font-weight:950!important;font-size:14px!important;padding:7px 13px!important;border-radius:999px!important;margin-bottom:7px!important;color:#fff!important}
+.profile-modal .modal-profile-header.head-admin .modal-profile-role,.profile-modal .modal-profile-header.admin .modal-profile-role{background:#a76508!important;border:1px solid #ffd55d!important}
+.profile-modal .modal-profile-header.supporter .modal-profile-role{background:#12643a!important;border:1px solid #69e69b!important}
+.profile-modal .modal-avatar{width:145px!important;height:145px!important;max-width:145px!important;max-height:145px!important;object-fit:cover!important;border-radius:50%!important;border:4px solid #a8b6c4!important}
+.profile-modal .modal-profile-header.head-admin .modal-avatar,.profile-modal .modal-profile-header.admin .modal-avatar{border-color:#ffd34f!important}
+.profile-modal .modal-profile-header.supporter .modal-avatar{border-color:#61e598!important}
+
+/* Top bar identity spacing/readability. */
+.topbar-user span{display:flex!important;flex-direction:column!important;align-items:flex-start!important;gap:2px!important}
+.topbar-user span strong{line-height:1.1!important}
+.topbar-user span small{line-height:1.1!important;font-weight:800!important}
+
+/* Permissions: compact two-column checklist, visible and easy to use. */
+.permissions-grid{display:grid!important;grid-template-columns:repeat(2,minmax(260px,1fr))!important;gap:9px 20px!important;margin:12px 0 18px!important}
+.permission-row{display:flex!important;align-items:center!important;gap:10px!important;padding:10px 12px!important;border:1px solid #d4dee7!important;border-radius:10px!important;background:#f7fafc!important;color:#183a59!important;font-weight:700!important;cursor:pointer!important}
+.permission-row input[type=checkbox]{width:19px!important;height:19px!important;flex:0 0 19px!important;accent-color:#ff7a22!important}
+.permissions-panel .primary-button{width:100%!important}
+
+/* Homepage upload control. */
+.ec-home-upload-wrap{margin:6px 0 10px!important;padding:10px 12px!important;border:1px dashed #8197aa!important;border-radius:12px!important;background:#f6f9fb!important}
+.ec-home-upload-label{display:flex!important;flex-direction:column!important;gap:6px!important;color:#1c3a56!important;font-weight:850!important}
+.ec-home-upload-input{background:#fff!important;color:#1d3b57!important;border:1px solid #c6d3df!important;padding:8px!important}
+.ec-home-upload-label small{color:#617588!important;font-weight:650!important}
+.ec-home-upload-status{margin-top:6px!important;color:#2f5977!important;font-size:12px!important;font-weight:800!important}
+
+@media(max-width:800px){.permissions-grid{grid-template-columns:1fr!important}.member-card .member-avatar{width:88px!important;height:88px!important;min-width:88px!important;min-height:88px!important;margin-top:47px!important}.member-card .member-nickname{font-size:15px!important}}
