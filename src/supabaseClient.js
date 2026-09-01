@@ -27,13 +27,43 @@ supabase.rpc = async (fn, args = {}, options) => {
   }
 
   if (fn === "submit_user_report") {
+    const rpcResult = await originalRpc(fn, args, options);
+    if (!rpcResult.error || !/schema cache/i.test(rpcResult.error.message || "")) return rpcResult;
     const { data: { user } } = await supabase.auth.getUser();
     const target = args?.target_user;
     const reason = String(args?.reason_text || "").trim();
     if (!user?.id) return { data: null, error: new Error("Nicht eingeloggt.") };
     if (!target || target === user.id) return { data: null, error: new Error("Ungültiger Nutzer.") };
     if (reason.length < 3) return { data: null, error: new Error("Bitte einen Meldegrund angeben.") };
-    const { error } = await supabase.from("user_reports").insert({ reporter_id: user.id, reported_user_id: target, reason, status: "PENDING", penalty_points: 0, created_at: new Date().toISOString() });
+    // Do not reference optional moderation columns such as penalty_points.
+    const { error } = await supabase.from("user_reports").insert({
+      reporter_id: user.id,
+      reported_user_id: target,
+      reason,
+      status: "PENDING",
+      created_at: new Date().toISOString()
+    });
+    return { data: null, error };
+  }
+
+  if (fn === "create_user_block") {
+    const rpcResult = await originalRpc(fn, args, options);
+    if (!rpcResult.error || !/schema cache/i.test(rpcResult.error.message || "")) return rpcResult;
+    const { data: { user } } = await supabase.auth.getUser();
+    const target = args?.target_user;
+    if (!user?.id) return { data: null, error: new Error("Nicht eingeloggt.") };
+    if (!target || target === user.id) return { data: null, error: new Error("Ungültiger Nutzer.") };
+    const { error } = await supabase.from("user_blocks").insert({ blocker_id: user.id, blocked_id: target });
+    return { data: null, error };
+  }
+
+  if (fn === "remove_user_block") {
+    const rpcResult = await originalRpc(fn, args, options);
+    if (!rpcResult.error || !/schema cache/i.test(rpcResult.error.message || "")) return rpcResult;
+    const { data: { user } } = await supabase.auth.getUser();
+    const target = args?.target_user;
+    if (!user?.id) return { data: null, error: new Error("Nicht eingeloggt.") };
+    const { error } = await supabase.from("user_blocks").delete().eq("blocker_id", user.id).eq("blocked_id", target);
     return { data: null, error };
   }
 
