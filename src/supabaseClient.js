@@ -1,10 +1,9 @@
 import { createClient } from "@supabase/supabase-js";
 
-// Cloudflare Workers Builds can run without saved Vite build variables. Keep the
-// public Supabase client configuration as a fallback so the browser can connect
-// even if the hosting dashboard has not persisted the build variables yet.
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://hcedafvgdqpkpcazjgbh.supabase.co";
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "sb_publishable_LBEPenuvp1SOJKSGcT5U2Q_qsGZR_9H";
+// Supabase configuration is supplied by the Vite/Cloudflare build variables.
+// Do not keep a stale project fallback in the client bundle.
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl) throw new Error("VITE_SUPABASE_URL wurde nicht geladen.");
 if (!supabaseUrl.startsWith("https://")) throw new Error(`VITE_SUPABASE_URL ist ungültig: ${supabaseUrl}`);
