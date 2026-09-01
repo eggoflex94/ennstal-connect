@@ -58,8 +58,7 @@ export default function App() {
   const [events, setEvents] = useState([]);
   const [groups, setGroups] = useState([]);
 
-  const [history, setHistory] = useState([]);
-  const [messages, setMessages] = useState([]);
+    const [messages, setMessages] = useState([]);
   const [profileActivities, setProfileActivities] = useState([]);
   const [adminLogs, setAdminLogs] = useState([]);
 
@@ -95,7 +94,6 @@ export default function App() {
   const [permissionDraft, setPermissionDraft] =
     useState({
       manage_members: false,
-      manage_points: false,
       manage_messages: false,
       manage_media: false,
       manage_roles: false,
@@ -167,11 +165,7 @@ export default function App() {
 
   // Kompatibilitätswert für ältere Profildaten.
   // Wird nur noch für ältere Datenbankeinträge vorgehalten.
-  const currentCommunityPoints = Number(
-    profile?.community_points ?? profile?.points ?? 0
-  ) || 0;
-
-  /* =========================================================
+    /* =========================================================
      ALLES LADEN
      ========================================================= */
 
@@ -224,7 +218,6 @@ export default function App() {
         eventData,
         groupData,
         homepageData,
-        historyData,
         messageData,
         friendshipData,
         visitData,
@@ -239,7 +232,6 @@ export default function App() {
         safe("Events", supabase.from("events").select("*").order("created_at", { ascending: false })),
         safe("Gruppen", supabase.from("groups").select("*").order("created_at", { ascending: false })),
         safe("Startseite", supabase.from("homepage_sections").select("*").eq("is_visible", true).order("sort_order", { ascending: true })),
-        safe("Punkteverlauf", supabase.from("point_history").select("*").eq("user_id", currentUser.id).order("created_at", { ascending: false })),
         safe("Nachrichten", supabase.from("messages").select("*").or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`).order("created_at", { ascending: false })),
         safe("Freundschaften", supabase.from("friendships").select("*").or(`requester_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`)),
         safe("Profilbesuche", supabase.from("profile_visits").select("*").eq("profile_id", currentUser.id).order("visited_at", { ascending: false })),
@@ -255,7 +247,6 @@ export default function App() {
       setEvents(eventData);
       setGroups(groupData);
       setHomepageSections(homepageData);
-      setHistory(historyData);
       setMessages(messageData);
       setFriendships(friendshipData);
       setProfileVisits(visitData);
@@ -646,6 +637,10 @@ const sortedMembers = useMemo(() => {
   async function register(event) {
     event.preventDefault();
 
+    const submitter = event.currentTarget?.querySelector('button[type="submit"]');
+    if (submitter?.disabled) return;
+    if (submitter) submitter.disabled = true;
+
     const form =
       new FormData(event.currentTarget);
 
@@ -678,15 +673,17 @@ const sortedMembers = useMemo(() => {
       });
 
     if (error) {
-      showNotice(error.message);
+      showNotice(error.status === 429 ? "Zu viele Anfragen. Bitte warte kurz und versuche es erneut." : error.message);
+      if (submitter) window.setTimeout(() => { submitter.disabled = false; }, 30000);
       return;
     }
 
-    event.currentTarget.reset();
+    if (event.currentTarget && typeof event.currentTarget.reset === "function") {
+      event.currentTarget.reset();
+    }
 
-    showNotice(
-      "Registrierung erfolgreich."
-    );
+    showNotice("Registrierung erfolgreich. Bitte prüfe dein E-Mail-Postfach.");
+    if (submitter) window.setTimeout(() => { submitter.disabled = false; }, 30000);
   }
 
   /* =========================================================
@@ -728,7 +725,6 @@ const sortedMembers = useMemo(() => {
 
     setPermissionDraft({
       manage_members: !!data?.manage_members,
-      manage_points: !!data?.manage_points,
       manage_messages: !!data?.manage_messages,
       manage_media: !!data?.manage_media,
       manage_roles: !!data?.manage_roles,
