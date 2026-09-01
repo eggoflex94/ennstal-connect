@@ -11,6 +11,13 @@ if (!supabaseAnonKey) throw new Error("VITE_SUPABASE_ANON_KEY wurde nicht gelade
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+// Never leave the whole SPA on "wird geladen", even if the auth endpoint is unreachable.
+const originalGetSession = supabase.auth.getSession.bind(supabase.auth);
+supabase.auth.getSession = async (...args) => {
+  const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("Supabase-Verbindung antwortet nicht.")), 10000));
+  return Promise.race([originalGetSession(...args), timeout]);
+};
+
 const originalRpc = supabase.rpc.bind(supabase);
 supabase.rpc = async (fn, args = {}, options) => {
   if (fn === "accept_friend_request") {
@@ -36,7 +43,8 @@ supabase.rpc = async (fn, args = {}, options) => {
     const reason = String(args?.reason_text || "").trim();
     if (!user?.id) return { data: null, error: new Error("Nicht eingeloggt.") };
     if (!target || target === user.id) return { data: null, error: new Error("Ungültiger Nutzer.") };
-    if (reason.length < 3) return { data: null, error: new Error("Bitte einen Meldegrund angeben.") };
+    if (reason.length < 3) return { data: null, error: new Error("Bitte einen Meldegrund angeben.");
+    }
     const { error } = await supabase.from("user_reports").insert({
       reporter_id: user.id,
       reported_user_id: target,
