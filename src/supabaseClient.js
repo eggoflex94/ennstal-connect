@@ -15,9 +15,12 @@ supabase.rpc = async (fn, args = {}, options) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user?.id || !args?.friendship_id) return { data: null, error: new Error("Nicht eingeloggt.") };
     const { data, error } = await supabase.from("friendships")
-      .update({ status: "ACCEPTED", updated_at: new Date().toISOString() })
-      .eq("id", args.friendship_id).eq("receiver_id", user.id).eq("status", "PENDING")
-      .select("id").maybeSingle();
+      .update({ status: "ACCEPTED" })
+      .eq("id", args.friendship_id)
+      .eq("receiver_id", user.id)
+      .eq("status", "PENDING")
+      .select("id")
+      .maybeSingle();
     if (error) return { data: null, error };
     if (!data) return { data: null, error: new Error("Freundschaftsanfrage nicht gefunden oder bereits beantwortet.") };
     return { data: null, error: null };
