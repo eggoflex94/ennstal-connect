@@ -1,7 +1,10 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Cloudflare Workers Builds can run without saved Vite build variables. Keep the
+// public Supabase client configuration as a fallback so the browser can connect
+// even if the hosting dashboard has not persisted the build variables yet.
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://hcedafvgdqpkpcazjgbh.supabase.co";
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "sb_publishable_LBEPenuvp1SOJKSGcT5U2Q_qsGZR_9H";
 
 if (!supabaseUrl) throw new Error("VITE_SUPABASE_URL wurde nicht geladen.");
 if (!supabaseUrl.startsWith("https://")) throw new Error(`VITE_SUPABASE_URL ist ungültig: ${supabaseUrl}`);
@@ -35,7 +38,6 @@ supabase.rpc = async (fn, args = {}, options) => {
     if (!user?.id) return { data: null, error: new Error("Nicht eingeloggt.") };
     if (!target || target === user.id) return { data: null, error: new Error("Ungültiger Nutzer.") };
     if (reason.length < 3) return { data: null, error: new Error("Bitte einen Meldegrund angeben.") };
-    // Do not reference optional moderation columns such as penalty_points.
     const { error } = await supabase.from("user_reports").insert({
       reporter_id: user.id,
       reported_user_id: target,
