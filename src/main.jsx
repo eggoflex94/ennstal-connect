@@ -4,6 +4,7 @@ import App from "./App.jsx";
 import "./styles.css";
 import "./release-final.css";
 import "./profile-admin-tools.js";
+import "./legal-overlay.js";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
