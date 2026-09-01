@@ -6,6 +6,7 @@ import "./release-final.css";
 import "./profile-admin-tools.js";
 import "./legal-overlay.js";
 import "./profile-customization.js";
+import "./homepage-media.js";
 import "./profile-tools.css";
 
 createRoot(document.getElementById("root")).render(
