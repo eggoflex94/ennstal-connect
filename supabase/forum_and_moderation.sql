@@ -6,14 +6,14 @@ create extension if not exists pgcrypto;
 create table if not exists public.forum_posts (
   id uuid primary key default gen_random_uuid(),
   scope text not null check (scope in ('COMMUNITY','ADMIN')),
-  author_id text not null references public.profiles(id) on delete cascade,
+  author_id uuid not null references public.profiles(id) on delete cascade,
   title text not null check (char_length(title) between 3 and 160),
   content text not null check (char_length(content) between 3 and 10000),
   font_family text not null default 'modern' check (font_family in ('modern','serif','handwritten')),
   font_size text not null default 'normal' check (font_size in ('small','normal','large')),
   emphasis text not null default 'normal' check (emphasis in ('normal','bold','italic')),
   edited_at timestamptz,
-  edited_by text references public.profiles(id) on delete set null,
+  edited_by uuid references public.profiles(id) on delete set null,
   edit_reason text,
   created_at timestamptz not null default now()
 );
@@ -21,11 +21,11 @@ create index if not exists forum_posts_scope_created_idx on public.forum_posts(s
 
 create table if not exists public.user_feature_locks (
   id uuid primary key default gen_random_uuid(),
-  user_id text not null references public.profiles(id) on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
   feature_key text not null check (feature_key in ('FORUM_POSTING','MESSAGING','FRIEND_REQUESTS')),
   is_locked boolean not null default true,
   reason text not null,
-  locked_by text not null references public.profiles(id) on delete restrict,
+  locked_by uuid not null references public.profiles(id) on delete restrict,
   updated_at timestamptz not null default now(),
   unique(user_id, feature_key)
 );
@@ -33,22 +33,14 @@ create index if not exists user_feature_locks_user_idx on public.user_feature_lo
 
 create table if not exists public.profile_activity (
   id uuid primary key default gen_random_uuid(),
-  profile_id text not null references public.profiles(id) on delete cascade,
-  actor_id text not null references public.profiles(id) on delete cascade,
+  profile_id uuid not null references public.profiles(id) on delete cascade,
+  actor_id uuid not null references public.profiles(id) on delete cascade,
   activity_type text not null check (char_length(activity_type) between 3 and 120),
   created_at timestamptz not null default now()
 );
--- Older Ennstal Connect versions may already have this table with a different
--- column layout. Preserve its rows while aligning the old user_id name.
-do $$
-begin
-  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'profile_activity' and column_name = 'user_id')
-     and not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'profile_activity' and column_name = 'profile_id') then
-    alter table public.profile_activity rename column user_id to profile_id;
-  end if;
-end $$;
-alter table public.profile_activity add column if not exists profile_id text references public.profiles(id) on delete cascade;
-alter table public.profile_activity add column if not exists actor_id text references public.profiles(id) on delete cascade;
+-- All profile IDs are UUIDs. Matching that type prevents text/UUID errors.
+alter table public.profile_activity add column if not exists profile_id uuid references public.profiles(id) on delete cascade;
+alter table public.profile_activity add column if not exists actor_id uuid references public.profiles(id) on delete cascade;
 alter table public.profile_activity add column if not exists activity_type text;
 alter table public.profile_activity add column if not exists created_at timestamptz not null default now();
 create index if not exists profile_activity_profile_created_idx on public.profile_activity(profile_id, created_at desc);
@@ -65,19 +57,19 @@ alter table public.profile_activity enable row level security;
 
 -- Make this migration work even when the earlier community repair was not run.
 create table if not exists public.admin_log (
-  id uuid primary key default gen_random_uuid(), actor_id text references public.profiles(id) on delete set null,
-  action text not null, target_id text references public.profiles(id) on delete set null,
+  id uuid primary key default gen_random_uuid(), actor_id uuid references public.profiles(id) on delete set null,
+  action text not null, target_id uuid references public.profiles(id) on delete set null,
   details jsonb not null default '{}'::jsonb, created_at timestamptz not null default now()
 );
 create or replace function public.ec_is_admin()
 returns boolean language sql stable security definer set search_path = public as $$
-  select exists(select 1 from public.profiles where id::text = auth.uid()::text and role in ('ADMIN','HEAD_ADMIN') and account_status = 'ACTIVE');
+  select exists(select 1 from public.profiles where id = auth.uid() and role in ('ADMIN','HEAD_ADMIN') and account_status = 'ACTIVE');
 $$;
 create or replace function public.ec_is_head_admin()
 returns boolean language sql stable security definer set search_path = public as $$
-  select exists(select 1 from public.profiles where id::text = auth.uid()::text and role = 'HEAD_ADMIN' and account_status = 'ACTIVE');
+  select exists(select 1 from public.profiles where id = auth.uid() and role = 'HEAD_ADMIN' and account_status = 'ACTIVE');
 $$;
-create or replace function public.ec_log(p_action text, p_target text default null, p_details jsonb default '{}'::jsonb)
+create or replace function public.ec_log(p_action text, p_target uuid default null, p_details jsonb default '{}'::jsonb)
 returns void language plpgsql security definer set search_path = public as $$
 begin
   insert into public.admin_log(actor_id, action, target_id, details)
@@ -98,24 +90,24 @@ using (scope = 'COMMUNITY' or public.ec_is_admin());
 drop policy if exists forum_posts_create on public.forum_posts;
 create policy forum_posts_create on public.forum_posts for insert to authenticated
 with check (
-  author_id = (select auth.uid()::text)
+  author_id = (select auth.uid())
   and (
     (scope = 'ADMIN' and public.ec_is_admin())
     or (scope = 'COMMUNITY' and not exists (
       select 1 from public.user_feature_locks lock
-      where lock.user_id = (select auth.uid()::text) and lock.feature_key = 'FORUM_POSTING' and lock.is_locked
+      where lock.user_id = (select auth.uid()) and lock.feature_key = 'FORUM_POSTING' and lock.is_locked
     ))
   )
 );
 drop policy if exists feature_locks_read on public.user_feature_locks;
 create policy feature_locks_read on public.user_feature_locks for select to authenticated
-using (user_id = (select auth.uid()::text) or public.ec_is_head_admin());
+using (user_id = (select auth.uid()) or public.ec_is_head_admin());
 drop policy if exists profile_activity_read on public.profile_activity;
 create policy profile_activity_read on public.profile_activity for select to authenticated
-using (profile_id = (select auth.uid()::text));
+using (profile_id = (select auth.uid()));
 drop policy if exists profile_activity_create on public.profile_activity;
 create policy profile_activity_create on public.profile_activity for insert to authenticated
-with check (profile_id = (select auth.uid()::text) and actor_id = (select auth.uid()::text));
+with check (profile_id = (select auth.uid()) and actor_id = (select auth.uid()));
 
 drop policy if exists community_media_read on storage.objects;
 create policy community_media_read on storage.objects for select to authenticated using (bucket_id = 'community-media');
@@ -133,22 +125,26 @@ begin
 end;
 $$;
 
-create or replace function public.admin_set_feature_lock(p_target_user text, p_feature_key text, p_is_locked boolean, p_reason text)
+create or replace function public.admin_set_feature_lock(p_target_user uuid, p_feature_key text, p_is_locked boolean, p_reason text)
 returns void language plpgsql security definer set search_path = public as $$
 begin
   if not public.ec_is_head_admin() then raise exception 'Nur der Head Admin darf Funktionen sperren.'; end if;
-  if p_target_user = auth.uid()::text or exists(select 1 from public.profiles where id = p_target_user and role = 'HEAD_ADMIN') then raise exception 'Der Head Admin kann nicht eingeschränkt werden.'; end if;
+  if p_target_user = auth.uid() or exists(select 1 from public.profiles where id = p_target_user and role = 'HEAD_ADMIN') then raise exception 'Der Head Admin kann nicht eingeschränkt werden.'; end if;
   if p_feature_key not in ('FORUM_POSTING','MESSAGING','FRIEND_REQUESTS') or char_length(trim(p_reason)) < 3 then raise exception 'Ungültige Funktion oder fehlender Grund.'; end if;
   insert into public.user_feature_locks(user_id,feature_key,is_locked,reason,locked_by,updated_at)
   values(p_target_user,p_feature_key,p_is_locked,trim(p_reason),auth.uid(),now())
   on conflict(user_id,feature_key) do update set is_locked=excluded.is_locked, reason=excluded.reason, locked_by=excluded.locked_by, updated_at=now();
   insert into public.messages(sender_id,receiver_id,content,is_read,created_at)
-  values(auth.uid()::text,p_target_user,case when p_is_locked then 'Eine Community-Funktion wurde vorübergehend gesperrt: ' else 'Eine Community-Funktion wurde wieder freigegeben: ' end || p_feature_key || E'\n\nGrund: ' || trim(p_reason),false,now());
+  values(auth.uid(),p_target_user,
+    (select case role when 'HEAD_ADMIN' then '♛ ' when 'ADMIN' then '★ ' when 'SUPPORTER' then '★ ' else '' end || coalesce(nullif(nickname,''),'Community-Moderation') from public.profiles where id=auth.uid())
+    || case when p_is_locked then ' hat dir folgende Funktion vorübergehend gesperrt: ' else ' hat dir folgende Funktion wieder freigegeben: ' end
+    || case p_feature_key when 'FORUM_POSTING' then 'Im Forum schreiben' when 'MESSAGING' then 'Nachrichten senden' when 'FRIEND_REQUESTS' then 'Freundschaftsanfragen' else p_feature_key end
+    || E'\n\nGrund: ' || trim(p_reason),false,now());
 end;
 $$;
 
 revoke all on function public.admin_edit_forum_post(uuid,text,text,text) from public;
-revoke all on function public.admin_set_feature_lock(text,text,boolean,text) from public;
+revoke all on function public.admin_set_feature_lock(uuid,text,boolean,text) from public;
 grant execute on function public.admin_edit_forum_post(uuid,text,text,text) to authenticated;
-grant execute on function public.admin_set_feature_lock(text,text,boolean,text) to authenticated;
+grant execute on function public.admin_set_feature_lock(uuid,text,boolean,text) to authenticated;
 notify pgrst, 'reload schema';
