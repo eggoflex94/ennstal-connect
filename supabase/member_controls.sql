@@ -108,11 +108,11 @@ end;
 $$;
 
 create or replace function public.admin_set_permissions(
-  target_user uuid, p_manage_members boolean, p_manage_points boolean,
-  p_manage_messages boolean, p_manage_media boolean, p_manage_roles boolean,
-  p_manage_admins boolean, p_view_profile_visits boolean, p_manage_news boolean,
-  p_manage_groups boolean, p_manage_events boolean, p_manage_marketplace boolean,
-  p_manage_friend_requests boolean, p_manage_homepage boolean, p_manage_reports boolean
+  target_user uuid, p_manage_members boolean default false, p_manage_points boolean default false,
+  p_manage_messages boolean default false, p_manage_media boolean default false, p_manage_roles boolean default false,
+  p_manage_admins boolean default false, p_view_profile_visits boolean default false, p_manage_news boolean default false,
+  p_manage_groups boolean default false, p_manage_events boolean default false, p_manage_marketplace boolean default false,
+  p_manage_friend_requests boolean default false, p_manage_homepage boolean default false, p_manage_reports boolean default false
 ) returns void language plpgsql security definer set search_path = public as $$
 begin
   if not public.ec_is_head_admin() then raise exception 'Nur der Head Admin darf Berechtigungen ändern.'; end if;
