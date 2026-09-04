@@ -78,4 +78,20 @@ begin
 end; $$;
 revoke all on function public.admin_set_business_account(uuid,boolean,text,text) from public;
 grant execute on function public.admin_set_business_account(uuid,boolean,text,text) to authenticated;
+
+create or replace function public.admin_set_account_status(target_user uuid, new_status text)
+returns void language plpgsql security definer set search_path=public as $$
+declare actor_name text;
+begin
+ if not public.ec_is_admin() then raise exception 'Keine Admin-Berechtigung.'; end if;
+ if new_status not in ('ACTIVE','SUSPENDED') then raise exception 'Ungültiger Kontostatus.'; end if;
+ if target_user = auth.uid() or exists(select 1 from public.profiles where id=target_user and role='HEAD_ADMIN') then raise exception 'Der Global Admin kann nicht gesperrt werden.'; end if;
+ if exists(select 1 from public.profiles where id=target_user and role='ADMIN') and not public.ec_is_head_admin() then raise exception 'Nur der Global Admin darf Admins sperren.'; end if;
+ update public.profiles set account_status=new_status, is_online=case when new_status='SUSPENDED' then false else is_online end where id=target_user;
+ if not found then raise exception 'Mitglied nicht gefunden.'; end if;
+ select case role when 'HEAD_ADMIN' then '♛ ' when 'ADMIN' then '★ ' else '' end || coalesce(nullif(nickname,''),'Community-Moderation') into actor_name from public.profiles where id=auth.uid();
+ insert into public.messages(sender_id,receiver_id,content,is_read,created_at) values(auth.uid(),target_user,actor_name || case when new_status='SUSPENDED' then ' hat dein Konto gesperrt.' else ' hat dein Konto wieder freigegeben.' end,false,now());
+end; $$;
+revoke all on function public.admin_set_account_status(uuid,text) from public;
+grant execute on function public.admin_set_account_status(uuid,text) to authenticated;
 notify pgrst, 'reload schema';
