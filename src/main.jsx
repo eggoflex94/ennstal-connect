@@ -5,8 +5,6 @@ import "./styles.css";
 import "./release-final.css";
 import "./launch-fixes.css";
 import "./profile-simple.css";
-import "./profile-admin-tools.js";
-import "./legal-overlay.js";
 import "./profile-customization.js";
 import "./homepage-author.css";
 import "./profile-tools.css";
