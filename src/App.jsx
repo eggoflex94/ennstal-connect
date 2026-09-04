@@ -44,6 +44,7 @@ const getAge = (date) => {
 
 export default function App() {
   const [user, setUser] = useState(null);
+  const [passwordRecovery, setPasswordRecovery] = useState(false);
   const [profile, setProfile] = useState(null);
   const [members, setMembers] = useState([]);
   const [memberEmails, setMemberEmails] = useState({});
@@ -54,6 +55,9 @@ export default function App() {
   const [blockedUsers, setBlockedUsers] = useState([]);
   const [news, setNews] = useState([]);
   const [events, setEvents] = useState([]);
+  const [communityEvents, setCommunityEvents] = useState([]);
+  const [communityAds, setCommunityAds] = useState([]);
+  const [memberPhotos, setMemberPhotos] = useState([]);
   const [groups, setGroups] = useState([]);
   const [profileVisits, setProfileVisits] = useState([]);
   const [forumPosts, setForumPosts] = useState([]);
@@ -119,6 +123,7 @@ export default function App() {
         setProfile(null); setMembers([]); setFriendships([]); return;
       }
       await supabase.rpc("ensure_current_profile");
+      void supabase.from("profiles").update({ is_online: true }).eq("id", currentUser.id);
       await supabase.rpc("claim_initial_head_admin");
       const safe = async (query, fallback = []) => {
         const { data, error } = await query;
@@ -141,7 +146,7 @@ export default function App() {
         safe(supabase.from("user_feature_locks").select("*").eq("user_id", currentUser.id)),
         safe(supabase.from("profile_activity").select("*").eq("profile_id", currentUser.id).order("created_at", { ascending: false }).limit(20))
       ]);
-      setProfile(p); setMembers(ms); setFriendships(fs); setMessages(msgs); setHomepageSections(hs); setReports(rs); setBlockedUsers(bs); setNews(ns); setEvents(es); setGroups(gs); setProfileVisits(visits); setForumPosts(posts); setFeatureLocks(locks); setProfileActivities(activities);
+      setProfile(p ? { ...p, is_online: true } : p); setMembers(ms.map((member) => member.id === currentUser.id ? { ...member, is_online: true } : member)); setFriendships(fs); setMessages(msgs); setHomepageSections(hs); setReports(rs); setBlockedUsers(bs); setNews(ns); setEvents(es); setGroups(gs); setProfileVisits(visits); setForumPosts(posts); setFeatureLocks(locks); setProfileActivities(activities);
       if (isAdmin(p?.role)) { const { data: directory, error: directoryError } = await supabase.rpc("admin_member_directory"); if (!directoryError) setMemberEmails(Object.fromEntries((directory || []).map((entry) => [entry.id, entry.email]))); } else setMemberEmails({});
     } catch (e) { console.error(e); showNotice(e?.message || "Fehler beim Laden"); }
   };
@@ -149,7 +154,8 @@ export default function App() {
   useEffect(() => {
     if (!supabase) return undefined;
     loadAll();
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => loadAll());
+    if (location.hash.includes("type=recovery")) setPasswordRecovery(true);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => { if (event === "PASSWORD_RECOVERY") setPasswordRecovery(true); loadAll(); });
     return () => subscription.unsubscribe();
   }, []);
 
@@ -158,6 +164,32 @@ export default function App() {
     const messageChannel = supabase.channel(`ec-messages-${user.id}`).on("postgres_changes", { event: "*", schema: "public", table: "messages", filter: `receiver_id=eq.${user.id}` }, loadAll).subscribe();
     const friendChannel = supabase.channel(`ec-friends-${user.id}`).on("postgres_changes", { event: "*", schema: "public", table: "friendships", filter: `receiver_id=eq.${user.id}` }, loadAll).subscribe();
     return () => { supabase.removeChannel(messageChannel); supabase.removeChannel(friendChannel); };
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!supabase || !user?.id) return undefined;
+    const loadCommunityExtras = async () => {
+      const [eventResult, adResult, photoResult] = await Promise.all([
+        supabase.from("community_events").select("*").order("event_at", { ascending: true }),
+        supabase.from("community_ads").select("*").eq("is_active", true).order("created_at", { ascending: false }),
+        supabase.from("member_photos").select("*").order("created_at", { ascending: false }).limit(24)
+      ]);
+      if (!eventResult.error) setCommunityEvents(eventResult.data || []);
+      if (!adResult.error) setCommunityAds(adResult.data || []);
+      if (!photoResult.error) setMemberPhotos(photoResult.data || []);
+    };
+    void loadCommunityExtras();
+    return undefined;
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!supabase || !user?.id) return undefined;
+    const setPresence = () => { void supabase.from("profiles").update({ is_online: true }).eq("id", user.id); };
+    const clearPresence = () => { void supabase.from("profiles").update({ is_online: false }).eq("id", user.id); };
+    setPresence();
+    const heartbeat = window.setInterval(setPresence, 60000);
+    window.addEventListener("pagehide", clearPresence);
+    return () => { window.clearInterval(heartbeat); window.removeEventListener("pagehide", clearPresence); };
   }, [user?.id]);
 
   async function login(e) {
@@ -184,6 +216,23 @@ export default function App() {
       showNotice("Registrierung erfolgreich. Bitte E-Mail bestätigen.");
     } catch (error) { showNotice(error?.message || supabaseUnavailableMessage); }
   }
+  async function requestPasswordReset() {
+    if (!supabase) return showNotice(supabaseUnavailableMessage);
+    const email = prompt("Bitte gib deine registrierte E-Mail-Adresse ein:", "");
+    if (email === null || !email.trim()) return;
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${location.origin}/` });
+    if (error) return showNotice(error.message);
+    showNotice("Wenn ein Konto mit dieser Adresse existiert, wurde ein Link zum Zurücksetzen versendet.");
+  }
+  async function finishPasswordReset(e) {
+    e.preventDefault(); if (!supabase) return showNotice(supabaseUnavailableMessage);
+    const f = new FormData(e.currentTarget); const password = String(f.get("password") || ""); const confirmPassword = String(f.get("confirm_password") || "");
+    if (password.length < 6) return showNotice("Das neue Passwort muss mindestens 6 Zeichen haben.");
+    if (password !== confirmPassword) return showNotice("Die beiden Passwörter stimmen nicht überein.");
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) return showNotice(error.message);
+    history.replaceState(null, "", location.pathname); setPasswordRecovery(false); showNotice("Dein Passwort wurde geändert. Du kannst dich jetzt anmelden."); await supabase.auth.signOut(); setUser(null);
+  }
   async function logout() { if (user) await supabase.from("profiles").update({ is_online: false }).eq("id", user.id); await supabase.auth.signOut(); setUser(null); setProfile(null); }
 
   async function requestFriend(m) {
@@ -208,7 +257,7 @@ export default function App() {
   async function unblockUser(id) { const { error } = await supabase.rpc("remove_user_block", { target_user: id }); if (error) return showNotice(error.message); await loadAll(); }
   async function reportUser(m) { if (!m?.id || m.id === user?.id) return; const reason = prompt(`Warum möchtest du ${getName(m)} melden?`, "Verstoß gegen die Community-Regeln"); if (reason === null || reason.trim().length < 3) return showNotice("Bitte einen Meldegrund angeben."); const { error } = await supabase.rpc("submit_user_report", { target_user: m.id, reason_text: reason.trim() }); if (error) return showNotice(error.message); setSelectedMember(null); showNotice("Meldung wurde gesendet."); await loadAll(); }
   async function warnMember(m) { if (!isAdmin(profile?.role) || !m?.id || m.id === user?.id || m.role === "HEAD_ADMIN") return showNotice("Keine Berechtigung."); const warning = prompt(`Verwarnung für ${getName(m)}:`, "Bitte beachte die Community-Regeln."); if (warning === null || warning.trim().length < 3) return showNotice("Bitte einen Verwarnungstext angeben."); const { error } = await supabase.rpc("admin_warn_user", { target_user: m.id, warning_text: warning.trim() }); if (error) return showNotice(error.message); showNotice("Die Verwarnung wurde als Nachricht gesendet."); }
-  async function resolveReport(id, status) { const { error } = await supabase.from("user_reports").update({ status, admin_id: user.id, admin_note: status === "CONFIRMED" ? "Meldung bestätigt." : "Unbegründet geschlossen.", resolved_at: new Date().toISOString() }).eq("id", id); if (error) return showNotice(error.message); await loadAll(); }
+  async function resolveReport(id, status) { const promptText = status === "CONFIRMED" ? "Was wurde aufgrund der Meldung unternommen?" : "Warum wurde die Meldung abgelehnt?"; const note = prompt(promptText, status === "CONFIRMED" ? "Die Meldung wurde geprüft und geeignete Maßnahmen wurden gesetzt." : "Nach Prüfung konnte kein Regelverstoß festgestellt werden."); if (note === null || note.trim().length < 3) return showNotice("Bitte einen nachvollziehbaren Grund angeben."); const { error } = await supabase.rpc("admin_resolve_report", { p_report_id: id, p_status: status, p_action_note: note.trim() }); if (error) return showNotice(error.message); showNotice("Meldung bearbeitet – der Melder wurde automatisch informiert."); await loadAll(); }
 
   async function updateMemberRole(m, newRole) {
     if (!isHeadAdmin(profile?.role)) return showNotice("Nur der Global Admin darf Rollen ändern.");
@@ -309,7 +358,8 @@ export default function App() {
   async function openChat(m) { setChatMember(m); setPage("messages"); const { data, error } = await supabase.from("messages").select("*").or(`and(sender_id.eq.${user.id},receiver_id.eq.${m.id}),and(sender_id.eq.${m.id},receiver_id.eq.${user.id})`).order("created_at", { ascending: true }); if (error) return showNotice(error.message); setMessages(data || []); await supabase.rpc("mark_messages_read", { from_user: m.id }); }
   async function openMember(m) { if (!m) return; if (m.id === user.id) return setPage("profile"); setViewingMember(m); setViewingFriends([]); setPage("member-profile"); const [{ data: connections }, { error: visitError }] = await Promise.all([supabase.from("friendships").select("requester_id,receiver_id").eq("status", "ACCEPTED").or(`requester_id.eq.${m.id},receiver_id.eq.${m.id}`), supabase.from("profile_visits").insert({ profile_id: m.id, visitor_id: user.id, visited_at: new Date().toISOString() })]); if (connections) { const ids = connections.map((connection) => connection.requester_id === m.id ? connection.receiver_id : connection.requester_id); setViewingFriends(members.filter((member) => ids.includes(member.id))); } if (visitError) console.warn(visitError.message); }
 
-  if (!user) return <div className="auth-page"><div className="text-logo">ENNSTAL CONNECT</div><Auth login={login} register={register}/>{notice && <div className="toast">{notice}</div>}</div>;
+  if (passwordRecovery) return <PasswordReset finishPasswordReset={finishPasswordReset} notice={notice}/>;
+  if (!user) return <div className="auth-page"><div className="text-logo">ENNSTAL CONNECT</div><Auth login={login} register={register}/><button className="forgot-password-button" onClick={requestPasswordReset}>Passwort vergessen?</button>{notice && <div className="toast">{notice}</div>}</div>;
 
   const unread = messages.filter((m) => m.receiver_id === user.id && !m.is_read).length;
   const myRole = roleLabel(profile?.role);
@@ -317,7 +367,7 @@ export default function App() {
     <header className="topbar modern-topbar">
       <div className="topbar-brand" onClick={() => setPage("home")}><img src="/ennstal-connect-community-logo.png" alt="Ennstal Connect Community-Logo" className="topbar-logo"/></div>
       <div className="breadcrumb">ENNSTAL.CONNECT <span>›</span> {page}</div>
-      <button className={`topbar-user ${roleClass(profile?.role)}`} onClick={() => setPage("profile")}><img src={profile?.avatar_url || DEFAULT_AVATAR} alt=""/><span><strong>{getName(profile)}{profile?.role === "HEAD_ADMIN" && <b className="nickname-crown" aria-label="Global Admin">♛</b>}</strong></span></button>
+      <div className="topbar-spacer" aria-hidden="true" />
     </header>
     <div className="dashboard-layout">
       <aside className="modern-sidebar">
@@ -330,6 +380,7 @@ export default function App() {
           <button onClick={() => setPage("blocked")}>⊘ <span>Blockiert</span></button>
           <button onClick={() => setPage("messages")}>☏ <span>Nachrichten</span>{unread > 0 && <em>{unread}</em>}</button>
           <button onClick={() => setPage("news")}>▣ <span>Neuigkeiten</span></button>
+          <button onClick={() => setPage("community")}>✦ <span>Community</span></button>
           <button onClick={() => setPage("forum")}>▤ <span>Forum</span></button>
           {isAdmin(profile?.role) && <button onClick={() => setPage("admin-forum")}>♛ <span>Admin-Forum</span></button>}
           <button onClick={() => setPage("profile")}>⚙ <span>Mein Profil</span></button>
@@ -345,6 +396,7 @@ export default function App() {
         {page === "blocked" && <Blocked blockedUsers={blockedUsers} memberById={memberById} unblock={unblockUser}/>} 
         {page === "messages" && <Messages user={user} messages={messages} chatMember={chatMember} setChatMember={setChatMember} memberById={memberById} openChat={openChat} messageText={messageText} setMessageText={setMessageText} sendMessage={sendMessage}/>} 
         {page === "news" && <News news={news} profile={profile} createNews={createNews}/>}
+        {page === "community" && <CommunityHub members={members} events={communityEvents} ads={communityAds} photos={memberPhotos}/>} 
         {page === "forum" && <Forum title="Community-Forum" intro="Austausch für alle Mitglieder von Ennstal Connect." scope="COMMUNITY" posts={forumPosts} members={members} profile={profile} createPost={createForumPost} editPost={editForumPost} locked={isFeatureLocked("FORUM_POSTING")}/>}
         {page === "admin-forum" && isAdmin(profile?.role) && <Forum title="Admin-Forum" intro="Interner Bereich für Moderation und Administration." scope="ADMIN" posts={forumPosts} members={members} profile={profile} createPost={createForumPost} editPost={editForumPost} locked={false}/>}
         {page === "profile" && <><Profile profile={profile} user={user} isHeadAdmin={isHeadAdmin} saveProfile={saveProfile} uploadProfileImage={uploadProfileImage} uploadProfileBackground={uploadProfileBackground} uploadProfileBioImage={uploadProfileBioImage}/><ProfileTimeline visits={profileVisits} activities={profileActivities} members={members}/></>}
@@ -431,6 +483,12 @@ function MemberProfile({ member, friends, user, viewerProfile, friendship, back,
   return <section className="member-profile-page"><button className="back-button" onClick={back}>← Zurück zu Mitgliedern</button><article className={`member-profile-hero ${roleClass(member.role)}`}><img className={!member.avatar_url ? "member-profile-default-avatar" : ""} src={member.avatar_url || DEFAULT_AVATAR} alt="Standard-Profilbild"/><div><span>{roleLabel(member.role)}</span><h1>{getName(member)}</h1><p>{[member.first_name, member.last_name].filter(Boolean).join(" ")}{getAge(member.birth_date) !== null && ` · ${getAge(member.birth_date)} Jahre`}</p>{member.bio && <p className="member-profile-bio">{member.bio}</p>}</div></article><div className="member-profile-actions"><button className="primary-button" onClick={() => openChat(member)}>💬 Nachricht</button>{accepted ? <button className="secondary-button" onClick={() => removeFriend(member)}>♥ Befreundet · entfernen</button> : incoming ? <><button className="primary-button" onClick={() => respond(friendship, true)}>✓ Anfrage annehmen</button><button className="danger-button" onClick={() => respond(friendship, false)}>Ablehnen</button></> : <button className="secondary-button" onClick={() => requestFriend(member)}>{sent ? "⏳ Anfrage gesendet" : "🤝 Freundschaftsanfrage"}</button>} {!isAdmin(member.role) && <button className="secondary-button" onClick={() => blockUser(member)}>🚫 Blockieren</button>}<button className="danger-button" onClick={() => reportUser(member)}>🚩 Nutzer melden</button></div>{canModerate && <section className="member-admin-tools"><span className="eyebrow">MODERATION</span><h2>Admin-Werkzeuge</h2><div><button className="danger-button" onClick={() => warnMember(member)}>⚠ Verwarnung senden</button><button className="secondary-button" onClick={() => toggleSuspension(member)}>{member.account_status === "SUSPENDED" ? "🔓 Freischalten" : "🔒 Sperren"}</button>{canManageRoles && <><button className="secondary-button" onClick={() => updateMemberRole(member, "SUPPORTER")}>🟢 Supporter</button><button className="secondary-button" onClick={() => updateMemberRole(member, member.role === "ADMIN" ? "MEMBER" : "ADMIN")}>{member.role === "ADMIN" ? "✕ Admin entfernen" : "★ Community Admin"}</button>{member.role !== "MEMBER" && <button className="secondary-button" onClick={() => updateMemberRole(member, "MEMBER")}>↩ Rolle entfernen</button>}<button className="secondary-button" onClick={() => loadPermissions(member.id)}>⚙ Rechte verwalten</button><button className="secondary-button" onClick={() => setMemberFeatureLock(member, "FORUM_POSTING", true)}>Forum sperren</button><button className="secondary-button" onClick={() => setMemberFeatureLock(member, "MESSAGING", true)}>Nachrichten sperren</button><button className="secondary-button" onClick={() => setMemberFeatureLock(member, "FRIEND_REQUESTS", true)}>Anfragen sperren</button><button className="secondary-button" onClick={() => setMemberFeatureLock(member, "FORUM_POSTING", false)}>Forum freigeben</button></>}</div></section>}{friends.length > 0 && <section className="public-friends"><span className="eyebrow">FREUNDE</span><h2>Mit {getName(member)} verbunden</h2><div>{friends.map((friend) => <button key={friend.id} onClick={() => onOpen(friend)}><img src={friend.avatar_url || DEFAULT_AVATAR} alt=""/><span>{getName(friend)}</span></button>)}</div></section>}</section>;
 }
 
-function Auth({ login, register }) { const [mode,setMode] = useState("login"); return <div className="auth-welcome"><section className="auth-intro"><img src="/ennstal-connect-community-logo.png" alt="Ennstal Connect"/><span className="eyebrow">DIE REGIONALE COMMUNITY</span><h1>Gemeinsam verbunden im Ennstal.</h1><p>Entdecke Neuigkeiten, Veranstaltungen, Gruppen und einen sicheren Austausch für Ennstal und Obersteiermark.</p><div className="auth-feature-list"><div><b>♛ Head Admin</b><span>Verantwortlich für Sicherheit, Regeln und Unterstützung.</span></div><div><b>★ Für die Community</b><span>Forum, Nachrichten, Freundschaften und regionale Informationen.</span></div><div><b>✓ Respektvoll verbunden</b><span>Mit der Registrierung akzeptierst du einen freundlichen Umgang und die Community-Regeln.</span></div></div><small>Mitgliederprofile und private Inhalte werden erst nach der Anmeldung angezeigt.</small></section><div className="auth-box">{mode === "login" ? <form className="panel" onSubmit={login}><h2>Anmelden</h2><input name="email" type="email" placeholder="E-Mail *" required/><input name="password" type="password" placeholder="Passwort *" required/><button className="primary-button">Anmelden</button><button type="button" className="text-button" onClick={() => setMode("register")}>Noch kein Konto? Jetzt registrieren</button></form> : <form className="panel" onSubmit={register}><h2>Registrieren</h2><p className="auth-form-note">Wähle einen einmaligen Nicknamen – er ist später für alle sichtbar.</p><input name="nickname" placeholder="Nickname *" required/><input name="first_name" placeholder="Vorname *" required/><input name="last_name" placeholder="Nachname *" required/><input name="birth_date" type="date" required/><select name="gender" defaultValue="" required><option value="">Bitte auswählen</option><option value="männlich">Männlich</option><option value="weiblich">Weiblich</option><option value="divers">Divers</option></select><input name="email" type="email" placeholder="E-Mail *" required/><input name="password" type="password" minLength={6} placeholder="Passwort *" required/><button className="primary-button">Konto erstellen</button><button type="button" className="text-button" onClick={() => setMode("login")}>Bereits registriert? Anmelden</button></form>}</div></div>; }
+function Auth({ login, register }) { const [mode,setMode] = useState("login"); return <div className="auth-welcome"><section className="auth-intro"><img src="/ennstal-connect-community-logo.png" alt="Ennstal Connect"/><span className="eyebrow">DIE REGIONALE COMMUNITY</span><h1>Gemeinsam verbunden im Ennstal.</h1><p>Entdecke Neuigkeiten, Veranstaltungen und einen sicheren Austausch für Ennstal und Obersteiermark.</p><div className="auth-feature-list"><div><b>♛ Head Admin</b><span>Verantwortlich für Sicherheit, Regeln und Unterstützung.</span></div><div><b>★ Für die Community</b><span>Forum, Nachrichten, Freundschaften und regionale Informationen.</span></div><div><b>★ Supporter</b><span>Engagierte Mitglieder helfen bei Verbesserungen, Meldungen und der Unterstützung anderer Mitglieder.</span></div><div><b>✓ Respektvoll verbunden</b><span>Mit der Registrierung akzeptierst du einen freundlichen Umgang und die Community-Regeln.</span></div></div><small>Mitgliederprofile und private Inhalte werden erst nach der Anmeldung angezeigt.</small></section><div className="auth-box">{mode === "login" ? <form className="panel" onSubmit={login}><h2>Anmelden</h2><input name="email" type="email" placeholder="E-Mail *" required/><input name="password" type="password" placeholder="Passwort *" required/><button className="primary-button">Anmelden</button><button type="button" className="text-button" onClick={() => setMode("register")}>Noch kein Konto? Jetzt registrieren</button></form> : <form className="panel" onSubmit={register}><h2>Registrieren</h2><p className="auth-form-note">Wähle einen einmaligen Nicknamen – er ist später für alle sichtbar.</p><input name="nickname" placeholder="Nickname *" required/><input name="first_name" placeholder="Vorname *" required/><input name="last_name" placeholder="Nachname *" required/><input name="birth_date" type="date" required/><select name="gender" defaultValue="" required><option value="">Bitte auswählen</option><option value="männlich">Männlich</option><option value="weiblich">Weiblich</option><option value="divers">Divers</option></select><input name="email" type="email" placeholder="E-Mail *" required/><input name="password" type="password" minLength={6} placeholder="Passwort *" required/><button className="primary-button">Konto erstellen</button><button type="button" className="text-button" onClick={() => setMode("login")}>Bereits registriert? Anmelden</button></form>}</div></div>; }
+function PasswordReset({ finishPasswordReset, notice }) { return <div className="auth-page"><div className="auth-welcome"><section className="auth-intro"><img src="/ennstal-connect-community-logo.png" alt="Ennstal Connect"/><span className="eyebrow">KONTO-SICHERHEIT</span><h1>Neues Passwort festlegen.</h1><p>Wähle ein sicheres neues Passwort für dein Ennstal-Connect-Konto.</p></section><div className="auth-box"><form className="panel" onSubmit={finishPasswordReset}><h2>Passwort zurücksetzen</h2><input name="password" type="password" minLength={6} placeholder="Neues Passwort (mindestens 6 Zeichen)" required/><input name="confirm_password" type="password" minLength={6} placeholder="Passwort wiederholen" required/><button className="primary-button">Passwort speichern</button></form></div></div>{notice && <div className="toast">{notice}</div>}</div>; }
 function InfoPage({ title, text }) { return <section><div className="page-heading"><h1>{title}</h1></div><div className="panel"><p>{text}</p></div></section>; }
-function LegalPage({ type }) { const privacy = type === "privacy"; return <section className="legal-page panel"><h1>{privacy ? "Datenschutzerklärung" : "Impressum"}</h1>{privacy ? <><h2>Verantwortlicher</h2><p>Ennstal Connect, Waidbachstraße, 8700 Leoben, Österreich. Kontakt: ennsstal.connect@gmx.at</p><h2>Verarbeitete Daten</h2><p>Für Konto, Profil, Nachrichten, Freundschaften und Moderation werden die dafür erforderlichen Registrierungs-, Profil- und Nutzungsdaten verarbeitet.</p><h2>Deine Rechte</h2><p>Du hast im gesetzlichen Rahmen insbesondere Rechte auf Auskunft, Berichtigung, Löschung, Einschränkung, Datenübertragbarkeit und Widerspruch sowie ein Beschwerderecht bei der Datenschutzbehörde.</p></> : <><p><strong>Ennstal Connect</strong></p><p>Verantwortlicher Betreiber: Marco Egger<br/>Waidbachstraße<br/>8700 Leoben, Österreich<br/>E-Mail: ennsstal.connect@gmx.at</p><h2>Zweck</h2><p>Regionale Community für Vernetzung, Kommunikation und Austausch im Ennstal und Umgebung.</p><h2>Haftung für Inhalte</h2><p>Für selbst veröffentlichte Inhalte sind die jeweiligen Mitglieder verantwortlich. Rechtswidrige Inhalte können an die Moderation gemeldet werden.</p></>}</section>; }
+function CommunityHub({ members, events, ads, photos }) {
+  const birthdays = members.filter((member) => member.birthday_visible && member.birth_date).map((member) => ({ member, date: new Date(member.birth_date) })).sort((a, b) => (a.date.getMonth() * 31 + a.date.getDate()) - (b.date.getMonth() * 31 + b.date.getDate())).slice(0, 8);
+  const admins = members.filter((member) => isAdmin(member.role));
+  return <section className="community-hub"><div className="page-heading"><div><span className="eyebrow">AKTUELL & VERBUNDEN</span><h1>Community</h1><p>Termine, engagierte Ansprechpartner und Beiträge aus dem Ennstal.</p></div></div><div className="community-hub-grid"><article className="panel"><span className="eyebrow">TERMINE</span><h2>Nächste Veranstaltungen</h2>{events.length ? events.slice(0,5).map((event) => <div className="hub-row" key={event.id}>{event.image_url && <img src={event.image_url} alt=""/>}<div><strong>{event.title}</strong><span>{new Date(event.event_at).toLocaleString("de-AT")}{event.location && ` · ${event.location}`}</span></div></div>) : <p>Noch keine Termine veröffentlicht.</p>}</article><article className="panel"><span className="eyebrow">GEBURTSTAGE</span><h2>Demnächst</h2>{birthdays.length ? birthdays.map(({ member, date }) => <div className="hub-row" key={member.id}><img src={member.avatar_url || DEFAULT_AVATAR} alt=""/><div><strong>{getName(member)}</strong><span>{date.toLocaleDateString("de-AT", { day: "2-digit", month: "long" })}</span></div></div>) : <p>Keine freigegebenen Geburtstage.</p>}</article><article className="panel"><span className="eyebrow">ANSPRECHPARTNER</span><h2>Administration</h2>{admins.map((admin) => <div className="hub-row" key={admin.id}><img src={admin.avatar_url || DEFAULT_AVATAR} alt=""/><div><strong>{admin.role === "HEAD_ADMIN" ? "♛ " : "★ "}{getName(admin)}</strong><span>{admin.role === "HEAD_ADMIN" ? "Gesamtverantwortung, Sicherheit & Regeln" : "Community-Moderation & Unterstützung"}</span></div></div>)}</article><article className="panel"><span className="eyebrow">AUS DER COMMUNITY</span><h2>Mitgliederfotos</h2><div className="photo-strip">{photos.slice(0,6).map((photo) => <img key={photo.id} src={photo.image_url} alt={photo.caption || "Mitgliederfoto"}/>)}</div>{!photos.length && <p>Die Fotogalerie wird nach den ersten Uploads hier sichtbar.</p>}</article></div>{ads.length > 0 && <aside className="community-ads"><span className="eyebrow">UNTERSTÜTZER & WERBUNG</span>{ads.map((ad) => <a key={ad.id} href={ad.link_url || "#"} target={ad.link_url ? "_blank" : undefined} rel="noreferrer"><strong>{ad.title}</strong><span>{ad.body}</span></a>)}</aside>}<p className="community-business-note">Unternehmen und Vereine können ein Unternehmenskonto beantragen. Sie erhalten einen blauen Stern und Rahmen, aber keine zusätzlichen Community-Rechte.</p></section>;
+}
+function LegalPage({ type }) { const privacy = type === "privacy"; return <section className="legal-page panel"><h1>{privacy ? "Datenschutzerklärung" : "Impressum"}</h1>{privacy ? <><h2>Verantwortlicher</h2><p>Ennstal Connect, Waidbachstraße, 8700 Leoben, Österreich. Kontakt: ennstal.connect@gmx.at</p><h2>Verarbeitete Daten</h2><p>Für Konto, Profil, Nachrichten, Freundschaften und Moderation werden die dafür erforderlichen Registrierungs-, Profil- und Nutzungsdaten verarbeitet.</p><h2>Deine Rechte</h2><p>Du hast im gesetzlichen Rahmen insbesondere Rechte auf Auskunft, Berichtigung, Löschung, Einschränkung, Datenübertragbarkeit und Widerspruch sowie ein Beschwerderecht bei der Datenschutzbehörde.</p></> : <><p><strong>Ennstal Connect</strong></p><p>Verantwortlicher Betreiber: Marco Egger<br/>Waidbachstraße<br/>8700 Leoben, Österreich<br/>E-Mail: ennstal.connect@gmx.at</p><h2>Zweck</h2><p>Regionale Community für Vernetzung, Kommunikation und Austausch im Ennstal und Umgebung.</p><h2>Haftung für Inhalte</h2><p>Für selbst veröffentlichte Inhalte sind die jeweiligen Mitglieder verantwortlich. Rechtswidrige Inhalte können an die Moderation gemeldet werden.</p></>}</section>; }
