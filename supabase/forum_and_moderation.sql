@@ -121,6 +121,9 @@ with check (
     ))
   )
 );
+drop policy if exists forum_posts_head_admin_update on public.forum_posts;
+create policy forum_posts_head_admin_update on public.forum_posts for update to authenticated
+using (public.ec_is_head_admin()) with check (public.ec_is_head_admin());
 drop policy if exists feature_locks_read on public.user_feature_locks;
 create policy feature_locks_read on public.user_feature_locks for select to authenticated
 using (user_id::text = (select auth.uid()::text) or public.ec_is_head_admin());
