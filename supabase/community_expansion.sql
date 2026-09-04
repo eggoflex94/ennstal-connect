@@ -55,6 +55,9 @@ create table if not exists public.community_events (
   description text not null default '', event_at timestamptz not null, location text, image_url text,
   created_by uuid references public.profiles(id) on delete set null, created_at timestamptz not null default now()
 );
+alter table public.community_events add column if not exists status text not null default 'ACTIVE' check (status in ('ACTIVE','CANCELLED'));
+alter table public.community_events add column if not exists cancellation_reason text;
+alter table public.community_events add column if not exists cancelled_at timestamptz;
 alter table public.community_events enable row level security;
 drop policy if exists community_events_read on public.community_events;
 drop policy if exists community_events_admin_write on public.community_events;
