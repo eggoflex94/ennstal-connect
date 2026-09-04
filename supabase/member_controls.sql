@@ -40,95 +40,12 @@ create table if not exists public.news (
 );
 alter table public.news add column if not exists author_id uuid references public.profiles(id) on delete set null;
 alter table public.news add column if not exists updated_at timestamptz not null default now();
-alter table public.news add column if not exists image_url text;
 alter table public.news enable row level security;
 drop policy if exists news_read on public.news;
 create policy news_read on public.news for select to authenticated using (true);
 drop policy if exists news_admin_write on public.news;
 create policy news_admin_write on public.news for all to authenticated
 using (public.ec_is_admin()) with check (public.ec_is_admin());
-
--- The two configurable homepage frames are owned by the Head Admin.
-create table if not exists public.homepage_sections (
-  id uuid primary key default gen_random_uuid(),
-  title text not null default '',
-  content text not null default '',
-  image_url text,
-  frame_style text not null default 'standard',
-  created_by uuid references public.profiles(id) on delete set null,
-  updated_by uuid references public.profiles(id) on delete set null,
-  sort_order integer not null default 0,
-  is_visible boolean not null default true,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-alter table public.homepage_sections add column if not exists image_url text;
-alter table public.homepage_sections add column if not exists frame_style text not null default 'standard';
-alter table public.homepage_sections add column if not exists updated_by uuid references public.profiles(id) on delete set null;
-alter table public.homepage_sections add column if not exists sort_order integer not null default 0;
-alter table public.homepage_sections add column if not exists is_visible boolean not null default true;
-alter table public.homepage_sections add column if not exists updated_at timestamptz not null default now();
-alter table public.homepage_sections enable row level security;
-drop policy if exists homepage_sections_read on public.homepage_sections;
-create policy homepage_sections_read on public.homepage_sections for select to authenticated
-using (is_visible or public.ec_is_head_admin());
-drop policy if exists homepage_sections_head_admin_write on public.homepage_sections;
-create policy homepage_sections_head_admin_write on public.homepage_sections for all to authenticated
-using (public.ec_is_head_admin()) with check (public.ec_is_head_admin());
-
--- Individual administrator permissions: readable and editable by Head Admin
--- through RPC only, regardless of older table RLS policies.
-create table if not exists public.user_permissions (
-  user_id uuid primary key references public.profiles(id) on delete cascade,
-  manage_members boolean not null default false,
-  manage_points boolean not null default false,
-  manage_messages boolean not null default false,
-  manage_media boolean not null default false,
-  manage_roles boolean not null default false,
-  manage_admins boolean not null default false,
-  view_profile_visits boolean not null default false,
-  manage_news boolean not null default false,
-  manage_groups boolean not null default false,
-  manage_events boolean not null default false,
-  manage_marketplace boolean not null default false,
-  manage_friend_requests boolean not null default false,
-  manage_homepage boolean not null default false,
-  manage_reports boolean not null default false
-);
-
-create or replace function public.admin_get_permissions(target_user uuid)
-returns jsonb
-language plpgsql security definer set search_path = public
-as $$
-declare v_result jsonb;
-begin
-  if not public.ec_is_head_admin() then raise exception 'Nur der Head Admin darf Rechte einsehen.'; end if;
-  select to_jsonb(p) - 'user_id' - 'updated_at' into v_result from public.user_permissions p where p.user_id = target_user;
-  return coalesce(v_result, '{}'::jsonb);
-end;
-$$;
-
-create or replace function public.admin_set_permissions(
-  target_user uuid, p_manage_members boolean default false, p_manage_points boolean default false,
-  p_manage_messages boolean default false, p_manage_media boolean default false, p_manage_roles boolean default false,
-  p_manage_admins boolean default false, p_view_profile_visits boolean default false, p_manage_news boolean default false,
-  p_manage_groups boolean default false, p_manage_events boolean default false, p_manage_marketplace boolean default false,
-  p_manage_friend_requests boolean default false, p_manage_homepage boolean default false, p_manage_reports boolean default false
-) returns void language plpgsql security definer set search_path = public as $$
-begin
-  if not public.ec_is_head_admin() then raise exception 'Nur der Head Admin darf Berechtigungen ändern.'; end if;
-  insert into public.user_permissions(user_id,manage_members,manage_points,manage_messages,manage_media,manage_roles,manage_admins,view_profile_visits,manage_news,manage_groups,manage_events,manage_marketplace,manage_friend_requests,manage_homepage,manage_reports)
-  values(target_user,p_manage_members,p_manage_points,p_manage_messages,p_manage_media,p_manage_roles,p_manage_admins,p_view_profile_visits,p_manage_news,p_manage_groups,p_manage_events,p_manage_marketplace,p_manage_friend_requests,p_manage_homepage,p_manage_reports)
-  on conflict(user_id) do update set
-    manage_members=excluded.manage_members, manage_points=excluded.manage_points,
-    manage_messages=excluded.manage_messages, manage_media=excluded.manage_media,
-    manage_roles=excluded.manage_roles, manage_admins=excluded.manage_admins,
-    view_profile_visits=excluded.view_profile_visits, manage_news=excluded.manage_news,
-    manage_groups=excluded.manage_groups, manage_events=excluded.manage_events,
-    manage_marketplace=excluded.manage_marketplace, manage_friend_requests=excluded.manage_friend_requests,
-    manage_homepage=excluded.manage_homepage, manage_reports=excluded.manage_reports;
-end;
-$$;
 
 create or replace function public.admin_set_role(target_user uuid, new_role text)
 returns void
@@ -217,31 +134,10 @@ begin
 end;
 $$;
 
-create or replace function public.admin_resolve_report(p_report_id uuid, p_status text, p_action_note text)
-returns void language plpgsql security definer set search_path = public as $$
-declare v_reporter_id uuid; v_actor_name text;
-begin
-  if not public.ec_is_admin() then raise exception 'Keine Admin-Berechtigung.'; end if;
-  if p_status not in ('CONFIRMED', 'UNFOUNDED') then raise exception 'Ungültiger Meldungsstatus.'; end if;
-  if char_length(trim(coalesce(p_action_note, ''))) < 3 then raise exception 'Bitte einen Grund angeben.'; end if;
-  select reporter_id into v_reporter_id from public.user_reports where id = p_report_id for update;
-  if not found then raise exception 'Meldung nicht gefunden.'; end if;
-  update public.user_reports set status = p_status, admin_id = auth.uid(), admin_note = trim(p_action_note), resolved_at = now() where id = p_report_id;
-  select case role when 'HEAD_ADMIN' then '♛ ' when 'ADMIN' then '★ ' else '' end || coalesce(nullif(nickname, ''), 'Community-Moderation') into v_actor_name from public.profiles where id = auth.uid();
-  insert into public.messages(sender_id, receiver_id, content, is_read, created_at) values (auth.uid(), v_reporter_id, v_actor_name || case when p_status = 'CONFIRMED' then ' hat deine Meldung bearbeitet. Unternommen wurde: ' else ' hat deine Meldung geprüft und abgelehnt. Grund: ' end || trim(p_action_note), false, now());
-end;
-$$;
-
 revoke all on function public.admin_set_role(uuid,text) from public;
 grant execute on function public.admin_set_role(uuid,text) to authenticated;
 revoke all on function public.admin_update_member(uuid,text,text,text,date,text,text,text) from public;
 grant execute on function public.admin_update_member(uuid,text,text,text,date,text,text,text) to authenticated;
 revoke all on function public.admin_member_directory() from public;
 grant execute on function public.admin_member_directory() to authenticated;
-revoke all on function public.admin_resolve_report(uuid,text,text) from public;
-grant execute on function public.admin_resolve_report(uuid,text,text) to authenticated;
-revoke all on function public.admin_get_permissions(uuid) from public;
-grant execute on function public.admin_get_permissions(uuid) to authenticated;
-revoke all on function public.admin_set_permissions(uuid,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean) from public;
-grant execute on function public.admin_set_permissions(uuid,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean) to authenticated;
 notify pgrst, 'reload schema';
