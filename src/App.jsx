@@ -195,6 +195,47 @@ export default function App() {
   }, [page, profile?.role, communityEvents.length]);
 
   useEffect(() => {
+    const authorMarkup = (container, authorId, className = "content-author") => {
+      const author = members.find((member) => member.id === authorId);
+      if (!author || container.querySelector(`.${className}`)) return;
+      const line = document.createElement("small");
+      const business = author.account_badge === "BUSINESS";
+      line.className = `${className} role-author ${business ? "business" : roleClass(author.role)}`;
+      line.textContent = `Erstellt von ${business ? "★" : roleMark(author.role)} ${getName(author)}${business ? " · Unternehmenskonto" : ""}`.trim();
+      container.appendChild(line);
+    };
+    if (page === "news") {
+      document.querySelectorAll(".news-card").forEach((card, index) => {
+        const entry = news[index]; if (!entry) return;
+        authorMarkup(card, entry.author_id);
+        if (isAdmin(profile?.role) && !card.querySelector(".content-card-actions")) {
+          const actions = document.createElement("div"); actions.className = "content-card-actions";
+          const edit = document.createElement("button"); edit.className = "secondary-button"; edit.textContent = "✎ Bearbeiten"; edit.onclick = () => editNews(entry);
+          const remove = document.createElement("button"); remove.className = "danger-button"; remove.textContent = "Löschen"; remove.onclick = () => deleteNews(entry);
+          actions.append(edit, remove); card.appendChild(actions);
+        }
+      });
+    }
+    if (page === "community") {
+      const eventCard = document.querySelector(".community-hub-grid article");
+      eventCard?.querySelectorAll(".hub-row").forEach((row, index) => {
+        const entry = communityEvents.slice(0, 5)[index]; if (!entry) return;
+        authorMarkup(row, entry.created_by, "event-author");
+        if (isAdmin(profile?.role) && !row.querySelector(".event-delete-button")) {
+          const remove = document.createElement("button"); remove.className = "danger-button event-delete-button"; remove.textContent = "Löschen"; remove.onclick = () => deleteCommunityEvent(entry); row.appendChild(remove);
+        }
+      });
+    }
+    if (page === "forum" || page === "admin-forum") {
+      const scope = page === "admin-forum" ? "ADMIN" : "COMMUNITY";
+      document.querySelectorAll(".forum-post").forEach((card, index) => {
+        const entry = forumPosts.filter((post) => post.scope === scope)[index]; const author = members.find((member) => member.id === entry?.author_id); const name = card.querySelector(".forum-post-head p strong");
+        if (author && name) { const business = author.account_badge === "BUSINESS"; name.className = `role-author ${business ? "business" : roleClass(author.role)}`; name.textContent = `${business ? "★" : roleMark(author.role)} ${getName(author)}${business ? " · Unternehmenskonto" : ""}`.trim(); }
+      });
+    }
+  }, [page, news, communityEvents, forumPosts, members, profile?.role]);
+
+  useEffect(() => {
     if (!supabase || !user?.id) return undefined;
     const loadCommunityExtras = async () => {
       const [eventResult, adResult, photoResult, likeResult, commentResult] = await Promise.all([
@@ -421,6 +462,9 @@ export default function App() {
   async function sendMessage(e) { e.preventDefault(); if (isFeatureLocked("MESSAGING")) return showNotice("Deine Nachrichtenfunktion ist derzeit vorübergehend gesperrt."); if (!chatMember || !messageText.trim()) return; const { error } = await supabase.rpc("send_private_message", { target_user: chatMember.id, message_text: messageText.trim() }); if (error) return showNotice(error.message); setMessageText(""); await openChat(chatMember); }
   async function createNews(e) { e.preventDefault(); if (!isAdmin(profile?.role)) return showNotice("Nur die Administration darf Neuigkeiten veröffentlichen."); const f = new FormData(e.currentTarget); const payload = { title: String(f.get("title") || "").trim(), content: String(f.get("content") || "").trim(), author_id: user.id }; if (payload.title.length < 3 || payload.content.length < 3) return showNotice("Bitte Überschrift und Text ausfüllen."); try { payload.image_url = await uploadContentImage(f.get("image"), "news"); } catch (error) { return showNotice(error.message); } const { error } = await supabase.from("news").insert(payload); if (error) return showNotice(error.message); e.currentTarget.reset(); showNotice("Neuigkeit veröffentlicht."); await loadAll(); }
   async function createCommunityEvent(e) { e.preventDefault(); if (!isAdmin(profile?.role)) return showNotice("Nur die Administration darf Veranstaltungen veröffentlichen."); const f = new FormData(e.currentTarget); let image_url = String(f.get("image_url") || "").trim() || null; try { const uploadedImage = await uploadContentImage(f.get("image"), "events"); if (uploadedImage) image_url = uploadedImage; } catch (error) { return showNotice(error.message); } const { data, error } = await supabase.from("community_events").insert({ title: String(f.get("title")).trim(), description: String(f.get("description") || "").trim(), event_at: f.get("event_at"), location: String(f.get("location") || "").trim() || null, image_url, created_by: user.id }).select().single(); if (error) return showNotice(error.message); if (data) setCommunityEvents((current) => [...current, data].sort((a,b) => new Date(a.event_at) - new Date(b.event_at))); e.currentTarget.reset(); showNotice("Veranstaltung veröffentlicht."); }
+  async function editNews(entry) { if (!isAdmin(profile?.role)) return; const title = prompt("Überschrift:", entry.title); if (title === null) return; const content = prompt("Text:", entry.content); if (content === null) return; if (title.trim().length < 3 || content.trim().length < 3) return showNotice("Bitte Überschrift und Text ausfüllen."); const { error } = await supabase.from("news").update({ title: title.trim(), content: content.trim(), updated_at: new Date().toISOString() }).eq("id", entry.id); if (error) return showNotice(error.message); showNotice("Neuigkeit gespeichert."); await loadAll(); }
+  async function deleteNews(entry) { if (!isAdmin(profile?.role) || !confirm(`Neuigkeit „${entry.title}" wirklich löschen?`)) return; const { error } = await supabase.from("news").delete().eq("id", entry.id); if (error) return showNotice(error.message); showNotice("Neuigkeit gelöscht."); await loadAll(); }
+  async function deleteCommunityEvent(event) { if (!isAdmin(profile?.role) || !confirm(`Veranstaltung „${event.title}" wirklich löschen?`)) return; const { error } = await supabase.from("community_events").delete().eq("id", event.id); if (error) return showNotice(error.message); setCommunityEvents((current) => current.filter((entry) => entry.id !== event.id)); showNotice("Veranstaltung gelöscht."); }
   async function createCommunityAd(e) { e.preventDefault(); if (!isHeadAdmin(profile?.role)) return showNotice("Werbeflächen verwaltet nur der Global Admin."); const f = new FormData(e.currentTarget); const { error } = await supabase.from("community_ads").insert({ title: String(f.get("title")).trim(), body: String(f.get("body") || "").trim(), link_url: String(f.get("link_url") || "").trim() || null, image_url: String(f.get("image_url") || "").trim() || null, created_by: user.id }); if (error) return showNotice(error.message); e.currentTarget.reset(); showNotice("Werbefläche veröffentlicht."); }
   async function setBusinessAccount(id, enabled) { if (!isHeadAdmin(profile?.role)) return showNotice("Nur der Global Admin darf Unternehmenskonten verwalten."); const company = enabled ? prompt("Firmen- oder Vereinsname:", "") : ""; if (enabled && (company === null || !company.trim())) return; const { error } = await supabase.rpc("admin_set_business_account", { p_user_id: id, p_enabled: enabled, p_company_name: company || null, p_company_description: null }); if (error) return showNotice(error.message); showNotice(enabled ? "Unternehmenskonto vergeben." : "Unternehmenskonto entfernt."); await loadAll(); }
   async function createForumPost(e, scope) { e.preventDefault(); if (scope === "COMMUNITY" && isFeatureLocked("FORUM_POSTING")) return showNotice("Deine Forums-Schreibfunktion ist derzeit vorübergehend gesperrt."); const form = new FormData(e.currentTarget); const payload = { scope, title: String(form.get("title") || "").trim(), content: String(form.get("content") || "").trim(), font_family: form.get("font_family") || "modern", font_size: form.get("font_size") || "normal", emphasis: form.get("emphasis") || "normal", author_id: user.id }; if (payload.title.length < 3 || payload.content.length < 3) return showNotice("Bitte Überschrift und Beitrag ausfüllen."); const { error } = await supabase.from("forum_posts").insert(payload); if (error) return showNotice(error.message); e.currentTarget.reset(); showNotice("Beitrag veröffentlicht."); await loadAll(); }
@@ -467,8 +511,8 @@ export default function App() {
         {page === "friend-requests" && <FriendRequests incoming={incomingRequests} sent={sentRequests} memberById={memberById} respond={respondToFriendRequest} cancel={cancelFriendRequest}/>} 
         {page === "blocked" && <Blocked blockedUsers={blockedUsers} memberById={memberById} unblock={unblockUser}/>} 
         {page === "messages" && <Messages user={user} messages={messages} chatMember={chatMember} setChatMember={setChatMember} memberById={memberById} openChat={openChat} messageText={messageText} setMessageText={setMessageText} sendMessage={sendMessage}/>} 
-        {page === "news" && <News news={news} profile={profile} createNews={createNews}/>}
-        {page === "community" && <><CommunityHub members={members} events={communityEvents} ads={communityAds} photos={memberPhotos}/>{isAdmin(profile?.role) && <AdminCommunityTools members={members} isHeadAdmin={isHeadAdmin(profile?.role)} createEvent={createCommunityEvent} createAd={createCommunityAd} setBusinessAccount={setBusinessAccount}/>}</>} 
+        {page === "news" && <News news={news} members={members} profile={profile} createNews={createNews} editNews={editNews} deleteNews={deleteNews}/>}
+        {page === "community" && <><CommunityHub members={members} events={communityEvents} ads={communityAds} photos={memberPhotos} profile={profile} deleteEvent={deleteCommunityEvent}/>{isAdmin(profile?.role) && <AdminCommunityTools members={members} isHeadAdmin={isHeadAdmin(profile?.role)} createEvent={createCommunityEvent} createAd={createCommunityAd} setBusinessAccount={setBusinessAccount}/>}</>} 
         {page === "forum" && <Forum title="Community-Forum" intro="Austausch für alle Mitglieder von Ennstal Connect." scope="COMMUNITY" posts={forumPosts} members={members} profile={profile} createPost={createForumPost} editPost={editForumPost} deletePost={deleteForumPost} locked={isFeatureLocked("FORUM_POSTING")}/>}
         {page === "admin-forum" && isAdmin(profile?.role) && <Forum title="Admin-Forum" intro="Interner Bereich für Moderation und Administration." scope="ADMIN" posts={forumPosts} members={members} profile={profile} createPost={createForumPost} editPost={editForumPost} deletePost={deleteForumPost} locked={false}/>}
         {page === "profile" && <><Profile profile={profile} user={user} isHeadAdmin={isHeadAdmin} saveProfile={saveProfile} uploadProfileImage={uploadProfileImage} uploadProfileBackground={uploadProfileBackground} uploadProfileBioImage={uploadProfileBioImage}/><ProfilePhotoGallery photos={memberPhotos.filter((photo) => photo.owner_id === user.id)} likes={photoLikes} comments={photoComments} user={user} onUpload={uploadMemberPhoto} onLike={togglePhotoLike} onComment={addPhotoComment}/><ProfileTimeline visits={profileVisits} activities={profileActivities} members={members}/></>}
