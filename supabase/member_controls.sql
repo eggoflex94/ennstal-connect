@@ -75,6 +75,60 @@ drop policy if exists homepage_sections_head_admin_write on public.homepage_sect
 create policy homepage_sections_head_admin_write on public.homepage_sections for all to authenticated
 using (public.ec_is_head_admin()) with check (public.ec_is_head_admin());
 
+-- Individual administrator permissions: readable and editable by Head Admin
+-- through RPC only, regardless of older table RLS policies.
+create table if not exists public.user_permissions (
+  user_id uuid primary key references public.profiles(id) on delete cascade,
+  manage_members boolean not null default false,
+  manage_points boolean not null default false,
+  manage_messages boolean not null default false,
+  manage_media boolean not null default false,
+  manage_roles boolean not null default false,
+  manage_admins boolean not null default false,
+  view_profile_visits boolean not null default false,
+  manage_news boolean not null default false,
+  manage_groups boolean not null default false,
+  manage_events boolean not null default false,
+  manage_marketplace boolean not null default false,
+  manage_friend_requests boolean not null default false,
+  manage_homepage boolean not null default false,
+  manage_reports boolean not null default false
+);
+
+create or replace function public.admin_get_permissions(target_user uuid)
+returns jsonb
+language plpgsql security definer set search_path = public
+as $$
+declare v_result jsonb;
+begin
+  if not public.ec_is_head_admin() then raise exception 'Nur der Head Admin darf Rechte einsehen.'; end if;
+  select to_jsonb(p) - 'user_id' - 'updated_at' into v_result from public.user_permissions p where p.user_id = target_user;
+  return coalesce(v_result, '{}'::jsonb);
+end;
+$$;
+
+create or replace function public.admin_set_permissions(
+  target_user uuid, p_manage_members boolean, p_manage_points boolean,
+  p_manage_messages boolean, p_manage_media boolean, p_manage_roles boolean,
+  p_manage_admins boolean, p_view_profile_visits boolean, p_manage_news boolean,
+  p_manage_groups boolean, p_manage_events boolean, p_manage_marketplace boolean,
+  p_manage_friend_requests boolean, p_manage_homepage boolean, p_manage_reports boolean
+) returns void language plpgsql security definer set search_path = public as $$
+begin
+  if not public.ec_is_head_admin() then raise exception 'Nur der Head Admin darf Berechtigungen ändern.'; end if;
+  insert into public.user_permissions(user_id,manage_members,manage_points,manage_messages,manage_media,manage_roles,manage_admins,view_profile_visits,manage_news,manage_groups,manage_events,manage_marketplace,manage_friend_requests,manage_homepage,manage_reports)
+  values(target_user,p_manage_members,p_manage_points,p_manage_messages,p_manage_media,p_manage_roles,p_manage_admins,p_view_profile_visits,p_manage_news,p_manage_groups,p_manage_events,p_manage_marketplace,p_manage_friend_requests,p_manage_homepage,p_manage_reports)
+  on conflict(user_id) do update set
+    manage_members=excluded.manage_members, manage_points=excluded.manage_points,
+    manage_messages=excluded.manage_messages, manage_media=excluded.manage_media,
+    manage_roles=excluded.manage_roles, manage_admins=excluded.manage_admins,
+    view_profile_visits=excluded.view_profile_visits, manage_news=excluded.manage_news,
+    manage_groups=excluded.manage_groups, manage_events=excluded.manage_events,
+    manage_marketplace=excluded.manage_marketplace, manage_friend_requests=excluded.manage_friend_requests,
+    manage_homepage=excluded.manage_homepage, manage_reports=excluded.manage_reports;
+end;
+$$;
+
 create or replace function public.admin_set_role(target_user uuid, new_role text)
 returns void
 language plpgsql
@@ -168,4 +222,8 @@ revoke all on function public.admin_update_member(uuid,text,text,text,date,text,
 grant execute on function public.admin_update_member(uuid,text,text,text,date,text,text,text) to authenticated;
 revoke all on function public.admin_member_directory() from public;
 grant execute on function public.admin_member_directory() to authenticated;
+revoke all on function public.admin_get_permissions(uuid) from public;
+grant execute on function public.admin_get_permissions(uuid) to authenticated;
+revoke all on function public.admin_set_permissions(uuid,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean) from public;
+grant execute on function public.admin_set_permissions(uuid,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean) to authenticated;
 notify pgrst, 'reload schema';
