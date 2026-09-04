@@ -137,6 +137,23 @@ supabase.rpc = async (fn, args = {}, options) => {
     return { data: null, error };
   }
 
+  if (fn === "send_private_message") {
+    const rpcResult = await originalRpc(fn, args, options);
+    if (!rpcResult.error || !canUseClientFallback(rpcResult.error)) return rpcResult;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user?.id || !args?.target_user || !String(args?.message_text || "").trim()) return { data: null, error: new Error("Nachricht ist ungültig.") };
+    const { error } = await supabase.from("messages").insert({ sender_id: user.id, receiver_id: args.target_user, content: String(args.message_text).trim(), is_read: false });
+    return { data: null, error };
+  }
+
+  if (fn === "mark_messages_read") {
+    const rpcResult = await originalRpc(fn, args, options);
+    if (!rpcResult.error || !canUseClientFallback(rpcResult.error)) return rpcResult;
+    const { data: { user } } = await supabase.auth.getUser();
+    const { error } = await supabase.from("messages").update({ is_read: true }).eq("receiver_id", user?.id).eq("sender_id", args?.from_user);
+    return { data: null, error };
+  }
+
   return originalRpc(fn, args, options);
 };
 }

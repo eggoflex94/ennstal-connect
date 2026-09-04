@@ -277,7 +277,7 @@ export default function App() {
     <header className="topbar modern-topbar">
       <div className="topbar-brand" onClick={() => setPage("home")}><img src="/logo.png" alt="Ennstal Connect" className="topbar-logo"/></div>
       <div className="breadcrumb">ENNSTAL.CONNECT <span>›</span> {page}</div>
-      <button className={`topbar-user ${roleClass(profile?.role)}`} onClick={() => setPage("profile")}><img src={profile?.avatar_url || DEFAULT_AVATAR} alt=""/><span><strong>{getName(profile)}</strong><small>{myRole}</small></span></button>
+      <button className={`topbar-user ${roleClass(profile?.role)}`} onClick={() => setPage("profile")}><img src={profile?.avatar_url || DEFAULT_AVATAR} alt=""/><span><strong>{getName(profile)}{profile?.role === "HEAD_ADMIN" && <b className="nickname-crown" aria-label="Global Admin">♛</b>}</strong></span></button>
     </header>
     <div className="dashboard-layout">
       <aside className="modern-sidebar">
