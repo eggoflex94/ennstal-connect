@@ -19,3 +19,5 @@
   input,select,textarea,button{font-size:16px!important}
   .primary-button,.secondary-button,.danger-button{min-height:44px!important}
 }
+.admin-responsibilities{display:block!important;margin-top:10px!important;padding:8px 10px!important;border-radius:10px!important;background:rgba(8,22,36,.55)!important;color:#e6f1fa!important;line-height:1.4!important}
+.public-profile-updates{margin-top:18px!important}.public-profile-updates .profile-update.head-admin strong,.public-profile-updates .profile-update.admin strong{color:#bd7d17!important}.public-profile-updates .profile-update.supporter strong{color:#15814b!important}.public-profile-updates .profile-update.member strong{color:#365b7e!important}

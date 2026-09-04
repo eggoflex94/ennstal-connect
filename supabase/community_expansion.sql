@@ -12,6 +12,18 @@ alter table public.profiles add column if not exists suspended_at timestamptz;
 alter table public.profiles add column if not exists suspended_by uuid;
 alter table public.profiles add column if not exists hide_online_status boolean not null default false;
 alter table public.profiles add column if not exists is_test_account boolean not null default false;
+alter table public.profiles add column if not exists admin_responsibilities text[] not null default '{}';
+
+create or replace function public.admin_set_responsibilities(p_target_user uuid, p_responsibilities text[])
+returns void language plpgsql security definer set search_path=public as $$
+begin
+  if not public.ec_is_head_admin() then raise exception 'Nur der Head Admin darf Zuständigkeiten festlegen.'; end if;
+  if not exists(select 1 from public.profiles where id=p_target_user and role in ('ADMIN','HEAD_ADMIN')) then raise exception 'Zuständigkeiten können nur für Admin-Profile gesetzt werden.'; end if;
+  update public.profiles set admin_responsibilities = coalesce(p_responsibilities, '{}') where id=p_target_user;
+end;
+$$;
+revoke all on function public.admin_set_responsibilities(uuid,text[]) from public;
+grant execute on function public.admin_set_responsibilities(uuid,text[]) to authenticated;
 alter table public.profiles add column if not exists is_verified boolean not null default false;
 alter table public.profiles add column if not exists verified_at timestamptz;
 alter table public.profiles add column if not exists verified_by uuid references public.profiles(id) on delete set null;
