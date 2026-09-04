@@ -86,7 +86,7 @@ export default function App() {
   const isFeatureLocked = (feature) => featureLocks.some((lock) => lock.feature_key === feature && lock.is_locked);
   // The public list hides suspended accounts, while the Global/Community Admin
   // must still see them to manage test accounts and restore access.
-  const visibleMembers = useMemo(() => members.filter((m) => !blockedIds.has(m.id) && (m.account_status !== "SUSPENDED" || isAdmin(profile?.role))), [members, blockedIds, profile?.role]);
+  const visibleMembers = useMemo(() => members.filter((m) => isAdmin(profile?.role) || (!blockedIds.has(m.id) && m.account_status !== "SUSPENDED")), [members, blockedIds, profile?.role]);
   const sortedMembers = useMemo(() => {
     const q = search.trim().toLowerCase();
     const filtered = visibleMembers.filter((m) => [m.nickname, m.first_name, m.last_name].filter(Boolean).join(" ").toLowerCase().includes(q));
