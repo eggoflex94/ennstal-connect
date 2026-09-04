@@ -40,6 +40,7 @@ create table if not exists public.news (
 );
 alter table public.news add column if not exists author_id uuid references public.profiles(id) on delete set null;
 alter table public.news add column if not exists updated_at timestamptz not null default now();
+alter table public.news add column if not exists image_url text;
 alter table public.news enable row level security;
 drop policy if exists news_read on public.news;
 create policy news_read on public.news for select to authenticated using (true);
