@@ -153,6 +153,28 @@ begin
 end;
 $$;
 
+create or replace function public.forum_create_post(p_scope text, p_title text, p_content text, p_font_family text default 'modern', p_font_size text default 'normal', p_emphasis text default 'normal')
+returns void language plpgsql security definer set search_path=public as $$
+begin
+ if p_scope not in ('COMMUNITY','ADMIN') or char_length(trim(p_title)) < 3 or char_length(trim(p_content)) < 3 then raise exception 'Ungültiger Forumsbeitrag.'; end if;
+ if p_scope='ADMIN' and not public.ec_is_admin() then raise exception 'Keine Admin-Berechtigung.'; end if;
+ if p_scope='COMMUNITY' and exists(select 1 from public.user_feature_locks where user_id=auth.uid() and feature_key='FORUM_POSTING' and is_locked) then raise exception 'Deine Forumsfunktion ist gesperrt.'; end if;
+ insert into public.forum_posts(scope,author_id,title,content,font_family,font_size,emphasis) values(p_scope,auth.uid(),trim(p_title),trim(p_content),p_font_family,p_font_size,p_emphasis);
+end; $$;
+create or replace function public.forum_update_own_post(p_post_id uuid, p_title text, p_content text)
+returns void language plpgsql security definer set search_path=public as $$
+begin
+ if char_length(trim(p_title))<3 or char_length(trim(p_content))<3 then raise exception 'Titel und Beitrag sind zu kurz.'; end if;
+ update public.forum_posts set title=trim(p_title),content=trim(p_content),edited_at=now(),edited_by=auth.uid(),edit_reason='Vom Autor bearbeitet' where id=p_post_id and (author_id=auth.uid() or public.ec_is_head_admin());
+ if not found then raise exception 'Du darfst diesen Beitrag nicht bearbeiten.'; end if;
+end; $$;
+create or replace function public.forum_delete_post(p_post_id uuid)
+returns void language plpgsql security definer set search_path=public as $$
+begin
+ delete from public.forum_posts where id=p_post_id and (author_id=auth.uid() or public.ec_is_head_admin());
+ if not found then raise exception 'Du darfst diesen Beitrag nicht löschen.'; end if;
+end; $$;
+
 create or replace function public.admin_set_feature_lock(p_target_user uuid, p_feature_key text, p_is_locked boolean, p_reason text)
 returns void language plpgsql security definer set search_path = public as $$
 begin
@@ -175,4 +197,7 @@ revoke all on function public.admin_edit_forum_post(uuid,text,text,text) from pu
 revoke all on function public.admin_set_feature_lock(uuid,text,boolean,text) from public;
 grant execute on function public.admin_edit_forum_post(uuid,text,text,text) to authenticated;
 grant execute on function public.admin_set_feature_lock(uuid,text,boolean,text) to authenticated;
+grant execute on function public.forum_create_post(text,text,text,text,text,text) to authenticated;
+grant execute on function public.forum_update_own_post(uuid,text,text) to authenticated;
+grant execute on function public.forum_delete_post(uuid) to authenticated;
 notify pgrst, 'reload schema';
