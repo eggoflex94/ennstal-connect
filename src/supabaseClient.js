@@ -53,12 +53,16 @@ supabase.rpc = async (fn, args = {}, options) => {
 
   if (fn === "create_user_block") {
     const rpcResult = await originalRpc(fn, args, options);
+    if (rpcResult.error?.code === "23505") return { data: null, error: null };
     if (!rpcResult.error || !canUseClientFallback(rpcResult.error)) return rpcResult;
     const { data: { user } } = await supabase.auth.getUser();
     const target = args?.target_user;
     if (!user?.id) return { data: null, error: new Error("Nicht eingeloggt.") };
     if (!target || target === user.id) return { data: null, error: new Error("Ungültiger Nutzer.") };
     const { error } = await supabase.from("user_blocks").insert({ blocker_id: user.id, blocked_id: target });
+    // A repeated click must be harmless: the unique constraint already proves
+    // that the requested block is active.
+    if (error?.code === "23505") return { data: null, error: null };
     return { data: null, error };
   }
 
