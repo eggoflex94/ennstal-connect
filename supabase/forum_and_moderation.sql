@@ -304,4 +304,17 @@ end;
 $$;
 revoke all on function public.forum_update_post(uuid,text,text,text) from public;
 grant execute on function public.forum_update_post(uuid,text,text,text) to authenticated;
+
+create or replace function public.forum_moderator_warn_user(p_target_user uuid, p_warning text)
+returns void language plpgsql security definer set search_path=public as $$
+begin
+  if not public.ec_is_forum_moderator() then raise exception 'Keine Forum-Moderationsberechtigung.'; end if;
+  if p_target_user = auth.uid() or exists(select 1 from public.profiles where id=p_target_user and role in ('HEAD_ADMIN','ADMIN')) then raise exception 'Dieses Profil kann nicht von der Forum-Moderation verwarnt werden.'; end if;
+  if char_length(trim(coalesce(p_warning,''))) < 3 then raise exception 'Bitte einen Verwarnungstext angeben.'; end if;
+  insert into public.messages(sender_id,receiver_id,content,is_read,created_at)
+  values(auth.uid(),p_target_user,'Forum-Moderation: ' || trim(p_warning),false,now());
+end;
+$$;
+revoke all on function public.forum_moderator_warn_user(uuid,text) from public;
+grant execute on function public.forum_moderator_warn_user(uuid,text) to authenticated;
 notify pgrst, 'reload schema';
