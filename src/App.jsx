@@ -92,6 +92,7 @@ export default function App() {
   const [forumReplies, setForumReplies] = useState([]);
   const [featureLocks, setFeatureLocks] = useState([]);
   const [profileActivities, setProfileActivities] = useState([]);
+  const [publicProfileUpdates, setPublicProfileUpdates] = useState([]);
   const [selectedMember, setSelectedMember] = useState(null);
   const [viewingMember, setViewingMember] = useState(null);
   const [viewingFriends, setViewingFriends] = useState([]);
@@ -217,6 +218,23 @@ export default function App() {
     const friendChannel = supabase.channel(`ec-friends-${user.id}`).on("postgres_changes", { event: "*", schema: "public", table: "friendships", filter: `receiver_id=eq.${user.id}` }, loadAll).subscribe();
     return () => { supabase.removeChannel(messageChannel); supabase.removeChannel(friendChannel); };
   }, [user?.id]);
+
+  useEffect(() => {
+    if (!supabase || page !== "community") return;
+    supabase.from("public_profile_updates").select("*").order("created_at", { ascending: false }).limit(12)
+      .then(({ data, error }) => { if (!error) setPublicProfileUpdates(data || []); });
+  }, [page]);
+
+  useEffect(() => {
+    if (page !== "community") return;
+    const host = document.querySelector(".community-hub");
+    if (!host || host.querySelector(".public-profile-updates")) return;
+    const panel = document.createElement("aside"); panel.className = "public-profile-updates panel";
+    panel.innerHTML = '<span class="eyebrow">ÖFFENTLICHE PROFIL-AKTUALISIERUNGEN</span><h2>Aus der Community</h2>';
+    if (!publicProfileUpdates.length) panel.insertAdjacentHTML("beforeend", "<p>Noch keine öffentlichen Profil-Aktualisierungen.</p>");
+    publicProfileUpdates.forEach((entry) => { const row = document.createElement("div"); const role = roleClass(entry.role); row.className = `hub-row profile-update ${role}`; row.innerHTML = `<img src="${entry.avatar_url || DEFAULT_AVATAR}" alt=""><div><strong>${entry.role === "HEAD_ADMIN" ? "♛" : entry.role === "ADMIN" || entry.role === "SUPPORTER" ? "★" : ""} ${entry.nickname}${entry.is_verified ? " ✓" : ""}</strong><span>${entry.activity_type}</span></div>`; panel.appendChild(row); });
+    host.appendChild(panel);
+  }, [page, publicProfileUpdates]);
 
   useEffect(() => {
     if (page !== "community" || !isAdmin(profile?.role)) return;
@@ -533,7 +551,7 @@ export default function App() {
     if (error && /bio_(font|size)|bio_image_url.*column|column.*bio_/i.test(error.message || "")) { delete payload.bio_font; delete payload.bio_size; ({ error } = await supabase.from("profiles").update(payload).eq("id", user.id)); }
     if (error) return showNotice(error.message); await logProfileActivity("Profil aktualisiert"); showNotice("Profil wurde gespeichert."); await loadAll();
   }
-  async function logProfileActivity(label) { if (!user?.id) return; const { error } = await supabase.from("profile_activity").insert({ profile_id: user.id, actor_id: user.id, activity_type: label }); if (error) console.warn(error.message); }
+  async function logProfileActivity(label) { if (!user?.id) return; let { error } = await supabase.rpc("log_profile_change", { p_activity: label }); if (error && /function|schema cache|does not exist/i.test(error.message || "")) ({ error } = await supabase.from("profile_activity").insert({ profile_id: user.id, actor_id: user.id, activity_type: label })); if (error) console.warn(error.message); }
   async function uploadProfileImage(file) {
     if (!file || !user) return; if (!file.type.startsWith("image/")) return showNotice("Bitte ein Bild auswählen."); if (file.size > 5 * 1024 * 1024) return showNotice("Maximal 5 MB.");
     const ext = file.name.split(".").pop()?.toLowerCase() || "jpg"; const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
