@@ -22,11 +22,14 @@
 /* Profile is intentionally narrow and portrait-like; the editor uses the remaining space. */
 .my-area-layout{grid-template-columns:300px minmax(0,1fr)!important;align-items:stretch!important}
 .my-profile-card{min-height:620px!important;width:300px!important;box-sizing:border-box!important}
+.my-profile-card{background-image:var(--profile-background-image,none)!important;background-size:cover!important;background-position:center!important}
+.profile-bio-image{width:calc(100% - 36px)!important;max-height:180px!important;object-fit:cover!important;border-radius:12px!important;margin:14px 18px 4px!important}.profile-bio.serif{font-family:Georgia,serif!important}.profile-bio.handwritten{font-family:cursive!important}.profile-bio.small{font-size:13px!important}.profile-bio.large{font-size:18px!important}
 .sidebar-profile{background:#203245!important;color:#fff!important;border:1px solid #40566c!important}
 .sidebar-profile strong{color:#fff!important}
 .sidebar-profile .role-badge.head-admin{width:38px!important;height:38px!important;padding:0!important;display:inline-grid!important;place-items:center!important;font-size:24px!important;background:#b87518!important;border:1px solid #ffd15e!important;color:#fff7d5!important}
 .homepage-image-picker{display:flex!important;flex-direction:column!important;gap:6px!important;font-weight:800!important;color:#405166!important}
 .homepage-image-picker input{padding:8px!important}
+.homepage-upload-preview{width:100%;max-height:180px;object-fit:cover;border-radius:12px;border:1px solid #cbd8e5}.homepage-upload-status{margin:0;color:#405166;font-size:13px;font-weight:700}
 @media(max-width:760px){.my-area-layout{grid-template-columns:1fr!important}.my-profile-card{width:100%!important;min-height:420px!important}}
 
 /* Member cards are portrait cards, not wide landscape tiles. */
@@ -37,7 +40,14 @@
 .modern-main .member-card .member-status span{width:10px!important;height:10px!important;border-radius:50%!important;background:#95a6b5!important}.modern-main .member-card .member-status.online span{background:#56e28c!important;box-shadow:0 0 10px #56e28c!important}
 .topbar-user strong{display:flex!important;align-items:center!important;gap:7px!important}.nickname-crown{color:#ffd15e!important;font-size:22px!important;line-height:1!important}
 .sidebar-profile{min-height:98px!important}.sidebar-profile>div{min-width:0!important}.sidebar-profile strong{overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}.sidebar-profile .role-badge{margin-top:6px!important}
+.admin-member-person-button img,.admin-member-card img{width:64px!important;height:64px!important;min-width:64px!important;max-width:64px!important;min-height:64px!important;max-height:64px!important;object-fit:cover!important;border-radius:50%!important;display:block!important}.admin-member-card{overflow:hidden!important}.admin-member-person-button{display:flex!important;align-items:center!important;gap:14px!important;text-align:left!important}
+.public-friends{margin-top:28px;padding:26px;border-radius:22px;background:#fff;border:1px solid #d8e0e8}.public-friends h2{margin:7px 0 18px;color:#33465b}.public-friends>div{display:flex;flex-wrap:wrap;gap:12px}.public-friends button{display:flex;align-items:center;gap:9px;padding:8px 12px;border:1px solid #d8e0e8;border-radius:999px;background:#f6f9fc;color:#33465b;font-weight:800;cursor:pointer}.public-friends img{width:38px;height:38px;object-fit:cover;border-radius:50%}
+.member-admin-tools{margin-top:28px;padding:26px;border:1px solid #9cb2c8;border-radius:22px;background:#172536;color:#fff}.member-admin-tools h2{margin:7px 0 18px}.member-admin-tools>div{display:flex;flex-wrap:wrap;gap:10px}.member-admin-tools .secondary-button{background:#253649;color:#fff;border-color:#7690a9}.member-admin-tools .danger-button{background:#ba3a3a}
 .member-profile-page{max-width:980px;margin:0 auto}.member-profile-hero{display:grid;grid-template-columns:220px 1fr;gap:32px;align-items:center;min-height:430px;padding:46px;border-radius:28px;background:#172536;color:#fff}.member-profile-hero img{width:190px;height:190px;border-radius:50%;object-fit:cover;border:4px solid #ffd15e}.member-profile-hero h1{font-size:clamp(38px,6vw,64px);margin:8px 0}.member-profile-hero span{font-weight:800;color:#ffd15e}.member-profile-bio{line-height:1.7;max-width:650px}.member-profile-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:22px}@media(max-width:680px){.modern-main .member-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}.modern-main .member-card{min-height:280px!important;height:280px!important}.member-profile-hero{grid-template-columns:1fr;text-align:center;padding:28px}.member-profile-hero img{margin:auto}}
+.member-profile-hero img.member-profile-default-avatar{width:128px;height:128px;margin:0 auto}
+
+/* The supplied Community logo replaces the old star mark on the start page and in the header. */
+.topbar-brand .topbar-logo{width:205px!important;height:66px!important;max-height:66px!important;object-fit:contain!important;object-position:left center!important;padding:4px 8px!important;border-radius:12px!important;background:#fff!important}.community-logo-hero{padding:0!important;background:#fff!important;overflow:hidden!important}.community-logo-hero img{width:100%!important;height:auto!important;max-height:420px!important;display:block!important;object-fit:contain!important}@media(max-width:680px){.topbar-brand .topbar-logo{width:150px!important;height:50px!important;max-height:50px!important;padding:3px 5px!important}.community-logo-hero img{max-height:260px!important}}
 
 /* Two independent homepage frame builders. Both receive the same upload field on desktop and mobile. */
 .homepage-builder-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:18px!important;align-items:stretch!important}
