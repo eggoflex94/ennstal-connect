@@ -312,6 +312,25 @@ export default function App() {
       select.value = settings[key] === "FRIENDS" ? "FRIENDS" : "PUBLIC"; field.appendChild(select); section.appendChild(field);
     });
     form.querySelector(".primary-button")?.before(section);
+    const verification = document.createElement("div"); verification.className = "verification-request";
+    if (profile.is_verified) {
+      verification.textContent = "✓ Dieses Profil ist verifiziert.";
+    } else {
+      const button = document.createElement("button"); button.type = "button"; button.className = "secondary-button";
+      button.textContent = isHeadAdmin(profile.role) ? "✓ Eigenes Head-Admin-Profil verifizieren" : "✓ Verifizierung anfragen";
+      button.onclick = async () => {
+        if (isHeadAdmin(profile.role)) {
+          const { error } = await supabase.rpc("admin_set_profile_verification", { p_user_id: user.id, p_verified: true });
+          if (error) return showNotice(error.message); showNotice("Dein Head-Admin-Profil wurde verifiziert."); await loadAll(); return;
+        }
+        const note = prompt("Warum möchtest du dein Profil verifizieren lassen? (optional)", "");
+        if (note === null) return;
+        const { error } = await supabase.rpc("request_profile_verification", { p_note: note.trim() });
+        if (error) return showNotice(error.message); showNotice("Verifizierungsanfrage wurde an den Head Admin gesendet.");
+      };
+      verification.appendChild(button);
+    }
+    section.appendChild(verification);
     document.querySelectorAll(".profile-gallery figure").forEach((figure, index) => {
       const photo = memberPhotos.filter((item) => item.owner_id === user?.id)[index]; if (!photo || figure.querySelector(".photo-visibility")) return;
       const select = document.createElement("select"); select.className = "photo-visibility"; select.value = photo.visibility === "FRIENDS" ? "FRIENDS" : "PUBLIC";

@@ -16,6 +16,43 @@ alter table public.profiles add column if not exists verified_at timestamptz;
 alter table public.profiles add column if not exists verified_by uuid references public.profiles(id) on delete set null;
 alter table public.profiles add column if not exists privacy_settings jsonb not null default '{"name":"PUBLIC","birth_date":"PUBLIC","bio":"PUBLIC","location":"PUBLIC","interests":"PUBLIC","website":"PUBLIC","photos":"PUBLIC","activity":"PUBLIC"}'::jsonb;
 
+create table if not exists public.verification_requests (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  note text not null default '' check (char_length(note) <= 1000),
+  status text not null default 'PENDING' check (status in ('PENDING','APPROVED','DECLINED')),
+  created_at timestamptz not null default now(),
+  reviewed_at timestamptz,
+  reviewed_by uuid references public.profiles(id) on delete set null,
+  unique(user_id, status)
+);
+alter table public.verification_requests enable row level security;
+drop policy if exists verification_requests_read on public.verification_requests;
+create policy verification_requests_read on public.verification_requests for select to authenticated
+using (user_id = auth.uid() or public.ec_is_head_admin());
+drop policy if exists verification_requests_create on public.verification_requests;
+create policy verification_requests_create on public.verification_requests for insert to authenticated
+with check (user_id = auth.uid() and status = 'PENDING');
+
+create or replace function public.request_profile_verification(p_note text default '')
+returns void language plpgsql security definer set search_path = public as $$
+declare v_head_admin uuid; v_name text;
+begin
+  if auth.uid() is null then raise exception 'Nicht eingeloggt.'; end if;
+  if exists (select 1 from public.profiles where id = auth.uid() and is_verified) then raise exception 'Dein Profil ist bereits verifiziert.'; end if;
+  if exists (select 1 from public.verification_requests where user_id = auth.uid() and status = 'PENDING') then raise exception 'Deine Verifizierungsanfrage wird bereits geprüft.'; end if;
+  insert into public.verification_requests(user_id, note) values (auth.uid(), left(trim(coalesce(p_note, '')), 1000));
+  select id into v_head_admin from public.profiles where role = 'HEAD_ADMIN' and account_status = 'ACTIVE' limit 1;
+  select coalesce(nullif(nickname, ''), 'Ein Mitglied') into v_name from public.profiles where id = auth.uid();
+  if v_head_admin is not null and v_head_admin <> auth.uid() then
+    insert into public.messages(sender_id, receiver_id, content, is_read, created_at)
+    values (auth.uid(), v_head_admin, v_name || ' hat eine Verifizierungsanfrage gestellt.', false, now());
+  end if;
+end;
+$$;
+revoke all on function public.request_profile_verification(text) from public;
+grant execute on function public.request_profile_verification(text) to authenticated;
+
 create table if not exists public.member_photos (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid not null references public.profiles(id) on delete cascade,
