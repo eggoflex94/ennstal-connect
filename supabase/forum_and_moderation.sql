@@ -19,6 +19,16 @@ create table if not exists public.forum_posts (
 );
 create index if not exists forum_posts_scope_created_idx on public.forum_posts(scope, created_at desc);
 
+alter table public.profiles add column if not exists forum_moderator boolean not null default false;
+create table if not exists public.forum_replies (
+  id uuid primary key default gen_random_uuid(), post_id uuid not null references public.forum_posts(id) on delete cascade,
+  author_id uuid not null references public.profiles(id) on delete cascade,
+  content text not null check (char_length(trim(content)) between 2 and 3000),
+  edited_at timestamptz, edited_by uuid references public.profiles(id) on delete set null,
+  edit_reason text, created_at timestamptz not null default now()
+);
+create index if not exists forum_replies_post_created_idx on public.forum_replies(post_id, created_at);
+
 create table if not exists public.user_feature_locks (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.profiles(id) on delete cascade,
@@ -74,6 +84,7 @@ values ('community-media', 'community-media', true)
 on conflict (id) do update set public = true;
 
 alter table public.forum_posts enable row level security;
+alter table public.forum_replies enable row level security;
 alter table public.user_feature_locks enable row level security;
 alter table public.profile_activity enable row level security;
 
@@ -100,15 +111,20 @@ end;
 $$;
 
 revoke all on public.forum_posts from anon, authenticated;
+revoke all on public.forum_replies from anon, authenticated;
 revoke all on public.user_feature_locks from anon, authenticated;
 revoke all on public.profile_activity from anon, authenticated;
 grant select, insert on public.forum_posts to authenticated;
+grant select on public.forum_replies to authenticated;
 grant select on public.user_feature_locks to authenticated;
 grant select, insert on public.profile_activity to authenticated;
 
 drop policy if exists forum_posts_read on public.forum_posts;
 create policy forum_posts_read on public.forum_posts for select to authenticated
 using (scope = 'COMMUNITY' or public.ec_is_admin());
+drop policy if exists forum_replies_read on public.forum_replies;
+create policy forum_replies_read on public.forum_replies for select to authenticated
+using (exists(select 1 from public.forum_posts post where post.id=post_id and (post.scope='COMMUNITY' or public.ec_is_admin())));
 drop policy if exists forum_posts_create on public.forum_posts;
 create policy forum_posts_create on public.forum_posts for insert to authenticated
 with check (
@@ -175,6 +191,56 @@ begin
  if not found then raise exception 'Du darfst diesen Beitrag nicht löschen.'; end if;
 end; $$;
 
+create or replace function public.ec_is_forum_moderator()
+returns boolean language sql stable security definer set search_path=public as $$
+  select exists(select 1 from public.profiles where id=auth.uid() and account_status='ACTIVE' and (role in ('HEAD_ADMIN','ADMIN') or (role='SUPPORTER' and forum_moderator)));
+$$;
+create or replace function public.forum_create_reply(p_post_id uuid, p_content text)
+returns void language plpgsql security definer set search_path=public as $$
+declare post_scope text;
+begin
+  select scope into post_scope from public.forum_posts where id=p_post_id;
+  if post_scope is null or char_length(trim(p_content)) < 2 then raise exception 'Ungültige Antwort.'; end if;
+  if post_scope='ADMIN' and not public.ec_is_admin() then raise exception 'Keine Admin-Berechtigung.'; end if;
+  if post_scope='COMMUNITY' and exists(select 1 from public.user_feature_locks where user_id=auth.uid() and feature_key='FORUM_POSTING' and is_locked) then raise exception 'Deine Forumsfunktion ist gesperrt.'; end if;
+  insert into public.forum_replies(post_id,author_id,content) values(p_post_id,auth.uid(),trim(p_content));
+end; $$;
+create or replace function public.forum_update_reply(p_reply_id uuid, p_content text, p_reason text)
+returns void language plpgsql security definer set search_path=public as $$
+declare reply_author uuid; post_scope text;
+begin
+  select reply.author_id, post.scope into reply_author, post_scope from public.forum_replies reply join public.forum_posts post on post.id=reply.post_id where reply.id=p_reply_id;
+  if reply_author is null or char_length(trim(p_content)) < 2 or char_length(trim(p_reason)) < 3 then raise exception 'Ungültige Antwort oder Bearbeitungsgrund.'; end if;
+  if reply_author<>auth.uid() and not public.ec_is_head_admin() and not (post_scope='COMMUNITY' and public.ec_is_forum_moderator()) then raise exception 'Keine Moderationsberechtigung.'; end if;
+  update public.forum_replies set content=trim(p_content), edited_at=now(), edited_by=auth.uid(), edit_reason=trim(p_reason) where id=p_reply_id;
+end; $$;
+create or replace function public.forum_delete_reply(p_reply_id uuid)
+returns void language plpgsql security definer set search_path=public as $$
+declare reply_author uuid; post_scope text;
+begin
+  select reply.author_id, post.scope into reply_author, post_scope from public.forum_replies reply join public.forum_posts post on post.id=reply.post_id where reply.id=p_reply_id;
+  if reply_author is null then raise exception 'Antwort nicht gefunden.'; end if;
+  if reply_author<>auth.uid() and not public.ec_is_head_admin() and not (post_scope='COMMUNITY' and public.ec_is_forum_moderator()) then raise exception 'Keine Moderationsberechtigung.'; end if;
+  delete from public.forum_replies where id=p_reply_id;
+end; $$;
+create or replace function public.admin_set_forum_moderator(p_target_user uuid, p_enabled boolean)
+returns void language plpgsql security definer set search_path=public as $$
+begin
+  if not public.ec_is_head_admin() then raise exception 'Nur der Head Admin darf Forum-Moderatoren verwalten.'; end if;
+  if p_enabled and not exists(select 1 from public.profiles where id=p_target_user and role='SUPPORTER' and account_status='ACTIVE') then raise exception 'Nur aktive Supporter können Forum-Moderatoren werden.'; end if;
+  update public.profiles set forum_moderator=p_enabled where id=p_target_user;
+  if not found then raise exception 'Mitglied nicht gefunden.'; end if;
+end; $$;
+create or replace function public.forum_delete_post(p_post_id uuid)
+returns void language plpgsql security definer set search_path=public as $$
+declare post_author uuid; post_scope text;
+begin
+  select author_id,scope into post_author,post_scope from public.forum_posts where id=p_post_id;
+  if post_author is null then raise exception 'Beitrag nicht gefunden.'; end if;
+  if post_author<>auth.uid() and not public.ec_is_head_admin() and not (post_scope='COMMUNITY' and public.ec_is_forum_moderator()) then raise exception 'Keine Moderationsberechtigung.'; end if;
+  delete from public.forum_posts where id=p_post_id;
+end; $$;
+
 create or replace function public.admin_set_feature_lock(p_target_user uuid, p_feature_key text, p_is_locked boolean, p_reason text)
 returns void language plpgsql security definer set search_path = public as $$
 begin
@@ -200,4 +266,14 @@ grant execute on function public.admin_set_feature_lock(uuid,text,boolean,text) 
 grant execute on function public.forum_create_post(text,text,text,text,text,text) to authenticated;
 grant execute on function public.forum_update_own_post(uuid,text,text) to authenticated;
 grant execute on function public.forum_delete_post(uuid) to authenticated;
+revoke all on function public.ec_is_forum_moderator() from public;
+revoke all on function public.forum_create_reply(uuid,text) from public;
+revoke all on function public.forum_update_reply(uuid,text,text) from public;
+revoke all on function public.forum_delete_reply(uuid) from public;
+revoke all on function public.admin_set_forum_moderator(uuid,boolean) from public;
+grant execute on function public.ec_is_forum_moderator() to authenticated;
+grant execute on function public.forum_create_reply(uuid,text) to authenticated;
+grant execute on function public.forum_update_reply(uuid,text,text) to authenticated;
+grant execute on function public.forum_delete_reply(uuid) to authenticated;
+grant execute on function public.admin_set_forum_moderator(uuid,boolean) to authenticated;
 notify pgrst, 'reload schema';
