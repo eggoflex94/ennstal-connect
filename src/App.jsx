@@ -623,7 +623,7 @@ export default function App() {
           <button onClick={() => setPage("community")}>✦ <span>Community</span></button>
           <button onClick={() => setPage("forum")}>▤ <span>Forum</span></button>
           <button onClick={() => setPage("profile")}>⚙ <span>Mein Profil</span></button>
-          {isAdmin(profile?.role) && <button onClick={() => setPage("admin")}>♛ <span>Admin-Zentrale</span></button>}
+          {isAdmin(profile?.role) && <button className="admin-nav-entry" onClick={() => setPage("admin")}>♛ <span>Admin-Zentrale</span></button>}
         </nav>
         <button className="sidebar-logout" onClick={logout}>⇥ <span>Abmelden</span></button>
       </aside>
