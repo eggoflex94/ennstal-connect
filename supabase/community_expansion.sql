@@ -13,6 +13,8 @@ alter table public.profiles add column if not exists suspended_by uuid;
 alter table public.profiles add column if not exists hide_online_status boolean not null default false;
 alter table public.profiles add column if not exists is_test_account boolean not null default false;
 alter table public.profiles add column if not exists admin_responsibilities text[] not null default '{}';
+alter table public.profiles add column if not exists verification_required_at timestamptz;
+alter table public.profiles add column if not exists verification_due_at timestamptz;
 
 create or replace function public.admin_set_responsibilities(p_target_user uuid, p_responsibilities text[])
 returns void language plpgsql security definer set search_path=public as $$
@@ -24,6 +26,45 @@ end;
 $$;
 revoke all on function public.admin_set_responsibilities(uuid,text[]) from public;
 grant execute on function public.admin_set_responsibilities(uuid,text[]) to authenticated;
+
+create or replace function public.admin_require_profile_verification(p_target_user uuid, p_reason text, p_due_days integer default 7)
+returns void language plpgsql security definer set search_path=public as $$
+declare v_actor text;
+begin
+  if not public.ec_is_admin() then raise exception 'Keine Admin-Berechtigung.'; end if;
+  if p_target_user = auth.uid() or p_due_days not between 1 and 30 or char_length(trim(coalesce(p_reason,''))) < 3 then raise exception 'Ungültige Verifizierungsanfrage.'; end if;
+  if exists(select 1 from public.profiles where id=p_target_user and is_verified) then raise exception 'Dieses Profil ist bereits verifiziert.'; end if;
+  update public.verification_requests set note=left(trim(p_reason),1000), created_at=now(), reviewed_at=null, reviewed_by=null where user_id=p_target_user and status='PENDING';
+  if not found then insert into public.verification_requests(user_id,note,status) values(p_target_user,left(trim(p_reason),1000),'PENDING'); end if;
+  update public.profiles set verification_required_at=now(), verification_due_at=now() + make_interval(days => p_due_days) where id=p_target_user;
+  select coalesce(nullif(nickname,''),'Die Administration') into v_actor from public.profiles where id=auth.uid();
+  insert into public.messages(sender_id,receiver_id,content,is_read,created_at) values(auth.uid(),p_target_user, v_actor || ' verlangt eine Profil-Verifizierung bis ' || to_char(now() + make_interval(days => p_due_days),'DD.MM.YYYY') || E'.\nGrund: ' || trim(p_reason),false,now());
+end;
+$$;
+create or replace function public.admin_verification_review_queue()
+returns table(user_id uuid, nickname text, due_at timestamptz, reason text)
+language plpgsql security definer set search_path=public as $$
+begin
+  if not public.ec_is_admin() then raise exception 'Keine Admin-Berechtigung.'; end if;
+  return query select p.id, coalesce(nullif(p.nickname,''),'Mitglied'), p.verification_due_at, v.note from public.profiles p left join public.verification_requests v on v.user_id=p.id and v.status='PENDING' where p.is_verified=false and p.verification_due_at is not null order by p.verification_due_at;
+end;
+$$;
+create or replace function public.head_admin_suspend_expired_verifications()
+returns integer language plpgsql security definer set search_path=public as $$
+declare affected integer;
+begin
+  if not public.ec_is_head_admin() then raise exception 'Nur der Head Admin darf abgelaufene Verifizierungen sperren.'; end if;
+  update public.profiles set account_status='SUSPENDED', is_online=false, suspension_reason='Verifizierungsfrist abgelaufen', suspended_at=now(), suspended_by=auth.uid() where is_verified=false and verification_due_at < now() and account_status='ACTIVE';
+  get diagnostics affected = row_count;
+  return affected;
+end;
+$$;
+revoke all on function public.admin_require_profile_verification(uuid,text,integer) from public;
+revoke all on function public.admin_verification_review_queue() from public;
+revoke all on function public.head_admin_suspend_expired_verifications() from public;
+grant execute on function public.admin_require_profile_verification(uuid,text,integer) to authenticated;
+grant execute on function public.admin_verification_review_queue() to authenticated;
+grant execute on function public.head_admin_suspend_expired_verifications() to authenticated;
 alter table public.profiles add column if not exists is_verified boolean not null default false;
 alter table public.profiles add column if not exists verified_at timestamptz;
 alter table public.profiles add column if not exists verified_by uuid references public.profiles(id) on delete set null;
