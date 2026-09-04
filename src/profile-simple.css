@@ -91,8 +91,9 @@
 .community-hub-grid article:nth-child(4){display:none!important}
 .member-profile-hero.business-profile>div>span{font-size:0!important;color:#62bfff!important}.member-profile-hero.business-profile>div>span::after{content:"★ Unternehmenskonto";font-size:16px;font-weight:800}.member-profile-hero.business-profile>img{border-color:#3daaf2!important}
 .member-business-tool{margin-top:18px}.member-business-tool h2{margin:6px 0}.member-business-tool p{color:#617589}
-.topbar-brand,.topbar-brand .topbar-logo{background:transparent!important;border-radius:0!important;padding:0!important}.topbar-brand .topbar-logo{width:190px!important;height:58px!important;object-fit:contain!important}
+.topbar-brand{width:auto!important;height:auto!important;min-width:0!important;min-height:0!important;background:none!important;border:0!important;border-radius:0!important;padding:0!important;box-shadow:none!important;overflow:visible!important}.topbar-brand .topbar-logo{display:block!important;width:190px!important;height:58px!important;max-height:none!important;object-fit:contain!important;background:transparent!important;border:0!important;border-radius:0!important;padding:0!important;box-shadow:none!important}
 .forum-post-head{position:relative}.forum-delete-button{margin-left:auto!important}
+.business-account-button{background:#146da8!important;border-color:#61bdf3!important;color:#fff!important}.admin-member-card:has(.business-account-button) .admin-member-card-info strong{color:#4eaeea!important}
 
 /* Two independent homepage frame builders. Both receive the same upload field on desktop and mobile. */
 .homepage-builder-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:18px!important;align-items:stretch!important}
