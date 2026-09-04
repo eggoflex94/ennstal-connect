@@ -125,6 +125,19 @@ export default function App() {
         setProfile(null); setMembers([]); setFriendships([]); return;
       }
       await supabase.rpc("ensure_current_profile");
+      // A suspended account must never reach the member area, even when a
+      // previously issued browser session still exists.
+      const { data: accessProfile } = await supabase.from("profiles")
+        .select("account_status,suspension_reason")
+        .eq("id", currentUser.id)
+        .maybeSingle();
+      if (accessProfile?.account_status === "SUSPENDED") {
+        await supabase.auth.signOut();
+        setUser(null); setProfile(null); setMembers([]); setFriendships([]);
+        const reason = String(accessProfile.suspension_reason || "Kein Grund wurde hinterlegt.").trim();
+        showNotice(`Dein Konto ist gesperrt. Grund: ${reason}`);
+        return;
+      }
       void supabase.from("profiles").update({ is_online: true, last_active_at: new Date().toISOString() }).eq("id", currentUser.id);
       await supabase.rpc("claim_initial_head_admin");
       const safe = async (query, fallback = []) => {
@@ -203,9 +216,18 @@ export default function App() {
     try {
       const { data, error } = await withTimeout(supabase.auth.signInWithPassword({ email: f.get("email"), password: f.get("password") }), supabaseUnavailableMessage);
       if (error) return showNotice(error.message);
+      const signedInUser = data?.user || data?.session?.user || null;
+      const { data: accessProfile } = await supabase.from("profiles")
+        .select("account_status,suspension_reason")
+        .eq("id", signedInUser?.id || "")
+        .maybeSingle();
+      if (accessProfile?.account_status === "SUSPENDED") {
+        await supabase.auth.signOut();
+        return showNotice(`Dein Konto ist gesperrt. Grund: ${String(accessProfile.suspension_reason || "Kein Grund wurde hinterlegt.").trim()}`);
+      }
       // Render the signed-in shell immediately. Profile and community data are
       // refreshed separately so a slow database request cannot block login.
-      setUser(data?.user || data?.session?.user || null);
+      setUser(signedInUser);
       void loadAll();
     } catch (error) { showNotice(error?.message || supabaseUnavailableMessage); }
   }
@@ -278,9 +300,11 @@ export default function App() {
   async function toggleSuspension(m) {
     if (!isAdmin(profile?.role) || m.role === "HEAD_ADMIN") return showNotice("Keine Berechtigung.");
     const next = m.account_status === "SUSPENDED" ? "ACTIVE" : "SUSPENDED";
+    const reason = next === "SUSPENDED" ? prompt(`Warum wird ${getName(m)} gesperrt?`, "Verstoß gegen die Community-Regeln") : null;
+    if (next === "SUSPENDED" && (reason === null || reason.trim().length < 3)) return showNotice("Bitte gib einen Sperrgrund mit mindestens 3 Zeichen an.");
     if (!confirm(`${getName(m)} ${next === "ACTIVE" ? "freischalten" : "sperren"}?`)) return;
-    const { error } = await supabase.rpc("admin_set_account_status", { target_user: m.id, new_status: next });
-    if (error) return showNotice(error.message); await loadAll();
+    const { error } = await supabase.rpc("admin_set_account_status", { target_user: m.id, new_status: next, p_reason: reason?.trim() || null });
+    if (error) return showNotice(error.message); showNotice(next === "SUSPENDED" ? "Konto wurde gesperrt." : "Konto wurde freigeschaltet."); await loadAll();
   }
 
   async function saveMemberData(e) {
@@ -310,6 +334,7 @@ export default function App() {
   async function saveProfile(e) {
     e.preventDefault(); const f = new FormData(e.currentTarget);
     const payload = { nickname: String(f.get("nickname") || "").trim(), gender: f.get("gender") || null, bio: String(f.get("bio") || "").trim(), location: String(f.get("location") || "").trim(), interests: String(f.get("interests") || "").split(",").map((interest) => interest.trim()).filter(Boolean), website: String(f.get("website") || "").trim(), profile_accent: f.get("profile_accent") || "#ff6b25", profile_background: f.get("profile_background_image") || f.get("profile_background_color") || "#f6f9fc", profile_layout: f.get("profile_layout") || "standard", bio_font: f.get("bio_font") || "modern", bio_size: f.get("bio_size") || "normal" };
+    if (isAdmin(profile?.role)) payload.hide_online_status = f.get("hide_online_status") === "on";
     let { error } = await supabase.from("profiles").update(payload).eq("id", user.id);
     // Older live databases may not yet include the optional presentation fields.
     // Save the rest of the profile instead of blocking the whole form.
@@ -453,7 +478,7 @@ function MemberCard({ member, profile, friendships, onOpen, onMessage }) {
     <strong className="member-nickname">{getName(member)}</strong>
     <img className="member-avatar" src={member.avatar_url || DEFAULT_AVATAR} alt=""/>
     <div className="member-name">{[member.first_name, member.last_name].filter(Boolean).join(" ")}{getAge(member.birth_date) !== null && ` · ${getAge(member.birth_date)} Jahre`}</div>
-    <div className={`member-status ${member.is_online ? "online" : "offline"}`}><span/>{member.is_online ? "Online" : "Offline"}{!member.is_online && member.last_active_at && <small>zuletzt aktiv {new Date(member.last_active_at).toLocaleString("de-AT", { dateStyle: "short", timeStyle: "short" })}</small>}</div>
+    {!member.hide_online_status && <div className={`member-status ${member.is_online ? "online" : "offline"}`}><span/>{member.is_online ? "Online" : "Offline"}{!member.is_online && member.last_active_at && <small>zuletzt aktiv {new Date(member.last_active_at).toLocaleString("de-AT", { dateStyle: "short", timeStyle: "short" })}</small>}</div>}
     {member.id !== profile?.id && <button className="member-message" onClick={(e) => { e.stopPropagation(); onMessage(member); }}>💬 Nachricht</button>}
   </article>;
 }

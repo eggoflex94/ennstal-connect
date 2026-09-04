@@ -8,6 +8,7 @@ import "./profile-simple.css";
 import "./profile-customization.js";
 import "./homepage-author.css";
 import "./profile-tools.css";
+import "./admin-online-status.js";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
