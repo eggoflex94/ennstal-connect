@@ -11,6 +11,9 @@ alter table public.profiles add column if not exists suspension_reason text;
 alter table public.profiles add column if not exists suspended_at timestamptz;
 alter table public.profiles add column if not exists suspended_by uuid;
 alter table public.profiles add column if not exists hide_online_status boolean not null default false;
+alter table public.profiles add column if not exists is_verified boolean not null default false;
+alter table public.profiles add column if not exists verified_at timestamptz;
+alter table public.profiles add column if not exists verified_by uuid references public.profiles(id) on delete set null;
 
 create table if not exists public.member_photos (
   id uuid primary key default gen_random_uuid(),
@@ -64,6 +67,21 @@ drop policy if exists community_events_admin_write on public.community_events;
 create policy community_events_read on public.community_events for select to authenticated using(true);
 create policy community_events_admin_write on public.community_events for all to authenticated using(public.ec_is_admin()) with check(public.ec_is_admin());
 
+create table if not exists public.community_event_rsvps (
+  event_id uuid not null references public.community_events(id) on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  status text not null check(status in ('INTERESTED','GOING')),
+  created_at timestamptz not null default now(), updated_at timestamptz not null default now(),
+  primary key(event_id,user_id)
+);
+alter table public.community_event_rsvps enable row level security;
+revoke all on public.community_event_rsvps from anon, authenticated;
+grant select, insert, update on public.community_event_rsvps to authenticated;
+drop policy if exists community_event_rsvps_read on public.community_event_rsvps;
+drop policy if exists community_event_rsvps_write on public.community_event_rsvps;
+create policy community_event_rsvps_read on public.community_event_rsvps for select to authenticated using(true);
+create policy community_event_rsvps_write on public.community_event_rsvps for all to authenticated using(user_id=auth.uid()) with check(user_id=auth.uid());
+
 create table if not exists public.community_ads (
   id uuid primary key default gen_random_uuid(), title text not null, body text not null default '', image_url text, link_url text,
   is_active boolean not null default true, created_by uuid references public.profiles(id) on delete set null, created_at timestamptz not null default now()
@@ -86,8 +104,18 @@ end; $$;
 revoke all on function public.admin_set_business_account(uuid,boolean,text,text) from public;
 grant execute on function public.admin_set_business_account(uuid,boolean,text,text) to authenticated;
 
+create or replace function public.admin_set_profile_verification(p_user_id uuid, p_verified boolean)
+returns void language plpgsql security definer set search_path=public as $$
+begin
+  if not public.ec_is_head_admin() then raise exception 'Nur der Head Admin darf Verifizierungen verwalten.'; end if;
+  update public.profiles set is_verified=p_verified, verified_at=case when p_verified then now() else null end, verified_by=case when p_verified then auth.uid() else null end where id=p_user_id;
+  if not found then raise exception 'Mitglied nicht gefunden.'; end if;
+end; $$;
+revoke all on function public.admin_set_profile_verification(uuid,boolean) from public;
+grant execute on function public.admin_set_profile_verification(uuid,boolean) to authenticated;
+
 drop function if exists public.admin_set_account_status(uuid,text);
-create function public.admin_set_account_status(target_user uuid, new_status text, p_reason text)
+create or replace function public.admin_set_account_status(target_user uuid, new_status text, p_reason text)
 returns void language plpgsql security definer set search_path=public as $$
 declare actor_name text;
 begin

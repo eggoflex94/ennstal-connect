@@ -56,6 +56,7 @@ export default function App() {
   const [news, setNews] = useState([]);
   const [events, setEvents] = useState([]);
   const [communityEvents, setCommunityEvents] = useState([]);
+  const [eventRsvps, setEventRsvps] = useState([]);
   const [communityAds, setCommunityAds] = useState([]);
   const [memberPhotos, setMemberPhotos] = useState([]);
   const [photoLikes, setPhotoLikes] = useState([]);
@@ -224,6 +225,7 @@ export default function App() {
         const entry = communityEvents.slice(0, 5)[index]; if (!entry) return;
         authorMarkup(row, entry.created_by, "event-author");
         if (entry.status === "CANCELLED") { row.classList.add("cancelled-event"); if (!row.querySelector(".event-cancelled-label")) { const label = document.createElement("small"); label.className = "event-cancelled-label"; label.textContent = `ABGESAGT${entry.cancellation_reason ? ` · ${entry.cancellation_reason}` : ""}`; row.querySelector("div")?.appendChild(label); } }
+        if (entry.status !== "CANCELLED" && !row.querySelector(".event-rsvp-actions")) { const rsvp = document.createElement("div"); rsvp.className = "event-rsvp-actions"; const current = eventRsvps.find((item) => item.event_id === entry.id && item.user_id === user?.id)?.status; ["INTERESTED", "GOING"].forEach((status) => { const button = document.createElement("button"); button.className = current === status ? "primary-button" : "secondary-button"; button.textContent = status === "GOING" ? "✓ Ich komme" : "☆ Interessiert"; button.onclick = () => respondToCommunityEvent(entry, status); rsvp.appendChild(button); }); row.appendChild(rsvp); }
         if (isAdmin(profile?.role) && !row.querySelector(".event-actions")) {
           const actions = document.createElement("div"); actions.className = "event-actions";
           const edit = document.createElement("button"); edit.className = "secondary-button event-delete-button"; edit.textContent = entry.status === "CANCELLED" ? "Wieder aktivieren" : "✎ Bearbeiten"; edit.onclick = () => editCommunityEvent(entry); actions.appendChild(edit);
@@ -239,7 +241,7 @@ export default function App() {
         if (author && name) { const business = author.account_badge === "BUSINESS"; const moderator = author.forum_moderator; name.className = `role-author ${business ? "business" : roleClass(author.role)}`; name.textContent = `${business ? "★" : roleMark(author.role)} ${getName(author)}${business ? " · Unternehmenskonto" : moderator ? " · Forum-Moderator" : ""}`.trim(); }
       });
     }
-  }, [page, news, communityEvents, forumPosts, members, profile?.role]);
+  }, [page, news, communityEvents, eventRsvps, forumPosts, members, profile?.role]);
 
   useEffect(() => {
     if (page !== "forum" && page !== "admin-forum") return;
@@ -267,18 +269,20 @@ export default function App() {
   useEffect(() => {
     if (!supabase || !user?.id) return undefined;
     const loadCommunityExtras = async () => {
-      const [eventResult, adResult, photoResult, likeResult, commentResult] = await Promise.all([
+      const [eventResult, adResult, photoResult, likeResult, commentResult, rsvpResult] = await Promise.all([
         supabase.from("community_events").select("*").order("event_at", { ascending: true }),
         supabase.from("community_ads").select("*").eq("is_active", true).order("created_at", { ascending: false }),
         supabase.from("member_photos").select("*").order("created_at", { ascending: false }).limit(24),
         supabase.from("member_photo_likes").select("*"),
-        supabase.from("member_photo_comments").select("*").order("created_at", { ascending: true })
+        supabase.from("member_photo_comments").select("*").order("created_at", { ascending: true }),
+        supabase.from("community_event_rsvps").select("*")
       ]);
       if (!eventResult.error) setCommunityEvents(eventResult.data || []);
       if (!adResult.error) setCommunityAds(adResult.data || []);
       if (!photoResult.error) setMemberPhotos(photoResult.data || []);
       if (!likeResult.error) setPhotoLikes(likeResult.data || []);
       if (!commentResult.error) setPhotoComments(commentResult.data || []);
+      if (!rsvpResult.error) setEventRsvps(rsvpResult.data || []);
     };
     void loadCommunityExtras();
     return undefined;
@@ -496,6 +500,7 @@ export default function App() {
   async function deleteNews(entry) { if (!isAdmin(profile?.role) || !confirm(`Neuigkeit „${entry.title}" wirklich löschen?`)) return; const { error } = await supabase.from("news").delete().eq("id", entry.id); if (error) return showNotice(error.message); showNotice("Neuigkeit gelöscht."); await loadAll(); }
   async function editCommunityEvent(event) { if (!isAdmin(profile?.role)) return; if (event.status === "CANCELLED") { const { error } = await supabase.from("community_events").update({ status: "ACTIVE", cancellation_reason: null, cancelled_at: null }).eq("id", event.id); if (error) return showNotice(error.message); showNotice("Veranstaltung wieder aktiviert."); return loadAll(); } const title = prompt("Titel:", event.title); if (title === null) return; const when = prompt("Datum und Uhrzeit (z. B. 2026-09-15T18:30):", new Date(event.event_at).toISOString().slice(0, 16)); if (when === null) return; const location = prompt("Ort:", event.location || ""); if (location === null) return; const description = prompt("Beschreibung:", event.description || ""); if (description === null || title.trim().length < 3 || Number.isNaN(new Date(when).getTime())) return showNotice("Bitte gültigen Titel sowie Datum und Uhrzeit eingeben."); const { error } = await supabase.from("community_events").update({ title: title.trim(), event_at: new Date(when).toISOString(), location: location.trim() || null, description: description.trim() }).eq("id", event.id); if (error) return showNotice(error.message); showNotice("Veranstaltung gespeichert."); await loadAll(); }
   async function cancelCommunityEvent(event) { if (!isAdmin(profile?.role) || !confirm(`Veranstaltung „${event.title}" wirklich absagen?`)) return; const reason = prompt("Grund der Absage (optional):", ""); if (reason === null) return; const { error } = await supabase.from("community_events").update({ status: "CANCELLED", cancellation_reason: reason.trim() || null, cancelled_at: new Date().toISOString() }).eq("id", event.id); if (error) return showNotice(error.message); showNotice("Veranstaltung abgesagt."); await loadAll(); }
+  async function respondToCommunityEvent(event, status) { if (event.status === "CANCELLED") return; const { error } = await supabase.from("community_event_rsvps").upsert({ event_id: event.id, user_id: user.id, status }, { onConflict: "event_id,user_id" }); if (error) return showNotice(error.message); showNotice(status === "GOING" ? "Du hast zugesagt." : "Du hast Interesse vorgemerkt."); await loadAll(); }
   async function deleteCommunityEvent(event) { if (!isAdmin(profile?.role) || !confirm(`Veranstaltung „${event.title}" wirklich löschen?`)) return; const { error } = await supabase.from("community_events").delete().eq("id", event.id); if (error) return showNotice(error.message); setCommunityEvents((current) => current.filter((entry) => entry.id !== event.id)); showNotice("Veranstaltung gelöscht."); }
   async function createCommunityAd(e) { e.preventDefault(); if (!isHeadAdmin(profile?.role)) return showNotice("Werbeflächen verwaltet nur der Global Admin."); const f = new FormData(e.currentTarget); const { error } = await supabase.from("community_ads").insert({ title: String(f.get("title")).trim(), body: String(f.get("body") || "").trim(), link_url: String(f.get("link_url") || "").trim() || null, image_url: String(f.get("image_url") || "").trim() || null, created_by: user.id }); if (error) return showNotice(error.message); e.currentTarget.reset(); showNotice("Werbefläche veröffentlicht."); }
   async function setBusinessAccount(id, enabled) { if (!isHeadAdmin(profile?.role)) return showNotice("Nur der Global Admin darf Unternehmenskonten verwalten."); const company = enabled ? prompt("Firmen- oder Vereinsname:", "") : ""; if (enabled && (company === null || !company.trim())) return; const { error } = await supabase.rpc("admin_set_business_account", { p_user_id: id, p_enabled: enabled, p_company_name: company || null, p_company_description: null }); if (error) return showNotice(error.message); showNotice(enabled ? "Unternehmenskonto vergeben." : "Unternehmenskonto entfernt."); await loadAll(); }
