@@ -184,6 +184,14 @@ export default function App() {
       showNotice("Registrierung erfolgreich. Bitte E-Mail bestätigen.");
     } catch (error) { showNotice(error?.message || supabaseUnavailableMessage); }
   }
+  async function requestPasswordReset() {
+    if (!supabase) return showNotice(supabaseUnavailableMessage);
+    const email = prompt("Bitte gib deine registrierte E-Mail-Adresse ein:", "");
+    if (email === null || !email.trim()) return;
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${location.origin}/` });
+    if (error) return showNotice(error.message);
+    showNotice("Wenn ein Konto mit dieser Adresse existiert, wurde ein Link zum Zurücksetzen versendet.");
+  }
   async function logout() { if (user) await supabase.from("profiles").update({ is_online: false }).eq("id", user.id); await supabase.auth.signOut(); setUser(null); setProfile(null); }
 
   async function requestFriend(m) {
@@ -309,7 +317,7 @@ export default function App() {
   async function openChat(m) { setChatMember(m); setPage("messages"); const { data, error } = await supabase.from("messages").select("*").or(`and(sender_id.eq.${user.id},receiver_id.eq.${m.id}),and(sender_id.eq.${m.id},receiver_id.eq.${user.id})`).order("created_at", { ascending: true }); if (error) return showNotice(error.message); setMessages(data || []); await supabase.rpc("mark_messages_read", { from_user: m.id }); }
   async function openMember(m) { if (!m) return; if (m.id === user.id) return setPage("profile"); setViewingMember(m); setViewingFriends([]); setPage("member-profile"); const [{ data: connections }, { error: visitError }] = await Promise.all([supabase.from("friendships").select("requester_id,receiver_id").eq("status", "ACCEPTED").or(`requester_id.eq.${m.id},receiver_id.eq.${m.id}`), supabase.from("profile_visits").insert({ profile_id: m.id, visitor_id: user.id, visited_at: new Date().toISOString() })]); if (connections) { const ids = connections.map((connection) => connection.requester_id === m.id ? connection.receiver_id : connection.requester_id); setViewingFriends(members.filter((member) => ids.includes(member.id))); } if (visitError) console.warn(visitError.message); }
 
-  if (!user) return <div className="auth-page"><div className="text-logo">ENNSTAL CONNECT</div><Auth login={login} register={register}/>{notice && <div className="toast">{notice}</div>}</div>;
+  if (!user) return <div className="auth-page"><div className="text-logo">ENNSTAL CONNECT</div><Auth login={login} register={register}/><button className="forgot-password-button" onClick={requestPasswordReset}>Passwort vergessen?</button>{notice && <div className="toast">{notice}</div>}</div>;
 
   const unread = messages.filter((m) => m.receiver_id === user.id && !m.is_read).length;
   const myRole = roleLabel(profile?.role);
