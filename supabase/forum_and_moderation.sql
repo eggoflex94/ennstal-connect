@@ -43,6 +43,28 @@ alter table public.profile_activity add column if not exists profile_id uuid ref
 alter table public.profile_activity add column if not exists actor_id uuid references public.profiles(id) on delete cascade;
 alter table public.profile_activity add column if not exists activity_type text;
 alter table public.profile_activity add column if not exists created_at timestamptz not null default now();
+-- A previous preview stored these two columns as text. Convert UUID strings
+-- before creating policies that compare them with auth.uid() (a UUID).
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'profile_activity'
+      and column_name = 'profile_id' and data_type = 'text'
+  ) then
+    alter table public.profile_activity
+      alter column profile_id type uuid using nullif(btrim(profile_id), '')::uuid;
+  end if;
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'profile_activity'
+      and column_name = 'actor_id' and data_type = 'text'
+  ) then
+    alter table public.profile_activity
+      alter column actor_id type uuid using nullif(btrim(actor_id), '')::uuid;
+  end if;
+end;
+$$;
 create index if not exists profile_activity_profile_created_idx on public.profile_activity(profile_id, created_at desc);
 
 -- Community media bucket is optional in older deployments. The client falls back
@@ -63,11 +85,11 @@ create table if not exists public.admin_log (
 );
 create or replace function public.ec_is_admin()
 returns boolean language sql stable security definer set search_path = public as $$
-  select exists(select 1 from public.profiles where id = auth.uid() and role in ('ADMIN','HEAD_ADMIN') and account_status = 'ACTIVE');
+  select exists(select 1 from public.profiles where id::text = auth.uid()::text and role in ('ADMIN','HEAD_ADMIN') and account_status = 'ACTIVE');
 $$;
 create or replace function public.ec_is_head_admin()
 returns boolean language sql stable security definer set search_path = public as $$
-  select exists(select 1 from public.profiles where id = auth.uid() and role = 'HEAD_ADMIN' and account_status = 'ACTIVE');
+  select exists(select 1 from public.profiles where id::text = auth.uid()::text and role = 'HEAD_ADMIN' and account_status = 'ACTIVE');
 $$;
 create or replace function public.ec_log(p_action text, p_target uuid default null, p_details jsonb default '{}'::jsonb)
 returns void language plpgsql security definer set search_path = public as $$
@@ -90,30 +112,30 @@ using (scope = 'COMMUNITY' or public.ec_is_admin());
 drop policy if exists forum_posts_create on public.forum_posts;
 create policy forum_posts_create on public.forum_posts for insert to authenticated
 with check (
-  author_id = (select auth.uid())
+  author_id::text = (select auth.uid()::text)
   and (
     (scope = 'ADMIN' and public.ec_is_admin())
     or (scope = 'COMMUNITY' and not exists (
       select 1 from public.user_feature_locks lock
-      where lock.user_id = (select auth.uid()) and lock.feature_key = 'FORUM_POSTING' and lock.is_locked
+      where lock.user_id::text = (select auth.uid()::text) and lock.feature_key = 'FORUM_POSTING' and lock.is_locked
     ))
   )
 );
 drop policy if exists feature_locks_read on public.user_feature_locks;
 create policy feature_locks_read on public.user_feature_locks for select to authenticated
-using (user_id = (select auth.uid()) or public.ec_is_head_admin());
+using (user_id::text = (select auth.uid()::text) or public.ec_is_head_admin());
 drop policy if exists profile_activity_read on public.profile_activity;
 create policy profile_activity_read on public.profile_activity for select to authenticated
-using (profile_id = (select auth.uid()));
+using (profile_id::text = (select auth.uid()::text));
 drop policy if exists profile_activity_create on public.profile_activity;
 create policy profile_activity_create on public.profile_activity for insert to authenticated
-with check (profile_id = (select auth.uid()) and actor_id = (select auth.uid()));
+with check (profile_id::text = (select auth.uid()::text) and actor_id::text = (select auth.uid()::text));
 
 drop policy if exists community_media_read on storage.objects;
 create policy community_media_read on storage.objects for select to authenticated using (bucket_id = 'community-media');
 drop policy if exists community_media_upload on storage.objects;
 create policy community_media_upload on storage.objects for insert to authenticated
-with check (bucket_id = 'community-media' and owner_id = (select auth.uid()));
+with check (bucket_id = 'community-media' and owner_id::text = (select auth.uid()::text));
 
 create or replace function public.admin_edit_forum_post(p_post_id uuid, p_title text, p_content text, p_reason text)
 returns void language plpgsql security definer set search_path = public as $$
