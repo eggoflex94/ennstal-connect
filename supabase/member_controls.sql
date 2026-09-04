@@ -47,6 +47,34 @@ drop policy if exists news_admin_write on public.news;
 create policy news_admin_write on public.news for all to authenticated
 using (public.ec_is_admin()) with check (public.ec_is_admin());
 
+-- The two configurable homepage frames are owned by the Head Admin.
+create table if not exists public.homepage_sections (
+  id uuid primary key default gen_random_uuid(),
+  title text not null default '',
+  content text not null default '',
+  image_url text,
+  frame_style text not null default 'standard',
+  created_by uuid references public.profiles(id) on delete set null,
+  updated_by uuid references public.profiles(id) on delete set null,
+  sort_order integer not null default 0,
+  is_visible boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+alter table public.homepage_sections add column if not exists image_url text;
+alter table public.homepage_sections add column if not exists frame_style text not null default 'standard';
+alter table public.homepage_sections add column if not exists updated_by uuid references public.profiles(id) on delete set null;
+alter table public.homepage_sections add column if not exists sort_order integer not null default 0;
+alter table public.homepage_sections add column if not exists is_visible boolean not null default true;
+alter table public.homepage_sections add column if not exists updated_at timestamptz not null default now();
+alter table public.homepage_sections enable row level security;
+drop policy if exists homepage_sections_read on public.homepage_sections;
+create policy homepage_sections_read on public.homepage_sections for select to authenticated
+using (is_visible or public.ec_is_head_admin());
+drop policy if exists homepage_sections_head_admin_write on public.homepage_sections;
+create policy homepage_sections_head_admin_write on public.homepage_sections for all to authenticated
+using (public.ec_is_head_admin()) with check (public.ec_is_head_admin());
+
 create or replace function public.admin_set_role(target_user uuid, new_role text)
 returns void
 language plpgsql
