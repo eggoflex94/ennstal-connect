@@ -2,6 +2,7 @@
 -- Run after member_controls.sql.
 
 alter table public.profiles add column if not exists birthday_visible boolean not null default false;
+alter table public.profiles add column if not exists last_active_at timestamptz not null default now();
 alter table public.profiles add column if not exists account_badge text not null default 'STANDARD'
   check (account_badge in ('STANDARD','BUSINESS'));
 alter table public.profiles add column if not exists company_name text;
