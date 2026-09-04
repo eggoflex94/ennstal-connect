@@ -70,6 +70,15 @@
 .auth-intro>p{font-size:0!important}.auth-intro>p::after{content:"Entdecke Neuigkeiten, Veranstaltungen und einen sicheren Austausch für Ennstal und Obersteiermark.";font-size:17px;line-height:1.6}.news-page{max-width:980px;margin:0 auto}.news-composer{display:grid;gap:12px;margin-bottom:20px}.news-composer textarea{min-height:130px;resize:vertical}
 .forgot-password-button{position:fixed;right:max(7vw,34px);bottom:calc(50% - 220px);z-index:2;border:0;background:transparent;color:#fff!important;font-weight:800;text-decoration:underline;cursor:pointer;text-underline-offset:4px}@media(max-width:760px){.forgot-password-button{position:static;margin-top:-20px;color:#fff!important}}
 
+/* Compact connection requests: source uploads are never allowed to set layout size. */
+.modern-main .request-card{display:flex!important;align-items:center!important;gap:14px!important;padding:16px!important}.modern-main .request-card>img{width:64px!important;height:64px!important;min-width:64px!important;max-width:64px!important;min-height:64px!important;max-height:64px!important;object-fit:cover!important;border-radius:50%!important}.modern-main .request-card>div:not(.request-actions){display:grid!important;gap:3px!important;min-width:0!important}.modern-main .request-card>div:not(.request-actions) span{font-size:13px!important;color:#718194!important}.modern-main .request-actions{margin-left:auto!important;display:flex!important;flex-wrap:wrap!important;gap:8px!important}
+
+/* Keep the navigation useful on smaller screens without turning it into a tall column. */
+.modern-sidebar{padding:16px 14px!important}.modern-nav{gap:3px!important}.modern-nav button{padding:10px 12px!important;gap:11px!important;font-size:15px!important;min-height:0!important}.modern-nav button span{font-size:15px!important}.sidebar-profile{margin-bottom:16px!important;padding:12px!important;min-height:82px!important}.sidebar-profile>img{width:54px!important;height:54px!important}.sidebar-logout{margin-top:10px!important;padding:10px 12px!important;font-size:15px!important}.topbar-spacer{min-width:48px!important}
+
+/* The legal copy stays readable over the supplied regional scenery. */
+.legal-page{position:relative!important;isolation:isolate!important;overflow:hidden!important;color:#24384d!important;background:rgba(255,255,255,.9)!important}.legal-page::before{content:"";position:absolute;inset:-24px;z-index:-1;background:linear-gradient(rgba(255,255,255,.84),rgba(255,255,255,.9)),url('/imprint-background.png') center/cover no-repeat;filter:blur(9px);transform:scale(1.05)}.legal-page h1,.legal-page h2{color:#2c4764!important}.legal-page p{color:#405a72!important}
+
 /* Two independent homepage frame builders. Both receive the same upload field on desktop and mobile. */
 .homepage-builder-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:18px!important;align-items:stretch!important}
 .homepage-builder-grid .homepage-builder{margin:0!important;height:100%!important;box-sizing:border-box!important}

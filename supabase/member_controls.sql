@@ -216,12 +216,29 @@ begin
 end;
 $$;
 
+create or replace function public.admin_resolve_report(p_report_id uuid, p_status text, p_action_note text)
+returns void language plpgsql security definer set search_path = public as $$
+declare v_reporter_id uuid; v_actor_name text;
+begin
+  if not public.ec_is_admin() then raise exception 'Keine Admin-Berechtigung.'; end if;
+  if p_status not in ('CONFIRMED', 'UNFOUNDED') then raise exception 'Ungültiger Meldungsstatus.'; end if;
+  if char_length(trim(coalesce(p_action_note, ''))) < 3 then raise exception 'Bitte einen Grund angeben.'; end if;
+  select reporter_id into v_reporter_id from public.user_reports where id = p_report_id for update;
+  if not found then raise exception 'Meldung nicht gefunden.'; end if;
+  update public.user_reports set status = p_status, admin_id = auth.uid(), admin_note = trim(p_action_note), resolved_at = now() where id = p_report_id;
+  select case role when 'HEAD_ADMIN' then '♛ ' when 'ADMIN' then '★ ' else '' end || coalesce(nullif(nickname, ''), 'Community-Moderation') into v_actor_name from public.profiles where id = auth.uid();
+  insert into public.messages(sender_id, receiver_id, content, is_read, created_at) values (auth.uid(), v_reporter_id, v_actor_name || case when p_status = 'CONFIRMED' then ' hat deine Meldung bearbeitet. Unternommen wurde: ' else ' hat deine Meldung geprüft und abgelehnt. Grund: ' end || trim(p_action_note), false, now());
+end;
+$$;
+
 revoke all on function public.admin_set_role(uuid,text) from public;
 grant execute on function public.admin_set_role(uuid,text) to authenticated;
 revoke all on function public.admin_update_member(uuid,text,text,text,date,text,text,text) from public;
 grant execute on function public.admin_update_member(uuid,text,text,text,date,text,text,text) to authenticated;
 revoke all on function public.admin_member_directory() from public;
 grant execute on function public.admin_member_directory() to authenticated;
+revoke all on function public.admin_resolve_report(uuid,text,text) from public;
+grant execute on function public.admin_resolve_report(uuid,text,text) to authenticated;
 revoke all on function public.admin_get_permissions(uuid) from public;
 grant execute on function public.admin_get_permissions(uuid) to authenticated;
 revoke all on function public.admin_set_permissions(uuid,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean) from public;
