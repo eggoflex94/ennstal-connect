@@ -1,0 +1,21 @@
+/* Handy und Tablet: gleiche Community-Funktionen wie am Desktop, nur touchfreundlich angeordnet. */
+@media(max-width:760px){
+  .modern-main{padding:14px 12px 98px!important}
+  .content-root,.forum-page,.news-page,.community-hub,.admin-page{width:100%!important;min-width:0!important}
+  .page-heading{display:grid!important;gap:12px!important}
+  .page-heading h1{font-size:clamp(30px,9vw,42px)!important;overflow-wrap:anywhere!important}
+  .forum-composer,.news-composer,.community-tool-grid>form,.profile-form{padding:16px!important}
+  .forum-composer textarea,.news-composer textarea{min-height:180px!important}
+  .forum-post-head{display:flex!important;align-items:flex-start!important;gap:10px!important}
+  .forum-post-head>div{min-width:0!important}
+  .forum-post-head h2,.forum-post p,.news-card p{overflow-wrap:anywhere!important}
+  .forum-post,.news-card,.community-hub-grid .panel{padding:16px!important}
+  .content-card-actions,.event-actions,.event-rsvp-actions,.member-profile-actions,.forum-reply-actions{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;padding-left:0!important}
+  .content-card-actions button,.event-actions button,.event-rsvp-actions button,.member-profile-actions button,.forum-reply-actions button{width:100%!important;min-height:44px!important}
+  .community-hub-grid,.admin-dashboard-actions,.community-tool-grid,.admin-member-cards{grid-template-columns:1fr!important}
+  .hub-row{align-items:flex-start!important}
+  .hub-row img{width:44px!important;height:44px!important;flex:0 0 44px!important}
+  .admin-dashboard-action{min-height:68px!important}
+  input,select,textarea,button{font-size:16px!important}
+  .primary-button,.secondary-button,.danger-button{min-height:44px!important}
+}

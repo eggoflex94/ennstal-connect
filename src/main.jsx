@@ -9,6 +9,7 @@ import "./profile-customization.js";
 import "./homepage-author.css";
 import "./profile-tools.css";
 import "./admin-online-status.js";
+import "./mobile-parity.css";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>

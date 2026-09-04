@@ -276,4 +276,32 @@ grant execute on function public.forum_create_reply(uuid,text) to authenticated;
 grant execute on function public.forum_update_reply(uuid,text,text) to authenticated;
 grant execute on function public.forum_delete_reply(uuid) to authenticated;
 grant execute on function public.admin_set_forum_moderator(uuid,boolean) to authenticated;
+
+-- One protected edit route for authors, the Head Admin and Community Forum
+-- moderators.  This avoids relying on browser-side table update permissions.
+create or replace function public.forum_update_post(p_post_id uuid, p_title text, p_content text, p_reason text default null)
+returns void language plpgsql security definer set search_path=public as $$
+declare post_author uuid; post_scope text; is_owner boolean;
+begin
+  if auth.uid() is null then raise exception 'Nicht eingeloggt.'; end if;
+  select author_id, scope into post_author, post_scope from public.forum_posts where id = p_post_id;
+  if post_author is null then raise exception 'Beitrag nicht gefunden.'; end if;
+  is_owner := post_author = auth.uid();
+  if not is_owner and not public.ec_is_head_admin() and not (post_scope = 'COMMUNITY' and public.ec_is_forum_moderator()) then
+    raise exception 'Keine Berechtigung zum Bearbeiten dieses Beitrags.';
+  end if;
+  if char_length(trim(coalesce(p_title, ''))) < 3 or char_length(trim(coalesce(p_content, ''))) < 3 then
+    raise exception 'Überschrift und Beitrag müssen mindestens drei Zeichen enthalten.';
+  end if;
+  if not is_owner and char_length(trim(coalesce(p_reason, ''))) < 3 then
+    raise exception 'Bitte einen Bearbeitungsgrund angeben.';
+  end if;
+  update public.forum_posts
+    set title = trim(p_title), content = trim(p_content), edited_at = now(), edited_by = auth.uid(),
+        edit_reason = case when is_owner then 'Vom Autor bearbeitet' else trim(p_reason) end
+    where id = p_post_id;
+end;
+$$;
+revoke all on function public.forum_update_post(uuid,text,text,text) from public;
+grant execute on function public.forum_update_post(uuid,text,text,text) to authenticated;
 notify pgrst, 'reload schema';

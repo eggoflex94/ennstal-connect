@@ -11,6 +11,7 @@ alter table public.profiles add column if not exists suspension_reason text;
 alter table public.profiles add column if not exists suspended_at timestamptz;
 alter table public.profiles add column if not exists suspended_by uuid;
 alter table public.profiles add column if not exists hide_online_status boolean not null default false;
+alter table public.profiles add column if not exists is_test_account boolean not null default false;
 alter table public.profiles add column if not exists is_verified boolean not null default false;
 alter table public.profiles add column if not exists verified_at timestamptz;
 alter table public.profiles add column if not exists verified_by uuid references public.profiles(id) on delete set null;
@@ -52,6 +53,34 @@ end;
 $$;
 revoke all on function public.request_profile_verification(text) from public;
 grant execute on function public.request_profile_verification(text) to authenticated;
+
+create table if not exists public.public_profile_updates (
+  id uuid primary key default gen_random_uuid(), profile_id uuid not null references public.profiles(id) on delete cascade,
+  nickname text not null, role text not null, account_badge text not null default 'STANDARD',
+  is_verified boolean not null default false, avatar_url text, activity_type text not null,
+  created_at timestamptz not null default now()
+);
+alter table public.public_profile_updates enable row level security;
+drop policy if exists public_profile_updates_read on public.public_profile_updates;
+create policy public_profile_updates_read on public.public_profile_updates for select to anon, authenticated using (true);
+revoke all on public.public_profile_updates from public;
+grant select on public.public_profile_updates to anon, authenticated;
+
+create or replace function public.log_profile_change(p_activity text)
+returns void language plpgsql security definer set search_path = public as $$
+declare p public.profiles%rowtype;
+begin
+  if auth.uid() is null then raise exception 'Nicht eingeloggt.'; end if;
+  select * into p from public.profiles where id = auth.uid();
+  insert into public.profile_activity(profile_id, actor_id, activity_type) values (auth.uid(), auth.uid(), left(trim(p_activity), 120));
+  if coalesce(p.privacy_settings->>'activity', 'PUBLIC') = 'PUBLIC' then
+    insert into public.public_profile_updates(profile_id,nickname,role,account_badge,is_verified,avatar_url,activity_type)
+    values (p.id,coalesce(nullif(p.nickname,''),'Mitglied'),p.role::text,p.account_badge,p.is_verified,p.avatar_url,left(trim(p_activity),120));
+  end if;
+end;
+$$;
+revoke all on function public.log_profile_change(text) from public;
+grant execute on function public.log_profile_change(text) to authenticated;
 
 create table if not exists public.member_photos (
   id uuid primary key default gen_random_uuid(),
@@ -154,6 +183,45 @@ begin
 end; $$;
 revoke all on function public.admin_set_profile_verification(uuid,boolean) from public;
 grant execute on function public.admin_set_profile_verification(uuid,boolean) to authenticated;
+
+create or replace function public.admin_set_test_account(p_user_id uuid, p_is_test boolean)
+returns void language plpgsql security definer set search_path=public as $$
+begin
+  if not public.ec_is_head_admin() then raise exception 'Nur der Head Admin darf Testkonten verwalten.'; end if;
+  if p_user_id = auth.uid() then raise exception 'Das eigene Konto kann nicht als Testkonto ausgeblendet werden.'; end if;
+  if exists(select 1 from public.profiles where id=p_user_id and role='HEAD_ADMIN') then raise exception 'Der Head Admin kann nicht als Testkonto markiert werden.'; end if;
+  update public.profiles set is_test_account = p_is_test where id = p_user_id;
+  if not found then raise exception 'Mitglied nicht gefunden.'; end if;
+end;
+$$;
+revoke all on function public.admin_set_test_account(uuid,boolean) from public;
+grant execute on function public.admin_set_test_account(uuid,boolean) to authenticated;
+
+-- Reliable administrator-only edit routes.  They work even when older RLS
+-- policies in an existing project do not include UPDATE or DELETE.
+alter table public.news add column if not exists image_url text;
+alter table public.news add column if not exists updated_at timestamptz;
+create or replace function public.admin_update_news(p_news_id uuid, p_title text, p_content text, p_image_url text default null)
+returns void language plpgsql security definer set search_path=public as $$
+begin
+  if not public.ec_is_admin() then raise exception 'Nur die Administration darf Neuigkeiten bearbeiten.'; end if;
+  if char_length(trim(coalesce(p_title,''))) < 3 or char_length(trim(coalesce(p_content,''))) < 3 then raise exception 'Überschrift und Text müssen ausgefüllt sein.'; end if;
+  update public.news set title=trim(p_title), content=trim(p_content), image_url=p_image_url, updated_at=now() where id=p_news_id;
+  if not found then raise exception 'Neuigkeit nicht gefunden.'; end if;
+end;
+$$;
+create or replace function public.admin_delete_news(p_news_id uuid)
+returns void language plpgsql security definer set search_path=public as $$
+begin
+  if not public.ec_is_admin() then raise exception 'Nur die Administration darf Neuigkeiten löschen.'; end if;
+  delete from public.news where id=p_news_id;
+  if not found then raise exception 'Neuigkeit nicht gefunden.'; end if;
+end;
+$$;
+revoke all on function public.admin_update_news(uuid,text,text,text) from public;
+revoke all on function public.admin_delete_news(uuid) from public;
+grant execute on function public.admin_update_news(uuid,text,text,text) to authenticated;
+grant execute on function public.admin_delete_news(uuid) to authenticated;
 
 drop function if exists public.admin_set_account_status(uuid,text);
 create or replace function public.admin_set_account_status(target_user uuid, new_status text, p_reason text)
