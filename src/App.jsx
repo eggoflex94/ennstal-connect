@@ -182,6 +182,19 @@ export default function App() {
   }, [user?.id]);
 
   useEffect(() => {
+    if (page !== "community" || !isAdmin(profile?.role)) return;
+    const eventForm = document.querySelector(".admin-community-tools form");
+    if (!eventForm || eventForm.querySelector("[name='image']")) return;
+    const label = document.createElement("label");
+    label.className = "content-image-upload";
+    label.append(document.createTextNode("Bild für die Veranstaltung (optional)"));
+    const input = document.createElement("input");
+    input.name = "image"; input.type = "file"; input.accept = "image/*";
+    label.appendChild(input);
+    eventForm.insertBefore(label, eventForm.querySelector("button"));
+  }, [page, profile?.role, communityEvents.length]);
+
+  useEffect(() => {
     if (!supabase || !user?.id) return undefined;
     const loadCommunityExtras = async () => {
       const [eventResult, adResult, photoResult, likeResult, commentResult] = await Promise.all([
@@ -383,6 +396,18 @@ export default function App() {
     if (error) throw error;
     const { data } = supabase.storage.from(bucket).getPublicUrl(path); if (!data?.publicUrl) throw new Error("Für das Bild konnte keine öffentliche URL erstellt werden."); return data.publicUrl;
   }
+  async function uploadContentImage(file, category) {
+    if (!file || !user) return null;
+    if (!file.type.startsWith("image/")) throw new Error("Bitte eine Bilddatei auswählen.");
+    if (file.size > 5 * 1024 * 1024) throw new Error("Das Bild darf höchstens 5 MB groß sein.");
+    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+    const path = `${user.id}/${category}/${crypto.randomUUID()}.${ext}`;
+    const { error } = await supabase.storage.from("profile-avatars").upload(path, file, { upsert: false, contentType: file.type });
+    if (error) throw error;
+    const { data } = supabase.storage.from("profile-avatars").getPublicUrl(path);
+    if (!data?.publicUrl) throw new Error("Für das Bild konnte keine öffentliche URL erstellt werden.");
+    return data.publicUrl;
+  }
   async function createHomepageSection(e) {
     e.preventDefault(); if (!isHeadAdmin(profile?.role)) return showNotice("Nur der Global Admin darf die Startseite gestalten.");
     const f = new FormData(e.currentTarget); const { error } = await supabase.from("homepage_sections").insert({ title: String(f.get("title") || "").trim(), content: String(f.get("content") || "").trim(), image_url: String(f.get("image_url") || "").trim() || null, frame_style: f.get("frame_style") || "standard", created_by: user.id, updated_by: user.id, sort_order: homepageSections.length, is_visible: true });
@@ -394,8 +419,8 @@ export default function App() {
   }
   async function deleteHomepageSection(x) { if (!isHeadAdmin(profile?.role)) return; if (!confirm("Rahmen wirklich löschen?")) return; const { error } = await supabase.from("homepage_sections").delete().eq("id", x.id); if (error) return showNotice(error.message); await loadAll(); }
   async function sendMessage(e) { e.preventDefault(); if (isFeatureLocked("MESSAGING")) return showNotice("Deine Nachrichtenfunktion ist derzeit vorübergehend gesperrt."); if (!chatMember || !messageText.trim()) return; const { error } = await supabase.rpc("send_private_message", { target_user: chatMember.id, message_text: messageText.trim() }); if (error) return showNotice(error.message); setMessageText(""); await openChat(chatMember); }
-  async function createNews(e) { e.preventDefault(); if (!isAdmin(profile?.role)) return showNotice("Nur die Administration darf Neuigkeiten veröffentlichen."); const f = new FormData(e.currentTarget); const payload = { title: String(f.get("title") || "").trim(), content: String(f.get("content") || "").trim(), author_id: user.id }; if (payload.title.length < 3 || payload.content.length < 3) return showNotice("Bitte Überschrift und Text ausfüllen."); const { error } = await supabase.from("news").insert(payload); if (error) return showNotice(error.message); e.currentTarget.reset(); showNotice("Neuigkeit veröffentlicht."); await loadAll(); }
-  async function createCommunityEvent(e) { e.preventDefault(); const f = new FormData(e.currentTarget); const { error } = await supabase.from("community_events").insert({ title: String(f.get("title")).trim(), description: String(f.get("description") || "").trim(), event_at: f.get("event_at"), location: String(f.get("location") || "").trim() || null, image_url: String(f.get("image_url") || "").trim() || null, created_by: user.id }); if (error) return showNotice(error.message); e.currentTarget.reset(); showNotice("Veranstaltung veröffentlicht."); }
+  async function createNews(e) { e.preventDefault(); if (!isAdmin(profile?.role)) return showNotice("Nur die Administration darf Neuigkeiten veröffentlichen."); const f = new FormData(e.currentTarget); const payload = { title: String(f.get("title") || "").trim(), content: String(f.get("content") || "").trim(), author_id: user.id }; if (payload.title.length < 3 || payload.content.length < 3) return showNotice("Bitte Überschrift und Text ausfüllen."); try { payload.image_url = await uploadContentImage(f.get("image"), "news"); } catch (error) { return showNotice(error.message); } const { error } = await supabase.from("news").insert(payload); if (error) return showNotice(error.message); e.currentTarget.reset(); showNotice("Neuigkeit veröffentlicht."); await loadAll(); }
+  async function createCommunityEvent(e) { e.preventDefault(); if (!isAdmin(profile?.role)) return showNotice("Nur die Administration darf Veranstaltungen veröffentlichen."); const f = new FormData(e.currentTarget); let image_url = String(f.get("image_url") || "").trim() || null; try { const uploadedImage = await uploadContentImage(f.get("image"), "events"); if (uploadedImage) image_url = uploadedImage; } catch (error) { return showNotice(error.message); } const { data, error } = await supabase.from("community_events").insert({ title: String(f.get("title")).trim(), description: String(f.get("description") || "").trim(), event_at: f.get("event_at"), location: String(f.get("location") || "").trim() || null, image_url, created_by: user.id }).select().single(); if (error) return showNotice(error.message); if (data) setCommunityEvents((current) => [...current, data].sort((a,b) => new Date(a.event_at) - new Date(b.event_at))); e.currentTarget.reset(); showNotice("Veranstaltung veröffentlicht."); }
   async function createCommunityAd(e) { e.preventDefault(); if (!isHeadAdmin(profile?.role)) return showNotice("Werbeflächen verwaltet nur der Global Admin."); const f = new FormData(e.currentTarget); const { error } = await supabase.from("community_ads").insert({ title: String(f.get("title")).trim(), body: String(f.get("body") || "").trim(), link_url: String(f.get("link_url") || "").trim() || null, image_url: String(f.get("image_url") || "").trim() || null, created_by: user.id }); if (error) return showNotice(error.message); e.currentTarget.reset(); showNotice("Werbefläche veröffentlicht."); }
   async function setBusinessAccount(id, enabled) { if (!isHeadAdmin(profile?.role)) return showNotice("Nur der Global Admin darf Unternehmenskonten verwalten."); const company = enabled ? prompt("Firmen- oder Vereinsname:", "") : ""; if (enabled && (company === null || !company.trim())) return; const { error } = await supabase.rpc("admin_set_business_account", { p_user_id: id, p_enabled: enabled, p_company_name: company || null, p_company_description: null }); if (error) return showNotice(error.message); showNotice(enabled ? "Unternehmenskonto vergeben." : "Unternehmenskonto entfernt."); await loadAll(); }
   async function createForumPost(e, scope) { e.preventDefault(); if (scope === "COMMUNITY" && isFeatureLocked("FORUM_POSTING")) return showNotice("Deine Forums-Schreibfunktion ist derzeit vorübergehend gesperrt."); const form = new FormData(e.currentTarget); const payload = { scope, title: String(form.get("title") || "").trim(), content: String(form.get("content") || "").trim(), font_family: form.get("font_family") || "modern", font_size: form.get("font_size") || "normal", emphasis: form.get("emphasis") || "normal", author_id: user.id }; if (payload.title.length < 3 || payload.content.length < 3) return showNotice("Bitte Überschrift und Beitrag ausfüllen."); const { error } = await supabase.from("forum_posts").insert(payload); if (error) return showNotice(error.message); e.currentTarget.reset(); showNotice("Beitrag veröffentlicht."); await loadAll(); }
@@ -506,7 +531,7 @@ function AdminPanel({ members, memberEmails, profile, user, onOpen, updateMember
   </section>;
 }
 
-function News({ news, profile, createNews }) { return <section className="news-page"><div className="page-heading"><div><span className="eyebrow">ENNSTAL CONNECT</span><h1>Neuigkeiten</h1><p>Aktuelle Informationen aus der Community.</p></div></div>{isAdmin(profile?.role) && <form className="news-composer panel" onSubmit={createNews}><h2>Neuigkeit veröffentlichen</h2><input name="title" minLength="3" placeholder="Überschrift" required/><textarea name="content" minLength="3" placeholder="Was gibt es Neues?" required/><button className="primary-button">Veröffentlichen</button></form>}<div className="news-grid">{news.map((entry) => <article className="news-card" key={entry.id}><span className="eyebrow">NEUIGKEIT · {new Date(entry.created_at).toLocaleDateString("de-AT")}</span><h2>{entry.title}</h2><p>{entry.content}</p></article>)}{!news.length && <div className="empty-card">Noch keine Neuigkeiten veröffentlicht.</div>}</div></section>; }
+function News({ news, profile, createNews }) { return <section className="news-page"><div className="page-heading"><div><span className="eyebrow">ENNSTAL CONNECT</span><h1>Neuigkeiten</h1><p>Aktuelle Informationen aus der Community.</p></div></div>{isAdmin(profile?.role) && <form className="news-composer panel" onSubmit={createNews}><h2>Neuigkeit veröffentlichen</h2><input name="title" minLength="3" placeholder="Überschrift" required/><textarea name="content" minLength="3" placeholder="Was gibt es Neues?" required/><label className="content-image-upload">Bild hinzufügen (optional)<input name="image" type="file" accept="image/*"/></label><button className="primary-button">Veröffentlichen</button></form>}<div className="news-grid">{news.map((entry) => <article className="news-card" key={entry.id}>{entry.image_url && <img className="content-card-image" src={entry.image_url} alt=""/>}<span className="eyebrow">NEUIGKEIT · {new Date(entry.created_at).toLocaleDateString("de-AT")}</span><h2>{entry.title}</h2><p>{entry.content}</p></article>)}{!news.length && <div className="empty-card">Noch keine Neuigkeiten veröffentlicht.</div>}</div></section>; }
 
 function Forum({ title, intro, scope, posts, members, profile, createPost, editPost, deletePost, locked }) {
   const visiblePosts = posts.filter((post) => post.scope === scope);
