@@ -227,4 +227,44 @@ revoke all on function public.admin_get_permissions(uuid) from public;
 grant execute on function public.admin_get_permissions(uuid) to authenticated;
 revoke all on function public.admin_set_permissions(uuid,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean) from public;
 grant execute on function public.admin_set_permissions(uuid,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean) to authenticated;
+
+-- Reliable member reports: free text is accepted only when it contains an
+-- actual explanation, rather than being limited to a legacy fixed value list.
+alter table public.user_reports drop constraint if exists user_reports_reason_check;
+alter table public.user_reports add constraint user_reports_reason_check
+  check (char_length(trim(reason)) between 3 and 2000);
+
+create or replace function public.submit_user_report(target_user uuid, reason_text text)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null then raise exception 'Nicht eingeloggt.'; end if;
+  if target_user is null or target_user = auth.uid() then raise exception 'Ungültiges Mitglied.'; end if;
+  if char_length(trim(coalesce(reason_text, ''))) < 3 then raise exception 'Bitte einen nachvollziehbaren Meldegrund angeben.'; end if;
+  if not exists (select 1 from public.profiles where id = target_user) then raise exception 'Mitglied nicht gefunden.'; end if;
+  insert into public.user_reports(reporter_id, reported_user_id, reason, status, created_at)
+  values (auth.uid(), target_user, trim(reason_text), 'PENDING', now());
+end;
+$$;
+revoke all on function public.submit_user_report(uuid,text) from public;
+grant execute on function public.submit_user_report(uuid,text) to authenticated;
+
+-- Admin-only review queue for accounts that need attention. We deliberately do
+-- not expose registration IP addresses: they are personal data and do not
+-- reliably prove that an account is fake. E-mail confirmation is the reliable
+-- initial signal available to the community itself.
+create or replace function public.admin_account_review_queue()
+returns table(user_id uuid, email text, nickname text, registered_at timestamptz, review_reason text)
+language plpgsql security definer set search_path = public, auth as $$
+begin
+  if not public.ec_is_admin() then raise exception 'Keine Admin-Berechtigung.'; end if;
+  return query
+  select p.id, u.email::text, coalesce(nullif(p.nickname, ''), 'Ohne Nickname'), u.created_at,
+    case when u.email_confirmed_at is null then 'E-Mail-Adresse noch nicht bestätigt' else 'Manuelle Prüfung' end
+  from public.profiles p join auth.users u on u.id = p.id
+  where u.email_confirmed_at is null
+  order by u.created_at desc;
+end;
+$$;
+revoke all on function public.admin_account_review_queue() from public;
+grant execute on function public.admin_account_review_queue() to authenticated;
 notify pgrst, 'reload schema';

@@ -42,6 +42,31 @@ const getAge = (date) => {
   return age;
 };
 
+const openContentEditor = ({ title, description, fields }) => new Promise((resolve) => {
+  const overlay = document.createElement("div"); overlay.className = "content-editor-overlay";
+  const dialog = document.createElement("form"); dialog.className = "content-editor-dialog";
+  dialog.innerHTML = `<div class="content-editor-header"><div><span class="eyebrow">BEARBEITEN</span><h2>${title}</h2><p>${description || "Änderungen prüfen und anschließend speichern."}</p></div><button type="button" class="content-editor-close" aria-label="Schließen">×</button></div>`;
+  fields.forEach((definition) => {
+    const label = document.createElement("label"); label.className = "content-editor-field"; label.textContent = definition.label;
+    const element = definition.type === "textarea" ? document.createElement("textarea") : document.createElement("input");
+    element.name = definition.name; element.type = definition.type === "file" ? "file" : definition.type || "text";
+    if (definition.type === "file") element.accept = "image/png,image/jpeg,image/webp,image/gif";
+    else element.value = definition.value || "";
+    if (definition.placeholder) element.placeholder = definition.placeholder;
+    if (definition.required) element.required = true;
+    if (definition.type === "textarea") element.rows = definition.rows || 12;
+    label.appendChild(element); dialog.appendChild(label);
+  });
+  const actions = document.createElement("div"); actions.className = "content-editor-actions";
+  actions.innerHTML = '<button type="button" class="secondary-button">Abbrechen</button><button class="primary-button">Änderungen speichern</button>';
+  dialog.appendChild(actions); overlay.appendChild(dialog); document.body.appendChild(overlay);
+  const close = (result) => { overlay.remove(); resolve(result); };
+  dialog.querySelector(".content-editor-close").onclick = () => close(null);
+  actions.querySelector(".secondary-button").onclick = () => close(null);
+  overlay.onclick = (event) => { if (event.target === overlay) close(null); };
+  dialog.onsubmit = (event) => { event.preventDefault(); const data = new FormData(dialog); const values = {}; fields.forEach((field) => { values[field.name] = field.type === "file" ? data.get(field.name) : String(data.get(field.name) || ""); }); close(values); };
+});
+
 export default function App() {
   const [user, setUser] = useState(null);
   const [passwordRecovery, setPasswordRecovery] = useState(false);
@@ -79,6 +104,7 @@ export default function App() {
   const [permissionDraft, setPermissionDraft] = useState({});
   const [savingPermissions, setSavingPermissions] = useState(false);
   const [editingMember, setEditingMember] = useState(null);
+  const [accountReviewQueue, setAccountReviewQueue] = useState([]);
 
   const showNotice = (text) => {
     setNotice(text);
@@ -169,6 +195,14 @@ export default function App() {
     } catch (e) { console.error(e); showNotice(e?.message || "Fehler beim Laden"); }
   };
 
+  async function openAccountReview() {
+    if (!isAdmin(profile?.role)) return;
+    const { data, error } = await supabase.rpc("admin_account_review_queue");
+    if (error) return showNotice(error.message);
+    setAccountReviewQueue(data || []);
+    setPage("admin-account-review");
+  }
+
   useEffect(() => {
     if (!supabase) return undefined;
     loadAll();
@@ -242,6 +276,50 @@ export default function App() {
       });
     }
   }, [page, news, communityEvents, eventRsvps, forumPosts, members, profile?.role]);
+
+  useEffect(() => {
+    if (page !== "admin" || !isAdmin(profile?.role)) return;
+    const root = document.querySelector(".admin-page");
+    if (!root || root.querySelector(".admin-dashboard-shortcuts")) return;
+    const shortcuts = document.createElement("section");
+    shortcuts.className = "admin-dashboard-shortcuts panel";
+    const heading = document.createElement("div");
+    heading.className = "admin-dashboard-heading";
+    heading.innerHTML = "<span class=\"eyebrow\">ADMIN-ZENTRALE</span><h2>Alles Wichtige auf einen Blick</h2><p>Öffne die passende Verwaltungsansicht, ohne die Navigation links zu überladen.</p>";
+    shortcuts.appendChild(heading);
+    const actions = document.createElement("div");
+    actions.className = "admin-dashboard-actions";
+    [["♙", "Mitglieder", "Mitglieder und Rollen verwalten", "admin"], ["⚑", "Meldungen", "Meldungen prüfen", "reports"], ["▤", "Admin-Forum", "Interne Moderation", "admin-forum"], ["✦", "Community", "Termine und Werbung", "community"], ["▣", "Neuigkeiten", "Beiträge verwalten", "news"], ["✓", "Kontoschutz", "Nicht bestätigte Konten prüfen", "account-review"]].forEach(([icon, title, text, target]) => {
+      const button = document.createElement("button"); button.type = "button"; button.className = "admin-dashboard-action";
+      button.innerHTML = `<strong>${icon} ${title}</strong><small>${text}</small>`;
+      button.onclick = () => target === "account-review" ? openAccountReview() : setPage(target); actions.appendChild(button);
+    });
+    shortcuts.appendChild(actions);
+    root.insertBefore(shortcuts, root.querySelector(".admin-member-cards") || root.firstChild);
+  }, [page, profile?.role, members.length, reports.length]);
+
+  useEffect(() => {
+    if (page !== "profile" || !profile?.id) return;
+    const form = document.querySelector(".profile-form");
+    if (!form || form.querySelector(".privacy-settings")) return;
+    const settings = profile.privacy_settings || {};
+    const section = document.createElement("section"); section.className = "privacy-settings";
+    section.innerHTML = '<span class="eyebrow">SICHTBARKEIT</span><h3>Was andere von dir sehen</h3><p>Standardmäßig ist alles öffentlich. Du kannst jeden Bereich auf „Nur Freunde“ beschränken.</p>';
+    [["name", "Name"], ["birth_date", "Geburtsdatum"], ["bio", "Über mich"], ["location", "Wohnort"], ["interests", "Interessen"], ["website", "Website"], ["photos", "Fotos"], ["activity", "Öffentliche Änderungsanzeige"]].forEach(([key, label]) => {
+      const field = document.createElement("label"); field.textContent = label;
+      const select = document.createElement("select"); select.name = `privacy_${key}`;
+      select.innerHTML = '<option value="PUBLIC">Öffentlich</option><option value="FRIENDS">Nur Freunde</option>';
+      select.value = settings[key] === "FRIENDS" ? "FRIENDS" : "PUBLIC"; field.appendChild(select); section.appendChild(field);
+    });
+    form.querySelector(".primary-button")?.before(section);
+    document.querySelectorAll(".profile-gallery figure").forEach((figure, index) => {
+      const photo = memberPhotos.filter((item) => item.owner_id === user?.id)[index]; if (!photo || figure.querySelector(".photo-visibility")) return;
+      const select = document.createElement("select"); select.className = "photo-visibility"; select.value = photo.visibility === "FRIENDS" ? "FRIENDS" : "PUBLIC";
+      select.innerHTML = '<option value="PUBLIC">Foto: Öffentlich</option><option value="FRIENDS">Foto: Nur Freunde</option>';
+      select.onchange = async () => { const { error } = await supabase.from("member_photos").update({ visibility: select.value }).eq("id", photo.id).eq("owner_id", user.id); if (error) showNotice(error.message); else { showNotice("Foto-Sichtbarkeit gespeichert."); await loadAll(); } };
+      figure.querySelector(".photo-actions")?.appendChild(select);
+    });
+  }, [page, profile?.id, profile?.privacy_settings, memberPhotos, user?.id]);
 
   useEffect(() => {
     if (page !== "forum" && page !== "admin-forum") return;
@@ -420,7 +498,7 @@ export default function App() {
 
   async function saveProfile(e) {
     e.preventDefault(); const f = new FormData(e.currentTarget);
-    const payload = { nickname: String(f.get("nickname") || "").trim(), gender: f.get("gender") || null, bio: String(f.get("bio") || "").trim(), location: String(f.get("location") || "").trim(), interests: String(f.get("interests") || "").split(",").map((interest) => interest.trim()).filter(Boolean), website: String(f.get("website") || "").trim(), profile_accent: f.get("profile_accent") || "#ff6b25", profile_background: f.get("profile_background_image") || f.get("profile_background_color") || "#f6f9fc", profile_layout: f.get("profile_layout") || "standard", bio_font: f.get("bio_font") || "modern", bio_size: f.get("bio_size") || "normal" };
+    const payload = { nickname: String(f.get("nickname") || "").trim(), gender: f.get("gender") || null, bio: String(f.get("bio") || "").trim(), location: String(f.get("location") || "").trim(), interests: String(f.get("interests") || "").split(",").map((interest) => interest.trim()).filter(Boolean), website: String(f.get("website") || "").trim(), profile_accent: f.get("profile_accent") || "#ff6b25", profile_background: f.get("profile_background_image") || f.get("profile_background_color") || "#f6f9fc", profile_layout: f.get("profile_layout") || "standard", bio_font: f.get("bio_font") || "modern", bio_size: f.get("bio_size") || "normal", privacy_settings: { name: f.get("privacy_name") || "PUBLIC", birth_date: f.get("privacy_birth_date") || "PUBLIC", bio: f.get("privacy_bio") || "PUBLIC", location: f.get("privacy_location") || "PUBLIC", interests: f.get("privacy_interests") || "PUBLIC", website: f.get("privacy_website") || "PUBLIC", photos: f.get("privacy_photos") || "PUBLIC", activity: f.get("privacy_activity") || "PUBLIC" } };
     if (isAdmin(profile?.role)) payload.hide_online_status = f.get("hide_online_status") === "on";
     let { error } = await supabase.from("profiles").update(payload).eq("id", user.id);
     // Older live databases may not yet include the optional presentation fields.
@@ -461,7 +539,7 @@ export default function App() {
   async function addPhotoComment(photoId, text) { if (!text.trim()) return; const { data, error } = await supabase.from("member_photo_comments").insert({ photo_id: photoId, author_id: user.id, content: text.trim() }).select().single(); if (error) return showNotice(error.message); setPhotoComments((comments) => [...comments, data]); }
   async function deleteMemberPhoto(photo) { if (photo.owner_id !== user?.id || !confirm("Dieses Profilfoto wirklich löschen?")) return; const { error } = await supabase.from("member_photos").delete().eq("id", photo.id).eq("owner_id", user.id); if (error) return showNotice(error.message); setMemberPhotos((current) => current.filter((entry) => entry.id !== photo.id)); showNotice("Profilfoto gelöscht."); }
   async function uploadHomepageImage(file) {
-    if (!file || !user) throw new Error("Bitte zuerst anmelden."); if (!file.type.startsWith("image/")) throw new Error("Bitte ein Bild auswählen."); if (file.size > 5 * 1024 * 1024) throw new Error("Das Bild darf höchstens 5 MB groß sein.");
+    if (!file) return null; if (!user) throw new Error("Bitte zuerst anmelden."); if (!file.type.startsWith("image/")) throw new Error("Bitte ein Bild auswählen."); if (file.size > 5 * 1024 * 1024) throw new Error("Das Bild darf höchstens 5 MB groß sein.");
     const ext = file.name.split(".").pop()?.toLowerCase() || "jpg"; const path = `${user.id}/homepage/${crypto.randomUUID()}.${ext}`;
     let bucket = "community-media";
     let { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: false, contentType: file.type });
@@ -489,14 +567,18 @@ export default function App() {
     if (error) { showNotice(error.message); return false; } e.currentTarget.reset(); showNotice("Rahmen veröffentlicht."); await loadAll(); return true;
   }
   async function editHomepageSection(x) {
-    if (!isHeadAdmin(profile?.role)) return; const title = prompt("Überschrift:", x.title || ""); if (title === null) return; const content = prompt("Text:", x.content || ""); if (content === null) return; const image = prompt("Bild-URL:", x.image_url || ""); if (image === null) return;
-    const { error } = await supabase.from("homepage_sections").update({ title: title.trim(), content: content.trim(), image_url: image.trim() || null, updated_by: user.id, updated_at: new Date().toISOString() }).eq("id", x.id); if (error) return showNotice(error.message); await loadAll();
+    if (!isHeadAdmin(profile?.role)) return;
+    const values = await openContentEditor({ title: "Startseiten-Beitrag", description: "Du hast hier ausreichend Platz für Text und kannst bei Bedarf ein neues Bild vom Computer oder Handy auswählen.", fields: [{ name: "title", label: "Überschrift", value: x.title, required: true }, { name: "content", label: "Text", type: "textarea", value: x.content, required: true, rows: 16 }, { name: "image", label: "Neues Bild auswählen (optional)", type: "file" }, { name: "image_url", label: "Oder Bild-URL", value: x.image_url || "", placeholder: "https://..." }] });
+    if (!values || values.title.trim().length < 3 || values.content.trim().length < 3) return;
+    let imageUrl = values.image_url.trim() || null;
+    try { const uploaded = await uploadHomepageImage(values.image); if (uploaded) imageUrl = uploaded; } catch (error) { return showNotice(error.message); }
+    const { error } = await supabase.from("homepage_sections").update({ title: values.title.trim(), content: values.content.trim(), image_url: imageUrl, updated_by: user.id, updated_at: new Date().toISOString() }).eq("id", x.id); if (error) return showNotice(error.message); showNotice("Beitrag gespeichert."); await loadAll();
   }
   async function deleteHomepageSection(x) { if (!isHeadAdmin(profile?.role)) return; if (!confirm("Rahmen wirklich löschen?")) return; const { error } = await supabase.from("homepage_sections").delete().eq("id", x.id); if (error) return showNotice(error.message); await loadAll(); }
   async function sendMessage(e) { e.preventDefault(); if (isFeatureLocked("MESSAGING")) return showNotice("Deine Nachrichtenfunktion ist derzeit vorübergehend gesperrt."); if (!chatMember || !messageText.trim()) return; const { error } = await supabase.rpc("send_private_message", { target_user: chatMember.id, message_text: messageText.trim() }); if (error) return showNotice(error.message); setMessageText(""); await openChat(chatMember); }
   async function createNews(e) { e.preventDefault(); if (!isAdmin(profile?.role)) return showNotice("Nur die Administration darf Neuigkeiten veröffentlichen."); const f = new FormData(e.currentTarget); const payload = { title: String(f.get("title") || "").trim(), content: String(f.get("content") || "").trim(), author_id: user.id }; if (payload.title.length < 3 || payload.content.length < 3) return showNotice("Bitte Überschrift und Text ausfüllen."); try { payload.image_url = await uploadContentImage(f.get("image"), "news"); } catch (error) { return showNotice(error.message); } const { error } = await supabase.from("news").insert(payload); if (error) return showNotice(error.message); e.currentTarget.reset(); showNotice("Neuigkeit veröffentlicht."); await loadAll(); }
   async function createCommunityEvent(e) { e.preventDefault(); if (!isAdmin(profile?.role)) return showNotice("Nur die Administration darf Veranstaltungen veröffentlichen."); const f = new FormData(e.currentTarget); let image_url = String(f.get("image_url") || "").trim() || null; try { const uploadedImage = await uploadContentImage(f.get("image"), "events"); if (uploadedImage) image_url = uploadedImage; } catch (error) { return showNotice(error.message); } const { data, error } = await supabase.from("community_events").insert({ title: String(f.get("title")).trim(), description: String(f.get("description") || "").trim(), event_at: f.get("event_at"), location: String(f.get("location") || "").trim() || null, image_url, created_by: user.id }).select().single(); if (error) return showNotice(error.message); if (data) setCommunityEvents((current) => [...current, data].sort((a,b) => new Date(a.event_at) - new Date(b.event_at))); e.currentTarget.reset(); showNotice("Veranstaltung veröffentlicht."); }
-  async function editNews(entry) { if (!isAdmin(profile?.role)) return; const title = prompt("Überschrift:", entry.title); if (title === null) return; const content = prompt("Text:", entry.content); if (content === null) return; if (title.trim().length < 3 || content.trim().length < 3) return showNotice("Bitte Überschrift und Text ausfüllen."); const { error } = await supabase.from("news").update({ title: title.trim(), content: content.trim(), updated_at: new Date().toISOString() }).eq("id", entry.id); if (error) return showNotice(error.message); showNotice("Neuigkeit gespeichert."); await loadAll(); }
+  async function editNews(entry) { if (!isAdmin(profile?.role)) return; const values = await openContentEditor({ title: "Neuigkeit bearbeiten", description: "Überarbeite die Neuigkeit in Ruhe. Ein neues Bild kann direkt vom Gerät ergänzt werden.", fields: [{ name: "title", label: "Überschrift", value: entry.title, required: true }, { name: "content", label: "Text", type: "textarea", value: entry.content, required: true, rows: 16 }, { name: "image", label: "Neues Bild auswählen (optional)", type: "file" }] }); if (!values || values.title.trim().length < 3 || values.content.trim().length < 3) return showNotice("Bitte Überschrift und Text ausfüllen."); let imageUrl = entry.image_url || null; try { const uploaded = await uploadContentImage(values.image, "news"); if (uploaded) imageUrl = uploaded; } catch (error) { return showNotice(error.message); } const { error } = await supabase.from("news").update({ title: values.title.trim(), content: values.content.trim(), image_url: imageUrl, updated_at: new Date().toISOString() }).eq("id", entry.id); if (error) return showNotice(error.message); showNotice("Neuigkeit gespeichert."); await loadAll(); }
   async function deleteNews(entry) { if (!isAdmin(profile?.role) || !confirm(`Neuigkeit „${entry.title}" wirklich löschen?`)) return; const { error } = await supabase.from("news").delete().eq("id", entry.id); if (error) return showNotice(error.message); showNotice("Neuigkeit gelöscht."); await loadAll(); }
   async function editCommunityEvent(event) { if (!isAdmin(profile?.role)) return; if (event.status === "CANCELLED") { const { error } = await supabase.from("community_events").update({ status: "ACTIVE", cancellation_reason: null, cancelled_at: null }).eq("id", event.id); if (error) return showNotice(error.message); showNotice("Veranstaltung wieder aktiviert."); return loadAll(); } const title = prompt("Titel:", event.title); if (title === null) return; const when = prompt("Datum und Uhrzeit (z. B. 2026-09-15T18:30):", new Date(event.event_at).toISOString().slice(0, 16)); if (when === null) return; const location = prompt("Ort:", event.location || ""); if (location === null) return; const description = prompt("Beschreibung:", event.description || ""); if (description === null || title.trim().length < 3 || Number.isNaN(new Date(when).getTime())) return showNotice("Bitte gültigen Titel sowie Datum und Uhrzeit eingeben."); const { error } = await supabase.from("community_events").update({ title: title.trim(), event_at: new Date(when).toISOString(), location: location.trim() || null, description: description.trim() }).eq("id", event.id); if (error) return showNotice(error.message); showNotice("Veranstaltung gespeichert."); await loadAll(); }
   async function cancelCommunityEvent(event) { if (!isAdmin(profile?.role) || !confirm(`Veranstaltung „${event.title}" wirklich absagen?`)) return; const reason = prompt("Grund der Absage (optional):", ""); if (reason === null) return; const { error } = await supabase.from("community_events").update({ status: "CANCELLED", cancellation_reason: reason.trim() || null, cancelled_at: new Date().toISOString() }).eq("id", event.id); if (error) return showNotice(error.message); showNotice("Veranstaltung abgesagt."); await loadAll(); }
@@ -523,7 +605,7 @@ export default function App() {
   const myRole = roleLabel(profile?.role);
   return <div className="app">
     <header className="topbar modern-topbar">
-      <div className="topbar-brand" onClick={() => setPage("home")}><img src="/ennstal-connect-community-logo.png" alt="Ennstal Connect Community-Logo" className="topbar-logo"/></div>
+      <div className="topbar-brand" onClick={() => setPage("home")}><img src="/ennstal-connect-logo-v2.png" alt="Ennstal Connect" className="topbar-logo"/></div>
       <div className="breadcrumb">ENNSTAL.CONNECT <span>›</span> {page}</div>
       <div className="topbar-spacer" aria-hidden="true" />
     </header>
@@ -540,9 +622,8 @@ export default function App() {
           <button onClick={() => setPage("news")}>▣ <span>Neuigkeiten</span></button>
           <button onClick={() => setPage("community")}>✦ <span>Community</span></button>
           <button onClick={() => setPage("forum")}>▤ <span>Forum</span></button>
-          {isAdmin(profile?.role) && <button onClick={() => setPage("admin-forum")}>♛ <span>Admin-Forum</span></button>}
           <button onClick={() => setPage("profile")}>⚙ <span>Mein Profil</span></button>
-          {isAdmin(profile?.role) && <><button onClick={() => setPage("admin")}>♛ <span>Verwaltung</span></button><button onClick={() => setPage("reports")}>⚑ <span>Meldungen</span></button></>}
+          {isAdmin(profile?.role) && <button onClick={() => setPage("admin")}>♛ <span>Admin-Zentrale</span></button>}
         </nav>
         <button className="sidebar-logout" onClick={logout}>⇥ <span>Abmelden</span></button>
       </aside>
@@ -562,6 +643,7 @@ export default function App() {
         {page === "member-profile" && viewingMember && isHeadAdmin(profile?.role) && viewingMember.role !== "HEAD_ADMIN" && <><FeatureUnlocks member={viewingMember} setMemberFeatureLock={setMemberFeatureLock}/><MemberBusinessTool member={viewingMember} setBusinessAccount={setBusinessAccount}/></>}
         {page === "reports" && isAdmin(profile?.role) && <Reports reports={reports} memberById={memberById} resolveReport={resolveReport}/>} 
         {page === "admin" && isAdmin(profile?.role) && <AdminPanel members={members} memberEmails={memberEmails} profile={profile} user={user} onOpen={openMember} updateMemberRole={updateMemberRole} toggleSuspension={toggleSuspension} setBusinessAccount={setBusinessAccount} editingMember={editingMember} setEditingMember={setEditingMember} saveMemberData={saveMemberData} adminTarget={adminTarget} loadPermissions={loadPermissions} permissionDraft={permissionDraft} setPermissionDraft={setPermissionDraft} savePermissions={savePermissions} savingPermissions={savingPermissions}/>}
+        {page === "admin-account-review" && isAdmin(profile?.role) && <AccountReview queue={accountReviewQueue} members={members} onBack={() => setPage("admin")} onOpen={openMember}/>}
         {page === "impressum" && <LegalPage type="impressum"/>}
         {page === "privacy" && <LegalPage type="privacy"/>}
       </div></main>
@@ -605,6 +687,8 @@ function ProfileTimeline({ visits, activities, members }) { const memberFor = (i
 function ProfilePhotoGallery({ photos, likes, comments, user, onUpload, onLike, onComment, onDelete }) { const [caption, setCaption] = useState(""); const [drafts, setDrafts] = useState({}); return <section className="profile-gallery panel"><span className="eyebrow">MEINE FOTOS</span><h2>Fotos aus deinem Profil</h2><label className="photo-upload-button">Foto hochladen<input type="file" accept="image/*" onChange={(event) => { const file = event.target.files?.[0]; if (file) onUpload(file, caption); event.target.value = ""; }}/></label><input value={caption} onChange={(event) => setCaption(event.target.value)} maxLength="240" placeholder="Kurze Bildbeschreibung (optional)"/><div className="profile-photo-grid">{photos.map((photo) => { const photoLikes = likes.filter((like) => like.photo_id === photo.id); const liked = photoLikes.some((like) => like.user_id === user.id); const photoComments = comments.filter((comment) => comment.photo_id === photo.id); return <figure key={photo.id}><img src={photo.image_url} alt={photo.caption || "Profilfoto"}/>{photo.caption && <figcaption>{photo.caption}</figcaption>}<div className="photo-actions"><button onClick={() => onLike(photo.id)}>{liked ? "♥ Gefällt dir" : "♡ Gefällt mir"} ({photoLikes.length})</button><button className="danger-button" onClick={() => onDelete(photo)}>Löschen</button></div><div className="photo-comments">{photoComments.map((comment) => <small key={comment.id}>{comment.content}</small>)}<form onSubmit={(event) => { event.preventDefault(); onComment(photo.id, drafts[photo.id] || ""); setDrafts((current) => ({ ...current, [photo.id]: "" })); }}><input value={drafts[photo.id] || ""} onChange={(event) => setDrafts((current) => ({ ...current, [photo.id]: event.target.value }))} placeholder="Kommentieren …"/><button>↵</button></form></div></figure>; })}</div>{!photos.length && <p>Noch keine Fotos veröffentlicht.</p>}</section>; }
 
 function Reports({ reports, memberById, resolveReport }) { return <section><div className="page-heading"><div><span className="eyebrow">MODERATION</span><h1>Meldungen</h1><p>Gemeldete Mitglieder prüfen und bearbeiten.</p></div></div><div className="report-list">{reports.map((r) => <article className="report-card" key={r.id}><div className="report-top"><strong>🚩 {r.status}</strong><span>{new Date(r.created_at).toLocaleString("de-AT")}</span></div><p><b>Gemeldet von:</b> {getName(memberById(r.reporter_id))}</p><p><b>Gemeldetes Mitglied:</b> {getName(memberById(r.reported_user_id))}</p><p>{r.reason}</p>{r.status === "PENDING" && <div className="content-manage-actions"><button className="primary-button" onClick={() => resolveReport(r.id, "CONFIRMED")}>Meldung bestätigen</button><button className="danger-button" onClick={() => resolveReport(r.id, "UNFOUNDED")}>Unbegründet</button></div>}</article>)}{!reports.length && <div className="empty-card">Keine Meldungen vorhanden.</div>}</div></section>; }
+
+function AccountReview({ queue, members, onBack, onOpen }) { return <section className="account-review-page"><div className="page-heading"><div><span className="eyebrow">KONTOSCHUTZ</span><h1>Konten prüfen</h1><p>Hier erscheinen Konten mit noch nicht bestätigter E-Mail-Adresse. Sie sind ein Hinweis zur Prüfung, kein automatischer Fake-Verdacht.</p></div><button className="secondary-button" onClick={onBack}>← Zur Admin-Zentrale</button></div>{queue.length ? <div className="report-list">{queue.map((item) => <article key={item.user_id} className="report-card"><strong>{item.nickname}</strong><p>{item.review_reason}</p><small>Registriert: {new Date(item.registered_at).toLocaleString("de-AT")}</small><div className="content-manage-actions"><button className="secondary-button" onClick={() => { const member = members.find((entry) => entry.id === item.user_id); if (member) onOpen(member); }}>Profil und Rechte öffnen</button></div></article>)}</div> : <div className="empty-card">Keine Konten benötigen derzeit eine Prüfung.</div>}</section>; }
 
 function AdminPanel({ members, memberEmails, profile, user, onOpen, updateMemberRole, toggleSuspension, setBusinessAccount, editingMember, setEditingMember, saveMemberData, adminTarget, loadPermissions, permissionDraft, setPermissionDraft, savePermissions, savingPermissions }) {
   const admins = members.filter((m) => isAdmin(m.role));

@@ -14,6 +14,7 @@ alter table public.profiles add column if not exists hide_online_status boolean 
 alter table public.profiles add column if not exists is_verified boolean not null default false;
 alter table public.profiles add column if not exists verified_at timestamptz;
 alter table public.profiles add column if not exists verified_by uuid references public.profiles(id) on delete set null;
+alter table public.profiles add column if not exists privacy_settings jsonb not null default '{"name":"PUBLIC","birth_date":"PUBLIC","bio":"PUBLIC","location":"PUBLIC","interests":"PUBLIC","website":"PUBLIC","photos":"PUBLIC","activity":"PUBLIC"}'::jsonb;
 
 create table if not exists public.member_photos (
   id uuid primary key default gen_random_uuid(),
@@ -22,6 +23,7 @@ create table if not exists public.member_photos (
   caption text not null default '',
   created_at timestamptz not null default now()
 );
+alter table public.member_photos add column if not exists visibility text not null default 'PUBLIC' check (visibility in ('PUBLIC','FRIENDS'));
 create table if not exists public.member_photo_likes (
   photo_id uuid not null references public.member_photos(id) on delete cascade,
   user_id uuid not null references public.profiles(id) on delete cascade,
@@ -45,6 +47,8 @@ drop policy if exists member_photo_comments_write on public.member_photo_comment
 drop policy if exists member_photo_comments_delete on public.member_photo_comments;
 create policy member_photos_read on public.member_photos for select to authenticated using (true);
 create policy member_photos_write on public.member_photos for insert to authenticated with check (owner_id=auth.uid());
+drop policy if exists member_photos_update on public.member_photos;
+create policy member_photos_update on public.member_photos for update to authenticated using (owner_id=auth.uid()) with check (owner_id=auth.uid() and visibility in ('PUBLIC','FRIENDS'));
 create policy member_photos_delete on public.member_photos for delete to authenticated using (owner_id=auth.uid() or public.ec_is_admin());
 create policy member_photo_likes_read on public.member_photo_likes for select to authenticated using(true);
 create policy member_photo_likes_write on public.member_photo_likes for insert to authenticated with check(user_id=auth.uid());
