@@ -1,6 +1,6 @@
 /* Ennstal Connect main branding supplied 2026-09-05.
    Loaded last so older global logo overrides cannot replace it. */
-:root{--ec-main-brand:url('/ennstal-connect-brand-2026.svg')}
+:root{--ec-main-brand:url('/ennstal-connect-logo-v2.png')}
 
 /* Logged-in header: compact, readable and cropped around the central brand mark. */
 .modern-topbar{min-height:76px!important;padding:7px 18px!important;gap:16px!important;align-items:center!important}
