@@ -13,6 +13,7 @@ alter table public.profiles add column if not exists suspended_by uuid;
 alter table public.profiles add column if not exists hide_online_status boolean not null default false;
 alter table public.profiles add column if not exists is_test_account boolean not null default false;
 alter table public.profiles add column if not exists admin_responsibilities text[] not null default '{}';
+alter table public.profiles add column if not exists head_admin_responsibilities text not null default '';
 alter table public.profiles add column if not exists verification_required_at timestamptz;
 alter table public.profiles add column if not exists verification_due_at timestamptz;
 
@@ -58,13 +59,14 @@ end;
 $$;
 revoke all on function public.admin_review_registration(uuid,boolean,text) from public;
 grant execute on function public.admin_review_registration(uuid,boolean,text) to authenticated;
-create or replace function public.admin_registration_approval_queue()
-returns table(user_id uuid, nickname text, registered_at timestamptz, review_reason text)
+drop function if exists public.admin_registration_approval_queue();
+create function public.admin_registration_approval_queue()
+returns table(user_id uuid, nickname text, email text, registered_at timestamptz, review_reason text)
 language plpgsql security definer set search_path = public as $$
 begin
   if not public.ec_is_admin() then raise exception 'Keine Admin-Berechtigung.'; end if;
-  return query select r.user_id, coalesce(nullif(p.nickname,''),'Mitglied'), r.created_at, 'Registrierung wartet auf Freigabe'
-  from public.registration_approval_requests r join public.profiles p on p.id=r.user_id
+  return query select r.user_id, coalesce(nullif(p.nickname,''),'Mitglied'), u.email::text, r.created_at, 'Registrierung wartet auf Freigabe'
+  from public.registration_approval_requests r join public.profiles p on p.id=r.user_id join auth.users u on u.id=r.user_id
   where r.status='PENDING' order by r.created_at asc;
 end;
 $$;
