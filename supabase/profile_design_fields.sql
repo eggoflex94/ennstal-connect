@@ -7,5 +7,5 @@ alter table public.profiles add constraint profiles_bio_font_allowed check (bio_
 alter table public.profiles drop constraint if exists profiles_bio_size_allowed;
 alter table public.profiles add constraint profiles_bio_size_allowed check (bio_size in ('small','normal','large'));
 alter table public.profiles drop constraint if exists profiles_layout_allowed;
-alter table public.profiles add constraint profiles_layout_allowed check (profile_layout in ('standard','alpine','aurora','ocean','slate','ember','redwood','lavender','midnight','sunrise'));
+alter table public.profiles add constraint profiles_layout_allowed check (profile_layout in ('standard','alpine','aurora','ocean','slate','ember','redwood','lavender','midnight','sunrise','neon'));
 notify pgrst,'reload schema';
