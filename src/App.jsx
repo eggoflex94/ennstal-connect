@@ -25,6 +25,7 @@ const roleMark = (role) => role === "HEAD_ADMIN" ? "♛" : role === "ADMIN" || r
 const roleClass = (role) => String(role || "MEMBER").toLowerCase().replace("_", "-");
 const isAdmin = (role) => role === "ADMIN" || role === "HEAD_ADMIN";
 const isHeadAdmin = (role) => role === "HEAD_ADMIN";
+const isRecentlyActive = (member) => Boolean(member?.is_online && member?.last_active_at && Date.now() - new Date(member.last_active_at).getTime() < 5 * 60 * 1000);
 const getName = (m) => m ? (m.nickname || [m.first_name, m.last_name].filter(Boolean).join(" ") || "Mitglied") : "";
 const formatInterests = (interests) => {
   if (Array.isArray(interests)) return interests.join(", ");
@@ -227,7 +228,7 @@ export default function App() {
         safe(supabase.rpc("featured_community_group"), null),
         safe(supabase.from("community_requests").select("*").eq("status", "ACTIVE").order("created_at", { ascending: false }).limit(8))
       ]);
-      setProfile(p ? { ...p, is_online: true } : p); setMembers(ms.map((member) => member.id === currentUser.id ? { ...member, is_online: true } : member)); setFriendships(fs); setMessages(msgs); setHomepageSections(hs); setReports(rs); setBlockedUsers(bs); setNews(ns); setEvents(es); setGroups((gs || []).map((entry) => typeof entry === "string" ? JSON.parse(entry) : entry)); setProfileVisits(visits); setForumPosts(posts); setForumReplies(replies); setFeatureLocks(locks); setProfileActivities(activities); setWeeklyPoll(Array.isArray(poll) ? poll[0] || null : poll); setWelcomeBadges(badges || []); setFeaturedGroup(Array.isArray(featured) ? featured[0] || null : featured); setCommunityRequests(requests || []);
+      setProfile(p); setMembers(ms); setFriendships(fs); setMessages(msgs); setHomepageSections(hs); setReports(rs); setBlockedUsers(bs); setNews(ns); setEvents(es); setGroups((gs || []).map((entry) => typeof entry === "string" ? JSON.parse(entry) : entry)); setProfileVisits(visits); setForumPosts(posts); setForumReplies(replies); setFeatureLocks(locks); setProfileActivities(activities); setWeeklyPoll(Array.isArray(poll) ? poll[0] || null : poll); setWelcomeBadges(badges || []); setFeaturedGroup(Array.isArray(featured) ? featured[0] || null : featured); setCommunityRequests(requests || []);
       if (isAdmin(p?.role)) { const { data: directory, error: directoryError } = await supabase.rpc("admin_member_directory"); if (!directoryError) setMemberEmails(Object.fromEntries((directory || []).map((entry) => [entry.id, entry.email]))); } else setMemberEmails({});
     } catch (e) { console.error(e); showNotice(e?.message || "Fehler beim Laden"); }
   };
@@ -474,12 +475,22 @@ export default function App() {
 
   useEffect(() => {
     if (!supabase || !user?.id) return undefined;
-    const setPresence = () => { void supabase.from("profiles").update({ is_online: true, last_active_at: new Date().toISOString() }).eq("id", user.id); void supabase.rpc("record_online_activity"); };
-    const clearPresence = () => { void supabase.from("profiles").update({ is_online: false, last_active_at: new Date().toISOString() }).eq("id", user.id); };
+    let lastSent = 0;
+    let inactiveTimer;
+    const clearPresence = () => { void supabase.from("profiles").update({ is_online: false }).eq("id", user.id); setProfile((current) => current?.id === user.id ? { ...current, is_online: false } : current); setMembers((current) => current.map((member) => member.id === user.id ? { ...member, is_online: false } : member)); };
+    const setPresence = () => {
+      window.clearTimeout(inactiveTimer);
+      inactiveTimer = window.setTimeout(clearPresence, 5 * 60 * 1000);
+      if (Date.now() - lastSent < 45000) return;
+      lastSent = Date.now();
+      void supabase.from("profiles").update({ is_online: true, last_active_at: new Date().toISOString() }).eq("id", user.id);
+      void supabase.rpc("record_online_activity");
+    };
     setPresence();
-    const heartbeat = window.setInterval(setPresence, 60000);
+    const activityEvents = ["pointerdown", "keydown", "scroll", "touchstart"];
+    activityEvents.forEach((eventName) => window.addEventListener(eventName, setPresence, { passive: true }));
     window.addEventListener("pagehide", clearPresence);
-    return () => { window.clearInterval(heartbeat); window.removeEventListener("pagehide", clearPresence); };
+    return () => { window.clearTimeout(inactiveTimer); activityEvents.forEach((eventName) => window.removeEventListener(eventName, setPresence)); window.removeEventListener("pagehide", clearPresence); };
   }, [user?.id]);
 
   async function login(e) {
@@ -831,7 +842,7 @@ export default function App() {
         {page === "groups" && selectedGroup && <GroupDetails group={groups.find((group) => group.id === selectedGroup.id) || selectedGroup} members={members} profile={profile} user={user} onClose={() => setSelectedGroup(null)} onJoin={joinGroup} onLeave={leaveGroup} onEdit={editGroup} onDelete={deleteGroup}/>}
         {page === "forum" && <Forum title="Community-Forum" intro="Austausch für alle Mitglieder von Ennstal Connect." scope="COMMUNITY" posts={forumPosts} members={visibleMembers} profile={profile} createPost={createForumPost} editPost={editForumPost} deletePost={deleteForumPost} locked={isFeatureLocked("FORUM_POSTING")}/>}
         {page === "admin-forum" && isAdmin(profile?.role) && <Forum title="Admin-Forum" intro="Interner Bereich für Moderation und Administration." scope="ADMIN" posts={forumPosts} members={members} profile={profile} createPost={createForumPost} editPost={editForumPost} deletePost={deleteForumPost} locked={false}/>}
-        {page === "profile" && <section className="profile-page-layout"><Profile profile={profile} user={user} isHeadAdmin={isHeadAdmin} saveProfile={saveProfile} uploadProfileImage={uploadProfileImage} uploadProfileBackground={uploadProfileBackground} uploadProfileBioImage={uploadProfileBioImage} openPublicPreview={() => setPage("profile-preview")}/><ProfilePhotoGallery photos={memberPhotos.filter((photo) => photo.owner_id === user.id)} likes={photoLikes} comments={photoComments} user={user} onUpload={uploadMemberPhoto} onLike={togglePhotoLike} onComment={addPhotoComment} onDelete={deleteMemberPhoto}/></section>}
+        {page === "profile" && <section className="profile-page-layout"><Profile profile={profile} user={user} isHeadAdmin={isHeadAdmin} saveProfile={saveProfile} uploadProfileImage={uploadProfileImage} uploadProfileBackground={uploadProfileBackground} uploadProfileBioImage={uploadProfileBioImage} openPublicPreview={() => setPage("profile-preview")}/><ProfileTimeline visits={profileVisits} activities={profileActivities} members={members} onOpen={openMember}/><ProfilePhotoGallery photos={memberPhotos.filter((photo) => photo.owner_id === user.id)} likes={photoLikes} comments={photoComments} user={user} onUpload={uploadMemberPhoto} onLike={togglePhotoLike} onComment={addPhotoComment} onDelete={deleteMemberPhoto}/></section>}
         {page === "profile-preview" && <PublicProfilePreview profile={profile} photos={memberPhotos} groups={groups} onBack={() => setPage("profile")} onOpenGroup={(group) => { setSelectedGroup(group); setPage("groups"); }}/>} 
         {page === "member-profile" && viewingMember && <MemberProfile member={viewingMember} friends={viewingFriends} groups={groups} user={user} viewerProfile={profile} friendship={friendshipWith(viewingMember.id)} back={() => { setViewingMember(null); setViewingFriends([]); setPage("members"); }} onOpen={openMember} onOpenGroup={(group) => { setSelectedGroup(group); setPage("groups"); }} requestFriend={requestFriend} respond={respondToFriendRequest} removeFriend={removeFriend} blockUser={blockUser} reportUser={reportUser} warnMember={warnMember} updateMemberRole={updateMemberRole} toggleSuspension={toggleSuspension} toggleTestAccount={toggleTestAccount} setBusinessAccount={setBusinessAccount} setForumModerator={setForumModerator} setGroupModerator={setGroupModerator} setProfileVerification={setProfileVerification} loadPermissions={loadPermissions} setMemberFeatureLock={setMemberFeatureLock} openChat={openChat}/>} 
         {page === "member-profile" && viewingMember && <MemberGroups member={viewingMember} groups={groups} onOpen={(group) => { setSelectedGroup(group); setPage("groups"); }}/>}
@@ -842,7 +853,6 @@ export default function App() {
         {page === "admin-account-review" && isAdmin(profile?.role) && <AccountReview queue={accountReviewQueue} members={members} onBack={() => setPage("admin")} onOpen={openMember} onReviewRegistration={reviewRegistration}/>} 
         {page === "impressum" && <LegalPage type="impressum"/>}
         {page === "privacy" && <LegalPage type="privacy"/>}
-        <ProfileTimeline visits={profileVisits} activities={profileActivities} members={members} onOpen={openMember}/>
       </div></main>
     </div>
     <footer className="site-footer"><strong>Ennstal Connect</strong><div><button onClick={() => setPage("impressum")}>Impressum</button><button onClick={() => setPage("privacy")}>Datenschutz</button></div></footer>
@@ -865,12 +875,13 @@ function MemberCard({ member, profile, friendships, onOpen, onMessage }) {
   const r = member.role || "MEMBER";
   const friendship = friendships.find((x) => (x.requester_id === profile?.id && x.receiver_id === member.id) || (x.receiver_id === profile?.id && x.requester_id === member.id));
   const friend = friendship?.status === "ACCEPTED";
+  const online = isRecentlyActive(member);
   return <article className={`member-card ${roleClass(r)} ${member.account_badge === "BUSINESS" ? "business" : ""}`} onClick={() => onOpen(member)}>
     <div className="member-role-line"><span className={`role-chip ${member.account_badge === "BUSINESS" ? "business" : roleClass(r)}`}>{r === "HEAD_ADMIN" ? "♛ Global Admin" : r === "ADMIN" ? "★ Community Admin" : r === "SUPPORTER" ? "★ Supporter" : member.account_badge === "BUSINESS" ? "★ Unternehmenskonto" : "Mitglied"}</span>{friend && <span className="friend-indicator" title="Befreundet">♥</span>}</div>
     <strong className="member-nickname">{getName(member)}</strong>
     <img className="member-avatar" src={member.avatar_url || DEFAULT_AVATAR} alt=""/>
     <div className="member-name">{[member.first_name, member.last_name].filter(Boolean).join(" ")}{getAge(member.birth_date) !== null && ` · ${getAge(member.birth_date)} Jahre`}</div>
-    {!member.hide_online_status && <div className={`member-status ${member.is_online ? "online" : "offline"}`}><span/>{member.is_online ? "Online" : "Offline"}{!member.is_online && member.last_active_at && <small>zuletzt aktiv {new Date(member.last_active_at).toLocaleString("de-AT", { dateStyle: "short", timeStyle: "short" })}</small>}</div>}
+    {!member.hide_online_status && <div className={`member-status ${online ? "online" : "offline"}`}><span/>{online ? "Online" : "Offline"}{!online && member.last_active_at && <small>zuletzt aktiv {new Date(member.last_active_at).toLocaleString("de-AT", { dateStyle: "short", timeStyle: "short" })}</small>}</div>}
     {member.id !== profile?.id && <button className="member-message" onClick={(e) => { e.stopPropagation(); onMessage(member); }}>💬 Nachricht</button>}
   </article>;
 }
