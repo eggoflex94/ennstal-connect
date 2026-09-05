@@ -9,6 +9,7 @@ import "./profile-customization.js";
 import "./homepage-author.css";
 import "./profile-tools.css";
 import "./admin-online-status.js";
+import "./last-name-privacy.js";
 import "./mobile-parity.css";
 
 class AppErrorBoundary extends React.Component {
