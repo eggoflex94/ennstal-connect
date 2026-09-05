@@ -10,6 +10,9 @@ const ADMIN_LOG_LABELS = {
   ROLE_REMOVED: "Rolle entfernt",
   ROLE_CHANGED: "Rolle geändert",
   SET_ROLE: "Rolle geändert",
+  PRIVILEGED_INSERT: "Privilegierte Aktion: erstellt",
+  PRIVILEGED_UPDATE: "Privilegierte Aktion: geändert",
+  PRIVILEGED_DELETE: "Privilegierte Aktion: gelöscht",
 };
 const PERMISSIONS = [
   ["manage_members", "Mitglieder verwalten"],
@@ -266,7 +269,7 @@ export default function App() {
         const [emailResult, memberResult, logResult] = await Promise.all([
           supabase.rpc("admin_member_directory"),
           supabase.rpc("admin_full_member_directory"),
-          isHeadAdmin(p?.role) ? supabase.rpc("get_admin_log", { p_limit: 200 }) : Promise.resolve({ data: [], error: null })
+          isHeadAdmin(p?.role) ? supabase.rpc("get_admin_log", { p_limit: 500 }) : Promise.resolve({ data: [], error: null })
         ]);
         if (!emailResult.error) setMemberEmails(Object.fromEntries((emailResult.data || []).map((entry) => [entry.id, entry.email])));
         if (!memberResult.error) setAdminMembers((memberResult.data || []).map((summary) => ({ ...(ms.find((member) => member.id === summary.id) || {}), ...summary })));
