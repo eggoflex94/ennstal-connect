@@ -11,6 +11,7 @@ export const isSupabaseConfigured = Boolean(
 );
 export const supabaseUnavailableMessage =
   "Die Anmeldung ist momentan nicht erreichbar. Bitte versuche es später erneut.";
+export let preparePrivilegedAction = async () => ({ error: new Error(supabaseUnavailableMessage) });
 
 export const supabase = isSupabaseConfigured
   ? createClient(supabaseUrl, supabaseAnonKey)
@@ -21,8 +22,35 @@ if (!supabase) {
 } else {
 
 const originalRpc = supabase.rpc.bind(supabase);
+const auditedRpcActions = new Set([
+  "admin_warn_user", "admin_set_permissions", "admin_set_role", "admin_set_account_status",
+  "admin_update_member", "admin_change_points", "admin_delete_member", "admin_remove_profile_avatar",
+  "admin_create_community_ad", "admin_delete_community_ad", "admin_delete_news", "admin_update_news",
+  "admin_edit_forum_post", "admin_require_profile_verification", "admin_resolve_report",
+  "admin_resolve_user_report", "admin_review_registration", "admin_set_business_account",
+  "admin_set_feature_lock", "admin_set_forum_moderator", "admin_set_profile_verification",
+  "admin_review_profile_verification", "admin_set_responsibilities", "admin_set_test_account",
+  "forum_moderator_warn_user", "forum_update_post", "forum_delete_post", "forum_update_reply",
+  "forum_delete_reply", "review_community_group_owner_change", "set_featured_community_group",
+  "create_weekly_poll", "update_community_group", "delete_community_group",
+  "admin_manage_featured_community_group"
+]);
+const targetKeys = ["target_user", "p_user_id", "p_target_user", "p_owner_id", "p_member_id"];
+
+preparePrivilegedAction = async function (actionName, targetId = null, suppliedReason = "") {
+  const entered = suppliedReason || window.prompt(`Begründung für „${actionName}“ (verpflichtend):`, "");
+  if (entered === null) return { error: new Error("Aktion abgebrochen: Begründung fehlt.") };
+  const reason = String(entered).trim();
+  if (reason.length < 5) return { error: new Error("Bitte eine Begründung mit mindestens 5 Zeichen eingeben.") };
+  return originalRpc("prepare_privileged_action", { p_action_name: actionName, p_reason: reason, p_target_id: targetId });
+};
 const canUseClientFallback = (error) => /schema cache|function\s+.*does not exist|function\s+upper\(user_role\)\s+does not exist/i.test(error?.message || "");
 supabase.rpc = async (fn, args = {}, options) => {
+  if (auditedRpcActions.has(fn)) {
+    const targetId = targetKeys.map((key) => args?.[key]).find(Boolean) || null;
+    const prepared = await preparePrivilegedAction(fn.replaceAll("_", " "), targetId);
+    if (prepared.error) return { data: null, error: prepared.error };
+  }
   if (fn === "accept_friend_request") {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user?.id || !args?.friendship_id) return { data: null, error: new Error("Nicht eingeloggt.") };
