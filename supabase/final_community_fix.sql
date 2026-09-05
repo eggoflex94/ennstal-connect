@@ -462,14 +462,26 @@ language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  v_old_role text;
+  v_action text;
 begin
   if new_role not in ('MEMBER','SUPPORTER','ADMIN','HEAD_ADMIN') then raise exception 'Ungültige Rolle.'; end if;
   if new_role='HEAD_ADMIN' and not public.ec_is_head_admin() then raise exception 'Nur der Head Admin darf diese Rolle vergeben.'; end if;
   if new_role in ('ADMIN','HEAD_ADMIN') and not public.ec_is_head_admin() then raise exception 'Nur der Head Admin darf Admin-Rollen vergeben.'; end if;
   if not public.ec_is_admin() then raise exception 'Keine Admin-Berechtigung.'; end if;
 
+  select role::text into v_old_role from public.profiles where id=target_user for update;
+  if not found then raise exception 'Mitglied nicht gefunden.'; end if;
+  if v_old_role = new_role then return; end if;
+
   update public.profiles set role=new_role where id=target_user;
-  perform public.ec_log('SET_ROLE',target_user,jsonb_build_object('role',new_role));
+  v_action := case
+    when new_role = 'MEMBER' and v_old_role <> 'MEMBER' then 'ROLE_REMOVED'
+    when v_old_role = 'MEMBER' and new_role <> 'MEMBER' then 'ROLE_ASSIGNED'
+    else 'ROLE_CHANGED'
+  end;
+  perform public.ec_log(v_action,target_user,jsonb_build_object('old_role',v_old_role,'new_role',new_role));
 end;
 $$;
 

@@ -139,6 +139,7 @@ as $$
 declare
   v_old_role text;
   v_actor_name text;
+  v_action text;
 begin
   if not public.ec_is_head_admin() then
     raise exception 'Nur der Head Admin darf Rollen vergeben oder entziehen.';
@@ -153,6 +154,7 @@ begin
   select role into v_old_role from public.profiles where id = target_user for update;
   if not found then raise exception 'Mitglied nicht gefunden.'; end if;
   if v_old_role = 'HEAD_ADMIN' then raise exception 'Die Head-Admin-Rolle ist geschützt.'; end if;
+  if v_old_role = new_role then return; end if;
 
   update public.profiles set role = new_role::public.user_role where id = target_user;
   select case role when 'HEAD_ADMIN' then '♛ ' when 'ADMIN' then '★ ' when 'SUPPORTER' then '★ ' else '' end || coalesce(nullif(nickname,''),'Community-Moderation')
@@ -169,6 +171,13 @@ begin
     end,
     false, now()
   );
+
+  v_action := case
+    when new_role = 'MEMBER' and v_old_role <> 'MEMBER' then 'ROLE_REMOVED'
+    when v_old_role = 'MEMBER' and new_role <> 'MEMBER' then 'ROLE_ASSIGNED'
+    else 'ROLE_CHANGED'
+  end;
+  perform public.ec_log(v_action,target_user,jsonb_build_object('old_role',v_old_role,'new_role',new_role));
 end;
 $$;
 
