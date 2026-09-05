@@ -22,6 +22,19 @@ begin
 end;
 $$;
 
+-- Old project versions may have registered a differently named trigger on
+-- auth.users. Remove only custom triggers; Supabase internal triggers remain.
+do $$
+declare t record;
+begin
+  for t in select tgname from pg_trigger where tgrelid='auth.users'::regclass and not tgisinternal loop
+    execute format('drop trigger if exists %I on auth.users', t.tgname);
+  end loop;
+end;
+$$;
+create trigger on_auth_user_created after insert on auth.users
+for each row execute procedure public.ec_handle_new_user();
+
 -- The profile and approval request are created safely at the first login.
 create or replace function public.ensure_current_profile()
 returns void language plpgsql security definer set search_path=public as $$
@@ -82,5 +95,23 @@ end;
 $$;
 revoke all on function public.admin_registration_approval_queue() from public;
 grant execute on function public.admin_registration_approval_queue() to authenticated;
+
+-- Use this only once for an account created by an older trigger before this
+-- repair was installed. It moves that account into the normal review queue.
+create or replace function public.admin_queue_existing_registration(p_email text)
+returns void language plpgsql security definer set search_path=public as $$
+declare v_user_id uuid;
+begin
+  if not public.ec_is_admin() then raise exception 'Keine Admin-Berechtigung.'; end if;
+  select id into v_user_id from auth.users where lower(email)=lower(trim(p_email));
+  if v_user_id is null then raise exception 'Kein Konto mit dieser E-Mail gefunden.'; end if;
+  if exists(select 1 from public.profiles where id=v_user_id and role='HEAD_ADMIN') then raise exception 'Der Head Admin kann nicht in die Freigabe verschoben werden.'; end if;
+  update public.profiles set account_status='PENDING_APPROVAL' where id=v_user_id;
+  insert into public.registration_approval_requests(user_id) values(v_user_id)
+  on conflict(user_id) do update set status='PENDING', reviewed_at=null, reviewed_by=null, reason=null;
+end;
+$$;
+revoke all on function public.admin_queue_existing_registration(text) from public;
+grant execute on function public.admin_queue_existing_registration(text) to authenticated;
 
 notify pgrst, 'reload schema';
