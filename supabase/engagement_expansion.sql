@@ -47,6 +47,33 @@ begin
   values(auth.uid(),auth.uid(),left(trim(coalesce(p_activity,'Profil aktualisiert')),120));
 end;
 $$;
+
+-- Ein einheitlicher Bearbeitungsweg für beide Foren: Autoren dürfen immer
+-- ihren eigenen Beitrag ändern; Administration beide Bereiche, Forum-Supporter
+-- den öffentlichen Bereich. Die Änderung bleibt transparent nachvollziehbar.
+alter table public.profiles add column if not exists forum_moderator boolean not null default false;
+alter table public.forum_posts add column if not exists edited_at timestamptz;
+alter table public.forum_posts add column if not exists edited_by uuid references public.profiles(id) on delete set null;
+alter table public.forum_posts add column if not exists edit_reason text;
+create or replace function public.forum_update_post(p_post_id uuid, p_title text, p_content text, p_reason text default null)
+returns void language plpgsql security definer set search_path=public as $$
+declare v_author uuid; v_scope text; v_role text; v_forum_moderator boolean; v_owns boolean;
+begin
+  if auth.uid() is null then raise exception 'Nicht eingeloggt.'; end if;
+  select author_id,scope into v_author,v_scope from public.forum_posts where id=p_post_id;
+  if v_author is null then raise exception 'Beitrag nicht gefunden.'; end if;
+  select role,coalesce(forum_moderator,false) into v_role,v_forum_moderator from public.profiles where id=auth.uid();
+  v_owns := v_author=auth.uid();
+  if not v_owns and coalesce(v_role,'MEMBER') not in ('HEAD_ADMIN','ADMIN') and not (v_scope='COMMUNITY' and v_role='SUPPORTER' and v_forum_moderator) then
+    raise exception 'Keine Berechtigung zum Bearbeiten dieses Beitrags.';
+  end if;
+  if char_length(trim(coalesce(p_title,'')))<3 or char_length(trim(coalesce(p_content,'')))<3 then raise exception 'Überschrift und Beitrag müssen mindestens drei Zeichen enthalten.'; end if;
+  if not v_owns and char_length(trim(coalesce(p_reason,'')))<3 then raise exception 'Bitte einen Bearbeitungsgrund angeben.'; end if;
+  update public.forum_posts
+     set title=trim(p_title),content=trim(p_content),edited_at=now(),edited_by=auth.uid(),edit_reason=case when v_owns then 'Vom Autor bearbeitet' else trim(p_reason) end
+   where id=p_post_id;
+end;
+$$;
 create table if not exists public.community_weekly_poll_votes (
   poll_id uuid not null references public.community_weekly_polls(id) on delete cascade,
   user_id uuid not null references public.profiles(id) on delete cascade,
@@ -155,6 +182,7 @@ revoke all on function public.featured_community_group() from public;
 revoke all on function public.my_welcome_badges() from public;
 revoke all on function public.record_presence(boolean) from public;
 revoke all on function public.log_profile_change(text) from public;
+revoke all on function public.forum_update_post(uuid,text,text,text) from public;
 grant execute on function public.weekly_poll_current() to authenticated;
 grant execute on function public.create_weekly_poll(text,text[]) to authenticated;
 grant execute on function public.vote_weekly_poll(uuid,integer) to authenticated;
@@ -163,4 +191,5 @@ grant execute on function public.featured_community_group() to authenticated;
 grant execute on function public.my_welcome_badges() to authenticated;
 grant execute on function public.record_presence(boolean) to authenticated;
 grant execute on function public.log_profile_change(text) to authenticated;
+grant execute on function public.forum_update_post(uuid,text,text,text) to authenticated;
 notify pgrst, 'reload schema';
