@@ -1,5 +1,5 @@
-const CACHE = "ennstal-connect-shell-v2";
-const SHELL = ["/", "/manifest.webmanifest", "/ennstal-connect-logo-v2.png", "/ennstal-connect-community-logo.png"];
+const CACHE = "ennstal-connect-shell-v3";
+const SHELL = ["/", "/manifest.webmanifest", "/ennstal-connect-logo-v2.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting()));
