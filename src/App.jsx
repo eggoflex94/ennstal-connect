@@ -478,7 +478,13 @@ export default function App() {
     if (!supabase || !user?.id) return undefined;
     let lastSent = 0;
     let inactiveTimer;
-    const writePresence = async (online) => { let { error } = await supabase.rpc("record_presence", { p_online: online }); if (error) ({ error } = await supabase.from("profiles").update(online ? { is_online: true, last_active_at: new Date().toISOString() } : { is_online: false }).eq("id", user.id)); if (error) console.warn("Presence could not be saved:", error.message); };
+    const presenceDevice = window.matchMedia("(max-width: 900px)").matches ? "MOBILE" : "DESKTOP";
+    const writePresence = async (online) => {
+      let { error } = await supabase.rpc("record_presence", { p_online: online, p_device: presenceDevice });
+      if (error && /schema cache|function|does not exist|could not find/i.test(error.message || "")) ({ error } = await supabase.rpc("record_presence", { p_online: online }));
+      if (error) ({ error } = await supabase.from("profiles").update(online ? { is_online: true, last_active_at: new Date().toISOString() } : { is_online: false }).eq("id", user.id));
+      if (error) console.warn("Presence could not be saved:", error.message);
+    };
     const clearPresence = () => { void writePresence(false); setProfile((current) => current?.id === user.id ? { ...current, is_online: false } : current); setMembers((current) => current.map((member) => member.id === user.id ? { ...member, is_online: false } : member)); };
     const setPresence = () => {
       window.clearTimeout(inactiveTimer);
@@ -488,8 +494,8 @@ export default function App() {
       const lastActive = new Date().toISOString();
       void writePresence(true);
       void supabase.rpc("record_online_activity");
-      setProfile((current) => current?.id === user.id ? { ...current, is_online: true, last_active_at: lastActive } : current);
-      setMembers((current) => current.map((member) => member.id === user.id ? { ...member, is_online: true, last_active_at: lastActive } : member));
+      setProfile((current) => current?.id === user.id ? { ...current, is_online: true, last_active_at: lastActive, presence_device: presenceDevice } : current);
+      setMembers((current) => current.map((member) => member.id === user.id ? { ...member, is_online: true, last_active_at: lastActive, presence_device: presenceDevice } : member));
     };
     setPresence();
     const activityEvents = ["pointerdown", "keydown", "scroll", "touchstart"];
@@ -911,7 +917,7 @@ function MemberCard({ member, profile, friendships, onOpen, onMessage }) {
     <strong className="member-nickname">{getName(member)}</strong>
     <img className="member-avatar" src={member.avatar_url || DEFAULT_AVATAR} alt=""/>
     <div className="member-name">{[member.first_name, member.last_name].filter(Boolean).join(" ")}{getAge(member.birth_date) !== null && ` · ${getAge(member.birth_date)} Jahre`}</div>
-    {!member.hide_online_status && <div className={`member-status ${online ? "online" : "offline"}`}><span/>{online ? "Online" : "Offline"}{!online && member.last_active_at && <small>zuletzt aktiv {new Date(member.last_active_at).toLocaleString("de-AT", { dateStyle: "short", timeStyle: "short" })}</small>}</div>}
+    {!member.hide_online_status && <div className={`member-status ${online ? "online" : "offline"}`}><span/>{online ? (member.presence_device === "MOBILE" ? "Mobil online" : "Online") : "Offline"}{!online && member.last_active_at && <small>zuletzt aktiv {new Date(member.last_active_at).toLocaleString("de-AT", { dateStyle: "short", timeStyle: "short" })}</small>}</div>}
     {member.id !== profile?.id && <button className="member-message" onClick={(e) => { e.stopPropagation(); onMessage(member); }}>💬 Nachricht</button>}
   </article>;
 }
