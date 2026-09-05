@@ -34,7 +34,8 @@ const updateCard = (card, member) => {
   status.className = `member-status ${online ? "online" : "offline"}`;
 
   const dot = document.createElement("span");
-  status.replaceChildren(dot, document.createTextNode(online ? "Online" : "Offline"));
+  const onlineLabel = member.presence_device === "MOBILE" ? "Mobil online" : "Online";
+  status.replaceChildren(dot, document.createTextNode(online ? onlineLabel : "Offline"));
 
   if (!online && member.last_active_at) {
     const lastActive = document.createElement("small");
