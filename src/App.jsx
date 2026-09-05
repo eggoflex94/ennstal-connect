@@ -785,6 +785,8 @@ export default function App() {
   }
   async function removeMemberProfileImage(member, field, label) {
     if (!isHeadAdmin(profile?.role) || !member?.id || !confirm(`${label} von ${getName(member)} wegen eines Regelverstoßes entfernen?`)) return;
+    const prepared = await preparePrivilegedAction(`${label} bei Regelverstoß entfernen`, member.id);
+    if (prepared.error) return showNotice(prepared.error.message);
     const { error } = await supabase.rpc("admin_remove_profile_media", { p_user_id: member.id, p_field: field });
     if (error) return showNotice(error.message);
     setViewingMember((current) => current?.id === member.id ? { ...current, [field]: field === "profile_background" ? "#1b1f26" : null } : current);
