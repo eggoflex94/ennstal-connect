@@ -46,3 +46,13 @@
 .app .member-card.business{background:linear-gradient(145deg,#075a9a,#147fc4)!important;color:#eff8ff!important}
 .app .member-card.head-admin .member-nickname,.app .member-card.head-admin .member-name,.app .member-card.admin .member-nickname,.app .member-card.admin .member-name,.app .member-card.supporter .member-nickname,.app .member-card.supporter .member-name,.app .member-card.member .member-nickname,.app .member-card.member .member-name{color:#fff!important;text-shadow:0 1px 3px rgba(0,0,0,.55)!important}
 .app .member-card .member-status,.app .member-card .member-status small{color:rgba(255,255,255,.88)!important;text-shadow:0 1px 2px rgba(0,0,0,.36)!important}
+
+/* Layout palettes have more CSS specificity than the generic card rules above.
+   Repeat the role palette at that level so the complete card remains role
+   coloured in every selected layout. */
+.app[class*="layout-"] .modern-main .member-card.head-admin{background:linear-gradient(145deg,#7a4a08,#bd7909)!important;color:#fff8df!important}
+.app[class*="layout-"] .modern-main .member-card.admin{background:linear-gradient(145deg,#8a5609,#d38b10)!important;color:#fff8df!important}
+.app[class*="layout-"] .modern-main .member-card.supporter{background:linear-gradient(145deg,#075d32,#168d50)!important;color:#effff5!important}
+.app[class*="layout-"] .modern-main .member-card.member:not(.business){background:linear-gradient(145deg,#203b58,#132b43)!important;color:#eff6ff!important}
+.app[class*="layout-"] .modern-main .member-card.business{background:linear-gradient(145deg,#075a9a,#147fc4)!important;color:#eff8ff!important}
+.app[class*="layout-"] .modern-main .member-card .member-nickname,.app[class*="layout-"] .modern-main .member-card .member-name,.app[class*="layout-"] .modern-main .member-card .member-status,.app[class*="layout-"] .modern-main .member-card .member-status small{color:#fff!important;text-shadow:0 1px 3px rgba(0,0,0,.55)!important}
