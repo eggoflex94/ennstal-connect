@@ -602,6 +602,10 @@
       .profile-bio-image { display:block; width:100%; max-height:320px; object-fit:cover; border-radius:16px; margin:16px 0; }
       .profile-editor-note, .profile-editor-help { color:#64748b; }
       .profile-typography-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+      .profile-media-delete-actions { display:flex; flex-wrap:wrap; gap:9px; padding:14px; border:1px solid #f0c9c9; border-radius:14px; background:#fff7f7; }
+      .profile-media-delete-actions::before { content:"Vorhandene Profilbilder entfernen"; width:100%; color:#8f3030; font-weight:800; }
+      .head-admin-media-tools { margin:18px 0; border:2px solid #e3a13c!important; background:#fff9ed!important; }
+      .head-admin-media-tools>div { display:flex; flex-wrap:wrap; gap:9px; }
       .layout-alpine .my-profile-card { background:linear-gradient(145deg,#285443,#152a23)!important; }
       .layout-aurora .my-profile-card { background:linear-gradient(145deg,#533a78,#1f2745)!important; }
       .layout-ocean .my-profile-card { background:linear-gradient(145deg,#155b73,#112c43)!important; }
