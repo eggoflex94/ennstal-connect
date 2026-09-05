@@ -111,4 +111,11 @@
   .chat-box{min-height:calc(100vh - 180px)!important}.chat-messages{max-height:none!important}
   .site-footer{margin:0!important;width:100%!important;padding:22px 14px calc(92px + env(safe-area-inset-bottom))!important}
   .auth-welcome{display:block!important;min-height:100vh!important;padding:0!important}.auth-intro,.auth-box{width:100%!important;max-width:none!important}.auth-intro{padding:28px 20px!important}.auth-box{padding:0 14px 28px!important}.auth-box .panel{width:100%!important;margin:0!important;padding:20px!important}
+  /* The status line was positioned below compact cards on phones. Keep room
+     for it and force it above the card background. */
+  .modern-main .member-card{height:292px!important;min-height:292px!important}
+  .modern-main .member-card .member-status{display:flex!important;position:absolute!important;left:8px!important;right:8px!important;bottom:16px!important;z-index:12!important;align-items:center!important;justify-content:center!important;gap:7px!important;visibility:visible!important;opacity:1!important;font-size:14px!important;font-weight:900!important;color:#fff!important}
+  .modern-main .member-card .member-status span{display:inline-block!important;width:11px!important;height:11px!important;min-width:11px!important;border-radius:50%!important;background:#a9b9c7!important}
+  .modern-main .member-card .member-status.online span{background:#58ec93!important;box-shadow:0 0 10px #58ec93!important}
+  .modern-main .member-card .member-status small{display:block!important;width:auto!important;color:rgba(255,255,255,.82)!important;font-size:10px!important}
 }
