@@ -1,4 +1,4 @@
-const CACHE = "ennstal-connect-shell-v1";
+const CACHE = "ennstal-connect-shell-v2";
 const SHELL = ["/", "/manifest.webmanifest", "/ennstal-connect-logo-v2.png", "/ennstal-connect-community-logo.png"];
 
 self.addEventListener("install", (event) => {
