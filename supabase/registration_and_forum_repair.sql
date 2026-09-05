@@ -147,4 +147,115 @@ $$;
 
 revoke all on function public.forum_update_post(uuid, text, text, text) from public;
 grant execute on function public.forum_update_post(uuid, text, text, text) to authenticated;
+
+-- Profile verification. The columns are deliberately created before the
+-- functions: an older SQL version declared its functions first and therefore
+-- left this feature only half-installed.
+create extension if not exists pgcrypto;
+alter table public.profiles add column if not exists is_verified boolean not null default false;
+alter table public.profiles add column if not exists verified_at timestamptz;
+alter table public.profiles add column if not exists verified_by uuid references public.profiles(id) on delete set null;
+alter table public.profiles add column if not exists verification_required_at timestamptz;
+alter table public.profiles add column if not exists verification_due_at timestamptz;
+
+create table if not exists public.verification_requests (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  note text not null default '' check (char_length(note) <= 1000),
+  status text not null default 'PENDING' check (status in ('PENDING', 'APPROVED', 'DECLINED')),
+  created_at timestamptz not null default now(),
+  reviewed_at timestamptz,
+  reviewed_by uuid references public.profiles(id) on delete set null,
+  unique(user_id, status)
+);
+alter table public.verification_requests enable row level security;
+drop policy if exists verification_requests_read on public.verification_requests;
+create policy verification_requests_read on public.verification_requests
+for select to authenticated
+using (user_id = auth.uid() or public.ec_is_head_admin());
+
+create or replace function public.request_profile_verification(p_note text default '')
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_head_admin uuid;
+  v_name text;
+begin
+  if auth.uid() is null then raise exception 'Nicht eingeloggt.'; end if;
+  if exists (select 1 from public.profiles where id = auth.uid() and is_verified) then
+    raise exception 'Dein Profil ist bereits verifiziert.';
+  end if;
+  if exists (select 1 from public.verification_requests where user_id = auth.uid() and status = 'PENDING') then
+    raise exception 'Deine Verifizierungsanfrage wird bereits geprüft.';
+  end if;
+  insert into public.verification_requests(user_id, note)
+  values (auth.uid(), left(btrim(coalesce(p_note, '')), 1000));
+  select id into v_head_admin from public.profiles
+  where role = 'HEAD_ADMIN' and account_status = 'ACTIVE' limit 1;
+  select coalesce(nullif(nickname, ''), 'Ein Mitglied') into v_name
+  from public.profiles where id = auth.uid();
+  if v_head_admin is not null and v_head_admin <> auth.uid() then
+    insert into public.messages(sender_id, receiver_id, content, is_read, created_at)
+    values (auth.uid(), v_head_admin, v_name || ' hat eine Verifizierungsanfrage gestellt.', false, now());
+  end if;
+end;
+$$;
+
+create or replace function public.admin_verification_review_queue()
+returns table(user_id uuid, nickname text, due_at timestamptz, reason text)
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not public.ec_is_admin() then raise exception 'Keine Admin-Berechtigung.'; end if;
+  return query
+  select p.id, coalesce(nullif(p.nickname, ''), 'Mitglied'), p.verification_due_at,
+         coalesce(r.note, 'Mitglied hat eine Verifizierung angefordert.')
+  from public.verification_requests r
+  join public.profiles p on p.id = r.user_id
+  where r.status = 'PENDING'
+  order by r.created_at asc;
+end;
+$$;
+
+create or replace function public.admin_review_profile_verification(
+  p_user_id uuid,
+  p_approved boolean
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not public.ec_is_head_admin() then
+    raise exception 'Nur der Head Admin darf Verifizierungsanfragen abschließen.';
+  end if;
+  if not exists (select 1 from public.verification_requests where user_id = p_user_id and status = 'PENDING') then
+    raise exception 'Keine offene Verifizierungsanfrage gefunden.';
+  end if;
+  update public.verification_requests
+  set status = case when p_approved then 'APPROVED' else 'DECLINED' end,
+      reviewed_at = now(), reviewed_by = auth.uid()
+  where user_id = p_user_id and status = 'PENDING';
+  update public.profiles
+  set is_verified = p_approved,
+      verified_at = case when p_approved then now() else null end,
+      verified_by = case when p_approved then auth.uid() else null end,
+      verification_required_at = null,
+      verification_due_at = null
+  where id = p_user_id;
+end;
+$$;
+
+revoke all on function public.request_profile_verification(text) from public;
+revoke all on function public.admin_verification_review_queue() from public;
+revoke all on function public.admin_review_profile_verification(uuid, boolean) from public;
+grant execute on function public.request_profile_verification(text) to authenticated;
+grant execute on function public.admin_verification_review_queue() to authenticated;
+grant execute on function public.admin_review_profile_verification(uuid, boolean) to authenticated;
 notify pgrst, 'reload schema';
