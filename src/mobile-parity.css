@@ -102,6 +102,9 @@
   .form-grid,.my-area-layout,.community-hub-grid,.admin-member-cards,.permissions-grid{grid-template-columns:1fr!important}
   .form-grid label:last-child{grid-column:auto!important}
   input,select,textarea{font-size:16px!important;min-height:46px!important}
+  /* iOS/Android file controls stay visible and are large enough to tap. */
+  .profile-form input[type="file"],.profile-gallery input[type="file"],.group-create-form input[type="file"],.content-image-upload input[type="file"]{display:block!important;width:100%!important;min-height:52px!important;padding:7px!important;border:1px dashed #8199ad!important;border-radius:12px!important;background:#f5f9fc!important;color:#203e58!important;cursor:pointer!important}
+  .profile-form input[type="file"]::file-selector-button,.profile-gallery input[type="file"]::file-selector-button,.group-create-form input[type="file"]::file-selector-button,.content-image-upload input[type="file"]::file-selector-button{min-height:36px!important;margin-right:10px!important;padding:7px 11px!important;border:0!important;border-radius:9px!important;background:#ff6b25!important;color:#fff!important;font-weight:850!important;cursor:pointer!important}
   textarea{min-height:128px!important}
   button,.primary-button,.secondary-button,.danger-button{min-height:46px!important;touch-action:manipulation!important}
   .content-card-actions,.event-actions,.event-rsvp-actions,.member-profile-actions,.forum-reply-actions{grid-template-columns:1fr!important}
