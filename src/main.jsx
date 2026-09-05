@@ -15,6 +15,7 @@ import "./featured-group-admin.js";
 import "./featured-group-admin.css";
 import "./branding-sync.js";
 import "./mobile-parity.css";
+import "./brand-logo-2026.css";
 
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
