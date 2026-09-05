@@ -26,6 +26,12 @@ const roleClass = (role) => String(role || "MEMBER").toLowerCase().replace("_", 
 const isAdmin = (role) => role === "ADMIN" || role === "HEAD_ADMIN";
 const isHeadAdmin = (role) => role === "HEAD_ADMIN";
 const isRecentlyActive = (member) => Boolean(member?.is_online && member?.last_active_at && Date.now() - new Date(member.last_active_at).getTime() < 5 * 60 * 1000);
+const instantWelcomeBadges = (profile, groups, posts, userId) => [
+  { key: "WELCOME", title: "Willkommen", description: "Dein Konto ist bereit für die Community.", icon: "✦", earned: true },
+  { key: "PROFILE", title: "Profil angelegt", description: "Dein Name ist in der Community sichtbar.", icon: "◉", earned: Boolean(profile?.nickname) },
+  { key: "GROUP", title: "Erste Gruppe", description: "Einer Community-Gruppe beigetreten.", icon: "◉", earned: groups.some((group) => (group.member_ids || []).includes(userId)) },
+  { key: "FORUM", title: "Erster Beitrag", description: "Im Forum mitdiskutiert.", icon: "✦", earned: posts.some((post) => post.author_id === userId) }
+];
 const getName = (m) => m ? (m.nickname || [m.first_name, m.last_name].filter(Boolean).join(" ") || "Mitglied") : "";
 const formatInterests = (interests) => {
   if (Array.isArray(interests)) return interests.join(", ");
@@ -228,7 +234,8 @@ export default function App() {
         safe(supabase.rpc("featured_community_group"), null),
         safe(supabase.from("community_requests").select("*").eq("status", "ACTIVE").order("created_at", { ascending: false }).limit(8))
       ]);
-      setProfile(p); setMembers(ms); setFriendships(fs); setMessages(msgs); setHomepageSections(hs); setReports(rs); setBlockedUsers(bs); setNews(ns); setEvents(es); setGroups((gs || []).map((entry) => typeof entry === "string" ? JSON.parse(entry) : entry)); setProfileVisits(visits); setForumPosts(posts); setForumReplies(replies); setFeatureLocks(locks); setProfileActivities(activities); setWeeklyPoll(Array.isArray(poll) ? poll[0] || null : poll); setWelcomeBadges(badges || []); setFeaturedGroup(Array.isArray(featured) ? featured[0] || null : featured); setCommunityRequests(requests || []);
+      const groupData = (gs || []).map((entry) => typeof entry === "string" ? JSON.parse(entry) : entry);
+      setProfile(p); setMembers(ms); setFriendships(fs); setMessages(msgs); setHomepageSections(hs); setReports(rs); setBlockedUsers(bs); setNews(ns); setEvents(es); setGroups(groupData); setProfileVisits(visits); setForumPosts(posts); setForumReplies(replies); setFeatureLocks(locks); setProfileActivities(activities); setWeeklyPoll(Array.isArray(poll) ? poll[0] || null : poll); setWelcomeBadges(Array.isArray(badges) && badges.length ? badges : instantWelcomeBadges(p, groupData, posts, currentUser.id)); setFeaturedGroup(Array.isArray(featured) ? featured[0] || null : featured); setCommunityRequests(requests || []);
       if (isAdmin(p?.role)) { const { data: directory, error: directoryError } = await supabase.rpc("admin_member_directory"); if (!directoryError) setMemberEmails(Object.fromEntries((directory || []).map((entry) => [entry.id, entry.email]))); } else setMemberEmails({});
     } catch (e) { console.error(e); showNotice(e?.message || "Fehler beim Laden"); }
   };

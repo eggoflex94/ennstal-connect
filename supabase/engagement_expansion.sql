@@ -22,6 +22,31 @@ begin
    where id=auth.uid();
 end;
 $$;
+
+-- Profil-Aktualisierungen werden in der persönlichen Übersicht gespeichert.
+-- Die Funktion ist auch dann verfügbar, wenn die Gruppen-Erweiterung nicht
+-- zuvor ausgeführt wurde.
+create table if not exists public.profile_activity (
+  id uuid primary key default gen_random_uuid(),
+  profile_id uuid not null references public.profiles(id) on delete cascade,
+  actor_id uuid not null references public.profiles(id) on delete cascade,
+  activity_type text not null check (char_length(activity_type) between 3 and 120),
+  created_at timestamptz not null default now()
+);
+alter table public.profile_activity enable row level security;
+grant select, insert on public.profile_activity to authenticated;
+drop policy if exists profile_activity_read on public.profile_activity;
+create policy profile_activity_read on public.profile_activity for select to authenticated using (profile_id=auth.uid());
+drop policy if exists profile_activity_create on public.profile_activity;
+create policy profile_activity_create on public.profile_activity for insert to authenticated with check (profile_id=auth.uid() and actor_id=auth.uid());
+create or replace function public.log_profile_change(p_activity text)
+returns void language plpgsql security definer set search_path=public as $$
+begin
+  if auth.uid() is null then raise exception 'Nicht eingeloggt.'; end if;
+  insert into public.profile_activity(profile_id,actor_id,activity_type)
+  values(auth.uid(),auth.uid(),left(trim(coalesce(p_activity,'Profil aktualisiert')),120));
+end;
+$$;
 create table if not exists public.community_weekly_poll_votes (
   poll_id uuid not null references public.community_weekly_polls(id) on delete cascade,
   user_id uuid not null references public.profiles(id) on delete cascade,
@@ -94,7 +119,8 @@ create or replace function public.my_welcome_badges()
 returns table(key text, title text, description text, icon text, earned boolean)
 language sql stable security definer set search_path=public as $$
   select * from (values
-    ('PROFILE','Profil gestaltet','Profilbild oder Über-mich-Text ergänzt','◉',exists(select 1 from public.profiles where id=auth.uid() and (coalesce(nullif(avatar_url,''),'') <> '' or coalesce(nullif(bio,''),'') <> ''))),
+    ('WELCOME','Willkommen','Dein Konto ist bereit für die Community.','✦',true),
+    ('PROFILE','Profil angelegt','Dein Name ist in der Community sichtbar.','◉',exists(select 1 from public.profiles where id=auth.uid() and coalesce(nullif(nickname,''),'') <> '')),
     ('GROUP','Erste Gruppe','Einer Community-Gruppe beigetreten','◉',exists(select 1 from public.community_group_members where user_id=auth.uid())),
     ('PHOTO','Erstes Foto','Ein Foto im Profil veröffentlicht','▣',exists(select 1 from public.member_photos where owner_id=auth.uid())),
     ('FORUM','Erster Beitrag','Im Forum mitdiskutiert','✦',exists(select 1 from public.forum_posts where author_id=auth.uid()))
@@ -128,6 +154,7 @@ revoke all on function public.set_featured_community_group(uuid) from public;
 revoke all on function public.featured_community_group() from public;
 revoke all on function public.my_welcome_badges() from public;
 revoke all on function public.record_presence(boolean) from public;
+revoke all on function public.log_profile_change(text) from public;
 grant execute on function public.weekly_poll_current() to authenticated;
 grant execute on function public.create_weekly_poll(text,text[]) to authenticated;
 grant execute on function public.vote_weekly_poll(uuid,integer) to authenticated;
@@ -135,4 +162,5 @@ grant execute on function public.set_featured_community_group(uuid) to authentic
 grant execute on function public.featured_community_group() to authenticated;
 grant execute on function public.my_welcome_badges() to authenticated;
 grant execute on function public.record_presence(boolean) to authenticated;
+grant execute on function public.log_profile_change(text) to authenticated;
 notify pgrst, 'reload schema';
