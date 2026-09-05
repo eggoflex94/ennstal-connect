@@ -56,6 +56,31 @@
 .app[class*="layout-"] .modern-main .member-card.member:not(.business){background:linear-gradient(145deg,#203b58,#132b43)!important;color:#eff6ff!important}
 .app[class*="layout-"] .modern-main .member-card.business{background:linear-gradient(145deg,#075a9a,#147fc4)!important;color:#eff8ff!important}
 .app[class*="layout-"] .modern-main .member-card .member-nickname,.app[class*="layout-"] .modern-main .member-card .member-name,.app[class*="layout-"] .modern-main .member-card .member-status,.app[class*="layout-"] .modern-main .member-card .member-status small{color:#fff!important;text-shadow:0 1px 3px rgba(0,0,0,.55)!important}
+
+/* Every selectable layout keeps administration text readable. Individual
+   profile palettes used to leak into these panels and produced dark text on
+   dark cards or white text on white cards. */
+.app[class*="layout-"] .modern-main .admin-page{color:#263f58!important}
+.app[class*="layout-"] .modern-main .admin-page .page-heading h1,.app[class*="layout-"] .modern-main .admin-page .page-heading p{color:#263f58!important}
+.app[class*="layout-"] .modern-main .admin-dashboard-shortcuts{background:linear-gradient(135deg,#102c45,#1d587d)!important;color:#fff!important;border-color:#76cdf8!important}
+.app[class*="layout-"] .modern-main .admin-dashboard-shortcuts .eyebrow{color:#ffbd66!important}
+.app[class*="layout-"] .modern-main .admin-dashboard-shortcuts h2{color:#fff!important}
+.app[class*="layout-"] .modern-main .admin-dashboard-shortcuts p{color:#d9efff!important}
+.app[class*="layout-"] .modern-main .admin-dashboard-action{background:#294c65!important;color:#fff!important;border-color:#79c8ef!important}
+.app[class*="layout-"] .modern-main .admin-dashboard-action strong{color:#fff!important}
+.app[class*="layout-"] .modern-main .admin-dashboard-action small{color:#e3f3ff!important}
+.app[class*="layout-"] .modern-main .admin-member-card{background:#fff!important;color:#263f58!important;border-color:#c7d8e5!important}
+.app[class*="layout-"] .modern-main .admin-member-card .admin-member-person-button{background:transparent!important;color:#263f58!important}
+.app[class*="layout-"] .modern-main .admin-member-card .admin-member-person-button strong{color:#263f58!important}
+.app[class*="layout-"] .modern-main .admin-member-card .admin-member-person-button small{color:#55718a!important}
+.app[class*="layout-"] .modern-main .admin-member-card .admin-member-card-info>div{background:#eef4f8!important;border-color:#d4e0e9!important}
+.app[class*="layout-"] .modern-main .admin-member-card .admin-member-card-info span{color:#5d7388!important}
+.app[class*="layout-"] .modern-main .admin-member-card .admin-member-card-info strong{color:#244b6d!important}
+.app[class*="layout-"] .modern-main .admin-member-card .admin-member-card-actions{background:transparent!important}
+.app[class*="layout-"] .modern-main .admin-email-directory,.app[class*="layout-"] .modern-main .permissions-panel,.app[class*="layout-"] .modern-main .profile-admin-edit-form{background:#fff!important;color:#263f58!important;border-color:#c7d8e5!important}
+.app[class*="layout-"] .modern-main .admin-email-directory h2,.app[class*="layout-"] .modern-main .permissions-panel h2,.app[class*="layout-"] .modern-main .profile-admin-edit-form h2{color:#263f58!important}
+.app[class*="layout-"] .modern-main .admin-email-directory p{background:#f3f7fa!important;color:#263f58!important}
+.app[class*="layout-"] .modern-main .admin-email-directory span{color:#55718a!important}
 /* Groups, moderation contacts and profile photo folders */
 .group-create-form,.group-moderators,.forum-contacts,.public-photo-folder{margin:0 0 20px!important}
 .group-create-form{display:grid!important;gap:12px!important;max-width:720px!important}
