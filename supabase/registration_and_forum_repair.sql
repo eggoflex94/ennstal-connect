@@ -378,4 +378,19 @@ end;
 $$;
 revoke all on function public.admin_create_community_ad(text, text, text, text) from public;
 grant execute on function public.admin_create_community_ad(text, text, text, text) to authenticated;
+
+create or replace function public.admin_delete_community_ad(p_ad_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not public.ec_is_head_admin() then raise exception 'Nur der Head Admin darf Werbeflächen entfernen.'; end if;
+  delete from public.community_ads where id = p_ad_id;
+  if not found then raise exception 'Werbefläche nicht gefunden.'; end if;
+end;
+$$;
+revoke all on function public.admin_delete_community_ad(uuid) from public;
+grant execute on function public.admin_delete_community_ad(uuid) to authenticated;
 notify pgrst, 'reload schema';
