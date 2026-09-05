@@ -688,7 +688,10 @@ export default function App() {
     const { data } = supabase.storage.from(bucket).getPublicUrl(path); if (!data?.publicUrl) throw new Error("Für das Bild konnte keine öffentliche URL erstellt werden."); return data.publicUrl;
   }
   async function uploadContentImage(file, category) {
-    if (!file || !user) return null;
+    // FormData supplies an empty File object when an optional file input was
+    // left blank. Treat that as "no image" instead of rejecting the whole
+    // group/news form as an invalid image upload.
+    if (!file || !user || !file.name || file.size === 0) return null;
     if (!file.type.startsWith("image/")) throw new Error("Bitte eine Bilddatei auswählen.");
     if (file.size > 5 * 1024 * 1024) throw new Error("Das Bild darf höchstens 5 MB groß sein.");
     const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
