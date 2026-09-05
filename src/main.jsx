@@ -13,6 +13,7 @@ import "./last-name-privacy.js";
 import "./online-status-sync.js";
 import "./featured-group-admin.js";
 import "./featured-group-admin.css";
+import "./branding-sync.js";
 import "./mobile-parity.css";
 
 class AppErrorBoundary extends React.Component {
