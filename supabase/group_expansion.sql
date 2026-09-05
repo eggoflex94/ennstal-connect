@@ -102,6 +102,25 @@ begin
 end;
 $$;
 
+-- A group may be deleted only by its original creator or by the explicitly
+-- authorised group moderation.  Memberships and open owner-change requests
+-- are removed automatically through the foreign-key cascades above.
+create or replace function public.delete_community_group(p_group_id uuid)
+returns void language plpgsql security definer set search_path=public as $$
+begin
+  if auth.uid() is null then raise exception 'Bitte zuerst anmelden.'; end if;
+  if not exists(
+    select 1 from public.community_groups
+    where id=p_group_id
+      and (created_by=auth.uid() or public.ec_can_manage_community_groups())
+  ) then
+    raise exception 'Nur der Gruppenersteller oder die Gruppenmoderation darf diese Gruppe löschen.';
+  end if;
+  delete from public.community_groups where id=p_group_id;
+  if not found then raise exception 'Gruppe wurde nicht gefunden.'; end if;
+end;
+$$;
+
 create or replace function public.request_community_group_owner_change(p_group_id uuid, p_new_owner_id uuid)
 returns void language plpgsql security definer set search_path=public as $$
 begin
@@ -156,6 +175,7 @@ revoke all on function public.create_community_group(text,text,text) from public
 revoke all on function public.join_community_group(uuid) from public;
 revoke all on function public.leave_community_group(uuid) from public;
 revoke all on function public.update_community_group(uuid,text,text,text) from public;
+revoke all on function public.delete_community_group(uuid) from public;
 revoke all on function public.request_community_group_owner_change(uuid,uuid) from public;
 revoke all on function public.review_community_group_owner_change(uuid,boolean) from public;
 revoke all on function public.community_group_owner_change_queue() from public;
@@ -165,6 +185,7 @@ grant execute on function public.create_community_group(text,text,text) to authe
 grant execute on function public.join_community_group(uuid) to authenticated;
 grant execute on function public.leave_community_group(uuid) to authenticated;
 grant execute on function public.update_community_group(uuid,text,text,text) to authenticated;
+grant execute on function public.delete_community_group(uuid) to authenticated;
 grant execute on function public.request_community_group_owner_change(uuid,uuid) to authenticated;
 grant execute on function public.review_community_group_owner_change(uuid,boolean) to authenticated;
 grant execute on function public.community_group_owner_change_queue() to authenticated;
