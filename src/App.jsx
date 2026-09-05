@@ -198,9 +198,10 @@ export default function App() {
 
   async function openAccountReview() {
     if (!isAdmin(profile?.role)) return;
-    const { data, error } = await supabase.rpc("admin_account_review_queue");
+    const [{ data, error }, { data: verificationQueue, error: verificationError }] = await Promise.all([supabase.rpc("admin_account_review_queue"), supabase.rpc("admin_verification_review_queue")]);
     if (error) return showNotice(error.message);
-    setAccountReviewQueue(data || []);
+    const required = verificationError ? [] : (verificationQueue || []).map((entry) => ({ user_id: entry.user_id, nickname: entry.nickname, registered_at: entry.due_at, review_reason: `Verifizierung angefordert · Frist: ${new Date(entry.due_at).toLocaleString("de-AT")} · ${entry.reason || ""}` }));
+    setAccountReviewQueue([...(data || []), ...required]);
     setPage("admin-account-review");
   }
 
