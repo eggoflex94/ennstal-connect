@@ -584,7 +584,37 @@
         padding:
           24px;
         text-align: center;
+        overflow: hidden;
       }
+
+      .profile-bio, .member-profile-bio { white-space: pre-wrap; overflow-wrap: anywhere; }
+      .profile-bio.modern, .member-profile-bio.modern { font-family: Inter, system-ui, sans-serif; }
+      .profile-bio.serif, .member-profile-bio.serif { font-family: Georgia, "Times New Roman", serif; }
+      .profile-bio.handwritten, .member-profile-bio.handwritten { font-family: "Segoe Print", "Bradley Hand", cursive; }
+      .profile-bio.small, .member-profile-bio.small { font-size: .92rem; }
+      .profile-bio.normal, .member-profile-bio.normal { font-size: 1.05rem; }
+      .profile-bio.large, .member-profile-bio.large { font-size: 1.3rem; line-height: 1.55; }
+      .profile-bio-image { display:block; width:100%; max-height:320px; object-fit:cover; border-radius:16px; margin:16px 0; }
+      .profile-editor-note, .profile-editor-help { color:#64748b; }
+      .profile-typography-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+      .layout-alpine .my-profile-card { background:linear-gradient(145deg,#285443,#152a23)!important; }
+      .layout-aurora .my-profile-card { background:linear-gradient(145deg,#533a78,#1f2745)!important; }
+      .layout-ocean .my-profile-card { background:linear-gradient(145deg,#155b73,#112c43)!important; }
+      .layout-slate .my-profile-card { background:linear-gradient(145deg,#465362,#202832)!important; }
+      .layout-ember .my-profile-card { background:linear-gradient(145deg,#9a4728,#38211f)!important; }
+      .layout-redwood .my-profile-card { background:linear-gradient(145deg,#7b2f38,#301d26)!important; }
+      .layout-lavender .my-profile-card { background:linear-gradient(145deg,#80639c,#3d3556)!important; }
+      .layout-midnight .my-profile-card { background:linear-gradient(145deg,#172b4d,#090f20)!important; }
+      .layout-sunrise .my-profile-card { background:linear-gradient(145deg,#ce7b62,#7d4865)!important; }
+      .profile-highlights { margin:20px 0; }
+      .profile-stat-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+      .profile-stat-grid span { display:flex; flex-direction:column; align-items:center; padding:14px; border-radius:14px; background:#f4f7fa; }
+      .profile-stat-grid strong { font-size:1.55rem; color:#314155; }
+      .profile-stat-grid small { color:#718196; }
+      .profile-interest-tags, .profile-social-actions { display:flex; flex-wrap:wrap; gap:9px; margin-top:16px; }
+      .profile-interest-tags span { padding:7px 12px; border-radius:999px; background:#fff0e7; color:#b94e12; font-weight:700; }
+      .profile-social-actions a, .profile-social-actions button { border:1px solid #d5dee8; border-radius:12px; padding:10px 14px; background:#fff; color:#33465b; text-decoration:none; font-weight:700; }
+      @media(max-width:680px){.profile-typography-grid{grid-template-columns:1fr}.profile-stat-grid{gap:7px}.profile-stat-grid span{padding:10px 5px}.profile-stat-grid small{font-size:.7rem;text-align:center}}
 
       .my-profile-card.admin-profile {
         border-color:
