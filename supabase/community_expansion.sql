@@ -165,14 +165,23 @@ drop policy if exists member_photo_comments_read on public.member_photo_comments
 drop policy if exists member_photo_comments_write on public.member_photo_comments;
 drop policy if exists member_photo_comments_delete on public.member_photo_comments;
 create policy member_photos_read on public.member_photos for select to authenticated using (
-  visibility = 'PUBLIC'
+  public.ec_is_admin()
   or owner_id = auth.uid()
-  or public.ec_is_admin()
-  or (visibility = 'FRIENDS' and exists (
-    select 1 from public.friendships f
-    where f.status = 'ACCEPTED'
-      and ((f.requester_id = auth.uid() and f.receiver_id = owner_id) or (f.receiver_id = auth.uid() and f.requester_id = owner_id))
-  ))
+  or (
+    not exists (
+      select 1 from public.user_blocks b
+      where (b.blocker_id = auth.uid() and b.blocked_id = owner_id)
+         or (b.blocker_id = owner_id and b.blocked_id = auth.uid())
+    )
+    and (
+      visibility = 'PUBLIC'
+      or (visibility = 'FRIENDS' and exists (
+        select 1 from public.friendships f
+        where f.status = 'ACCEPTED'
+          and ((f.requester_id = auth.uid() and f.receiver_id = owner_id) or (f.receiver_id = auth.uid() and f.requester_id = owner_id))
+      ))
+    )
+  )
 );
 create policy member_photos_write on public.member_photos for insert to authenticated with check (owner_id=auth.uid());
 drop policy if exists member_photos_update on public.member_photos;
