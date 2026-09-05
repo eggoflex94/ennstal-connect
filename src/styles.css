@@ -49,6 +49,11 @@
         max-width: 500px;
       }
 
+      .auth-online-rewards { width:min(100%,980px); margin:22px auto 8px; padding:18px 22px; border:1px solid #ccd9e5; border-radius:18px; background:linear-gradient(135deg,#eefbff,#fff0fb); color:#33465b; box-shadow:0 12px 28px rgba(38,68,96,.10); display:grid; gap:6px; }
+      .auth-online-rewards strong { color:#7a21ad; font-size:1.08rem; }
+      .auth-online-rewards span { line-height:1.55; }
+      .auth-online-rewards small { color:#65778a; }
+
       .app {
         min-height: 100vh;
       }
