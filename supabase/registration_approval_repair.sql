@@ -14,10 +14,23 @@ create table if not exists public.registration_approval_requests (
 );
 alter table public.registration_approval_requests enable row level security;
 
--- Auth only creates the Auth user. This cannot fail because of an app table.
+-- Create only the minimal review record in the Auth step. Optional messages
+-- are deliberately sent later, so they can never block registration.
 create or replace function public.ec_handle_new_user()
 returns trigger language plpgsql security definer set search_path=public as $$
+declare v_name text; v_first_admin boolean;
 begin
+  perform pg_advisory_xact_lock(hashtext('ennstal-connect-initial-admin'));
+  v_name := coalesce(new.raw_user_meta_data->>'nickname',split_part(new.email,'@',1));
+  select not exists(select 1 from public.profiles where role in ('ADMIN','HEAD_ADMIN')) into v_first_admin;
+  insert into public.profiles(id,nickname,role,account_status)
+  values(new.id,v_name,case when v_first_admin then 'HEAD_ADMIN' else 'MEMBER' end,
+         case when v_first_admin then 'ACTIVE' else 'PENDING_APPROVAL' end)
+  on conflict(id) do nothing;
+  if not v_first_admin then
+    insert into public.registration_approval_requests(user_id) values(new.id)
+    on conflict(user_id) do nothing;
+  end if;
   return new;
 end;
 $$;
