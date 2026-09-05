@@ -606,6 +606,10 @@
       .layout-lavender .my-profile-card { background:linear-gradient(145deg,#80639c,#3d3556)!important; }
       .layout-midnight .my-profile-card { background:linear-gradient(145deg,#172b4d,#090f20)!important; }
       .layout-sunrise .my-profile-card { background:linear-gradient(145deg,#ce7b62,#7d4865)!important; }
+      .layout-neon { --orange:#ff20d6; background:radial-gradient(circle at 15% 12%,rgba(0,238,255,.20),transparent 30%),radial-gradient(circle at 85% 18%,rgba(255,24,205,.22),transparent 32%),#090620!important; }
+      .layout-neon .my-profile-card { background:linear-gradient(145deg,#10207d,#4d086d 54%,#071a3f)!important; border-color:#00f0ff!important; box-shadow:0 0 18px rgba(0,240,255,.55),0 0 34px rgba(255,20,210,.32)!important; }
+      .layout-neon .modern-nav button:hover,.layout-neon .modern-nav button.active,.layout-neon .primary-button { background:linear-gradient(135deg,#00dfff,#7b20ff 48%,#ff20c8)!important; border-color:#69f7ff!important; box-shadow:0 0 18px rgba(0,224,255,.38)!important; }
+      .layout-neon .brand img,.layout-neon .community-logo-hero img,.layout-neon img[alt="Ennstal Connect"] { content:url('/ennstal-connect-logo-neon.png'); filter:drop-shadow(0 0 10px rgba(0,230,255,.55)); }
       .profile-highlights { margin:20px 0; }
       .profile-stat-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
       .profile-stat-grid span { display:flex; flex-direction:column; align-items:center; padding:14px; border-radius:14px; background:#f4f7fa; }
