@@ -21,6 +21,17 @@ alter table public.profiles add column if not exists verification_due_at timesta
 -- explicitly approves them. Admins are notified inside the community.
 alter table public.profiles drop constraint if exists profiles_account_status_check;
 alter table public.profiles add constraint profiles_account_status_check check (account_status in ('ACTIVE','PENDING_APPROVAL','SUSPENDED'));
+-- The registration form uses this protected lookup before Auth creates a
+-- user.  It turns a duplicate nickname into a clear user-facing message.
+create unique index if not exists profiles_nickname_unique_normalized
+on public.profiles ((lower(btrim(nickname))))
+where nickname is not null and btrim(nickname) <> '';
+create or replace function public.nickname_available(p_nickname text)
+returns boolean language sql stable security definer set search_path=public as $$
+  select not exists(select 1 from public.profiles where lower(btrim(nickname)) = lower(btrim(coalesce(p_nickname,''))));
+$$;
+revoke all on function public.nickname_available(text) from public;
+grant execute on function public.nickname_available(text) to anon, authenticated;
 create table if not exists public.registration_approval_requests (
   user_id uuid primary key references public.profiles(id) on delete cascade,
   status text not null default 'PENDING' check (status in ('PENDING','APPROVED','DECLINED')),

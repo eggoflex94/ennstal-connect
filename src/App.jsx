@@ -483,8 +483,15 @@ export default function App() {
       const nickname = String(f.get("nickname") || "").trim();
       const { data: nicknameAvailable, error: nicknameCheckError } = await supabase.rpc("nickname_available", { p_nickname: nickname });
       if (!nicknameCheckError && nicknameAvailable === false) return showNotice("Dieser Nickname ist bereits vergeben. Bitte wähle einen anderen.");
+      // Older installations may not yet have the helper function.  The
+      // directory check prevents Supabase Auth from returning its vague
+      // "Database error saving new user" for an already used nickname.
+      if (nicknameCheckError) {
+        const { data: sameNickname } = await supabase.from("profiles").select("id").ilike("nickname", nickname).limit(1);
+        if (sameNickname?.length) return showNotice("Dieser Nickname ist bereits vergeben. Bitte wähle einen anderen.");
+      }
       const { data, error } = await withTimeout(supabase.auth.signUp({ email: f.get("email"), password: f.get("password"), options: { emailRedirectTo: `${location.origin}/`, data: { nickname: f.get("nickname"), first_name: f.get("first_name"), last_name: f.get("last_name"), birth_date: f.get("birth_date"), gender: f.get("gender") } } }), supabaseUnavailableMessage);
-      if (error) return showNotice(error.message);
+      if (error) return showNotice(/database error saving new user/i.test(error.message || "") ? "Die Registrierung wurde von der Datenbank abgelehnt. Bitte verwende einen noch nicht vergebenen Nickname und führe anschließend die aktuelle Community-SQL einmal aus." : error.message);
       // When confirmations are disabled, create the matching profile immediately.
       if (data.session?.user) { setUser(data.session.user); void supabase.rpc("ensure_current_profile").finally(loadAll); }
       showNotice("Registrierung eingereicht. Bestätige gegebenenfalls deine E-Mail; danach wartet dein Konto auf die Freigabe durch einen Admin.");
