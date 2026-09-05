@@ -192,8 +192,12 @@ export default function App() {
         return data ?? fallback;
       };
       const safeMemberDirectory = async () => {
-        const rows = await safe(supabase.rpc("community_member_directory"));
-        return rows.map((row) => typeof row === "string" ? JSON.parse(row) : row);
+        const { data, error } = await supabase.rpc("community_member_directory");
+        if (error) {
+          console.warn(error.message);
+          return safe(supabase.from("profiles").select("*").eq("account_status", "ACTIVE"));
+        }
+        return (data || []).map((row) => typeof row === "string" ? JSON.parse(row) : row);
       };
       const [p, ms, fs, msgs, hs, rs, bs, ns, es, gs, visits, posts, replies, locks, activities] = await Promise.all([
         safe(supabase.from("profiles").select("*").eq("id", currentUser.id).maybeSingle(), null),
