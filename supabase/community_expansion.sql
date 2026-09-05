@@ -56,7 +56,14 @@ begin
   if not v_first_admin then
     insert into public.registration_approval_requests(user_id) values(new.id) on conflict(user_id) do nothing;
     for a in select id from public.profiles where role in ('ADMIN','HEAD_ADMIN') and account_status='ACTIVE' loop
-      insert into public.messages(sender_id,receiver_id,content,is_read,created_at) values(new.id,a.id,'Neue Registrierung wartet auf Freigabe: ' || v_name || ' (' || new.email || ')',false,now());
+      -- Auth triggers must never fail merely because an optional in-app
+      -- notification cannot be written on an older installation.
+      begin
+        insert into public.messages(sender_id,receiver_id,content,is_read,created_at)
+        values(new.id,a.id,'Neue Registrierung wartet auf Freigabe: ' || v_name || ' (' || new.email || ')',false,now());
+      exception when others then
+        null;
+      end;
     end loop;
   end if;
   return new;
@@ -81,7 +88,12 @@ begin
   if not v_first_admin then
     insert into public.registration_approval_requests(user_id) values(auth.uid()) on conflict(user_id) do nothing;
     for a in select id from public.profiles where role in ('ADMIN','HEAD_ADMIN') and account_status='ACTIVE' loop
-      insert into public.messages(sender_id,receiver_id,content,is_read,created_at) values(auth.uid(),a.id,'Neue Registrierung wartet auf Freigabe: ' || v_name || ' (' || v_email || ')',false,now());
+      begin
+        insert into public.messages(sender_id,receiver_id,content,is_read,created_at)
+        values(auth.uid(),a.id,'Neue Registrierung wartet auf Freigabe: ' || v_name || ' (' || v_email || ')',false,now());
+      exception when others then
+        null;
+      end;
     end loop;
   end if;
 end;
