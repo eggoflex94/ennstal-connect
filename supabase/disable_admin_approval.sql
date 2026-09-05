@@ -25,7 +25,8 @@ begin
     coalesce(new.raw_user_meta_data->>'nickname',split_part(new.email,'@',1)),
     nullif(new.raw_user_meta_data->>'first_name',''),
     nullif(new.raw_user_meta_data->>'last_name',''),
-    nullif(new.raw_user_meta_data->>'birth_date','')::date,
+    case when coalesce(new.raw_user_meta_data->>'birth_date','') ~ '^\\d{4}-\\d{2}-\\d{2}$'
+         then (new.raw_user_meta_data->>'birth_date')::date else date '2000-01-01' end,
     nullif(new.raw_user_meta_data->>'gender',''),
     case when v_first_admin then 'HEAD_ADMIN' else 'MEMBER' end,
     'ACTIVE'
@@ -41,14 +42,16 @@ begin
   if auth.uid() is null then return; end if;
   select coalesce(raw_user_meta_data->>'nickname',split_part(email,'@',1)),
          nullif(raw_user_meta_data->>'first_name',''), nullif(raw_user_meta_data->>'last_name',''),
-         nullif(raw_user_meta_data->>'birth_date','')::date, nullif(raw_user_meta_data->>'gender','')
+         case when coalesce(raw_user_meta_data->>'birth_date','') ~ '^\\d{4}-\\d{2}-\\d{2}$'
+              then (raw_user_meta_data->>'birth_date')::date else date '2000-01-01' end,
+         nullif(raw_user_meta_data->>'gender','')
     into v_name,v_first_name,v_last_name,v_birth_date,v_gender from auth.users where id=auth.uid();
   -- Repair partially created profiles from older registration attempts.
   if exists(select 1 from public.profiles where id=auth.uid()) then
     update public.profiles
     set nickname=coalesce(nullif(nickname,''),v_name),
         first_name=coalesce(first_name,v_first_name), last_name=coalesce(last_name,v_last_name),
-        birth_date=coalesce(birth_date,v_birth_date), gender=coalesce(gender,v_gender), account_status='ACTIVE'
+        birth_date=coalesce(birth_date,v_birth_date,date '2000-01-01'), gender=coalesce(gender,v_gender), account_status='ACTIVE'
     where id=auth.uid();
     return;
   end if;
@@ -56,7 +59,7 @@ begin
   if exists(select 1 from public.profiles where id=auth.uid()) then return; end if;
   select not exists(select 1 from public.profiles where role in ('ADMIN','HEAD_ADMIN')) into v_first_admin;
   insert into public.profiles(id,nickname,first_name,last_name,birth_date,gender,role,account_status)
-  values(auth.uid(),v_name,v_first_name,v_last_name,v_birth_date,v_gender,case when v_first_admin then 'HEAD_ADMIN' else 'MEMBER' end,'ACTIVE');
+  values(auth.uid(),v_name,v_first_name,v_last_name,coalesce(v_birth_date,date '2000-01-01'),v_gender,case when v_first_admin then 'HEAD_ADMIN' else 'MEMBER' end,'ACTIVE');
 end;
 $$;
 revoke all on function public.ensure_current_profile() from public;
@@ -71,7 +74,7 @@ select
   nullif(u.raw_user_meta_data->>'first_name',''),
   nullif(u.raw_user_meta_data->>'last_name',''),
   case when coalesce(u.raw_user_meta_data->>'birth_date','') ~ '^\\d{4}-\\d{2}-\\d{2}$'
-       then (u.raw_user_meta_data->>'birth_date')::date else null end,
+       then (u.raw_user_meta_data->>'birth_date')::date else date '2000-01-01' end,
   nullif(u.raw_user_meta_data->>'gender',''),
   'MEMBER',
   'ACTIVE'
