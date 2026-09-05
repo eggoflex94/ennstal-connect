@@ -528,6 +528,7 @@ export default function App() {
     e.preventDefault(); if (!supabase) return showNotice(supabaseUnavailableMessage); const f = new FormData(e.currentTarget);
     try {
       const nickname = String(f.get("nickname") || "").trim();
+      if (nickname.length < 3) return showNotice("Der Nickname muss mindestens drei Zeichen haben.");
       const { data: nicknameAvailable, error: nicknameCheckError } = await supabase.rpc("nickname_available", { p_nickname: nickname });
       if (!nicknameCheckError && nicknameAvailable === false) return showNotice("Dieser Nickname ist bereits vergeben. Bitte wähle einen anderen.");
       // Older installations may not yet have the helper function.  The
@@ -537,8 +538,8 @@ export default function App() {
         const { data: sameNickname } = await supabase.from("profiles").select("id").ilike("nickname", nickname).limit(1);
         if (sameNickname?.length) return showNotice("Dieser Nickname ist bereits vergeben. Bitte wähle einen anderen.");
       }
-      const { data, error } = await withTimeout(supabase.auth.signUp({ email: f.get("email"), password: f.get("password"), options: { emailRedirectTo: `${location.origin}/`, data: { nickname: f.get("nickname"), first_name: f.get("first_name"), last_name: f.get("last_name"), birth_date: f.get("birth_date"), gender: f.get("gender") } } }), supabaseUnavailableMessage);
-      if (error) return showNotice(/database error saving new user/i.test(error.message || "") ? "Die Registrierung wurde von der Datenbank abgelehnt. Bitte verwende einen noch nicht vergebenen Nickname und führe anschließend die aktuelle Community-SQL einmal aus." : error.message);
+      const { data, error } = await withTimeout(supabase.auth.signUp({ email: f.get("email"), password: f.get("password"), options: { emailRedirectTo: `${location.origin}/`, data: { nickname, first_name: String(f.get("first_name") || "").trim(), last_name: String(f.get("last_name") || "").trim(), birth_date: String(f.get("birth_date") || "").trim(), gender: String(f.get("gender") || "").trim() } } }), supabaseUnavailableMessage);
+      if (error) return showNotice(/database error saving new user/i.test(error.message || "") ? "Die Registrierung konnte nicht angelegt werden. Der Nickname ist nicht als vergeben erkannt worden – die Datenbank-Registrierung muss einmal repariert werden. Bitte führe die Datei registration_and_forum_repair.sql in Supabase aus und versuche es danach erneut." : error.message);
       // When confirmations are disabled, create the matching profile immediately.
       if (data.session?.user) { setUser(data.session.user); void supabase.rpc("ensure_current_profile").finally(loadAll); }
       showNotice("Registrierung erfolgreich. Bestätige gegebenenfalls noch deine E-Mail und melde dich anschließend an.");
