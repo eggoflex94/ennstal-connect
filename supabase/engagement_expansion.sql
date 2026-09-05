@@ -9,6 +9,19 @@ create table if not exists public.community_weekly_polls (
   created_by uuid not null references public.profiles(id) on delete restrict,
   created_at timestamptz not null default now()
 );
+
+-- Der Browser meldet nur echte Bedienung. Nach fünf Minuten ohne Meldung
+-- zeigt die Oberfläche das Mitglied automatisch als offline an.
+create or replace function public.record_presence(p_online boolean default true)
+returns void language plpgsql security definer set search_path=public as $$
+begin
+  if auth.uid() is null then raise exception 'Nicht eingeloggt.'; end if;
+  update public.profiles
+     set is_online=p_online,
+         last_active_at=case when p_online then now() else last_active_at end
+   where id=auth.uid();
+end;
+$$;
 create table if not exists public.community_weekly_poll_votes (
   poll_id uuid not null references public.community_weekly_polls(id) on delete cascade,
   user_id uuid not null references public.profiles(id) on delete cascade,
@@ -114,10 +127,12 @@ revoke all on function public.vote_weekly_poll(uuid,integer) from public;
 revoke all on function public.set_featured_community_group(uuid) from public;
 revoke all on function public.featured_community_group() from public;
 revoke all on function public.my_welcome_badges() from public;
+revoke all on function public.record_presence(boolean) from public;
 grant execute on function public.weekly_poll_current() to authenticated;
 grant execute on function public.create_weekly_poll(text,text[]) to authenticated;
 grant execute on function public.vote_weekly_poll(uuid,integer) to authenticated;
 grant execute on function public.set_featured_community_group(uuid) to authenticated;
 grant execute on function public.featured_community_group() to authenticated;
 grant execute on function public.my_welcome_badges() to authenticated;
+grant execute on function public.record_presence(boolean) to authenticated;
 notify pgrst, 'reload schema';
