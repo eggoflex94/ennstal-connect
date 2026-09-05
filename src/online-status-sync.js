@@ -87,7 +87,15 @@ async function refreshOnlineStatus() {
 
 const scheduleRefresh = () => window.setTimeout(() => void refreshOnlineStatus(), 0);
 
-const observer = new MutationObserver(() => scheduleRefresh());
+const observer = new MutationObserver((mutations) => {
+  const memberCardAppeared = mutations.some((mutation) =>
+    [...mutation.addedNodes].some((node) =>
+      node.nodeType === Node.ELEMENT_NODE &&
+      (node.matches?.(".member-card") || node.querySelector?.(".member-card"))
+    )
+  );
+  if (memberCardAppeared) scheduleRefresh();
+});
 observer.observe(document.documentElement, { childList: true, subtree: true });
 
 window.addEventListener("focus", scheduleRefresh);
