@@ -17,10 +17,10 @@ alter table public.profiles add column if not exists head_admin_responsibilities
 alter table public.profiles add column if not exists verification_required_at timestamptz;
 alter table public.profiles add column if not exists verification_due_at timestamptz;
 
--- Registration approval: new members remain pending until an administrator
--- explicitly approves them. Admins are notified inside the community.
+-- New members are active immediately. Suspicious accounts are handled through
+-- the separate verification workflow, not by blocking registration.
 alter table public.profiles drop constraint if exists profiles_account_status_check;
-alter table public.profiles add constraint profiles_account_status_check check (account_status in ('ACTIVE','PENDING_APPROVAL','SUSPENDED'));
+alter table public.profiles add constraint profiles_account_status_check check (account_status in ('ACTIVE','SUSPENDED'));
 -- The registration form uses this protected lookup before Auth creates a
 -- user.  It turns a duplicate nickname into a clear user-facing message.
 create unique index if not exists profiles_nickname_unique_normalized
@@ -53,8 +53,7 @@ $$;
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created after insert on auth.users for each row execute procedure public.ec_handle_new_user();
 
--- Fallback for older Auth accounts that may exist without a profile. It uses
--- exactly the same approval path as a freshly registered account.
+-- Fallback for older Auth accounts that may exist without a profile.
 create or replace function public.ensure_current_profile()
 returns void language plpgsql security definer set search_path = public as $$
 declare a record; v_name text; v_email text; v_first_admin boolean;
@@ -65,18 +64,7 @@ begin
   select email, coalesce(raw_user_meta_data->>'nickname',split_part(email,'@',1)) into v_email,v_name from auth.users where id=auth.uid();
   select not exists(select 1 from public.profiles where role in ('ADMIN','HEAD_ADMIN')) into v_first_admin;
   insert into public.profiles(id,nickname,role,account_status)
-  values(auth.uid(),v_name,case when v_first_admin then 'HEAD_ADMIN' else 'MEMBER' end,case when v_first_admin then 'ACTIVE' else 'PENDING_APPROVAL' end);
-  if not v_first_admin then
-    insert into public.registration_approval_requests(user_id) values(auth.uid()) on conflict(user_id) do nothing;
-    for a in select id from public.profiles where role in ('ADMIN','HEAD_ADMIN') and account_status='ACTIVE' loop
-      begin
-        insert into public.messages(sender_id,receiver_id,content,is_read,created_at)
-        values(auth.uid(),a.id,'Neue Registrierung wartet auf Freigabe: ' || v_name || ' (' || v_email || ')',false,now());
-      exception when others then
-        null;
-      end;
-    end loop;
-  end if;
+  values(auth.uid(),v_name,case when v_first_admin then 'HEAD_ADMIN' else 'MEMBER' end,'ACTIVE');
 end;
 $$;
 revoke all on function public.ensure_current_profile() from public;
