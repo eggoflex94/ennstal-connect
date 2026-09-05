@@ -16,6 +16,49 @@ alter table public.profiles add column if not exists admin_responsibilities text
 alter table public.profiles add column if not exists verification_required_at timestamptz;
 alter table public.profiles add column if not exists verification_due_at timestamptz;
 
+-- Registration approval: new members remain pending until an administrator
+-- explicitly approves them. Admins are notified inside the community.
+alter table public.profiles drop constraint if exists profiles_account_status_check;
+alter table public.profiles add constraint profiles_account_status_check check (account_status in ('ACTIVE','PENDING_APPROVAL','SUSPENDED'));
+create table if not exists public.registration_approval_requests (
+  user_id uuid primary key references public.profiles(id) on delete cascade,
+  status text not null default 'PENDING' check (status in ('PENDING','APPROVED','DECLINED')),
+  created_at timestamptz not null default now(), reviewed_at timestamptz, reviewed_by uuid references public.profiles(id), reason text
+);
+alter table public.registration_approval_requests enable row level security;
+drop policy if exists registration_approval_admin_read on public.registration_approval_requests;
+create policy registration_approval_admin_read on public.registration_approval_requests for select to authenticated using (public.ec_is_admin() or user_id = auth.uid());
+
+create or replace function public.ec_handle_new_user()
+returns trigger language plpgsql security definer set search_path = public as $$
+declare a record; v_name text;
+begin
+  v_name := coalesce(new.raw_user_meta_data->>'nickname', split_part(new.email,'@',1));
+  insert into public.profiles(id,nickname,role,account_status) values(new.id,v_name,'MEMBER','PENDING_APPROVAL') on conflict(id) do nothing;
+  insert into public.registration_approval_requests(user_id) values(new.id) on conflict(user_id) do nothing;
+  for a in select id from public.profiles where role in ('ADMIN','HEAD_ADMIN') and account_status='ACTIVE' loop
+    insert into public.messages(sender_id,receiver_id,content,is_read,created_at) values(new.id,a.id,'Neue Registrierung wartet auf Freigabe: ' || v_name || ' (' || new.email || ')',false,now());
+  end loop;
+  return new;
+end;
+$$;
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created after insert on auth.users for each row execute procedure public.ec_handle_new_user();
+
+create or replace function public.admin_review_registration(p_user_id uuid, p_approve boolean, p_reason text default null)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if not public.ec_is_admin() then raise exception 'Keine Admin-Berechtigung.'; end if;
+  if not p_approve and length(trim(coalesce(p_reason,''))) < 3 then raise exception 'Bitte einen Ablehnungsgrund angeben.'; end if;
+  update public.registration_approval_requests set status=case when p_approve then 'APPROVED' else 'DECLINED' end, reviewed_at=now(), reviewed_by=auth.uid(), reason=case when p_approve then null else trim(p_reason) end where user_id=p_user_id and status='PENDING';
+  if not found then raise exception 'Keine offene Registrierungsanfrage gefunden.'; end if;
+  update public.profiles set account_status=case when p_approve then 'ACTIVE' else 'SUSPENDED' end, suspension_reason=case when p_approve then null else trim(p_reason) end where id=p_user_id;
+  insert into public.messages(sender_id,receiver_id,content,is_read,created_at) values(auth.uid(),p_user_id,case when p_approve then 'Dein Konto wurde von der Community freigegeben.' else 'Deine Registrierung wurde abgelehnt. Grund: ' || trim(p_reason) end,false,now());
+end;
+$$;
+revoke all on function public.admin_review_registration(uuid,boolean,text) from public;
+grant execute on function public.admin_review_registration(uuid,boolean,text) to authenticated;
+
 create or replace function public.admin_set_responsibilities(p_target_user uuid, p_responsibilities text[])
 returns void language plpgsql security definer set search_path=public as $$
 begin

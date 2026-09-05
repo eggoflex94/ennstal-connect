@@ -160,6 +160,11 @@ export default function App() {
         .select("account_status,suspension_reason")
         .eq("id", currentUser.id)
         .maybeSingle();
+      if (accessProfile?.account_status === "PENDING_APPROVAL") {
+        await supabase.auth.signOut(); setUser(null); setProfile(null); setMembers([]); setFriendships([]);
+        showNotice("Deine Registrierung wartet noch auf die Freigabe durch einen Admin.");
+        return;
+      }
       if (accessProfile?.account_status === "SUSPENDED") {
         await supabase.auth.signOut();
         setUser(null); setProfile(null); setMembers([]); setFriendships([]);
