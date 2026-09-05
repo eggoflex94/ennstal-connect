@@ -463,6 +463,15 @@ export default function App() {
       textarea.value = profile.head_admin_responsibilities || ""; responsibilities.appendChild(textarea);
       form.querySelector(".primary-button")?.before(responsibilities);
     }
+    form.querySelector(".profile-media-delete-actions")?.remove();
+    const mediaDeleteActions = document.createElement("section"); mediaDeleteActions.className = "profile-media-delete-actions";
+    [["avatar_url", "Profilbild"], ["profile_background", "Hintergrundfoto"], ["bio_image_url", "Über-mich-Bild"]].forEach(([field, label]) => {
+      const value = profile?.[field]; const isStoredImage = typeof value === "string" && value.startsWith("http");
+      if (!isStoredImage) return;
+      const button = document.createElement("button"); button.type = "button"; button.className = "danger-button"; button.textContent = `${label} löschen`;
+      button.onclick = () => deleteProfileDesignImage(field, label, value); mediaDeleteActions.appendChild(button);
+    });
+    if (mediaDeleteActions.childElementCount) form.querySelector(".primary-button")?.before(mediaDeleteActions);
     const layout = document.createElement("section"); layout.className = "layout-rewards";
     const freeLayouts = isAdmin(profile?.role) || profile?.role === "SUPPORTER" || profile?.account_badge === "BUSINESS";
     const hours = Math.floor(Number(profile.total_online_seconds || 0) / 3600);
@@ -477,7 +486,7 @@ export default function App() {
       select.onchange = async () => { const { error } = await supabase.from("member_photos").update({ visibility: select.value }).eq("id", photo.id).eq("owner_id", user.id); if (error) showNotice(error.message); else { showNotice("Foto-Sichtbarkeit gespeichert."); await loadAll(); } };
       figure.querySelector(".photo-actions")?.appendChild(select);
     });
-  }, [page, profile?.id, profile?.privacy_settings, memberPhotos, user?.id]);
+  }, [page, profile?.id, profile?.privacy_settings, profile?.avatar_url, profile?.profile_background, profile?.bio_image_url, memberPhotos, user?.id]);
 
   useEffect(() => {
     if (page !== "forum" && page !== "admin-forum") return;
@@ -756,6 +765,31 @@ export default function App() {
     if (error) return showNotice(error.message); await logProfileActivity("Profil aktualisiert"); showNotice("Profil wurde gespeichert."); await loadAll();
   }
   async function logProfileActivity(label) { if (!user?.id) return; let { error } = await supabase.rpc("log_profile_change", { p_activity: label }); if (error) ({ error } = await supabase.from("profile_activity").insert({ profile_id: user.id, actor_id: user.id, activity_type: label })); if (error) { console.warn(error.message); showNotice("Profil gespeichert, aber die Aktualisierung konnte nicht protokolliert werden: " + error.message); return; } setProfileActivities((current) => [{ id: `local-${Date.now()}`, profile_id: user.id, actor_id: user.id, activity_type: label, created_at: new Date().toISOString() }, ...current].slice(0, 20)); }
+  async function deleteProfileDesignImage(field, label, currentUrl) {
+    if (!user?.id || !["avatar_url", "profile_background", "bio_image_url"].includes(field)) return;
+    if (!confirm(`${label} wirklich löschen?`)) return;
+    const replacement = field === "profile_background" ? "#1b1f26" : null;
+    const { error } = await supabase.from("profiles").update({ [field]: replacement }).eq("id", user.id);
+    if (error) return showNotice(error.message);
+    const marker = "/storage/v1/object/public/profile-avatars/";
+    const markerIndex = String(currentUrl || "").indexOf(marker);
+    if (markerIndex >= 0) {
+      const storedPath = decodeURIComponent(String(currentUrl).slice(markerIndex + marker.length).split("?")[0]);
+      if (storedPath.startsWith(`${user.id}/`)) {
+        const { error: removeError } = await supabase.storage.from("profile-avatars").remove([storedPath]);
+        if (removeError) console.warn(removeError.message);
+      }
+    }
+    setProfile((current) => current ? { ...current, [field]: replacement } : current);
+    await logProfileActivity(`${label} gelöscht`); showNotice(`${label} wurde gelöscht.`); await loadAll();
+  }
+  async function removeMemberProfileImage(member, field, label) {
+    if (!isHeadAdmin(profile?.role) || !member?.id || !confirm(`${label} von ${getName(member)} wegen eines Regelverstoßes entfernen?`)) return;
+    const { error } = await supabase.rpc("admin_remove_profile_media", { p_user_id: member.id, p_field: field });
+    if (error) return showNotice(error.message);
+    setViewingMember((current) => current?.id === member.id ? { ...current, [field]: field === "profile_background" ? "#1b1f26" : null } : current);
+    showNotice(`${label} wurde entfernt und im Admin-Logbuch protokolliert.`); await loadAll();
+  }
   async function uploadProfileImage(file) {
     if (!file || !user) return; if (!file.type.startsWith("image/")) return showNotice("Bitte ein Bild auswählen."); if (file.size > 5 * 1024 * 1024) return showNotice("Maximal 5 MB.");
     const ext = file.name.split(".").pop()?.toLowerCase() || "jpg"; const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
@@ -945,6 +979,7 @@ export default function App() {
         {page === "member-profile" && viewingMember && <MemberProfile member={viewingMember} friends={viewingFriends} groups={groups} user={user} viewerProfile={profile} friendship={friendshipWith(viewingMember.id)} back={() => { setViewingMember(null); setViewingFriends([]); setPage("members"); }} onOpen={openMember} onOpenGroup={(group) => { setSelectedGroup(group); setPage("groups"); }} requestFriend={requestFriend} respond={respondToFriendRequest} removeFriend={removeFriend} blockUser={blockUser} reportUser={reportUser} warnMember={warnMember} updateMemberRole={updateMemberRole} toggleSuspension={toggleSuspension} toggleTestAccount={toggleTestAccount} setBusinessAccount={setBusinessAccount} setForumModerator={setForumModerator} setGroupModerator={setGroupModerator} setProfileVerification={setProfileVerification} loadPermissions={loadPermissions} setMemberFeatureLock={setMemberFeatureLock} openChat={openChat}/>} 
         {page === "member-profile" && viewingMember && <MemberGroups member={viewingMember} groups={groups} onOpen={(group) => { setSelectedGroup(group); setPage("groups"); }}/>}
         {page === "member-profile" && viewingMember && <ProfileHighlights member={viewingMember} friends={viewingFriends} groups={groups} photos={memberPhotos}/>}
+        {page === "member-profile" && viewingMember && isHeadAdmin(profile?.role) && viewingMember.id !== user.id && <HeadAdminProfileMediaTools member={viewingMember} onRemove={removeMemberProfileImage}/>}
         {page === "member-profile" && viewingMember && <MemberGroups member={viewingMember} groups={groups} onOpen={(group) => { setSelectedGroup(group); setPage("groups"); }}/>}
         {page === "member-profile" && viewingMember && <PublicProfilePhotoFolder member={viewingMember} photos={memberPhotos} canSeeFriends={isAdmin(profile?.role) || friendshipWith(viewingMember.id)?.status === "ACCEPTED"}/>} 
         {page === "member-profile" && viewingMember && isHeadAdmin(profile?.role) && viewingMember.role !== "HEAD_ADMIN" && <><FeatureUnlocks member={viewingMember} setMemberFeatureLock={setMemberFeatureLock}/><MemberBusinessTool member={viewingMember} setBusinessAccount={setBusinessAccount}/></>}
@@ -1087,6 +1122,12 @@ function ProfileModal({ selectedMember, user, profile, friendship, setSelectedMe
   const sent = friendship?.status === "PENDING" && friendship.requester_id === user.id;
   const accepted = friendship?.status === "ACCEPTED";
   return <div className="modal-overlay" onClick={() => setSelectedMember(null)}><div className="profile-modal" onClick={(e) => e.stopPropagation()}><button className="modal-close" onClick={() => setSelectedMember(null)}>×</button><div className={`modal-profile-header ${roleClass(selectedMember.role)}`}><div className="profile-modal-role">{selectedMember.role === "HEAD_ADMIN" ? "♛ GLOBAL ADMIN" : selectedMember.role === "ADMIN" ? "★ COMMUNITY ADMIN" : selectedMember.role === "SUPPORTER" ? "★ SUPPORTER" : "MITGLIED"}</div><img className="modal-avatar" src={selectedMember.avatar_url || DEFAULT_AVATAR} alt=""/><div className="modal-title"><h1>{getName(selectedMember)}</h1><span>{[selectedMember.first_name, selectedMember.last_name].filter(Boolean).join(" ")}{getAge(selectedMember.birth_date) !== null && ` · ${getAge(selectedMember.birth_date)} Jahre`}</span></div></div><div className="modal-content">{selectedMember.bio && <><h3>Über mich</h3><p>{selectedMember.bio}</p></>}{selectedMember.id !== user.id && <div className="profile-actions"><button className="primary-button" onClick={() => { setSelectedMember(null); openChat(selectedMember); }}>💬 Nachricht</button>{accepted ? <button className="secondary-button" onClick={() => removeFriend(selectedMember)}>♥ Befreundet · entfernen</button> : incoming ? <><button className="primary-button" onClick={() => respond(friendship, true)}>✓ Anfrage annehmen</button><button className="danger-button" onClick={() => respond(friendship, false)}>Anfrage ablehnen</button></> : <button className="secondary-button" onClick={() => requestFriend(selectedMember)}>{sent ? "⏳ Anfrage gesendet" : "🤝 Freundschaftsanfrage"}</button>}{!isAdmin(selectedMember.role) && <button className="secondary-button" onClick={() => blockUser(selectedMember)}>🚫 Blockieren</button>}<button className="danger-button" onClick={() => reportUser(selectedMember)}>🚩 Nutzer melden</button></div>}</div></div></div>;
+}
+
+function HeadAdminProfileMediaTools({ member, onRemove }) {
+  const items = [["avatar_url", "Profilbild"], ["profile_background", "Hintergrundfoto"], ["bio_image_url", "Über-mich-Bild"]].filter(([field]) => String(member?.[field] || "").startsWith("http"));
+  if (!items.length) return null;
+  return <section className="head-admin-media-tools panel"><span className="eyebrow">HEAD-ADMIN · PROFILMEDIEN</span><h2>Bilder bei Regelverstoß entfernen</h2><p>Jede Entfernung verlangt eine Begründung und wird im Admin-Logbuch festgehalten.</p><div>{items.map(([field, label]) => <button type="button" className="danger-button" key={field} onClick={() => onRemove(member, field, label)}>{label} entfernen</button>)}</div></section>;
 }
 
 function ProfileHighlights({ member, friends, groups, photos }) {
