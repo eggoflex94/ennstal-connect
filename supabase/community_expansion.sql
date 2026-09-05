@@ -32,14 +32,22 @@ create policy registration_approval_admin_read on public.registration_approval_r
 
 create or replace function public.ec_handle_new_user()
 returns trigger language plpgsql security definer set search_path = public as $$
-declare a record; v_name text;
+declare a record; v_name text; v_first_admin boolean;
 begin
+  -- The very first account bootstraps the community as Head Admin. Every
+  -- later account is pending until an active administrator reviews it.
+  perform pg_advisory_xact_lock(hashtext('ennstal-connect-initial-admin'));
   v_name := coalesce(new.raw_user_meta_data->>'nickname', split_part(new.email,'@',1));
-  insert into public.profiles(id,nickname,role,account_status) values(new.id,v_name,'MEMBER','PENDING_APPROVAL') on conflict(id) do nothing;
-  insert into public.registration_approval_requests(user_id) values(new.id) on conflict(user_id) do nothing;
-  for a in select id from public.profiles where role in ('ADMIN','HEAD_ADMIN') and account_status='ACTIVE' loop
-    insert into public.messages(sender_id,receiver_id,content,is_read,created_at) values(new.id,a.id,'Neue Registrierung wartet auf Freigabe: ' || v_name || ' (' || new.email || ')',false,now());
-  end loop;
+  select not exists(select 1 from public.profiles where role in ('ADMIN','HEAD_ADMIN')) into v_first_admin;
+  insert into public.profiles(id,nickname,role,account_status)
+  values(new.id,v_name,case when v_first_admin then 'HEAD_ADMIN' else 'MEMBER' end,case when v_first_admin then 'ACTIVE' else 'PENDING_APPROVAL' end)
+  on conflict(id) do nothing;
+  if not v_first_admin then
+    insert into public.registration_approval_requests(user_id) values(new.id) on conflict(user_id) do nothing;
+    for a in select id from public.profiles where role in ('ADMIN','HEAD_ADMIN') and account_status='ACTIVE' loop
+      insert into public.messages(sender_id,receiver_id,content,is_read,created_at) values(new.id,a.id,'Neue Registrierung wartet auf Freigabe: ' || v_name || ' (' || new.email || ')',false,now());
+    end loop;
+  end if;
   return new;
 end;
 $$;
