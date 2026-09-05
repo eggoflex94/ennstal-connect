@@ -58,6 +58,18 @@ end;
 $$;
 revoke all on function public.admin_review_registration(uuid,boolean,text) from public;
 grant execute on function public.admin_review_registration(uuid,boolean,text) to authenticated;
+create or replace function public.admin_registration_approval_queue()
+returns table(user_id uuid, nickname text, registered_at timestamptz, review_reason text)
+language plpgsql security definer set search_path = public as $$
+begin
+  if not public.ec_is_admin() then raise exception 'Keine Admin-Berechtigung.'; end if;
+  return query select r.user_id, coalesce(nullif(p.nickname,''),'Mitglied'), r.created_at, 'Registrierung wartet auf Freigabe'
+  from public.registration_approval_requests r join public.profiles p on p.id=r.user_id
+  where r.status='PENDING' order by r.created_at asc;
+end;
+$$;
+revoke all on function public.admin_registration_approval_queue() from public;
+grant execute on function public.admin_registration_approval_queue() to authenticated;
 
 create or replace function public.admin_set_responsibilities(p_target_user uuid, p_responsibilities text[])
 returns void language plpgsql security definer set search_path=public as $$
