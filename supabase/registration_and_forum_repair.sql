@@ -258,4 +258,82 @@ revoke all on function public.admin_review_profile_verification(uuid, boolean) f
 grant execute on function public.request_profile_verification(text) to authenticated;
 grant execute on function public.admin_verification_review_queue() to authenticated;
 grant execute on function public.admin_review_profile_verification(uuid, boolean) to authenticated;
+
+-- Public profile updates. This replaces the older activity-only logger so a
+-- successful profile save is also visible on the Community page when the
+-- member kept activity visibility public.
+alter table public.profiles add column if not exists privacy_settings jsonb not null default '{"name":"PUBLIC","activity":"PUBLIC"}'::jsonb;
+create table if not exists public.public_profile_updates (
+  id uuid primary key default gen_random_uuid(),
+  profile_id uuid not null references public.profiles(id) on delete cascade,
+  nickname text not null,
+  role text not null,
+  account_badge text not null default 'STANDARD',
+  is_verified boolean not null default false,
+  avatar_url text,
+  activity_type text not null,
+  created_at timestamptz not null default now()
+);
+alter table public.public_profile_updates add column if not exists account_badge text not null default 'STANDARD';
+alter table public.public_profile_updates enable row level security;
+drop policy if exists public_profile_updates_read on public.public_profile_updates;
+create policy public_profile_updates_read on public.public_profile_updates for select to anon, authenticated using (true);
+revoke all on public.public_profile_updates from public;
+grant select on public.public_profile_updates to anon, authenticated;
+
+create or replace function public.log_profile_change(p_activity text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare p public.profiles%rowtype;
+begin
+  if auth.uid() is null then raise exception 'Nicht eingeloggt.'; end if;
+  select * into p from public.profiles where id = auth.uid();
+  if p.id is null then raise exception 'Profil nicht gefunden.'; end if;
+  insert into public.profile_activity(profile_id, actor_id, activity_type)
+  values (p.id, p.id, left(btrim(coalesce(p_activity, 'Profil aktualisiert')), 120));
+  if coalesce(p.privacy_settings ->> 'activity', 'PUBLIC') = 'PUBLIC' then
+    insert into public.public_profile_updates(profile_id, nickname, role, account_badge, is_verified, avatar_url, activity_type)
+    values (p.id,
+      case when coalesce(p.privacy_settings ->> 'name', 'PUBLIC') = 'PUBLIC' then coalesce(nullif(p.nickname, ''), 'Mitglied') else 'Privates Mitglied' end,
+      coalesce(p.role, 'MEMBER'), coalesce(p.account_badge, 'STANDARD'), coalesce(p.is_verified, false), p.avatar_url,
+      left(btrim(coalesce(p_activity, 'Profil aktualisiert')), 120));
+  end if;
+end;
+$$;
+revoke all on function public.log_profile_change(text) from public;
+grant execute on function public.log_profile_change(text) to authenticated;
+
+-- Creating a community advert is protected on the server, independently of
+-- RLS policy versions. The image URL is supplied only after the browser has
+-- uploaded the selected file to the existing image bucket.
+create table if not exists public.community_ads (
+  id uuid primary key default gen_random_uuid(), title text not null,
+  body text not null default '', image_url text, link_url text,
+  is_active boolean not null default true,
+  created_by uuid references public.profiles(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+create or replace function public.admin_create_community_ad(
+  p_title text, p_body text default '', p_link_url text default null, p_image_url text default null
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare v_id uuid;
+begin
+  if not public.ec_is_head_admin() then raise exception 'Nur der Head Admin darf Werbeflächen veröffentlichen.'; end if;
+  if char_length(btrim(coalesce(p_title, ''))) < 3 then raise exception 'Der Name muss mindestens drei Zeichen haben.'; end if;
+  insert into public.community_ads(title, body, link_url, image_url, created_by)
+  values (btrim(p_title), btrim(coalesce(p_body, '')), nullif(btrim(coalesce(p_link_url, '')), ''), nullif(btrim(coalesce(p_image_url, '')), ''), auth.uid())
+  returning id into v_id;
+  return v_id;
+end;
+$$;
+revoke all on function public.admin_create_community_ad(text, text, text, text) from public;
+grant execute on function public.admin_create_community_ad(text, text, text, text) to authenticated;
 notify pgrst, 'reload schema';
