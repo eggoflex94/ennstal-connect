@@ -164,16 +164,33 @@ drop policy if exists member_photo_likes_delete on public.member_photo_likes;
 drop policy if exists member_photo_comments_read on public.member_photo_comments;
 drop policy if exists member_photo_comments_write on public.member_photo_comments;
 drop policy if exists member_photo_comments_delete on public.member_photo_comments;
-create policy member_photos_read on public.member_photos for select to authenticated using (true);
+create policy member_photos_read on public.member_photos for select to authenticated using (
+  visibility = 'PUBLIC'
+  or owner_id = auth.uid()
+  or public.ec_is_admin()
+  or (visibility = 'FRIENDS' and exists (
+    select 1 from public.friendships f
+    where f.status = 'ACCEPTED'
+      and ((f.requester_id = auth.uid() and f.receiver_id = owner_id) or (f.receiver_id = auth.uid() and f.requester_id = owner_id))
+  ))
+);
 create policy member_photos_write on public.member_photos for insert to authenticated with check (owner_id=auth.uid());
 drop policy if exists member_photos_update on public.member_photos;
 create policy member_photos_update on public.member_photos for update to authenticated using (owner_id=auth.uid()) with check (owner_id=auth.uid() and visibility in ('PUBLIC','FRIENDS'));
 create policy member_photos_delete on public.member_photos for delete to authenticated using (owner_id=auth.uid() or public.ec_is_admin());
-create policy member_photo_likes_read on public.member_photo_likes for select to authenticated using(true);
-create policy member_photo_likes_write on public.member_photo_likes for insert to authenticated with check(user_id=auth.uid());
+create policy member_photo_likes_read on public.member_photo_likes for select to authenticated using (
+  exists (select 1 from public.member_photos photo where photo.id = photo_id)
+);
+create policy member_photo_likes_write on public.member_photo_likes for insert to authenticated with check(
+  user_id = auth.uid() and exists (select 1 from public.member_photos photo where photo.id = photo_id)
+);
 create policy member_photo_likes_delete on public.member_photo_likes for delete to authenticated using(user_id=auth.uid());
-create policy member_photo_comments_read on public.member_photo_comments for select to authenticated using(true);
-create policy member_photo_comments_write on public.member_photo_comments for insert to authenticated with check(author_id=auth.uid());
+create policy member_photo_comments_read on public.member_photo_comments for select to authenticated using (
+  exists (select 1 from public.member_photos photo where photo.id = photo_id)
+);
+create policy member_photo_comments_write on public.member_photo_comments for insert to authenticated with check(
+  author_id = auth.uid() and exists (select 1 from public.member_photos photo where photo.id = photo_id)
+);
 create policy member_photo_comments_delete on public.member_photo_comments for delete to authenticated using(author_id=auth.uid() or public.ec_is_admin());
 
 create table if not exists public.community_events (
