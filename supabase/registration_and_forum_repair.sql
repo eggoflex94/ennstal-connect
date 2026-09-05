@@ -306,6 +306,48 @@ $$;
 revoke all on function public.log_profile_change(text) from public;
 grant execute on function public.log_profile_change(text) to authenticated;
 
+-- The feed is also written directly by the profile table. This is a reliable
+-- fallback when a mobile browser ends a request immediately after saving the
+-- form and therefore never reaches the follow-up RPC above.
+create or replace function public.ec_publish_profile_update()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare v_activity text;
+begin
+  if coalesce(new.privacy_settings ->> 'activity', 'PUBLIC') <> 'PUBLIC' then
+    return new;
+  end if;
+  v_activity := case
+    when old.nickname is distinct from new.nickname then 'Nickname geändert'
+    when old.avatar_url is distinct from new.avatar_url then 'Profilbild geändert'
+    when old.profile_background is distinct from new.profile_background then 'Hintergrund aktualisiert'
+    when old.profile_layout is distinct from new.profile_layout then 'Profil-Layout geändert'
+    when old.bio is distinct from new.bio then 'Über-mich-Text aktualisiert'
+    when old.location is distinct from new.location then 'Wohnort aktualisiert'
+    when old.interests is distinct from new.interests then 'Interessen aktualisiert'
+    when old.website is distinct from new.website then 'Webseite aktualisiert'
+    when old.profile_accent is distinct from new.profile_accent then 'Profil gestaltet'
+    else null
+  end;
+  if v_activity is null then return new; end if;
+  insert into public.public_profile_updates(profile_id, nickname, role, account_badge, is_verified, avatar_url, activity_type)
+  values (
+    new.id,
+    case when coalesce(new.privacy_settings ->> 'name', 'PUBLIC') = 'PUBLIC' then coalesce(nullif(new.nickname, ''), 'Mitglied') else 'Privates Mitglied' end,
+    coalesce(new.role, 'MEMBER'), coalesce(new.account_badge, 'STANDARD'), coalesce(new.is_verified, false), new.avatar_url, v_activity
+  );
+  return new;
+end;
+$$;
+drop trigger if exists ennstal_connect_profile_update_feed on public.profiles;
+create trigger ennstal_connect_profile_update_feed
+after update of nickname, avatar_url, profile_background, profile_layout, bio, location, interests, website, profile_accent on public.profiles
+for each row execute procedure public.ec_publish_profile_update();
+revoke all on function public.ec_publish_profile_update() from public;
+
 -- Creating a community advert is protected on the server, independently of
 -- RLS policy versions. The image URL is supplied only after the browser has
 -- uploaded the selected file to the existing image bucket.
