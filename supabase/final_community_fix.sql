@@ -576,3 +576,66 @@ grant execute on function public.admin_remove_profile_avatar(uuid) to authentica
 grant execute on function public.get_admin_log(integer) to authenticated;
 
 notify pgrst, 'reload schema';
+
+-- ===== ADMIN HIDDEN ACCOUNTS, AUDIT LOG & RULE ACCEPTANCE =====
+create table if not exists public.community_rule_acceptances (
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  rules_version text not null,
+  accepted_at timestamptz not null default now(),
+  primary key (user_id, rules_version)
+);
+alter table public.community_rule_acceptances enable row level security;
+drop policy if exists "rule_acceptance_read_own_or_admin" on public.community_rule_acceptances;
+create policy "rule_acceptance_read_own_or_admin" on public.community_rule_acceptances
+for select to authenticated using ((select auth.uid()) = user_id or public.ec_is_admin());
+revoke all on table public.community_rule_acceptances from anon, authenticated;
+grant select on table public.community_rule_acceptances to authenticated;
+
+create or replace function public.accept_community_rules(p_rules_version text)
+returns timestamptz language plpgsql security definer set search_path=public as $$
+declare v_accepted_at timestamptz;
+begin
+  if auth.uid() is null then raise exception 'Anmeldung erforderlich.'; end if;
+  if p_rules_version is distinct from '2026-09-05' then raise exception 'Diese Regelversion ist nicht aktuell.'; end if;
+  insert into public.community_rule_acceptances(user_id,rules_version)
+  values(auth.uid(),p_rules_version)
+  on conflict(user_id,rules_version) do update set rules_version=excluded.rules_version
+  returning accepted_at into v_accepted_at;
+  return v_accepted_at;
+end;
+$$;
+revoke all on function public.accept_community_rules(text) from public;
+grant execute on function public.accept_community_rules(text) to authenticated;
+
+drop function if exists public.admin_full_member_directory();
+create function public.admin_full_member_directory()
+returns table(id uuid,nickname text,role text,account_status text,is_test_account boolean,avatar_url text,account_badge text,rules_version text,rules_accepted_at timestamptz)
+language plpgsql stable security definer set search_path=public as $$
+begin
+  if not public.ec_is_admin() then raise exception 'Keine Admin-Berechtigung.'; end if;
+  return query
+  select p.id,p.nickname,p.role::text,p.account_status,coalesce(p.is_test_account,false),p.avatar_url,p.account_badge,a.rules_version,a.accepted_at
+  from public.profiles p
+  left join lateral (
+    select x.rules_version,x.accepted_at from public.community_rule_acceptances x
+    where x.user_id=p.id order by x.accepted_at desc limit 1
+  ) a on true
+  order by case p.role when 'HEAD_ADMIN' then 1 when 'ADMIN' then 2 when 'SUPPORTER' then 3 else 4 end,lower(p.nickname);
+end;
+$$;
+revoke all on function public.admin_full_member_directory() from public;
+grant execute on function public.admin_full_member_directory() to authenticated;
+
+create or replace function public.get_admin_log(p_limit integer default 200)
+returns table(id uuid,actor_id uuid,action text,target_id uuid,details jsonb,created_at timestamptz)
+language plpgsql stable security definer set search_path=public as $$
+begin
+  if not public.ec_is_head_admin() then raise exception 'Nur der Global Admin darf das Logbuch sehen.'; end if;
+  return query select l.id,l.actor_id,l.action,l.target_id,l.details,l.created_at
+  from public.admin_log l order by l.created_at desc
+  limit greatest(1,least(coalesce(p_limit,200),500));
+end;
+$$;
+revoke all on function public.get_admin_log(integer) from public;
+grant execute on function public.get_admin_log(integer) to authenticated;
+notify pgrst,'reload schema';
