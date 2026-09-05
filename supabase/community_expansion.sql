@@ -101,7 +101,7 @@ create or replace function public.admin_set_responsibilities(p_target_user uuid,
 returns void language plpgsql security definer set search_path=public as $$
 begin
   if not public.ec_is_head_admin() then raise exception 'Nur der Head Admin darf Zuständigkeiten festlegen.'; end if;
-  if not exists(select 1 from public.profiles where id=p_target_user and role in ('ADMIN','HEAD_ADMIN')) then raise exception 'Zuständigkeiten können nur für Admin-Profile gesetzt werden.'; end if;
+  if not exists(select 1 from public.profiles where id=p_target_user and role in ('ADMIN','HEAD_ADMIN','SUPPORTER')) then raise exception 'Zuständigkeiten können nur für Admin- oder Supporter-Profile gesetzt werden.'; end if;
   update public.profiles set admin_responsibilities = coalesce(p_responsibilities, '{}') where id=p_target_user;
 end;
 $$;

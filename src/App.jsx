@@ -100,6 +100,7 @@ export default function App() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState("home");
   const [notice, setNotice] = useState("");
+  const [incomingMessage, setIncomingMessage] = useState(null);
   const [messageText, setMessageText] = useState("");
   const [adminTarget, setAdminTarget] = useState("");
   const [permissionDraft, setPermissionDraft] = useState({});
@@ -242,10 +243,17 @@ export default function App() {
 
   useEffect(() => {
     if (!supabase || !user?.id) return;
-    const messageChannel = supabase.channel(`ec-messages-${user.id}`).on("postgres_changes", { event: "*", schema: "public", table: "messages", filter: `receiver_id=eq.${user.id}` }, loadAll).subscribe();
+    const handleIncomingMessage = (payload) => {
+      if (payload.eventType === "INSERT" && payload.new?.sender_id && payload.new.sender_id !== user.id) {
+        const sender = members.find((member) => member.id === payload.new.sender_id);
+        setIncomingMessage({ senderId: payload.new.sender_id, senderName: getName(sender) || "Ein Mitglied", content: String(payload.new.content || "") });
+      }
+      loadAll();
+    };
+    const messageChannel = supabase.channel(`ec-messages-${user.id}`).on("postgres_changes", { event: "*", schema: "public", table: "messages", filter: `receiver_id=eq.${user.id}` }, handleIncomingMessage).subscribe();
     const friendChannel = supabase.channel(`ec-friends-${user.id}`).on("postgres_changes", { event: "*", schema: "public", table: "friendships", filter: `receiver_id=eq.${user.id}` }, loadAll).subscribe();
     return () => { supabase.removeChannel(messageChannel); supabase.removeChannel(friendChannel); };
-  }, [user?.id]);
+  }, [user?.id, members]);
 
   useEffect(() => {
     if (!supabase || page !== "community") return;
@@ -656,7 +664,7 @@ export default function App() {
     if (error && /bio_(font|size)|bio_image_url.*column|column.*bio_/i.test(error.message || "")) { delete payload.bio_font; delete payload.bio_size; ({ error } = await supabase.from("profiles").update(payload).eq("id", user.id)); }
     if (error) return showNotice(error.message); await logProfileActivity("Profil aktualisiert"); showNotice("Profil wurde gespeichert."); await loadAll();
   }
-  async function logProfileActivity(label) { if (!user?.id) return; let { error } = await supabase.rpc("log_profile_change", { p_activity: label }); if (error && /function|schema cache|does not exist/i.test(error.message || "")) ({ error } = await supabase.from("profile_activity").insert({ profile_id: user.id, actor_id: user.id, activity_type: label })); if (error) console.warn(error.message); }
+  async function logProfileActivity(label) { if (!user?.id) return; let { error } = await supabase.rpc("log_profile_change", { p_activity: label }); if (error) ({ error } = await supabase.from("profile_activity").insert({ profile_id: user.id, actor_id: user.id, activity_type: label })); if (error) { console.warn(error.message); showNotice("Profil gespeichert, aber die Aktualisierung konnte nicht protokolliert werden: " + error.message); return; } setProfileActivities((current) => [{ id: `local-${Date.now()}`, profile_id: user.id, actor_id: user.id, activity_type: label, created_at: new Date().toISOString() }, ...current].slice(0, 20)); }
   async function uploadProfileImage(file) {
     if (!file || !user) return; if (!file.type.startsWith("image/")) return showNotice("Bitte ein Bild auswählen."); if (file.size > 5 * 1024 * 1024) return showNotice("Maximal 5 MB.");
     const ext = file.name.split(".").pop()?.toLowerCase() || "jpg"; const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
@@ -795,7 +803,7 @@ export default function App() {
         </nav>
         <button className="sidebar-logout" onClick={logout}>⇥ <span>Abmelden</span></button>
       </aside>
-      <main className="modern-main"><div className="content-root">{notice && <div className="toast">{notice}</div>}
+      <main className="modern-main"><div className="content-root">{notice && <div className="toast">{notice}</div>}{incomingMessage && <aside className="incoming-message-popup" role="status"><strong>✉ Neue Nachricht von {incomingMessage.senderName}</strong><p>{incomingMessage.content || "Du hast eine neue private Nachricht erhalten."}</p><div><button className="primary-button" onClick={() => { const sender = members.find((member) => member.id === incomingMessage.senderId); setIncomingMessage(null); if (sender) openChat(sender); else setPage("messages"); }}>Nachricht öffnen</button><button className="secondary-button" onClick={() => setIncomingMessage(null)}>Später</button></div></aside>}
         {page === "home" && <Home profile={profile} isHeadAdmin={isHeadAdmin} homepageSections={homepageSections} canEdit={isHeadAdmin(profile?.role)} createHomepageSection={createHomepageSection} editHomepageSection={editHomepageSection} deleteHomepageSection={deleteHomepageSection} uploadHomepageImage={uploadHomepageImage}/>}
         {page === "members" && <section><div className="page-heading"><div><span className="eyebrow">COMMUNITY</span><h1>Mitglieder</h1></div><input className="search-input" placeholder="Mitglied suchen …" value={search} onChange={(e) => setSearch(e.target.value)}/></div><MemberGrid members={sortedMembers} profile={profile} friendships={friendships} onOpen={openMember} onMessage={openChat}/></section>}
         {page === "friends" && <section><div className="page-heading"><h1>Freunde</h1><p>Nur bestätigte Freundschaften werden hier angezeigt.</p></div><MemberGrid members={members.filter((m) => acceptedFriendIds.includes(m.id) && !m.is_test_account && m.account_status !== "SUSPENDED")} profile={profile} friendships={friendships} onOpen={openMember} onMessage={openChat}/></section>}
@@ -808,7 +816,7 @@ export default function App() {
         {page === "groups" && selectedGroup && <GroupDetails group={groups.find((group) => group.id === selectedGroup.id) || selectedGroup} members={members} profile={profile} user={user} onClose={() => setSelectedGroup(null)} onJoin={joinGroup} onLeave={leaveGroup} onEdit={editGroup} onDelete={deleteGroup}/>}
         {page === "forum" && <Forum title="Community-Forum" intro="Austausch für alle Mitglieder von Ennstal Connect." scope="COMMUNITY" posts={forumPosts} members={visibleMembers} profile={profile} createPost={createForumPost} editPost={editForumPost} deletePost={deleteForumPost} locked={isFeatureLocked("FORUM_POSTING")}/>}
         {page === "admin-forum" && isAdmin(profile?.role) && <Forum title="Admin-Forum" intro="Interner Bereich für Moderation und Administration." scope="ADMIN" posts={forumPosts} members={members} profile={profile} createPost={createForumPost} editPost={editForumPost} deletePost={deleteForumPost} locked={false}/>}
-        {page === "profile" && <section className="profile-page-layout"><Profile profile={profile} user={user} isHeadAdmin={isHeadAdmin} saveProfile={saveProfile} uploadProfileImage={uploadProfileImage} uploadProfileBackground={uploadProfileBackground} uploadProfileBioImage={uploadProfileBioImage} openPublicPreview={() => setPage("profile-preview")}/><ProfileTimeline visits={profileVisits} activities={profileActivities} members={members} onOpen={openMember}/><ProfilePhotoGallery photos={memberPhotos.filter((photo) => photo.owner_id === user.id)} likes={photoLikes} comments={photoComments} user={user} onUpload={uploadMemberPhoto} onLike={togglePhotoLike} onComment={addPhotoComment} onDelete={deleteMemberPhoto}/></section>}
+        {page === "profile" && <section className="profile-page-layout"><Profile profile={profile} user={user} isHeadAdmin={isHeadAdmin} saveProfile={saveProfile} uploadProfileImage={uploadProfileImage} uploadProfileBackground={uploadProfileBackground} uploadProfileBioImage={uploadProfileBioImage} openPublicPreview={() => setPage("profile-preview")}/><ProfilePhotoGallery photos={memberPhotos.filter((photo) => photo.owner_id === user.id)} likes={photoLikes} comments={photoComments} user={user} onUpload={uploadMemberPhoto} onLike={togglePhotoLike} onComment={addPhotoComment} onDelete={deleteMemberPhoto}/></section>}
         {page === "profile-preview" && <PublicProfilePreview profile={profile} photos={memberPhotos} groups={groups} onBack={() => setPage("profile")} onOpenGroup={(group) => { setSelectedGroup(group); setPage("groups"); }}/>} 
         {page === "member-profile" && viewingMember && <MemberProfile member={viewingMember} friends={viewingFriends} groups={groups} user={user} viewerProfile={profile} friendship={friendshipWith(viewingMember.id)} back={() => { setViewingMember(null); setViewingFriends([]); setPage("members"); }} onOpen={openMember} onOpenGroup={(group) => { setSelectedGroup(group); setPage("groups"); }} requestFriend={requestFriend} respond={respondToFriendRequest} removeFriend={removeFriend} blockUser={blockUser} reportUser={reportUser} warnMember={warnMember} updateMemberRole={updateMemberRole} toggleSuspension={toggleSuspension} toggleTestAccount={toggleTestAccount} setBusinessAccount={setBusinessAccount} setForumModerator={setForumModerator} setGroupModerator={setGroupModerator} setProfileVerification={setProfileVerification} loadPermissions={loadPermissions} setMemberFeatureLock={setMemberFeatureLock} openChat={openChat}/>} 
         {page === "member-profile" && viewingMember && <MemberGroups member={viewingMember} groups={groups} onOpen={(group) => { setSelectedGroup(group); setPage("groups"); }}/>}
@@ -819,6 +827,7 @@ export default function App() {
         {page === "admin-account-review" && isAdmin(profile?.role) && <AccountReview queue={accountReviewQueue} members={members} onBack={() => setPage("admin")} onOpen={openMember} onReviewRegistration={reviewRegistration}/>} 
         {page === "impressum" && <LegalPage type="impressum"/>}
         {page === "privacy" && <LegalPage type="privacy"/>}
+        <ProfileTimeline visits={profileVisits} activities={profileActivities} members={members} onOpen={openMember}/>
       </div></main>
     </div>
     <footer className="site-footer"><strong>Ennstal Connect</strong><div><button onClick={() => setPage("impressum")}>Impressum</button><button onClick={() => setPage("privacy")}>Datenschutz</button></div></footer>

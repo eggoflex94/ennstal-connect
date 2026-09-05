@@ -34,6 +34,56 @@ create table if not exists public.community_group_owner_change_requests (
 create index if not exists community_group_members_user_idx on public.community_group_members(user_id);
 create index if not exists community_group_owner_requests_status_idx on public.community_group_owner_change_requests(status);
 
+-- Supporter dürfen ausschließlich über den Head Admin als Gruppenmoderation
+-- eingetragen werden. Die Zuständigkeit bleibt anschließend im Profil sichtbar.
+create or replace function public.admin_set_responsibilities(p_target_user uuid, p_responsibilities text[])
+returns void language plpgsql security definer set search_path=public as $$
+begin
+  if not public.ec_is_head_admin() then raise exception 'Nur der Head Admin darf Zuständigkeiten festlegen.'; end if;
+  if not exists(select 1 from public.profiles where id=p_target_user and role in ('ADMIN','HEAD_ADMIN','SUPPORTER')) then
+    raise exception 'Zuständigkeiten können nur für Admin- oder Supporter-Profile gesetzt werden.';
+  end if;
+  update public.profiles
+     set admin_responsibilities = coalesce(p_responsibilities, '{}')
+   where id=p_target_user;
+end;
+$$;
+revoke all on function public.admin_set_responsibilities(uuid,text[]) from public;
+grant execute on function public.admin_set_responsibilities(uuid,text[]) to authenticated;
+
+-- Zuverlässiges Protokoll für die Profil-Dashboards. Der Aufruf erfolgt
+-- ausschließlich für das eigene Profil und bleibt damit auch bei RLS sicher.
+create table if not exists public.profile_activity (
+  id uuid primary key default gen_random_uuid(),
+  profile_id uuid not null references public.profiles(id) on delete cascade,
+  actor_id uuid not null references public.profiles(id) on delete cascade,
+  activity_type text not null check (char_length(activity_type) between 3 and 120),
+  created_at timestamptz not null default now()
+);
+alter table public.profile_activity enable row level security;
+grant select, insert on public.profile_activity to authenticated;
+drop policy if exists profile_activity_read on public.profile_activity;
+create policy profile_activity_read on public.profile_activity for select to authenticated using (profile_id = auth.uid());
+drop policy if exists profile_activity_create on public.profile_activity;
+create policy profile_activity_create on public.profile_activity for insert to authenticated with check (profile_id = auth.uid() and actor_id = auth.uid());
+create or replace function public.log_profile_change(p_activity text)
+returns void language plpgsql security definer set search_path=public as $$
+declare p public.profiles%rowtype;
+begin
+  if auth.uid() is null then raise exception 'Nicht eingeloggt.'; end if;
+  select * into p from public.profiles where id=auth.uid();
+  if not found then raise exception 'Profil nicht gefunden.'; end if;
+  insert into public.profile_activity(profile_id,actor_id,activity_type)
+  values(auth.uid(),auth.uid(),left(trim(coalesce(p_activity,'Profil aktualisiert')),120));
+  if to_regclass('public.public_profile_updates') is not null and coalesce(p.privacy_settings->>'activity','PUBLIC')='PUBLIC' then
+    insert into public.public_profile_updates(profile_id,nickname,role,account_badge,is_verified,avatar_url,activity_type)
+    values(p.id,case when coalesce(p.privacy_settings->>'name','PUBLIC')='PUBLIC' then coalesce(nullif(p.nickname,''),'Mitglied') else 'Privates Mitglied' end,p.role::text,coalesce(p.account_badge,'STANDARD'),coalesce(p.is_verified,false),p.avatar_url,left(trim(coalesce(p_activity,'Profil aktualisiert')),120));
+  end if;
+end;
+$$;
+revoke all on function public.log_profile_change(text) from public;
+grant execute on function public.log_profile_change(text) to authenticated;
+
 alter table public.community_groups enable row level security;
 alter table public.community_group_members enable row level security;
 alter table public.community_group_owner_change_requests enable row level security;
