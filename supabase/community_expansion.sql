@@ -154,7 +154,7 @@ begin
     if not v_full_access and p.id <> auth.uid() then
       select exists(select 1 from public.friendships f where f.status = 'ACCEPTED' and ((f.requester_id = auth.uid() and f.receiver_id = p.id) or (f.receiver_id = auth.uid() and f.requester_id = p.id))) into v_friend;
       v_private_keys := array[]::text[];
-      if coalesce(p.privacy_settings->>'name','PUBLIC') <> 'PUBLIC' and not (p.privacy_settings->>'name' = 'FRIENDS' and v_friend) then v_private_keys := v_private_keys || array['first_name','last_name']; end if;
+      if coalesce(p.privacy_settings->>'name','PUBLIC') <> 'PUBLIC' and not (p.privacy_settings->>'name' = 'FRIENDS' and v_friend) then v_private_keys := v_private_keys || array['nickname','first_name','last_name']; end if;
       if coalesce(p.privacy_settings->>'birth_date','PUBLIC') <> 'PUBLIC' and not (p.privacy_settings->>'birth_date' = 'FRIENDS' and v_friend) then v_private_keys := v_private_keys || array['birth_date']; end if;
       if coalesce(p.privacy_settings->>'bio','PUBLIC') <> 'PUBLIC' and not (p.privacy_settings->>'bio' = 'FRIENDS' and v_friend) then v_private_keys := v_private_keys || array['bio','bio_image_url']; end if;
       if coalesce(p.privacy_settings->>'location','PUBLIC') <> 'PUBLIC' and not (p.privacy_settings->>'location' = 'FRIENDS' and v_friend) then v_private_keys := v_private_keys || array['location']; end if;
@@ -227,7 +227,7 @@ begin
   insert into public.profile_activity(profile_id, actor_id, activity_type) values (auth.uid(), auth.uid(), left(trim(p_activity), 120));
   if coalesce(p.privacy_settings->>'activity', 'PUBLIC') = 'PUBLIC' then
     insert into public.public_profile_updates(profile_id,nickname,role,account_badge,is_verified,avatar_url,activity_type)
-    values (p.id,coalesce(nullif(p.nickname,''),'Mitglied'),p.role::text,p.account_badge,p.is_verified,p.avatar_url,left(trim(p_activity),120));
+    values (p.id,case when coalesce(p.privacy_settings->>'name','PUBLIC')='PUBLIC' then coalesce(nullif(p.nickname,''),'Mitglied') else 'Privates Mitglied' end,p.role::text,p.account_badge,p.is_verified,p.avatar_url,left(trim(p_activity),120));
   end if;
 end;
 $$;
@@ -424,4 +424,60 @@ begin
 end; $$;
 revoke all on function public.admin_set_account_status(uuid,text,text) from public;
 grant execute on function public.admin_set_account_status(uuid,text,text) to authenticated;
+
+-- Forum update routes: own authors, all admins and explicitly appointed
+-- supporter moderators can manage posts and replies.  These definitions also
+-- repair installations created with an earlier forum SQL version.
+create or replace function public.forum_update_post(p_post_id uuid, p_title text, p_content text, p_reason text default null)
+returns void language plpgsql security definer set search_path=public as $$
+declare post_author uuid; post_scope text; is_owner boolean;
+begin
+  if auth.uid() is null then raise exception 'Nicht eingeloggt.'; end if;
+  select author_id, scope into post_author, post_scope from public.forum_posts where id=p_post_id;
+  if post_author is null then raise exception 'Beitrag nicht gefunden.'; end if;
+  is_owner := post_author=auth.uid();
+  if not is_owner and not public.ec_is_admin() and not (post_scope='COMMUNITY' and public.ec_is_forum_moderator()) then raise exception 'Keine Berechtigung zum Bearbeiten dieses Beitrags.'; end if;
+  if char_length(trim(coalesce(p_title,'')))<3 or char_length(trim(coalesce(p_content,'')))<3 then raise exception 'Überschrift und Beitrag müssen mindestens drei Zeichen enthalten.'; end if;
+  if not is_owner and char_length(trim(coalesce(p_reason,'')))<3 then raise exception 'Bitte einen Bearbeitungsgrund angeben.'; end if;
+  update public.forum_posts set title=trim(p_title), content=trim(p_content), edited_at=now(), edited_by=auth.uid(), edit_reason=case when is_owner then 'Vom Autor bearbeitet' else trim(p_reason) end where id=p_post_id;
+end;
+$$;
+create or replace function public.forum_delete_post(p_post_id uuid)
+returns void language plpgsql security definer set search_path=public as $$
+declare post_author uuid; post_scope text;
+begin
+  select author_id, scope into post_author, post_scope from public.forum_posts where id=p_post_id;
+  if post_author is null then raise exception 'Beitrag nicht gefunden.'; end if;
+  if post_author<>auth.uid() and not public.ec_is_admin() and not (post_scope='COMMUNITY' and public.ec_is_forum_moderator()) then raise exception 'Keine Moderationsberechtigung.'; end if;
+  delete from public.forum_posts where id=p_post_id;
+end;
+$$;
+create or replace function public.forum_update_reply(p_reply_id uuid, p_content text, p_reason text)
+returns void language plpgsql security definer set search_path=public as $$
+declare reply_author uuid; post_scope text;
+begin
+  select reply.author_id, post.scope into reply_author, post_scope from public.forum_replies reply join public.forum_posts post on post.id=reply.post_id where reply.id=p_reply_id;
+  if reply_author is null or char_length(trim(coalesce(p_content,'')))<2 or char_length(trim(coalesce(p_reason,'')))<3 then raise exception 'Ungültige Antwort oder Bearbeitungsgrund.'; end if;
+  if reply_author<>auth.uid() and not public.ec_is_admin() and not (post_scope='COMMUNITY' and public.ec_is_forum_moderator()) then raise exception 'Keine Moderationsberechtigung.'; end if;
+  update public.forum_replies set content=trim(p_content), edited_at=now(), edited_by=auth.uid(), edit_reason=trim(p_reason) where id=p_reply_id;
+end;
+$$;
+create or replace function public.forum_delete_reply(p_reply_id uuid)
+returns void language plpgsql security definer set search_path=public as $$
+declare reply_author uuid; post_scope text;
+begin
+  select reply.author_id, post.scope into reply_author, post_scope from public.forum_replies reply join public.forum_posts post on post.id=reply.post_id where reply.id=p_reply_id;
+  if reply_author is null then raise exception 'Antwort nicht gefunden.'; end if;
+  if reply_author<>auth.uid() and not public.ec_is_admin() and not (post_scope='COMMUNITY' and public.ec_is_forum_moderator()) then raise exception 'Keine Moderationsberechtigung.'; end if;
+  delete from public.forum_replies where id=p_reply_id;
+end;
+$$;
+revoke all on function public.forum_update_post(uuid,text,text,text) from public;
+revoke all on function public.forum_delete_post(uuid) from public;
+revoke all on function public.forum_update_reply(uuid,text,text) from public;
+revoke all on function public.forum_delete_reply(uuid) from public;
+grant execute on function public.forum_update_post(uuid,text,text,text) to authenticated;
+grant execute on function public.forum_delete_post(uuid) to authenticated;
+grant execute on function public.forum_update_reply(uuid,text,text) to authenticated;
+grant execute on function public.forum_delete_reply(uuid) to authenticated;
 notify pgrst, 'reload schema';

@@ -211,7 +211,7 @@ declare reply_author uuid; post_scope text;
 begin
   select reply.author_id, post.scope into reply_author, post_scope from public.forum_replies reply join public.forum_posts post on post.id=reply.post_id where reply.id=p_reply_id;
   if reply_author is null or char_length(trim(p_content)) < 2 or char_length(trim(p_reason)) < 3 then raise exception 'Ungültige Antwort oder Bearbeitungsgrund.'; end if;
-  if reply_author<>auth.uid() and not public.ec_is_head_admin() and not (post_scope='COMMUNITY' and public.ec_is_forum_moderator()) then raise exception 'Keine Moderationsberechtigung.'; end if;
+  if reply_author<>auth.uid() and not public.ec_is_admin() and not (post_scope='COMMUNITY' and public.ec_is_forum_moderator()) then raise exception 'Keine Moderationsberechtigung.'; end if;
   update public.forum_replies set content=trim(p_content), edited_at=now(), edited_by=auth.uid(), edit_reason=trim(p_reason) where id=p_reply_id;
 end; $$;
 create or replace function public.forum_delete_reply(p_reply_id uuid)
@@ -220,7 +220,7 @@ declare reply_author uuid; post_scope text;
 begin
   select reply.author_id, post.scope into reply_author, post_scope from public.forum_replies reply join public.forum_posts post on post.id=reply.post_id where reply.id=p_reply_id;
   if reply_author is null then raise exception 'Antwort nicht gefunden.'; end if;
-  if reply_author<>auth.uid() and not public.ec_is_head_admin() and not (post_scope='COMMUNITY' and public.ec_is_forum_moderator()) then raise exception 'Keine Moderationsberechtigung.'; end if;
+  if reply_author<>auth.uid() and not public.ec_is_admin() and not (post_scope='COMMUNITY' and public.ec_is_forum_moderator()) then raise exception 'Keine Moderationsberechtigung.'; end if;
   delete from public.forum_replies where id=p_reply_id;
 end; $$;
 create or replace function public.admin_set_forum_moderator(p_target_user uuid, p_enabled boolean)
@@ -237,7 +237,7 @@ declare post_author uuid; post_scope text;
 begin
   select author_id,scope into post_author,post_scope from public.forum_posts where id=p_post_id;
   if post_author is null then raise exception 'Beitrag nicht gefunden.'; end if;
-  if post_author<>auth.uid() and not public.ec_is_head_admin() and not (post_scope='COMMUNITY' and public.ec_is_forum_moderator()) then raise exception 'Keine Moderationsberechtigung.'; end if;
+  if post_author<>auth.uid() and not public.ec_is_admin() and not (post_scope='COMMUNITY' and public.ec_is_forum_moderator()) then raise exception 'Keine Moderationsberechtigung.'; end if;
   delete from public.forum_posts where id=p_post_id;
 end; $$;
 
@@ -287,7 +287,7 @@ begin
   select author_id, scope into post_author, post_scope from public.forum_posts where id = p_post_id;
   if post_author is null then raise exception 'Beitrag nicht gefunden.'; end if;
   is_owner := post_author = auth.uid();
-  if not is_owner and not public.ec_is_head_admin() and not (post_scope = 'COMMUNITY' and public.ec_is_forum_moderator()) then
+  if not is_owner and not public.ec_is_admin() and not (post_scope = 'COMMUNITY' and public.ec_is_forum_moderator()) then
     raise exception 'Keine Berechtigung zum Bearbeiten dieses Beitrags.';
   end if;
   if char_length(trim(coalesce(p_title, ''))) < 3 or char_length(trim(coalesce(p_content, ''))) < 3 then
