@@ -611,10 +611,17 @@
       .layout-lavender .my-profile-card { background:linear-gradient(145deg,#80639c,#3d3556)!important; }
       .layout-midnight .my-profile-card { background:linear-gradient(145deg,#172b4d,#090f20)!important; }
       .layout-sunrise .my-profile-card { background:linear-gradient(145deg,#ce7b62,#7d4865)!important; }
-      .layout-neon { --orange:#ff20d6; background:radial-gradient(circle at 15% 12%,rgba(0,238,255,.20),transparent 30%),radial-gradient(circle at 85% 18%,rgba(255,24,205,.22),transparent 32%),#090620!important; }
-      .layout-neon .my-profile-card { background:linear-gradient(145deg,#10207d,#4d086d 54%,#071a3f)!important; border-color:#00f0ff!important; box-shadow:0 0 18px rgba(0,240,255,.55),0 0 34px rgba(255,20,210,.32)!important; }
-      .layout-neon .modern-nav button:hover,.layout-neon .modern-nav button.active,.layout-neon .primary-button { background:linear-gradient(135deg,#00dfff,#7b20ff 48%,#ff20c8)!important; border-color:#69f7ff!important; box-shadow:0 0 18px rgba(0,224,255,.38)!important; }
-      .layout-neon .brand img,.layout-neon .community-logo-hero img,.layout-neon img[alt="Ennstal Connect"] { content:url('/ennstal-connect-logo-neon.png'); filter:drop-shadow(0 0 10px rgba(0,230,255,.55)); }
+      .layout-neon { --orange:#ff20d6; background:radial-gradient(circle at 8% 12%,rgba(0,247,255,.42),transparent 28%),radial-gradient(circle at 92% 16%,rgba(255,0,204,.40),transparent 31%),radial-gradient(circle at 50% 88%,rgba(125,32,255,.38),transparent 34%),#050313!important; background-size:135% 135%!important; animation:neon-connect-shift 9s ease-in-out infinite alternate; }
+      .layout-neon .modern-topbar { background:linear-gradient(90deg,rgba(4,8,34,.98),rgba(58,5,82,.98),rgba(4,8,34,.98))!important; border-bottom:2px solid #00f5ff!important; box-shadow:0 0 24px rgba(0,245,255,.58),0 0 40px rgba(255,0,204,.28)!important; }
+      .layout-neon .modern-sidebar { background:linear-gradient(180deg,#091347,#310648 55%,#07142e)!important; border-right:2px solid #ff20d6!important; box-shadow:8px 0 28px rgba(255,0,204,.30)!important; }
+      .layout-neon .modern-main .panel,.layout-neon .modern-main .member-card,.layout-neon .modern-main .news-card,.layout-neon .modern-main .content-card { border:2px solid #34dfff!important; box-shadow:0 0 15px rgba(0,224,255,.30),0 0 28px rgba(255,25,209,.16)!important; }
+      .layout-neon .my-profile-card { background:linear-gradient(145deg,#0b2fa4,#6b087f 52%,#071a3f)!important; border:3px solid #00f5ff!important; box-shadow:0 0 22px rgba(0,245,255,.85),0 0 48px rgba(255,10,211,.58)!important; }
+      .layout-neon .modern-nav button:hover,.layout-neon .modern-nav button.active,.layout-neon .primary-button { background:linear-gradient(110deg,#00eaff,#7130ff 46%,#ff12ce 78%,#dfff00)!important; background-size:180% 180%!important; border-color:#c9ff27!important; box-shadow:0 0 20px rgba(0,234,255,.65),0 0 30px rgba(255,18,206,.35)!important; animation:neon-connect-button 3.6s linear infinite; }
+      .layout-neon .eyebrow { color:#d6ff23!important; text-shadow:0 0 8px rgba(214,255,35,.72); }
+      .layout-neon .brand img,.layout-neon .topbar-logo,.layout-neon .community-logo-hero img,.layout-neon img[alt="Ennstal Connect"] { content:url('/ennstal-connect-logo-neon.png'); filter:drop-shadow(0 0 8px #00ecff) drop-shadow(0 0 18px rgba(255,0,208,.82)); }
+      @keyframes neon-connect-shift { from{background-position:0% 0%} to{background-position:100% 70%} }
+      @keyframes neon-connect-button { 0%{background-position:0% 50%} 100%{background-position:180% 50%} }
+      @media(prefers-reduced-motion:reduce){.layout-neon,.layout-neon .modern-nav button,.layout-neon .primary-button{animation:none!important}}
       .profile-highlights { margin:20px 0; }
       .profile-stat-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
       .profile-stat-grid span { display:flex; flex-direction:column; align-items:center; padding:14px; border-radius:14px; background:#f4f7fa; }
