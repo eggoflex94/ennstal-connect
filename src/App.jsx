@@ -350,6 +350,13 @@ export default function App() {
       verification.appendChild(button);
     }
     section.appendChild(verification);
+    const layout = document.createElement("section"); layout.className = "layout-rewards";
+    const freeLayouts = isAdmin(profile?.role) || profile?.role === "SUPPORTER" || profile?.account_badge === "BUSINESS";
+    const hours = Math.floor(Number(profile.total_online_seconds || 0) / 3600);
+    layout.innerHTML = `<span class="eyebrow">LAYOUT & BELOHNUNGEN</span><h3>Dein Community-Design</h3><p>${freeLayouts ? "Deine Rolle erlaubt die freie Layoutwahl." : `Onlinezeit: ${hours} Stunden · Alpen bei 5 h, Aurora bei 20 h.`}</p>`;
+    const layoutSelect = document.createElement("select"); layoutSelect.name = "profile_layout";
+    [["standard", "Standard – Ennstal"], ["alpine", `Alpen – ${freeLayouts || hours >= 5 ? "freigeschaltet" : "ab 5 Stunden"}`], ["aurora", `Aurora – ${freeLayouts || hours >= 20 ? "freigeschaltet" : "ab 20 Stunden"}`]].forEach(([value, label]) => { const option = document.createElement("option"); option.value = value; option.textContent = label; option.disabled = !freeLayouts && ((value === "alpine" && hours < 5) || (value === "aurora" && hours < 20)); layoutSelect.appendChild(option); });
+    layoutSelect.value = profile.profile_layout || "standard"; layout.appendChild(layoutSelect); form.querySelector(".primary-button")?.before(layout);
     document.querySelectorAll(".profile-gallery figure").forEach((figure, index) => {
       const photo = memberPhotos.filter((item) => item.owner_id === user?.id)[index]; if (!photo || figure.querySelector(".photo-visibility")) return;
       const select = document.createElement("select"); select.className = "photo-visibility"; select.value = photo.visibility === "FRIENDS" ? "FRIENDS" : "PUBLIC";
@@ -406,7 +413,7 @@ export default function App() {
 
   useEffect(() => {
     if (!supabase || !user?.id) return undefined;
-    const setPresence = () => { void supabase.from("profiles").update({ is_online: true, last_active_at: new Date().toISOString() }).eq("id", user.id); };
+    const setPresence = () => { void supabase.from("profiles").update({ is_online: true, last_active_at: new Date().toISOString() }).eq("id", user.id); void supabase.rpc("record_online_activity"); };
     const clearPresence = () => { void supabase.from("profiles").update({ is_online: false, last_active_at: new Date().toISOString() }).eq("id", user.id); };
     setPresence();
     const heartbeat = window.setInterval(setPresence, 60000);
@@ -546,6 +553,8 @@ export default function App() {
   async function saveProfile(e) {
     e.preventDefault(); const f = new FormData(e.currentTarget);
     const payload = { nickname: String(f.get("nickname") || "").trim(), gender: f.get("gender") || null, bio: String(f.get("bio") || "").trim(), location: String(f.get("location") || "").trim(), interests: String(f.get("interests") || "").split(",").map((interest) => interest.trim()).filter(Boolean), website: String(f.get("website") || "").trim(), profile_accent: f.get("profile_accent") || "#ff6b25", profile_background: f.get("profile_background_image") || f.get("profile_background_color") || "#f6f9fc", profile_layout: f.get("profile_layout") || "standard", bio_font: f.get("bio_font") || "modern", bio_size: f.get("bio_size") || "normal", privacy_settings: { name: f.get("privacy_name") || "PUBLIC", birth_date: f.get("privacy_birth_date") || "PUBLIC", bio: f.get("privacy_bio") || "PUBLIC", location: f.get("privacy_location") || "PUBLIC", interests: f.get("privacy_interests") || "PUBLIC", website: f.get("privacy_website") || "PUBLIC", photos: f.get("privacy_photos") || "PUBLIC", activity: f.get("privacy_activity") || "PUBLIC" } };
+    const layoutUnlocked = isAdmin(profile?.role) || profile?.role === "SUPPORTER" || profile?.account_badge === "BUSINESS" || Number(profile?.total_online_seconds || 0) >= (payload.profile_layout === "alpine" ? 18000 : payload.profile_layout === "aurora" ? 72000 : 0);
+    if (!layoutUnlocked) return showNotice("Dieses Layout wird mit Onlinezeit freigeschaltet.");
     if (isAdmin(profile?.role)) payload.hide_online_status = f.get("hide_online_status") === "on";
     let { error } = await supabase.from("profiles").update(payload).eq("id", user.id);
     // Older live databases may not yet include the optional presentation fields.

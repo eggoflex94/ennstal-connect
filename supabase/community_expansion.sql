@@ -70,6 +70,48 @@ alter table public.profiles add column if not exists verified_at timestamptz;
 alter table public.profiles add column if not exists verified_by uuid references public.profiles(id) on delete set null;
 alter table public.profiles add column if not exists privacy_settings jsonb not null default '{"name":"PUBLIC","birth_date":"PUBLIC","bio":"PUBLIC","location":"PUBLIC","interests":"PUBLIC","website":"PUBLIC","photos":"PUBLIC","activity":"PUBLIC"}'::jsonb;
 
+-- A privacy-aware directory response. Own profiles and admins receive the complete
+-- record; other members receive only fields released by the profile owner.
+create or replace function public.community_member_directory()
+returns setof jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  p public.profiles%rowtype;
+  v_friend boolean;
+  v_full_access boolean := public.ec_is_admin();
+  v_profile jsonb;
+  v_private_keys text[];
+begin
+  if auth.uid() is null then raise exception 'Nicht eingeloggt.'; end if;
+  for p in select * from public.profiles loop
+    if not v_full_access and p.id <> auth.uid() then
+      if p.account_status <> 'ACTIVE' or coalesce(p.is_test_account, false)
+        or exists (select 1 from public.user_blocks b where (b.blocker_id = auth.uid() and b.blocked_id = p.id) or (b.blocker_id = p.id and b.blocked_id = auth.uid())) then
+        continue;
+      end if;
+    end if;
+    v_profile := to_jsonb(p);
+    if not v_full_access and p.id <> auth.uid() then
+      select exists(select 1 from public.friendships f where f.status = 'ACCEPTED' and ((f.requester_id = auth.uid() and f.receiver_id = p.id) or (f.receiver_id = auth.uid() and f.requester_id = p.id))) into v_friend;
+      v_private_keys := array[]::text[];
+      if coalesce(p.privacy_settings->>'name','PUBLIC') <> 'PUBLIC' and not (p.privacy_settings->>'name' = 'FRIENDS' and v_friend) then v_private_keys := v_private_keys || array['first_name','last_name']; end if;
+      if coalesce(p.privacy_settings->>'birth_date','PUBLIC') <> 'PUBLIC' and not (p.privacy_settings->>'birth_date' = 'FRIENDS' and v_friend) then v_private_keys := v_private_keys || array['birth_date']; end if;
+      if coalesce(p.privacy_settings->>'bio','PUBLIC') <> 'PUBLIC' and not (p.privacy_settings->>'bio' = 'FRIENDS' and v_friend) then v_private_keys := v_private_keys || array['bio','bio_image_url']; end if;
+      if coalesce(p.privacy_settings->>'location','PUBLIC') <> 'PUBLIC' and not (p.privacy_settings->>'location' = 'FRIENDS' and v_friend) then v_private_keys := v_private_keys || array['location']; end if;
+      if coalesce(p.privacy_settings->>'interests','PUBLIC') <> 'PUBLIC' and not (p.privacy_settings->>'interests' = 'FRIENDS' and v_friend) then v_private_keys := v_private_keys || array['interests']; end if;
+      if coalesce(p.privacy_settings->>'website','PUBLIC') <> 'PUBLIC' and not (p.privacy_settings->>'website' = 'FRIENDS' and v_friend) then v_private_keys := v_private_keys || array['website']; end if;
+      v_profile := v_profile - v_private_keys;
+    end if;
+    return next v_profile;
+  end loop;
+end;
+$$;
+revoke all on function public.community_member_directory() from public;
+grant execute on function public.community_member_directory() to authenticated;
+
 create table if not exists public.verification_requests (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.profiles(id) on delete cascade,
