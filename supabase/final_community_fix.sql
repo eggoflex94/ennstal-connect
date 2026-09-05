@@ -638,4 +638,7 @@ end;
 $$;
 revoke all on function public.get_admin_log(integer) from public;
 grant execute on function public.get_admin_log(integer) to authenticated;
+revoke execute on function public.accept_community_rules(text) from anon;
+revoke execute on function public.admin_full_member_directory() from anon;
+revoke execute on function public.get_admin_log(integer) from anon;
 notify pgrst,'reload schema';
