@@ -177,11 +177,6 @@ export default function App() {
         .select("account_status,suspension_reason")
         .eq("id", currentUser.id)
         .maybeSingle();
-      if (accessProfile?.account_status === "PENDING_APPROVAL") {
-        await supabase.auth.signOut(); setUser(null); setProfile(null); setMembers([]); setFriendships([]);
-        showNotice("Deine Registrierung wartet noch auf die Freigabe durch einen Admin.");
-        return;
-      }
       if (accessProfile?.account_status === "SUSPENDED") {
         await supabase.auth.signOut();
         setUser(null); setProfile(null); setMembers([]); setFriendships([]);
@@ -494,7 +489,7 @@ export default function App() {
       if (error) return showNotice(/database error saving new user/i.test(error.message || "") ? "Die Registrierung wurde von der Datenbank abgelehnt. Bitte verwende einen noch nicht vergebenen Nickname und führe anschließend die aktuelle Community-SQL einmal aus." : error.message);
       // When confirmations are disabled, create the matching profile immediately.
       if (data.session?.user) { setUser(data.session.user); void supabase.rpc("ensure_current_profile").finally(loadAll); }
-      showNotice("Registrierung eingereicht. Bestätige gegebenenfalls deine E-Mail; danach wartet dein Konto auf die Freigabe durch einen Admin.");
+      showNotice("Registrierung erfolgreich. Bestätige gegebenenfalls noch deine E-Mail und melde dich anschließend an.");
     } catch (error) { showNotice(error?.message || supabaseUnavailableMessage); }
   }
   async function requestPasswordReset() {

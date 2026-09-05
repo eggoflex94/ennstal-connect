@@ -14,8 +14,8 @@ create table if not exists public.registration_approval_requests (
 );
 alter table public.registration_approval_requests enable row level security;
 
--- Create only the minimal review record in the Auth step. Optional messages
--- are deliberately sent later, so they can never block registration.
+-- New members become active immediately. Suspicious accounts are handled with
+-- the separate verification request workflow, never by blocking registration.
 create or replace function public.ec_handle_new_user()
 returns trigger language plpgsql security definer set search_path=public as $$
 declare v_name text; v_first_admin boolean;
@@ -24,13 +24,8 @@ begin
   v_name := coalesce(new.raw_user_meta_data->>'nickname',split_part(new.email,'@',1));
   select not exists(select 1 from public.profiles where role in ('ADMIN','HEAD_ADMIN')) into v_first_admin;
   insert into public.profiles(id,nickname,role,account_status)
-  values(new.id,v_name,case when v_first_admin then 'HEAD_ADMIN' else 'MEMBER' end,
-         case when v_first_admin then 'ACTIVE' else 'PENDING_APPROVAL' end)
+  values(new.id,v_name,case when v_first_admin then 'HEAD_ADMIN' else 'MEMBER' end,'ACTIVE')
   on conflict(id) do nothing;
-  if not v_first_admin then
-    insert into public.registration_approval_requests(user_id) values(new.id)
-    on conflict(user_id) do nothing;
-  end if;
   return new;
 end;
 $$;
@@ -60,18 +55,7 @@ begin
     into v_email,v_name from auth.users where id=auth.uid();
   select not exists(select 1 from public.profiles where role in ('ADMIN','HEAD_ADMIN')) into v_first_admin;
   insert into public.profiles(id,nickname,role,account_status)
-  values(auth.uid(),v_name,case when v_first_admin then 'HEAD_ADMIN' else 'MEMBER' end,
-         case when v_first_admin then 'ACTIVE' else 'PENDING_APPROVAL' end);
-  if not v_first_admin then
-    insert into public.registration_approval_requests(user_id) values(auth.uid()) on conflict(user_id) do nothing;
-    for a in select id from public.profiles where role in ('ADMIN','HEAD_ADMIN') and account_status='ACTIVE' loop
-      begin
-        insert into public.messages(sender_id,receiver_id,content,is_read,created_at)
-        values(auth.uid(),a.id,'Neue Registrierung wartet auf Freigabe: ' || v_name || ' (' || v_email || ')',false,now());
-      exception when others then null;
-      end;
-    end loop;
-  end if;
+  values(auth.uid(),v_name,case when v_first_admin then 'HEAD_ADMIN' else 'MEMBER' end,'ACTIVE');
 end;
 $$;
 
