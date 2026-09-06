@@ -57,27 +57,62 @@ function enhanceProfileRewards() {
 
   const paragraph = section.querySelector("p");
   if (paragraph && hours !== null) {
-    paragraph.textContent = `Onlinezeit: ${hours} Stunden · Neue Designs werden jetzt schneller freigeschaltet. Neon Connect ist ab 50 Stunden verfügbar.`;
+    paragraph.textContent = `Onlinezeit: ${hours} Stunden · Neue Designs werden schneller freigeschaltet. Neon Connect ist ab 50 Stunden verfügbar.`;
   }
   section.dataset.rewardThresholds = "fast";
 }
 
+function fixRewardCopy(root = document) {
+  root.querySelectorAll("p,span,small,div").forEach((node) => {
+    if (node.children.length) return;
+    const text = node.textContent || "";
+    if (!/180\s*Stunden/i.test(text)) return;
+    node.textContent = text.replace(/180\s*Stunden/gi, "50 Stunden");
+  });
+}
+
+function ensureAuthRewardBanner() {
+  const welcome = document.querySelector(".auth-welcome");
+  if (!welcome || welcome.querySelector(".ec-auth-reward-banner")) return;
+
+  const banner = document.createElement("aside");
+  banner.className = "ec-auth-reward-banner";
+  banner.innerHTML = `
+    <div class="ec-auth-reward-icon">♕</div>
+    <div class="ec-auth-reward-copy">
+      <strong>Aktiv sein lohnt sich!</strong>
+      <span>Mit deinen Online-Stunden schaltest du besondere Profildesigns frei – <b>Neon Connect bereits ab 50 Stunden.</b></span>
+      <small>Supporter und offizielle Unterstützer der Community können alle Layouts sofort verwenden.</small>
+    </div>
+    <button type="button" class="ec-auth-reward-action">Alle Belohnungen ansehen</button>
+  `;
+  banner.querySelector("button")?.addEventListener("click", () => {
+    const rewardCard = [...document.querySelectorAll(".auth-intro *, .auth-welcome *")]
+      .find((node) => /Aktiv sein lohnt sich/i.test(node.textContent || "") && node !== banner && !banner.contains(node));
+    rewardCard?.scrollIntoView({ behavior: "smooth", block: "center" });
+  });
+  welcome.prepend(banner);
+}
+
 function enhanceAuthPage() {
   const list = document.querySelector(".auth-feature-list");
-  if (!list) return;
+  if (list) {
+    const first = list.firstElementChild;
+    const firstTitle = first?.querySelector("b");
+    const firstText = first?.querySelector("span");
+    if (firstTitle && /Head Admin/i.test(firstTitle.textContent || "")) firstTitle.textContent = "♛ Betreiber";
+    if (firstText && /Verantwortlich|Sicherheit|Regeln|Unterstützung/i.test(firstText.textContent || "")) firstText.textContent = "Ennstal Connect.";
 
-  const first = list.firstElementChild;
-  const firstTitle = first?.querySelector("b");
-  const firstText = first?.querySelector("span");
-  if (firstTitle && /Head Admin/i.test(firstTitle.textContent || "")) firstTitle.textContent = "♛ Betreiber";
-  if (firstText && /Verantwortlich|Sicherheit|Regeln|Unterstützung/i.test(firstText.textContent || "")) firstText.textContent = "Ennstal Connect.";
-
-  if (!list.querySelector("[data-auth-rewards]")) {
-    const reward = document.createElement("div");
-    reward.dataset.authRewards = "true";
-    reward.innerHTML = "<b>🎨 Schnellere Profil-Belohnungen</b><span>Neue Community-Layouts werden schon nach wenigen Online-Stunden freigeschaltet. Neon Connect gibt es bereits ab 50 Stunden.</span>";
-    list.appendChild(reward);
+    if (!list.querySelector("[data-auth-rewards]")) {
+      const reward = document.createElement("div");
+      reward.dataset.authRewards = "true";
+      reward.innerHTML = "<b>🎨 Schnellere Profil-Belohnungen</b><span>Neue Community-Layouts werden schon nach wenigen Online-Stunden freigeschaltet. Neon Connect gibt es bereits ab 50 Stunden.</span>";
+      list.appendChild(reward);
+    }
   }
+
+  ensureAuthRewardBanner();
+  fixRewardCopy(document.querySelector(".auth-welcome") || document);
 }
 
 async function saveNewlyUnlockedLayout(layout) {
@@ -113,10 +148,6 @@ function handleProfileSubmit(event) {
     .filter((value) => (OLD_LAYOUT_HOURS[value] ?? 0) <= hours)
     .pop() || "standard";
 
-  // App.jsx still validates the original thresholds during its own submit
-  // handler. Save all regular profile fields through that existing flow with
-  // a currently valid fallback and persist the newly unlocked layout right
-  // afterwards.
   select.value = fallback;
   window.setTimeout(() => saveNewlyUnlockedLayout(requested), 1200);
 }
@@ -124,6 +155,7 @@ function handleProfileSubmit(event) {
 function applyEnhancements() {
   enhanceProfileRewards();
   enhanceAuthPage();
+  fixRewardCopy();
 }
 
 document.addEventListener("submit", handleProfileSubmit, true);
