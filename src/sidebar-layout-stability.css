@@ -1,0 +1,28 @@
+/* Keep the refactored sidebar in the page flow: no nested x/y scrollbars. */
+.dashboard-layout{display:grid!important;grid-template-columns:320px minmax(0,1fr)!important;align-items:start!important;padding-top:92px!important;min-height:100vh!important}
+.modern-sidebar{position:sticky!important;top:92px!important;left:auto!important;bottom:auto!important;width:320px!important;min-width:0!important;max-width:320px!important;height:auto!important;max-height:none!important;overflow:visible!important;overflow-x:hidden!important;overflow-y:visible!important;padding:18px 12px 22px!important;z-index:40!important;box-sizing:border-box!important;align-self:start!important}
+.modern-nav{width:100%!important;min-width:0!important;overflow:visible!important}
+.ec-sidebar-refactor{width:100%!important;min-width:0!important;max-width:100%!important;overflow:visible!important}
+.ec-sidebar-refactor .ec-sidebar-block,.ec-rf-grid,.ec-rf-grid>button,.ec-rf-feed,.ec-rf-activity,.ec-rf-user{min-width:0!important;max-width:100%!important}
+.ec-rf-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+.ec-rf-grid>button{width:100%!important}
+.modern-main{margin-left:0!important;width:auto!important;min-width:0!important;max-width:none!important;padding:46px 48px 72px!important}
+.site-footer{margin-left:320px!important;width:calc(100% - 320px)!important}
+html,body,#root,.app{overflow-x:hidden!important}
+
+@media(max-width:1050px){
+  .dashboard-layout{grid-template-columns:300px minmax(0,1fr)!important}
+  .modern-sidebar{width:300px!important;max-width:300px!important;padding-inline:10px!important}
+  .modern-main{margin-left:0!important;width:auto!important;padding:34px 24px 64px!important}
+  .site-footer{margin-left:300px!important;width:calc(100% - 300px)!important}
+}
+
+@media(max-width:760px){
+  .dashboard-layout{display:block!important;padding-top:70px!important}
+  .modern-sidebar{position:relative!important;top:auto!important;width:100%!important;max-width:none!important;padding:10px!important;overflow:visible!important;border-right:0!important}
+  .modern-main{margin-left:0!important;width:100%!important;padding:22px 12px 52px!important}
+  .site-footer{margin-left:auto!important;width:calc(100% - 20px)!important}
+  .ec-sidebar-refactor{width:100%!important}
+  .ec-rf-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+  .ec-rf-grid>button{height:58px!important;min-height:58px!important}
+}
