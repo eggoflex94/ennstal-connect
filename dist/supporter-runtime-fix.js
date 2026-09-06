@@ -7,6 +7,31 @@ function setImportant(el,p,v){if(el.style.getPropertyValue(p)===v&&el.style.getP
 function paint(selector,key){const t=THEMES[key];document.querySelectorAll(selector).forEach(el=>{el.classList.add(`role-theme-${key}`);setImportant(el,'background',t.bg);setImportant(el,'border-color',t.border);setImportant(el,'box-shadow',t.shadow)})}
 function paintRows(selector,key){const t=THEMES[key];document.querySelectorAll(selector).forEach(el=>{setImportant(el,'border',`1px solid ${t.border}`);setImportant(el,'background',t.row);setImportant(el,'box-shadow',`0 0 14px ${t.border}55`)})}
 function paintNames(selector,key){const t=THEMES[key];document.querySelectorAll(selector).forEach(el=>{setImportant(el,'color',t.color);setImportant(el,'text-shadow',`0 0 12px ${t.color}66`)})}
+function formatMemberAges(){
+  document.querySelectorAll('.member-card').forEach(card=>{
+    if(card.dataset.ecAgeStacked==='1')return;
+    const nodes=[...card.querySelectorAll('.member-name,strong,p,div,span')].filter(el=>!el.children.length);
+    const target=nodes.find(el=>/^\s*.+?\s*[·•-]\s*\d{1,3}\s*Jahre\s*$/i.test(el.textContent||''));
+    if(!target)return;
+    const m=String(target.textContent||'').trim().match(/^(.+?)\s*[·•-]\s*(\d{1,3})\s*Jahre$/i);
+    if(!m)return;
+    target.textContent='';
+    const name=document.createElement('span');name.className='ec-member-realname';name.textContent=m[1].trim();
+    const age=document.createElement('small');age.className='ec-member-age';age.textContent=`(${m[2]} Jahre)`;
+    target.append(name,age);
+    target.style.setProperty('display','flex','important');
+    target.style.setProperty('flex-direction','column','important');
+    target.style.setProperty('align-items','center','important');
+    target.style.setProperty('gap','2px','important');
+    name.style.setProperty('display','block','important');
+    age.style.setProperty('display','block','important');
+    age.style.setProperty('font-size','0.72em','important');
+    age.style.setProperty('font-weight','700','important');
+    age.style.setProperty('line-height','1.1','important');
+    age.style.setProperty('opacity','.9','important');
+    card.dataset.ecAgeStacked='1';
+  });
+}
 function paintRoles(){
   paint('.member-card.ec-role-supporter,.member-card:has(.ec-pro-supporter),.member-card:has(img[alt="Supporter"])','supporter');
   paint('.member-card.ec-role-admin,.member-card.ec-role-head-admin,.member-card:has(.ec-pro-admin),.member-card:has(.ec-pro-head-admin),.member-card:has(img[alt="Admin"]),.member-card:has(img[alt="Hauptadmin"])','admin');
@@ -17,6 +42,7 @@ function paintRoles(){
   paintNames('.ec-pro-supporter .ec-pro-nickname,.ec-role-supporter .ec-pro-nickname','supporter');
   paintNames('.ec-pro-admin .ec-pro-nickname,.ec-pro-head-admin .ec-pro-nickname,.ec-role-admin .ec-pro-nickname,.ec-role-head-admin .ec-pro-nickname','admin');
   paintNames('.ec-pro-business .ec-pro-nickname,.ec-role-business .ec-pro-nickname','business');
+  formatMemberAges();
 }
 let scheduled=false;function schedulePaint(){if(scheduled)return;scheduled=true;requestAnimationFrame(()=>{scheduled=false;paintRoles()})}
 const start=()=>{paintRoles();const o=new MutationObserver(r=>{if(r.some(x=>x.addedNodes?.length))schedulePaint()});o.observe(document.body||document.documentElement,{subtree:true,childList:true})};
