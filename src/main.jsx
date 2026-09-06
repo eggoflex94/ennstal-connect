@@ -78,9 +78,22 @@ class AppErrorBoundary extends React.Component {
   }
 }
 
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => navigator.serviceWorker.register("/service-worker.js").catch(() => {}));
+async function removeLegacyAppShell() {
+  try {
+    if ("serviceWorker" in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map(registration => registration.unregister()));
+    }
+    if ("caches" in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.filter(key => key.startsWith("ennstal-connect-shell-")).map(key => caches.delete(key)));
+    }
+  } catch (error) {
+    console.warn("Alter App-Cache konnte nicht vollständig entfernt werden:", error);
+  }
 }
+
+void removeLegacyAppShell();
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
