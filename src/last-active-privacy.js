@@ -30,6 +30,15 @@ function hideNode(el) {
   el.style.setProperty("visibility", "hidden", "important");
 }
 
+function revealLastActive(root = document) {
+  root.querySelectorAll?.(".member-status small,.last-active,.last-active-at,[data-last-active],time[data-last-active],.ec-last-active-text").forEach((el) => {
+    el.hidden = false;
+    el.removeAttribute("aria-hidden");
+    el.style.removeProperty("display");
+    el.style.removeProperty("visibility");
+  });
+}
+
 function scrubLastActive(root = document) {
   if (canSeeLastActive) return;
   root.querySelectorAll?.(".member-status small,.last-active,.last-active-at,[data-last-active],time[data-last-active]").forEach(hideNode);
@@ -78,7 +87,10 @@ async function applyLastActivePrivacy() {
   document.documentElement.classList.toggle("ec-can-see-last-active", canSeeLastActive);
   document.documentElement.classList.toggle("ec-hide-last-active", !canSeeLastActive);
 
-  if (!canSeeLastActive) {
+  if (canSeeLastActive) {
+    revealLastActive(document);
+    requestAnimationFrame(() => revealLastActive(document));
+  } else {
     scrubLastActive(document);
     requestAnimationFrame(() => scrubLastActive(document));
     setTimeout(() => scrubLastActive(document), 250);
