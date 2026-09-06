@@ -1,0 +1,19 @@
+/* Friendly, compact navigation inspired by the approved sidebar direction. */
+.modern-nav button,.modern-nav a,nav button,nav a{min-height:40px}
+.modern-nav button:not(.primary-button),.modern-nav a,nav button:not(.primary-button),nav a{border-radius:10px;transition:background .16s ease,transform .16s ease}
+.modern-nav button:hover,.modern-nav a:hover,nav button:hover,nav a:hover{transform:translateX(1px)}
+/* Give existing monochrome/emoji nav icons a friendly color rhythm without changing behavior. */
+.modern-nav button:nth-child(8n+1),.modern-nav a:nth-child(8n+1),nav button:nth-child(8n+1),nav a:nth-child(8n+1){--ec-nav-icon:#4da3ff}
+.modern-nav button:nth-child(8n+2),.modern-nav a:nth-child(8n+2),nav button:nth-child(8n+2),nav a:nth-child(8n+2){--ec-nav-icon:#45d6a4}
+.modern-nav button:nth-child(8n+3),.modern-nav a:nth-child(8n+3),nav button:nth-child(8n+3),nav a:nth-child(8n+3){--ec-nav-icon:#ff5f8f}
+.modern-nav button:nth-child(8n+4),.modern-nav a:nth-child(8n+4),nav button:nth-child(8n+4),nav a:nth-child(8n+4){--ec-nav-icon:#aa72ff}
+.modern-nav button:nth-child(8n+5),.modern-nav a:nth-child(8n+5),nav button:nth-child(8n+5),nav a:nth-child(8n+5){--ec-nav-icon:#ff9b45}
+.modern-nav button:nth-child(8n+6),.modern-nav a:nth-child(8n+6),nav button:nth-child(8n+6),nav a:nth-child(8n+6){--ec-nav-icon:#4cc9f0}
+.modern-nav button:nth-child(8n+7),.modern-nav a:nth-child(8n+7),nav button:nth-child(8n+7),nav a:nth-child(8n+7){--ec-nav-icon:#ffd166}
+.modern-nav button:nth-child(8n),.modern-nav a:nth-child(8n),nav button:nth-child(8n),nav a:nth-child(8n){--ec-nav-icon:#8b7cff}
+.modern-nav button>svg,.modern-nav a>svg,nav button>svg,nav a>svg{color:var(--ec-nav-icon);filter:drop-shadow(0 0 5px color-mix(in srgb,var(--ec-nav-icon) 30%,transparent))}
+.ec-privacy-entry{--ec-nav-icon:#ffb020!important}.ec-help-entry{--ec-nav-icon:#ff5f8f!important}.ec-notification-bell{--ec-nav-icon:#ffd23f!important}.ec-admin-workspace-entry{--ec-nav-icon:#8b7cff!important}
+/* Keep operator controls visually separate and compact. */
+.ec-admin-workspace-entry{min-height:40px!important;margin-top:5px!important;padding:8px 13px!important;border:1px solid rgba(139,124,255,.22)!important;background:rgba(139,124,255,.08)!important}
+.ec-admin-workspace-entry:hover{background:rgba(139,124,255,.14)!important}
+@media(max-width:600px){.modern-nav button,.modern-nav a,nav button,nav a{min-height:38px}.ec-admin-workspace-entry{padding:7px 12px!important}}
