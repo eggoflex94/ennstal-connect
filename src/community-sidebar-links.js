@@ -6,7 +6,16 @@ const isVerified=p=>p?.is_verified===true||p?.verified===true||String(p?.verific
 let uid=null,role='',profiles=new Map(),names=new Map(),friends=new Set(),sweepQueued=false;
 
 function profileFor(root){const id=root?.dataset?.profile||root?.dataset?.memberId||q('[data-member-id]',root)?.dataset?.memberId;if(id&&profiles.has(id))return profiles.get(id);return names.get(norm(q('.ec-pro-nickname,.member-nickname,.ec-rf-user-copy strong',root)?.textContent))||null;}
-function openProfile(id){if(!id)return;const url=new URL(location.href);url.searchParams.set('profile',id);location.assign(url.toString());}
+function legacyButton(label){return qa('.modern-nav button,.modern-nav a').find(node=>!node.closest('.ec-sidebar-refactor')&&norm(node.textContent).includes(norm(label)));}
+function openProfile(id){
+  if(!id)return;
+  if(id===uid){legacyButton('Mein Profil')?.click();return;}
+  const openCard=()=>{const p=profiles.get(id),card=qa('.member-card').find(node=>node.dataset.memberId===id||norm(q('.ec-pro-nickname,.member-nickname',node)?.textContent)===norm(p?.nickname));if(!card)return false;card.click();return true;};
+  if(openCard())return;
+  legacyButton('Mitglieder')?.click();
+  let attempts=0;
+  const timer=setInterval(()=>{attempts+=1;if(openCard()||attempts>=40)clearInterval(timer);},75);
+}
 function addImage(className,src,title){const img=document.createElement('img');img.className=className;img.src=src;img.alt=title;img.title=title;return img;}
 
 function syncIdentity(root,p,showFriend){
@@ -49,7 +58,7 @@ document.addEventListener('click',event=>{const target=event.target.closest?.('.
 async function load(){
   const {data:{user}}=await supabase.auth.getUser();uid=user?.id||null;if(!uid)return;
   const [{data:ps},{data:fs}]=await Promise.all([
-    supabase.from('profiles').select('id,nickname,role,account_badge,is_verified,verification_status,account_status').eq('account_status','ACTIVE'),
+    supabase.from('profiles').select('id,nickname,role,account_badge,is_verified,account_status').eq('account_status','ACTIVE'),
     supabase.from('friendships').select('requester_id,receiver_id,status').or(`requester_id.eq.${uid},receiver_id.eq.${uid}`).eq('status','ACCEPTED')
   ]);
   profiles=new Map((ps||[]).map(p=>[p.id,p]));names=new Map((ps||[]).map(p=>[norm(p.nickname),p]));
