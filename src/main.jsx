@@ -26,6 +26,8 @@ import "./ad-management.js";
 import "./ad-management.css";
 import "./member-extras.js";
 import "./member-extras.css";
+import "./legal-evidence-admin.js";
+import "./legal-evidence-admin.css";
 
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
