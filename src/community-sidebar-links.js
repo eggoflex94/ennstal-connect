@@ -5,7 +5,6 @@ const norm=v=>String(v||'').replace(/[★♛♥✓]/g,'').trim().toLowerCase();
 const isVerified=p=>['ADMIN','HEAD_ADMIN'].includes(String(p?.role||'').toUpperCase())||p?.is_verified===true||p?.verified===true||String(p?.verification_status||'').toUpperCase()==='VERIFIED'||String(p?.account_status||'').toUpperCase()==='VERIFIED';
 let uid=null,role='',profiles=new Map(),names=new Map(),friends=new Set(),sweepQueued=false;
 
-function profileFor(root){const id=root?.dataset?.profile||root?.dataset?.memberId||q('[data-member-id]',root)?.dataset?.memberId;if(id&&profiles.has(id))return profiles.get(id);return names.get(norm(q('.ec-pro-nickname,.member-nickname,.ec-rf-user-copy strong',root)?.textContent))||null;}
 function openProfile(id,source){
   const shown=norm(q('.ec-pro-nickname,.ec-rf-name,.ec-rf-user-copy strong',source)?.textContent);
   const resolved=profiles.get(id)||names.get(shown);
@@ -19,7 +18,6 @@ function openProfile(id,source){
 function addImage(className,src,title){const img=document.createElement('img');img.className=className;img.src=src;img.alt='';img.title=title;img.setAttribute('aria-hidden','true');img.decoding='async';return img;}
 
 function verificationTarget(root){
-  if(root?.matches?.('.member-card')) return root;
   if(root?.matches?.('.ec-rf-person,.ec-sidebar-activity,.ec-rf-user,[data-profile]')) return q('.ec-rf-user-copy,.ec-rf-name,.ec-pro-name-row',root) || root;
   return q('.ec-pro-name-row,.profile-title,.profile-name,.ec-rf-user-copy,.ec-rf-name',root) || root;
 }
@@ -56,7 +54,8 @@ function sweep(){
     const self=q('.ec-rf-user',sidebar),me=profiles.get(uid);if(self&&me)syncIdentity(self,me,false);
     qa('[data-profile]',sidebar).forEach(row=>{const p=profiles.get(row.dataset.profile);if(p)syncIdentity(row,p,true);});
   }
-  qa('.member-card').forEach(card=>{const p=profileFor(card);if(!p)return;if(card.dataset.memberId!==p.id)card.dataset.memberId=p.id;syncIdentity(card,p,true);});
+  /* Member cards now render friendship + verification natively in React.
+     Do not inject or reposition badges here; this legacy runtime only owns sidebar/feed identity. */
   restoreAdminActivity();
 }
 function scheduleSweep(){if(sweepQueued)return;sweepQueued=true;requestAnimationFrame(sweep);}
