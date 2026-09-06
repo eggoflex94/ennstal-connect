@@ -156,14 +156,20 @@ export default function App() {
   }, [members, viewingMember?.id]);
 
   useEffect(() => {
-    if (!user?.id || !members.length) return;
+    if (!user?.id || !members.length) return undefined;
+    const openProfileById = (profileId) => {
+      const member = members.find((item) => item.id === profileId);
+      if (!member) return false;
+      setViewingMember(member.id === user.id ? null : member);
+      setViewingFriends([]);
+      setPage(member.id === user.id ? "profile" : "member-profile");
+      return true;
+    };
     const sharedProfileId = new URLSearchParams(window.location.search).get("profile");
-    if (!sharedProfileId) return;
-    const sharedMember = members.find((member) => member.id === sharedProfileId);
-    if (!sharedMember) return;
-    setViewingMember(sharedMember);
-    setViewingFriends([]);
-    setPage(sharedMember.id === user.id ? "profile" : "member-profile");
+    if (sharedProfileId) openProfileById(sharedProfileId);
+    const handleSidebarProfile = (event) => openProfileById(String(event.detail?.profileId || ""));
+    window.addEventListener("ec:open-profile", handleSidebarProfile);
+    return () => window.removeEventListener("ec:open-profile", handleSidebarProfile);
   }, [user?.id, members]);
 
   const showNotice = (text) => {
