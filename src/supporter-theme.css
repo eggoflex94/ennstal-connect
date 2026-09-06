@@ -1,109 +1,172 @@
-/* Supporter-Rolle: einheitlich gelb, kontrastreich und gut lesbar. */
-
+/* Supporter role: yellow/black identity across overview, profiles and activity lists. */
 :root {
   --supporter-yellow: #ffd400;
-  --supporter-yellow-light: #ffe95a;
-  --supporter-yellow-dark: #d9a900;
-  --supporter-ink: #111111;
+  --supporter-yellow-light: #ffe85a;
+  --supporter-yellow-dark: #c99d00;
+  --supporter-black: #080808;
+  --supporter-ink: #fff3a0;
 }
 
-/* Bestehende Mitgliederübersicht */
-.member-card.supporter {
-  border-color: var(--supporter-yellow-dark) !important;
-  background: linear-gradient(145deg, var(--supporter-yellow-light), var(--supporter-yellow)) !important;
-  color: var(--supporter-ink) !important;
-  box-shadow: 0 10px 28px rgba(217, 169, 0, 0.22);
+/* Member overview card */
+.member-card.supporter,
+article.member-card:has(.member-role.role-supporter) {
+  border: 3px solid var(--supporter-yellow) !important;
+  background: linear-gradient(145deg,#ffe51f 0%,#c79c00 34%,#312800 61%,#080808 82%,#000 100%) !important;
+  color: #fff4a3 !important;
+  box-shadow: 0 0 0 1px rgba(255,212,0,.35),0 0 22px rgba(255,212,0,.35),0 18px 34px rgba(0,0,0,.28) !important;
 }
 
 .member-card.supporter .member-nickname,
 .member-card.supporter .member-name,
 .member-card.supporter .member-status,
-.member-card.supporter .member-status.online,
-.member-card.supporter .member-status.offline,
 .member-card.supporter strong,
 .member-card.supporter h2,
 .member-card.supporter h3,
 .member-card.supporter p,
-.member-card.supporter small {
-  color: var(--supporter-ink) !important;
-  text-shadow: none !important;
+.member-card.supporter small,
+article.member-card:has(.member-role.role-supporter) .member-info h3,
+article.member-card:has(.member-role.role-supporter) .member-online-status,
+article.member-card:has(.member-role.role-supporter) .member-bio {
+  color: #fff3a0 !important;
+  text-shadow: 0 1px 2px #000 !important;
 }
 
+.member-card.supporter .member-nickname { color:#ffd400 !important; }
+
+.supporter-star,
 .member-card.supporter .supporter-star,
-.supporter-star {
+.role-supporter svg,
+.supporter-action svg {
   color: var(--supporter-yellow) !important;
-  filter: drop-shadow(0 0 5px rgba(255, 212, 0, 0.75));
-  text-shadow: 0 0 9px rgba(255, 212, 0, 0.7) !important;
+  fill: var(--supporter-yellow) !important;
+  filter: drop-shadow(0 0 5px #ffd400) drop-shadow(0 0 11px rgba(255,212,0,.7)) !important;
+  text-shadow: 0 0 10px #ffd400 !important;
 }
 
-.member-card.supporter .member-avatar {
-  border-color: var(--supporter-yellow-dark) !important;
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.45), 0 8px 18px rgba(0, 0, 0, 0.2);
-}
-
-.member-card.supporter .member-status span {
-  border: 1px solid rgba(17, 17, 17, 0.35);
+.member-card.supporter .member-avatar,
+article.member-card:has(.member-role.role-supporter) .member-avatar {
+  border-color: var(--supporter-yellow) !important;
+  box-shadow: 0 0 0 3px rgba(255,255,255,.75),0 0 15px rgba(255,212,0,.8) !important;
 }
 
 .member-card.supporter .member-message,
 .member-card.supporter button.member-message {
-  background: #171717 !important;
-  border-color: #171717 !important;
-  color: #ffffff !important;
+  background:#080808 !important;
+  border:1px solid #ffd400 !important;
+  color:#ffd400 !important;
 }
 
-/* Neue Mitgliederverwaltung aus Members.jsx */
 .member-role.role-supporter {
-  background: var(--supporter-yellow) !important;
-  border-color: var(--supporter-yellow-dark) !important;
-  color: var(--supporter-ink) !important;
+  background:linear-gradient(135deg,#ffe72c,#d4a900) !important;
+  border-color:#ffd400 !important;
+  color:#090909 !important;
+  font-weight:900 !important;
 }
 
-.member-role.role-supporter svg,
-.role-supporter svg,
-.supporter-action svg {
-  color: var(--supporter-yellow-dark) !important;
-  fill: var(--supporter-yellow) !important;
-  filter: drop-shadow(0 0 4px rgba(255, 212, 0, 0.55));
-}
-
-article.member-card:has(.member-role.role-supporter) {
-  border: 3px solid var(--supporter-yellow-dark) !important;
-  background: linear-gradient(145deg, var(--supporter-yellow-light), var(--supporter-yellow)) !important;
-  color: var(--supporter-ink) !important;
-}
-
-article.member-card:has(.member-role.role-supporter) .member-info h3,
-article.member-card:has(.member-role.role-supporter) .member-online-status,
-article.member-card:has(.member-role.role-supporter) .member-bio {
-  color: var(--supporter-ink) !important;
-  text-shadow: none !important;
-}
-
-article.member-card:has(.member-role.role-supporter) .member-avatar {
-  border-color: var(--supporter-yellow-dark) !important;
-}
-
-/* Supporter-Kennzeichnung in Kopfbereich und Profilen ebenfalls gelb */
-.top-profile-button.supporter-border {
-  border-color: var(--supporter-yellow-dark) !important;
-  background: rgba(255, 212, 0, 0.16) !important;
-}
-
+/* Header/profile role styling. Works with current supporter classes and role wrappers. */
 .top-profile-button.supporter-border,
-.top-profile-button.supporter-border * {
-  color: inherit;
+.supporter-border {
+  border-color:#ffd400 !important;
+  background:linear-gradient(135deg,rgba(255,212,0,.28),rgba(0,0,0,.72)) !important;
 }
 
-/* Lesbarkeit auf gelbem Rollen-Hintergrund erhalten. */
+.supporter-border .profile-avatar,
+.supporter-border .member-avatar,
+.profile-supporter .profile-avatar,
+.profile-supporter .member-avatar {
+  border-color:#ffd400 !important;
+  box-shadow:0 0 0 2px #fff,0 0 18px rgba(255,212,0,.8) !important;
+}
+
+.profile-supporter,
+.supporter-profile,
+[data-role="SUPPORTER"],
+[data-role="supporter"] {
+  --role-accent:#ffd400;
+  --role-text:#fff3a0;
+}
+
+.profile-supporter .profile-nickname,
+.supporter-profile .profile-nickname,
+[data-role="SUPPORTER"] .profile-nickname,
+[data-role="supporter"] .profile-nickname {
+  color:#ffd400 !important;
+  text-shadow:0 0 12px rgba(255,212,0,.55) !important;
+}
+
+/* Supporter entries in profile changes, profile visitors and other member/activity lists. */
+.profile-change.supporter,
+.profile-change-item.supporter,
+.profile-update.supporter,
+.profile-update-item.supporter,
+.profile-visitor.supporter,
+.profile-visitor-item.supporter,
+.visitor-item.supporter,
+.activity-item.supporter,
+.notification-item.supporter,
+[data-role="SUPPORTER"].profile-change,
+[data-role="SUPPORTER"].profile-change-item,
+[data-role="SUPPORTER"].profile-visitor,
+[data-role="SUPPORTER"].profile-visitor-item,
+[data-role="SUPPORTER"].visitor-item,
+[data-role="supporter"].profile-change,
+[data-role="supporter"].profile-change-item,
+[data-role="supporter"].profile-visitor,
+[data-role="supporter"].profile-visitor-item,
+[data-role="supporter"].visitor-item {
+  border:1px solid #ffd400 !important;
+  background:linear-gradient(105deg,rgba(255,218,0,.92) 0%,rgba(164,128,0,.75) 30%,rgba(23,20,4,.96) 68%,#050505 100%) !important;
+  color:#fff3a0 !important;
+  box-shadow:0 0 14px rgba(255,212,0,.25) !important;
+}
+
+.profile-change.supporter *,
+.profile-change-item.supporter *,
+.profile-update.supporter *,
+.profile-update-item.supporter *,
+.profile-visitor.supporter *,
+.profile-visitor-item.supporter *,
+.visitor-item.supporter *,
+.activity-item.supporter *,
+[data-role="SUPPORTER"].profile-change *,
+[data-role="SUPPORTER"].profile-change-item *,
+[data-role="SUPPORTER"].profile-visitor *,
+[data-role="SUPPORTER"].profile-visitor-item *,
+[data-role="SUPPORTER"].visitor-item *,
+[data-role="supporter"].profile-change *,
+[data-role="supporter"].profile-change-item *,
+[data-role="supporter"].profile-visitor *,
+[data-role="supporter"].profile-visitor-item *,
+[data-role="supporter"].visitor-item * {
+  color:inherit;
+}
+
+/* Common nested role badges: keep black text on solid yellow for readability. */
+.supporter-badge,
+.role-supporter,
+[data-role-badge="SUPPORTER"],
+[data-role-badge="supporter"] {
+  background:#ffd400 !important;
+  border-color:#ffd400 !important;
+  color:#080808 !important;
+  font-weight:900 !important;
+}
+
+/* Links remain readable on the dark end of the gradient. */
 .member-card.supporter a:not(.member-message),
-article.member-card:has(.member-role.role-supporter) a {
-  color: #111111 !important;
+article.member-card:has(.member-role.role-supporter) a,
+.profile-supporter a,
+.supporter-profile a {
+  color:#ffe45b !important;
 }
 
-@media (max-width: 700px) {
+@media (max-width:700px) {
   .member-card.supporter,
-  article.member-card:has(.member-role.role-supporter) {
-    color: var(--supporter-ink) !important;
+  article.member-card:has(.member-role.role-supporter),
+  .profile-change.supporter,
+  .profile-visitor.supporter,
+  .profile-visitor-item.supporter,
+  .visitor-item.supporter {
+    background:linear-gradient(155deg,#ffe51f 0%,#8b7000 38%,#161300 64%,#050505 100%) !important;
   }
 }
