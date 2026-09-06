@@ -35,6 +35,8 @@ html body .profile-header img.ec-pro-verified-badge,
 html body .profile-hero img.ec-pro-verified-badge{
   position:static!important;display:inline-block!important;vertical-align:middle!important;width:22px!important;height:22px!important;min-width:22px!important;max-width:22px!important;margin:0 0 0 7px!important;padding:2px!important;border:1px solid rgba(255,255,255,.85)!important;border-radius:50%!important;background:rgba(5,28,49,.84)!important;box-sizing:border-box!important;object-fit:contain!important;filter:drop-shadow(0 0 5px rgba(66,190,255,.7))!important
 }
+/* The blue verification icon in the profile header is sufficient. Do not repeat a second text pill below it. */
+html body .member-profile-hero .verified-profile-badge{display:none!important}
 @media(max-width:560px){
   html body .modern-main .member-card img.ec-pro-verified-badge,html body .modern-main .member-card img.ec-member-name-verified,html body .modern-main .member-card img[src*="badge-verified"]{top:10px!important;right:10px!important;width:26px!important;height:26px!important;min-width:26px!important;max-width:26px!important;min-height:26px!important;max-height:26px!important;padding:3px!important}
   html body .ec-sidebar-refactor img.ec-pro-verified-badge,html body .ec-sidebar-refactor img[src*="badge-verified"]{width:15px!important;height:15px!important;min-width:15px!important;max-width:15px!important;min-height:15px!important;max-height:15px!important;flex-basis:15px!important}
