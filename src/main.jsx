@@ -51,6 +51,8 @@ import "./sidebar-news-popup.js";
 import "./sidebar-news-popup.css";
 import "./layout-mountain-backgrounds.css";
 import "./identity-badges.css";
+import "./identity-system.js";
+import "./identity-system.css";
 import "./community-sidebar-refactor.js";
 import "./community-sidebar-refactor.css";
 import "./sidebar-layout-stability.css";
