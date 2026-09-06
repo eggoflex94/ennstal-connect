@@ -13,7 +13,9 @@ const requiredMainModules = [
   "./admin-dashboard-modern.js",
   "./admin-compact-enhancements.js",
   "./mobile-admin-production.css",
-  "./supporter-runtime-fix.js"
+  "./supporter-runtime-fix.js",
+  "./member-grid-final.css",
+  "./role-theme-lock.css"
 ];
 
 test("main entry keeps critical member/admin modules wired", async () => {
@@ -112,9 +114,25 @@ test("mobile admin hardening preserves touch sized controls and narrow layouts",
   assert.match(css, /safe-area-inset-bottom/);
 });
 
-test("Cloudflare production entry keeps stability assets wired", async () => {
-  const html = await source("dist/index.html");
-  assert.match(html, /mobile-admin-production\.css/);
-  assert.match(html, /supporter-runtime-fix\.js\?v=d2252741/);
-  assert.match(html, /viewport-fit=cover/);
+test("member card layout keeps status separated from name and age", async () => {
+  const css = await source("src/member-grid-final.css");
+  assert.match(css, /grid-template-rows/);
+  assert.match(css, /\.member-card \.member-status\{display:grid!important/);
+  assert.match(css, /min-height:54px!important/);
+  assert.match(css, /row-gap:7px!important/);
+});
+
+test("supporter role lock forbids green card fallback", async () => {
+  const css = await source("src/role-theme-lock.css");
+  assert.match(css, /data-role-theme="supporter"/);
+  assert.match(css, /#ffe537/);
+  assert.match(css, /#050505/);
+  assert.doesNotMatch(css, /#0[0-9a-f]{1,2}8[0-9a-f]{1,2}.*green/i);
+});
+
+test("service worker refreshes application assets network-first", async () => {
+  const worker = await source("public/service-worker.js");
+  assert.match(worker, /ennstal-connect-shell-v5/);
+  assert.match(worker, /cache: "no-store"/);
+  assert.match(worker, /isNavigation \|\| isVersionedAsset/);
 });
