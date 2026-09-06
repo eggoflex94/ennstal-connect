@@ -18,6 +18,12 @@ function openProfile(id,source){
 }
 function addImage(className,src,title){const img=document.createElement('img');img.className=className;img.src=src;img.alt='';img.title=title;img.setAttribute('aria-hidden','true');img.decoding='async';return img;}
 
+function verificationTarget(root){
+  if(root?.matches?.('.member-card')) return root;
+  if(root?.matches?.('.ec-rf-person,.ec-sidebar-activity,.ec-rf-user,[data-profile]')) return q('.ec-rf-user-copy,.ec-rf-name,.ec-pro-name-row',root) || root;
+  return q('.ec-pro-name-row,.profile-title,.profile-name,.ec-rf-user-copy,.ec-rf-name',root) || root;
+}
+
 function syncIdentity(root,p,showFriend){
   const stack=q('.ec-pro-role-stack',root);
   if(stack){
@@ -28,7 +34,7 @@ function syncIdentity(root,p,showFriend){
   }
   const badges=qa('.ec-pro-verified-badge,.ec-member-name-verified,img[src*="badge-verified"]',root);
   if(isVerified(p)){
-    if(!badges.length){const target=q('.ec-pro-name-row,.member-name,.ec-rf-user-copy,.ec-rf-name',root);if(target)target.prepend(addImage('ec-pro-verified-badge','/badge-verified.svg','Verifiziert'));}
+    if(!badges.length){const target=verificationTarget(root);if(target)target.appendChild(addImage('ec-pro-verified-badge','/badge-verified.svg','Verifiziert'));}
     badges.slice(1).forEach(x=>x.remove());
   }else badges.forEach(x=>x.remove());
 }
