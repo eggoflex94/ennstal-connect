@@ -1,172 +1,118 @@
-/* Supporter role: yellow/black identity across overview, profiles and activity lists. */
-:root {
-  --supporter-yellow: #ffd400;
-  --supporter-yellow-light: #ffe85a;
-  --supporter-yellow-dark: #c99d00;
-  --supporter-black: #080808;
-  --supporter-ink: #fff3a0;
-}
+/* Supporter theme - loaded last. The star itself is the reliable role marker. */
+:root{--supporter-yellow:#ffd400;--supporter-gold:#b88d00;--supporter-black:#050505;}
 
-/* Member overview card */
+/* MEMBER OVERVIEW: match both role class and the existing supporter star. */
 .member-card.supporter,
-article.member-card:has(.member-role.role-supporter) {
-  border: 3px solid var(--supporter-yellow) !important;
-  background: linear-gradient(145deg,#ffe51f 0%,#c79c00 34%,#312800 61%,#080808 82%,#000 100%) !important;
-  color: #fff4a3 !important;
-  box-shadow: 0 0 0 1px rgba(255,212,0,.35),0 0 22px rgba(255,212,0,.35),0 18px 34px rgba(0,0,0,.28) !important;
+.member-card:has(.supporter-star),
+article.member-card:has(.member-role.role-supporter){
+  border:3px solid var(--supporter-yellow)!important;
+  background:linear-gradient(145deg,#ffe522 0%,#bd9200 28%,#4a3a00 48%,#171300 65%,#050505 84%,#000 100%)!important;
+  box-shadow:0 0 0 1px rgba(255,212,0,.4),0 0 22px rgba(255,212,0,.42),0 18px 34px rgba(0,0,0,.3)!important;
+  color:#fff!important;
 }
-
+.member-card:has(.supporter-star) .member-nickname,
+.member-card:has(.supporter-star) .member-name,
+.member-card:has(.supporter-star) .member-status,
+.member-card:has(.supporter-star) small,
+.member-card:has(.supporter-star) strong,
+.member-card:has(.supporter-star) p,
 .member-card.supporter .member-nickname,
 .member-card.supporter .member-name,
 .member-card.supporter .member-status,
-.member-card.supporter strong,
-.member-card.supporter h2,
-.member-card.supporter h3,
-.member-card.supporter p,
 .member-card.supporter small,
-article.member-card:has(.member-role.role-supporter) .member-info h3,
-article.member-card:has(.member-role.role-supporter) .member-online-status,
-article.member-card:has(.member-role.role-supporter) .member-bio {
-  color: #fff3a0 !important;
-  text-shadow: 0 1px 2px #000 !important;
-}
+.member-card.supporter strong,
+.member-card.supporter p{color:#fff!important;text-shadow:0 2px 3px #000!important;}
+.member-card:has(.supporter-star) .member-nickname,
+.member-card.supporter .member-nickname{color:#ffd400!important;}
 
-.member-card.supporter .member-nickname { color:#ffd400 !important; }
-
+/* Yellow star everywhere for supporters. */
 .supporter-star,
-.member-card.supporter .supporter-star,
-.role-supporter svg,
-.supporter-action svg {
-  color: var(--supporter-yellow) !important;
-  fill: var(--supporter-yellow) !important;
-  filter: drop-shadow(0 0 5px #ffd400) drop-shadow(0 0 11px rgba(255,212,0,.7)) !important;
-  text-shadow: 0 0 10px #ffd400 !important;
+.member-card .supporter-star,
+.profile-header .supporter-star,
+.profile-card .supporter-star,
+.profile-visitor .supporter-star,
+.profile-visitor-item .supporter-star,
+.profile-change .supporter-star,
+.profile-change-item .supporter-star{
+  color:#ffd400!important;
+  fill:#ffd400!important;
+  text-shadow:0 0 7px #ffd400,0 0 15px rgba(255,212,0,.8)!important;
+  filter:drop-shadow(0 0 5px #ffd400) drop-shadow(0 0 10px rgba(255,212,0,.7))!important;
 }
 
+/* Avatar ring on every supporter surface. */
+.member-card:has(.supporter-star) .member-avatar,
 .member-card.supporter .member-avatar,
-article.member-card:has(.member-role.role-supporter) .member-avatar {
-  border-color: var(--supporter-yellow) !important;
-  box-shadow: 0 0 0 3px rgba(255,255,255,.75),0 0 15px rgba(255,212,0,.8) !important;
+.profile-header:has(.supporter-star) .profile-avatar,
+.my-profile-card:has(.supporter-star) .profile-avatar,
+.profile-visitor:has(.supporter-star) img,
+.profile-visitor-item:has(.supporter-star) img{
+  border-color:#ffd400!important;
+  box-shadow:0 0 0 2px #fff,0 0 17px rgba(255,212,0,.85)!important;
 }
 
-.member-card.supporter .member-message,
-.member-card.supporter button.member-message {
-  background:#080808 !important;
-  border:1px solid #ffd400 !important;
-  color:#ffd400 !important;
-}
-
-.member-role.role-supporter {
-  background:linear-gradient(135deg,#ffe72c,#d4a900) !important;
-  border-color:#ffd400 !important;
-  color:#090909 !important;
-  font-weight:900 !important;
-}
-
-/* Header/profile role styling. Works with current supporter classes and role wrappers. */
-.top-profile-button.supporter-border,
-.supporter-border {
-  border-color:#ffd400 !important;
-  background:linear-gradient(135deg,rgba(255,212,0,.28),rgba(0,0,0,.72)) !important;
-}
-
-.supporter-border .profile-avatar,
-.supporter-border .member-avatar,
-.profile-supporter .profile-avatar,
-.profile-supporter .member-avatar {
-  border-color:#ffd400 !important;
-  box-shadow:0 0 0 2px #fff,0 0 18px rgba(255,212,0,.8) !important;
-}
-
-.profile-supporter,
+/* PROFILE HEADER / OWN PROFILE CARD. */
+.profile-header:has(.supporter-star),
+.profile-hero:has(.supporter-star),
+.my-profile-card:has(.supporter-star),
+.member-profile-card:has(.supporter-star),
+.profile-card:has(.supporter-star),
 .supporter-profile,
+.profile-supporter,
 [data-role="SUPPORTER"],
-[data-role="supporter"] {
+[data-role="supporter"]{
   --role-accent:#ffd400;
-  --role-text:#fff3a0;
 }
-
+.profile-header:has(.supporter-star) .profile-nickname,
+.profile-hero:has(.supporter-star) .profile-nickname,
+.my-profile-card:has(.supporter-star) .profile-nickname,
+.member-profile-card:has(.supporter-star) .profile-nickname,
 .profile-supporter .profile-nickname,
-.supporter-profile .profile-nickname,
-[data-role="SUPPORTER"] .profile-nickname,
-[data-role="supporter"] .profile-nickname {
-  color:#ffd400 !important;
-  text-shadow:0 0 12px rgba(255,212,0,.55) !important;
-}
+.supporter-profile .profile-nickname{color:#ffd400!important;text-shadow:0 0 12px rgba(255,212,0,.65)!important;}
 
-/* Supporter entries in profile changes, profile visitors and other member/activity lists. */
-.profile-change.supporter,
-.profile-change-item.supporter,
-.profile-update.supporter,
-.profile-update-item.supporter,
+/* PROFILE VISITS + PROFILE CHANGES: use the supporter star as marker too. */
+.profile-visitor:has(.supporter-star),
+.profile-visitor-item:has(.supporter-star),
+.visitor-item:has(.supporter-star),
+.profile-change:has(.supporter-star),
+.profile-change-item:has(.supporter-star),
+.profile-update:has(.supporter-star),
+.profile-update-item:has(.supporter-star),
+.activity-item:has(.supporter-star),
 .profile-visitor.supporter,
 .profile-visitor-item.supporter,
 .visitor-item.supporter,
-.activity-item.supporter,
-.notification-item.supporter,
-[data-role="SUPPORTER"].profile-change,
-[data-role="SUPPORTER"].profile-change-item,
-[data-role="SUPPORTER"].profile-visitor,
-[data-role="SUPPORTER"].profile-visitor-item,
-[data-role="SUPPORTER"].visitor-item,
-[data-role="supporter"].profile-change,
-[data-role="supporter"].profile-change-item,
-[data-role="supporter"].profile-visitor,
-[data-role="supporter"].profile-visitor-item,
-[data-role="supporter"].visitor-item {
-  border:1px solid #ffd400 !important;
-  background:linear-gradient(105deg,rgba(255,218,0,.92) 0%,rgba(164,128,0,.75) 30%,rgba(23,20,4,.96) 68%,#050505 100%) !important;
-  color:#fff3a0 !important;
-  box-shadow:0 0 14px rgba(255,212,0,.25) !important;
+.profile-change.supporter,
+.profile-change-item.supporter,
+.profile-update.supporter,
+.profile-update-item.supporter{
+  border:1px solid #ffd400!important;
+  background:linear-gradient(105deg,rgba(255,218,0,.94) 0%,rgba(171,132,0,.82) 28%,rgba(45,37,2,.97) 58%,#050505 100%)!important;
+  box-shadow:0 0 14px rgba(255,212,0,.3)!important;
+  color:#fff!important;
+}
+.profile-visitor:has(.supporter-star) *,
+.profile-visitor-item:has(.supporter-star) *,
+.visitor-item:has(.supporter-star) *,
+.profile-change:has(.supporter-star) *,
+.profile-change-item:has(.supporter-star) *,
+.profile-update:has(.supporter-star) *,
+.profile-update-item:has(.supporter-star) *{color:inherit;}
+
+/* Solid role badge remains readable. */
+.role-supporter,.supporter-badge,.member-role.role-supporter,[data-role-badge="SUPPORTER"],[data-role-badge="supporter"]{
+  background:#ffd400!important;border-color:#ffd400!important;color:#080808!important;font-weight:900!important;
 }
 
-.profile-change.supporter *,
-.profile-change-item.supporter *,
-.profile-update.supporter *,
-.profile-update-item.supporter *,
-.profile-visitor.supporter *,
-.profile-visitor-item.supporter *,
-.visitor-item.supporter *,
-.activity-item.supporter *,
-[data-role="SUPPORTER"].profile-change *,
-[data-role="SUPPORTER"].profile-change-item *,
-[data-role="SUPPORTER"].profile-visitor *,
-[data-role="SUPPORTER"].profile-visitor-item *,
-[data-role="SUPPORTER"].visitor-item *,
-[data-role="supporter"].profile-change *,
-[data-role="supporter"].profile-change-item *,
-[data-role="supporter"].profile-visitor *,
-[data-role="supporter"].profile-visitor-item *,
-[data-role="supporter"].visitor-item * {
-  color:inherit;
+/* Header button. */
+.top-profile-button.supporter-border,.supporter-border{
+  border-color:#ffd400!important;
+  background:linear-gradient(135deg,rgba(255,212,0,.3),rgba(0,0,0,.72))!important;
 }
 
-/* Common nested role badges: keep black text on solid yellow for readability. */
-.supporter-badge,
-.role-supporter,
-[data-role-badge="SUPPORTER"],
-[data-role-badge="supporter"] {
-  background:#ffd400 !important;
-  border-color:#ffd400 !important;
-  color:#080808 !important;
-  font-weight:900 !important;
-}
-
-/* Links remain readable on the dark end of the gradient. */
-.member-card.supporter a:not(.member-message),
-article.member-card:has(.member-role.role-supporter) a,
-.profile-supporter a,
-.supporter-profile a {
-  color:#ffe45b !important;
-}
-
-@media (max-width:700px) {
-  .member-card.supporter,
-  article.member-card:has(.member-role.role-supporter),
-  .profile-change.supporter,
-  .profile-visitor.supporter,
-  .profile-visitor-item.supporter,
-  .visitor-item.supporter {
-    background:linear-gradient(155deg,#ffe51f 0%,#8b7000 38%,#161300 64%,#050505 100%) !important;
+@media(max-width:700px){
+  .member-card:has(.supporter-star),.member-card.supporter,
+  .profile-visitor:has(.supporter-star),.profile-change:has(.supporter-star){
+    background:linear-gradient(155deg,#ffe522 0%,#8c6d00 34%,#171300 64%,#050505 100%)!important;
   }
 }
