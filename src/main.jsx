@@ -43,6 +43,8 @@ import "./sidebar-dedupe.js";
 import "./admin-workspace.js";
 import "./admin-workspace.css";
 import "./sidebar-friendly.css";
+import "./admin-dashboard-modern.js";
+import "./admin-dashboard-modern.css";
 
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
