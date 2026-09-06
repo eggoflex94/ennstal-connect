@@ -2,33 +2,37 @@
    Loaded last so older global logo overrides cannot replace it. */
 :root{--ec-main-brand:url('/ennstal-connect-logo-v2.png')}
 
-/* Logged-in header: compact, readable and cropped around the central brand mark. */
-.modern-topbar{min-height:76px!important;padding:7px 18px!important;gap:16px!important;align-items:center!important}
-.topbar-brand{display:flex!important;align-items:center!important;justify-content:center!important;flex:0 0 252px!important;width:252px!important;height:62px!important;min-width:252px!important;overflow:hidden!important;border-radius:12px!important;background:#f7fbff!important;box-shadow:0 3px 14px rgba(0,0,0,.18)!important;cursor:pointer!important}
-.topbar-brand .topbar-logo,.topbar-brand img[alt="Ennstal Connect"]{content:var(--ec-main-brand)!important;display:block!important;width:100%!important;height:100%!important;max-width:none!important;max-height:none!important;object-fit:cover!important;object-position:center center!important;transform:scale(1.52)!important;transform-origin:center!important;border:0!important;margin:0!important}
+/* Logged-in header: keep the complete logo visible. Never crop or zoom the wordmark. */
+.modern-topbar{min-height:82px!important;padding:8px 18px!important;gap:16px!important;align-items:center!important}
+.topbar-brand{display:flex!important;align-items:center!important;justify-content:center!important;flex:0 0 300px!important;width:300px!important;height:66px!important;min-width:300px!important;overflow:hidden!important;border-radius:12px!important;background:#f7fbff!important;box-shadow:0 3px 14px rgba(0,0,0,.18)!important;cursor:pointer!important;padding:4px 10px!important;box-sizing:border-box!important}
+.topbar-brand .topbar-logo,.topbar-brand img[alt="Ennstal Connect"]{content:var(--ec-main-brand)!important;display:block!important;width:100%!important;height:100%!important;max-width:100%!important;max-height:100%!important;object-fit:contain!important;object-position:center!important;transform:none!important;border:0!important;margin:0!important}
 .modern-topbar .breadcrumb{min-width:0!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
 
-/* Start page: replace the previous hero logo with the full new banner. */
-.community-logo-hero{display:block!important;min-height:0!important;padding:0!important;grid-template-columns:none!important;background:#f7fbff!important;border:1px solid #35506a!important;border-radius:22px!important;overflow:hidden!important;box-shadow:0 14px 34px rgba(0,0,0,.24)!important}
+/* Start page: display the full logo without clipping any text. */
+.community-logo-hero{display:flex!important;align-items:center!important;justify-content:center!important;min-height:0!important;padding:12px 16px!important;grid-template-columns:none!important;background:#f7fbff!important;border:1px solid #35506a!important;border-radius:22px!important;overflow:hidden!important;box-shadow:0 14px 34px rgba(0,0,0,.24)!important;box-sizing:border-box!important}
 .community-logo-hero:after{display:none!important}
-.community-logo-hero>img,.community-logo-hero img[alt="Ennstal Connect Community-Logo"]{content:var(--ec-main-brand)!important;display:block!important;width:100%!important;height:auto!important;max-width:none!important;max-height:none!important;object-fit:contain!important;margin:0!important;border-radius:0!important}
+.community-logo-hero>img,.community-logo-hero img[alt="Ennstal Connect Community-Logo"]{content:var(--ec-main-brand)!important;display:block!important;width:100%!important;height:auto!important;max-width:900px!important;max-height:260px!important;object-fit:contain!important;object-position:center!important;margin:0 auto!important;border-radius:0!important;transform:none!important}
 
-/* Login / registration / password reset: show the new banner clearly and remove the duplicate text logo. */
+/* Login / registration / password reset: make the complete wordmark readable on every width. */
 .auth-page>.text-logo{display:none!important}
-.auth-intro>img[alt="Ennstal Connect"]{content:var(--ec-main-brand)!important;display:block!important;width:100%!important;max-width:760px!important;height:auto!important;max-height:none!important;object-fit:contain!important;margin:0 0 22px!important;border-radius:18px!important;box-shadow:0 12px 32px rgba(0,0,0,.24)!important;background:#f7fbff!important}
-.auth-intro{overflow:visible!important}
+.auth-intro>img[alt="Ennstal Connect"]{content:var(--ec-main-brand)!important;display:block!important;width:min(100%,760px)!important;height:auto!important;max-width:760px!important;max-height:260px!important;object-fit:contain!important;object-position:center!important;margin:0 auto 22px!important;border-radius:18px!important;box-shadow:0 12px 32px rgba(0,0,0,.24)!important;background:#f7fbff!important;padding:10px 16px!important;box-sizing:border-box!important;transform:none!important}
+.auth-intro{overflow:visible!important;min-width:0!important}
+.auth-welcome,.auth-page{overflow-x:hidden!important}
 
 @media(max-width:760px){
-  .modern-topbar{min-height:66px!important;padding:7px 10px!important;gap:10px!important}
-  .topbar-brand{flex-basis:192px!important;width:192px!important;min-width:192px!important;height:50px!important;border-radius:10px!important}
-  .topbar-brand .topbar-logo,.topbar-brand img[alt="Ennstal Connect"]{transform:scale(1.55)!important}
+  .modern-topbar{min-height:72px!important;padding:7px 10px!important;gap:10px!important}
+  .topbar-brand{flex-basis:220px!important;width:220px!important;min-width:220px!important;height:56px!important;border-radius:10px!important;padding:4px 8px!important}
+  .topbar-brand .topbar-logo,.topbar-brand img[alt="Ennstal Connect"]{transform:none!important;object-fit:contain!important}
   .modern-topbar .breadcrumb{font-size:11px!important}
-  .auth-intro>img[alt="Ennstal Connect"]{border-radius:13px!important;margin-bottom:16px!important}
-  .community-logo-hero{border-radius:16px!important}
+  .auth-intro>img[alt="Ennstal Connect"]{width:100%!important;max-height:210px!important;border-radius:13px!important;margin:0 auto 16px!important;padding:8px 10px!important}
+  .community-logo-hero{border-radius:16px!important;padding:10px!important}
+  .community-logo-hero>img,.community-logo-hero img[alt="Ennstal Connect Community-Logo"]{max-height:210px!important}
 }
 
 @media(max-width:480px){
   .modern-topbar{justify-content:flex-start!important}
-  .topbar-brand{flex-basis:170px!important;width:170px!important;min-width:170px!important;height:46px!important}
+  .topbar-brand{flex:1 1 190px!important;width:auto!important;min-width:0!important;max-width:230px!important;height:52px!important}
   .modern-topbar .breadcrumb{display:none!important}
+  .auth-intro>img[alt="Ennstal Connect"]{max-height:180px!important;padding:7px 8px!important}
+  .community-logo-hero>img,.community-logo-hero img[alt="Ennstal Connect Community-Logo"]{max-height:180px!important}
 }
