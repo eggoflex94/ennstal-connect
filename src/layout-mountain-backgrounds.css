@@ -1,0 +1,25 @@
+/* Alpine identity for every selectable community layout.
+   One mountain scene, different layout-tuned overlays so text/cards stay readable. */
+:root{--ec-mountain-scene:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1600 1100'%3E%3Cdefs%3E%3ClinearGradient id='sky' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop stop-color='%236daed0'/%3E%3Cstop offset='.5' stop-color='%233f7898'/%3E%3Cstop offset='1' stop-color='%231d3f54'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='1600' height='1100' fill='url(%23sky)'/%3E%3Ccircle cx='1280' cy='150' r='86' fill='%23ffe5a2' opacity='.62'/%3E%3Cpath d='M-80 540 230 190l145 170 215-275 220 304 150-178 320 329v560H-80Z' fill='%23dceaf0' opacity='.82'/%3E%3Cpath d='m160 268 70-78 68 80-40-22-28 39-28-39Z' fill='%23fff' opacity='.96'/%3E%3Cpath d='m505 195 85-110 88 121-48-28-40 55-37-55Z' fill='%23fff' opacity='.96'/%3E%3Cpath d='M-80 650 250 390l185 160 250-245 260 230 215-172 520 287v450H-80Z' fill='%234b7381' opacity='.93'/%3E%3Cpath d='M-80 760c310-165 485-82 710-224 205-129 437-73 1050-310v874H-80Z' fill='%23162f3b' opacity='.95'/%3E%3C/svg%3E")}
+
+.dashboard-layout,.app-shell,.community-app{--ec-layout-overlay:linear-gradient(180deg,rgba(241,247,252,.76),rgba(235,243,249,.88));background-image:var(--ec-layout-overlay),var(--ec-mountain-scene)!important;background-size:cover!important;background-position:center top!important;background-attachment:fixed!important;background-repeat:no-repeat!important}
+
+/* Layout-specific atmosphere while keeping the same Ennstal mountain identity. */
+.layout-alpine,.theme-alpine{--ec-layout-overlay:linear-gradient(180deg,rgba(226,246,238,.72),rgba(224,241,234,.88))}
+.layout-aurora,.theme-aurora{--ec-layout-overlay:linear-gradient(180deg,rgba(239,230,255,.72),rgba(228,221,247,.88))}
+.layout-ocean,.theme-ocean{--ec-layout-overlay:linear-gradient(180deg,rgba(220,242,249,.72),rgba(216,235,244,.88))}
+.layout-slate,.theme-slate{--ec-layout-overlay:linear-gradient(180deg,rgba(232,238,243,.78),rgba(222,231,237,.9))}
+.layout-ember,.theme-ember{--ec-layout-overlay:linear-gradient(180deg,rgba(255,232,215,.72),rgba(245,224,213,.88))}
+.layout-redwood,.theme-redwood{--ec-layout-overlay:linear-gradient(180deg,rgba(250,226,229,.72),rgba(240,218,224,.88))}
+.layout-lavender,.theme-lavender{--ec-layout-overlay:linear-gradient(180deg,rgba(241,232,252,.72),rgba(231,223,244,.88))}
+.layout-midnight,.theme-midnight{--ec-layout-overlay:linear-gradient(180deg,rgba(7,18,38,.68),rgba(6,14,28,.86))}
+.layout-sunrise,.theme-sunrise{--ec-layout-overlay:linear-gradient(180deg,rgba(255,223,199,.66),rgba(242,215,205,.86))}
+.layout-neon,.theme-neon{--ec-layout-overlay:linear-gradient(180deg,rgba(8,17,48,.64),rgba(27,9,45,.84))}
+
+/* Let the scene show through without sacrificing content contrast. */
+.dashboard-layout .modern-main,.app-shell main,.community-app main{background:transparent!important}.dashboard-layout .panel,.dashboard-layout .card,.dashboard-layout .member-card,.dashboard-layout .group-card,.dashboard-layout .news-card,.dashboard-layout .forum-post,.dashboard-layout .empty-card{backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px)}
+.layout-midnight .panel,.layout-neon .panel,.theme-midnight .panel,.theme-neon .panel{background:rgba(8,18,34,.82)!important;color:#f7fbff!important}
+.layout-midnight .modern-main,.layout-neon .modern-main,.theme-midnight .modern-main,.theme-neon .modern-main{color:#f7fbff}
+
+@media(max-width:900px){.dashboard-layout,.app-shell,.community-app{background-attachment:scroll!important;background-position:center top!important;background-size:auto 1050px!important}.dashboard-layout .panel,.dashboard-layout .card{backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}}
+@media(prefers-reduced-motion:reduce){.dashboard-layout,.app-shell,.community-app{background-attachment:scroll!important}}
