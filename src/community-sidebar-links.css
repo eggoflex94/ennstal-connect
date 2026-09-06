@@ -35,37 +35,42 @@ html.ec-can-see-last-active .member-status small,html.ec-can-see-last-active .la
 }
 
 
-/* Friend badge: fixed top-left position inside every member card. */
-.member-card{position:relative!important}
-.member-card .ec-final-card-identity,
-.member-card>.ec-pro-identity,
-.member-card .ec-pro-role-stack{position:static!important}
-.member-card .ec-pro-friend-badge{
+/* Friend badge: fixed in the free top-left corner, independent of the role star. */
+html body .modern-main .member-card{position:relative!important}
+html body .modern-main .member-card .ec-final-card-identity,
+html body .modern-main .member-card .ec-pro-identity,
+html body .modern-main .member-card .ec-pro-role-stack{position:static!important}
+html body .modern-main .member-card img.ec-pro-friend-badge{
   position:absolute!important;
-  top:14px!important;
-  left:14px!important;
-  z-index:8!important;
+  inset:16px auto auto 16px!important;
+  z-index:12!important;
   display:block!important;
   visibility:visible!important;
-  width:18px!important;
-  height:18px!important;
-  min-width:18px!important;
-  max-width:18px!important;
-  max-height:18px!important;
+  width:20px!important;
+  height:20px!important;
+  min-width:20px!important;
+  max-width:20px!important;
+  min-height:20px!important;
+  max-height:20px!important;
   margin:0!important;
-  padding:0!important;
+  padding:3px!important;
+  border:1px solid rgba(110,235,244,.8)!important;
+  border-radius:50%!important;
+  background:rgba(10,42,61,.78)!important;
   object-fit:contain!important;
+  transform:none!important;
   pointer-events:none!important;
-  filter:drop-shadow(0 0 5px rgba(92,225,230,.95))!important
+  box-sizing:border-box!important;
+  filter:drop-shadow(0 0 5px rgba(92,225,230,.75))!important
 }
 @media(max-width:900px){
-  .member-card .ec-pro-friend-badge{
-    top:11px!important;
-    left:11px!important;
-    width:17px!important;
-    height:17px!important;
-    min-width:17px!important;
-    max-width:17px!important;
-    max-height:17px!important
+  html body .modern-main .member-card img.ec-pro-friend-badge{
+    inset:12px auto auto 12px!important;
+    width:19px!important;
+    height:19px!important;
+    min-width:19px!important;
+    max-width:19px!important;
+    min-height:19px!important;
+    max-height:19px!important
   }
 }
