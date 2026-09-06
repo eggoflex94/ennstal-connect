@@ -30,8 +30,11 @@ const OLD_LAYOUT_HOURS = {
 
 const NEW_LAYOUT_HOURS = Object.fromEntries(REWARD_LAYOUTS.map(([value, , hours]) => [value, hours]));
 const REWARD_SIGNATURE = REWARD_LAYOUTS.map(([value, , hours]) => `${value}:${hours}`).join("|");
+const SUPPORT_EMAIL = "ennstal.connect@gmx.at";
 let applyingEnhancements = false;
 let enhancementQueued = false;
+let supportPanelLoading = false;
+let supportPanelSubscribed = false;
 
 function onlineHoursFrom(section) {
   const match = section?.textContent?.match(/Onlinezeit:\s*(\d+)\s*Stunden/i);
@@ -131,6 +134,149 @@ function enhanceHeadAdminOperatorLabel() {
     box.classList.add("operator-responsibilities");
     box.dataset.operatorLabel = "true";
   });
+}
+
+function profileRole(profile) {
+  return String(profile?.role || "").toUpperCase();
+}
+
+function contactRoleLabel(profile) {
+  const role = profileRole(profile);
+  if (role === "HEAD_ADMIN" || role.includes("HEAD")) return "Betreiber";
+  if (role.includes("ADMIN")) return "Admin";
+  if (role.includes("SUPPORTER")) return "Supporter";
+  return role || "Team";
+}
+
+function contactName(profile) {
+  return profile?.display_name || profile?.full_name || profile?.name || profile?.nickname || profile?.username || "Community-Team";
+}
+
+function contactAvatar(profile) {
+  return profile?.avatar_url || profile?.profile_image || profile?.profile_image_url || profile?.photo_url || "";
+}
+
+function contactResponsibilities(profile) {
+  const role = profileRole(profile);
+  if (role === "HEAD_ADMIN" || role.includes("HEAD")) {
+    return profile?.head_admin_responsibilities || profile?.admin_responsibilities || "Datenschutz, Technischer Betrieb, Sicherheit und Community-Verwaltung.";
+  }
+  if (role.includes("ADMIN")) return profile?.admin_responsibilities || "Administration und Community-Betreuung.";
+  return profile?.supporter_responsibilities || profile?.admin_responsibilities || "Support und Community-Betreuung.";
+}
+
+function findAdministrationCard() {
+  const heading = [...document.querySelectorAll("h1,h2,h3,h4")].find((node) => /^Administration(?:\s*&\s*Support)?$/i.test(String(node.textContent || "").trim()));
+  if (!heading) return null;
+  return heading.closest("section,article,.card,.dashboard-card,.home-card,.panel") || heading.parentElement;
+}
+
+function ensureSupportPanelStyles() {
+  if (document.getElementById("ec-support-panel-styles")) return;
+  const style = document.createElement("style");
+  style.id = "ec-support-panel-styles";
+  style.textContent = `
+    .ec-support-panel{margin-top:14px;border:1px solid #b8dcf4;border-radius:16px;background:linear-gradient(145deg,#fff,#f5fbff);box-shadow:0 8px 22px rgba(30,93,145,.10);overflow:hidden}
+    .ec-support-info{padding:15px 16px;border-bottom:1px solid #dbeaf4}
+    .ec-support-info strong{display:block;color:#1f334b;font-size:16px;margin-bottom:5px}
+    .ec-support-info p{margin:4px 0;color:#4a627c;line-height:1.4}
+    .ec-support-email{display:inline-block;margin-top:5px;color:#0879e8;font-weight:800;text-decoration:none}
+    .ec-contact-person{display:grid;grid-template-columns:48px minmax(0,1fr) auto;gap:12px;align-items:start;padding:14px 16px;border-bottom:1px solid #e1edf5}
+    .ec-contact-person:last-child{border-bottom:0}
+    .ec-contact-avatar{width:48px;height:48px;border-radius:50%;object-fit:cover;background:#e8f0f6;border:2px solid #d6e5ef}
+    .ec-contact-avatar-fallback{display:grid;place-items:center;font-weight:900;color:#34526d}
+    .ec-contact-name{font-weight:900;color:#c87500;font-size:17px}
+    .ec-contact-role{font-weight:800;color:#27845c;margin:2px 0}
+    .ec-contact-responsibility{color:#536c84;line-height:1.35;font-size:14px}
+    .ec-contact-badge{background:#d8edff;color:#0b6fc6;border-radius:999px;padding:4px 9px;font-weight:800;font-size:12px;white-space:nowrap}
+    .ec-support-empty{padding:14px 16px;color:#60758a}
+    @media(max-width:520px){.ec-contact-person{grid-template-columns:42px minmax(0,1fr)}.ec-contact-avatar{width:42px;height:42px}.ec-contact-badge{grid-column:2;justify-self:start}}
+  `;
+  document.head.appendChild(style);
+}
+
+function renderSupportContacts(card, profiles) {
+  ensureSupportPanelStyles();
+  const heading = [...card.querySelectorAll("h1,h2,h3,h4")].find((node) => /^Administration(?:\s*&\s*Support)?$/i.test(String(node.textContent || "").trim()));
+  if (!heading) return;
+  heading.textContent = "Administration & Support";
+
+  let panel = card.querySelector(".ec-support-panel");
+  if (!panel) {
+    panel = document.createElement("div");
+    panel.className = "ec-support-panel";
+    const oldRows = [...card.children].filter((child) => child !== heading && child !== panel && !child.classList?.contains("eyebrow"));
+    oldRows.forEach((child) => {
+      if (/Marco|Roland|Zuständig|Nachrichten verwalten|Profilbesuche|Community-Verwaltung/i.test(child.textContent || "")) child.remove();
+    });
+    heading.insertAdjacentElement("afterend", panel);
+  }
+
+  panel.innerHTML = `
+    <div class="ec-support-info">
+      <strong>✉ Support für alle Anfragen</strong>
+      <p>Für sämtliche Support-Anfragen sind entweder ich persönlich über eine private Nachricht oder die unten angeführten Admins bzw. Supporter zuständig.</p>
+      <a class="ec-support-email" href="mailto:${SUPPORT_EMAIL}">${SUPPORT_EMAIL}</a>
+    </div>
+    <div class="ec-support-people"></div>
+  `;
+
+  const people = panel.querySelector(".ec-support-people");
+  if (!profiles.length) {
+    people.innerHTML = '<div class="ec-support-empty">Derzeit sind keine Admins oder Supporter eingetragen.</div>';
+    return;
+  }
+
+  profiles.forEach((profile) => {
+    const row = document.createElement("div");
+    row.className = "ec-contact-person";
+    const avatar = contactAvatar(profile);
+    const avatarHtml = avatar
+      ? `<img class="ec-contact-avatar" src="${avatar}" alt="">`
+      : `<div class="ec-contact-avatar ec-contact-avatar-fallback">${contactName(profile).slice(0, 1).toUpperCase()}</div>`;
+    row.innerHTML = `
+      ${avatarHtml}
+      <div>
+        <div class="ec-contact-name">${contactName(profile)}</div>
+        <div class="ec-contact-role">${contactRoleLabel(profile)}</div>
+        <div class="ec-contact-responsibility">${contactResponsibilities(profile)}</div>
+      </div>
+      <span class="ec-contact-badge">${contactRoleLabel(profile)}</span>
+    `;
+    people.appendChild(row);
+  });
+}
+
+async function refreshSupportContacts() {
+  if (!supabase || supportPanelLoading) return;
+  const card = findAdministrationCard();
+  if (!card) return;
+  supportPanelLoading = true;
+  try {
+    const { data, error } = await supabase.from("profiles").select("*");
+    if (error) throw error;
+    const profiles = (data || [])
+      .filter((profile) => {
+        const role = profileRole(profile);
+        return role.includes("ADMIN") || role.includes("SUPPORTER");
+      })
+      .sort((a, b) => {
+        const rank = (profile) => profileRole(profile).includes("HEAD") ? 0 : profileRole(profile).includes("ADMIN") ? 1 : 2;
+        return rank(a) - rank(b) || contactName(a).localeCompare(contactName(b), "de");
+      });
+    renderSupportContacts(card, profiles);
+  } catch (error) {
+    console.error("Ansprechpartner konnten nicht synchronisiert werden:", error);
+  } finally {
+    supportPanelLoading = false;
+  }
+
+  if (!supportPanelSubscribed) {
+    supportPanelSubscribed = true;
+    supabase.channel("ec-support-contacts")
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => refreshSupportContacts())
+      .subscribe();
+  }
 }
 
 function enhanceOwnProfileCustomization() {
@@ -250,6 +396,7 @@ function applyEnhancements() {
     enhanceAuthPage();
     enhanceHeadAdminOperatorLabel();
     enhanceOwnProfileCustomization();
+    refreshSupportContacts();
     fixRewardCopy();
   } finally {
     applyingEnhancements = false;
