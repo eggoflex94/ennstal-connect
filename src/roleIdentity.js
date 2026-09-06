@@ -3,10 +3,14 @@ export const ROLE_ORDER = { HEAD_ADMIN: 1, ADMIN: 2, SUPPORTER: 3, MEMBER: 4 };
 export function roleIdentity(profile = {}) {
   const role = String(profile.role || "MEMBER").toUpperCase();
   const badge = String(profile.account_badge || "").toUpperCase();
-  if (role === "HEAD_ADMIN") return { key: "head-admin", label: "Head Admin", mark: "♛", color: "#ffd34d" };
-  if (role === "ADMIN") return { key: "admin", label: "Community Admin", mark: "◆", color: "#62b8ff" };
-  if (role === "SUPPORTER") return { key: "supporter", label: "Supporter", mark: "★", color: "#55dfa8" };
-  if (badge === "BUSINESS" || badge.includes("UNTERNEHM")) return { key: "business", label: "Unternehmenskonto", mark: "★", color: "#54c8ff" };
+
+  // Head Admin and Admin intentionally share the same red team identity.
+  // The Head Admin remains clearly distinguishable by the role label and
+  // its first position wherever team members are sorted by ROLE_ORDER.
+  if (role === "HEAD_ADMIN") return { key: "head-admin", label: "Head Admin", mark: "★", color: "#ef4444" };
+  if (role === "ADMIN") return { key: "admin", label: "Community Admin", mark: "★", color: "#ef4444" };
+  if (role === "SUPPORTER") return { key: "supporter", label: "Supporter", mark: "★", color: "#45d89f" };
+  if (badge === "BUSINESS" || badge.includes("UNTERNEHM")) return { key: "business", label: "Unternehmenskonto", mark: "★", color: "#45c7ff" };
   return { key: "member", label: "Mitglied", mark: "", color: profile.nickname_color || "#f7fbff" };
 }
 
