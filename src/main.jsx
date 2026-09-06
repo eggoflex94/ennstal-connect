@@ -39,31 +39,19 @@ import "./live-notifications.css";
 import "./notification-center.css";
 import "./member-onboarding.js";
 import "./member-onboarding.css";
-import "./sidebar-dedupe.js";
 import "./admin-workspace.js";
 import "./admin-workspace.css";
-import "./sidebar-friendly.css";
 import "./admin-dashboard-modern.js";
 import "./admin-dashboard-modern.css";
 import "./admin-compact-enhancements.js";
 import "./admin-compact-enhancements.css";
-import "./sidebar-overview.js";
-import "./sidebar-badge-sync.js";
-import "./sidebar-cleanup-links.js";
-import "./sidebar-overview.css";
-import "./sidebar-overview-final.css";
-import "./sidebar-cleanup-links.css";
-import "./sidebar-clarity.js";
-import "./sidebar-clarity.css";
-import "./sidebar-community-activity.js";
-import "./sidebar-community-activity.css";
 import "./mobile-admin-parity.js";
 import "./mobile-admin-parity.css";
 import "./sidebar-news-popup.js";
 import "./sidebar-news-popup.css";
 import "./layout-mountain-backgrounds.css";
-import "./sidebar-polish-final.css";
-import "./sidebar-role-display-fix.js";
+import "./community-sidebar-refactor.js";
+import "./community-sidebar-refactor.css";
 
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
