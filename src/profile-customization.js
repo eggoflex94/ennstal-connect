@@ -29,6 +29,9 @@ const OLD_LAYOUT_HOURS = {
 };
 
 const NEW_LAYOUT_HOURS = Object.fromEntries(REWARD_LAYOUTS.map(([value, , hours]) => [value, hours]));
+const REWARD_SIGNATURE = REWARD_LAYOUTS.map(([value, , hours]) => `${value}:${hours}`).join("|");
+let applyingEnhancements = false;
+let enhancementQueued = false;
 
 function onlineHoursFrom(section) {
   const match = section?.textContent?.match(/Onlinezeit:\s*(\d+)\s*Stunden/i);
@@ -41,25 +44,29 @@ function enhanceProfileRewards() {
   const section = select.closest(".layout-rewards");
   if (!section) return;
 
-  const currentValue = select.value || "standard";
   const hours = onlineHoursFrom(section);
   const freeLayouts = hours === null;
+  const stateSignature = `${REWARD_SIGNATURE}|hours:${hours ?? "free"}`;
+  if (section.dataset.rewardSignature === stateSignature) return;
 
-  select.innerHTML = "";
+  const currentValue = select.value || "standard";
+  const fragment = document.createDocumentFragment();
   REWARD_LAYOUTS.forEach(([value, label, requiredHours]) => {
     const option = document.createElement("option");
     option.value = value;
     option.textContent = `${label}${freeLayouts || hours >= requiredHours ? "" : ` · ab ${requiredHours} Stunden`}`;
     option.disabled = !freeLayouts && hours < requiredHours;
-    select.appendChild(option);
+    fragment.appendChild(option);
   });
+  select.replaceChildren(fragment);
   select.value = currentValue;
 
   const paragraph = section.querySelector("p");
   if (paragraph && hours !== null) {
-    paragraph.textContent = `Onlinezeit: ${hours} Stunden · Neue Designs werden schneller freigeschaltet. Neon Connect ist ab 50 Stunden verfügbar.`;
+    const nextText = `Onlinezeit: ${hours} Stunden · Neue Designs werden schneller freigeschaltet. Neon Connect ist ab 50 Stunden verfügbar.`;
+    if (paragraph.textContent !== nextText) paragraph.textContent = nextText;
   }
-  section.dataset.rewardThresholds = "fast";
+  section.dataset.rewardSignature = stateSignature;
 }
 
 function fixRewardCopy(root = document) {
@@ -67,7 +74,8 @@ function fixRewardCopy(root = document) {
     if (node.children.length) return;
     const text = node.textContent || "";
     if (!/180\s*Stunden/i.test(text)) return;
-    node.textContent = text.replace(/180\s*Stunden/gi, "50 Stunden");
+    const next = text.replace(/180\s*Stunden/gi, "50 Stunden");
+    if (next !== text) node.textContent = next;
   });
 }
 
@@ -153,9 +161,24 @@ function handleProfileSubmit(event) {
 }
 
 function applyEnhancements() {
-  enhanceProfileRewards();
-  enhanceAuthPage();
-  fixRewardCopy();
+  if (applyingEnhancements) return;
+  applyingEnhancements = true;
+  try {
+    enhanceProfileRewards();
+    enhanceAuthPage();
+    fixRewardCopy();
+  } finally {
+    applyingEnhancements = false;
+  }
+}
+
+function queueEnhancements() {
+  if (enhancementQueued) return;
+  enhancementQueued = true;
+  window.requestAnimationFrame(() => {
+    enhancementQueued = false;
+    applyEnhancements();
+  });
 }
 
 document.addEventListener("submit", handleProfileSubmit, true);
@@ -166,5 +189,9 @@ if (document.readyState === "loading") {
   applyEnhancements();
 }
 
-const observer = new MutationObserver(() => applyEnhancements());
+const observer = new MutationObserver((mutations) => {
+  if (applyingEnhancements) return;
+  const relevant = mutations.some((mutation) => mutation.addedNodes.length || mutation.removedNodes.length);
+  if (relevant) queueEnhancements();
+});
 observer.observe(document.documentElement, { childList: true, subtree: true });
