@@ -21,6 +21,7 @@ import "./brand-logo-2026.css";
 import "./mobile-desktop-parity-2026.css";
 import "./mobile-zoom.js";
 import "./auth-compact.css";
+import "./ad-form-fix.js";
 
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
