@@ -42,6 +42,17 @@ function findHostCard() {
   return heading.closest("section,article,.card,.dashboard-card,.home-card,.panel") || heading.parentElement;
 }
 
+function hideLegacyContacts(host, heading, panel) {
+  [...host.children].forEach((child) => {
+    if (child === heading || child === panel || child.classList?.contains("eyebrow")) return;
+    const text = String(child.textContent || "").trim();
+    if (/Marco|Roland|Zuständig\s+für|Nachrichten verwalten|Profilbesuche|Community-Verwaltung|Technischen Support|Technischer Support/i.test(text)) {
+      child.style.display = "none";
+      child.dataset.ecLegacyContact = "true";
+    }
+  });
+}
+
 function makeAvatar(profile) {
   if (profile.avatar_url) {
     const image = document.createElement("img");
@@ -111,6 +122,7 @@ function renderTeam(profiles) {
     else heading?.insertAdjacentElement("afterend", panel);
   }
 
+  hideLegacyContacts(host, heading, panel);
   panel.replaceChildren();
 
   const intro = document.createElement("div");
@@ -125,7 +137,9 @@ function renderTeam(profiles) {
   const email = document.createElement("a");
   email.className = "ec-team-email";
   email.href = `mailto:${SUPPORT_EMAIL}`;
-  email.textContent = SUPPORT_EMAIL;
+  email.title = SUPPORT_EMAIL;
+  email.setAttribute("aria-label", `E-Mail an ${SUPPORT_EMAIL} senden`);
+  email.textContent = "✉ E-Mail senden";
   intro.append(introText, email);
   panel.appendChild(intro);
 
@@ -193,6 +207,11 @@ async function refreshTeam() {
     if (nextSignature !== lastSignature || !document.querySelector(".ec-team-panel")) {
       lastSignature = nextSignature;
       renderTeam(profiles);
+    } else {
+      const host = findHostCard();
+      const panel = host?.querySelector(".ec-team-panel");
+      const heading = host ? [...host.querySelectorAll("h1,h2,h3,h4")].find((node) => /Administration|Ansprechpartner/i.test(node.textContent || "")) : null;
+      if (host && panel) hideLegacyContacts(host, heading, panel);
     }
   } catch (error) {
     console.error("Administration & Support konnte nicht synchronisiert werden:", error);
@@ -235,6 +254,11 @@ if (document.readyState === "loading") document.addEventListener("DOMContentLoad
 else boot();
 
 const observer = new MutationObserver(() => {
-  if (findHostCard() && !document.querySelector(".ec-team-panel")) refreshTeam();
+  const host = findHostCard();
+  if (!host) return;
+  const panel = host.querySelector(".ec-team-panel");
+  const heading = [...host.querySelectorAll("h1,h2,h3,h4")].find((node) => /Administration|Ansprechpartner/i.test(node.textContent || ""));
+  if (panel) hideLegacyContacts(host, heading, panel);
+  else refreshTeam();
 });
 observer.observe(document.documentElement, { childList: true, subtree: true });
