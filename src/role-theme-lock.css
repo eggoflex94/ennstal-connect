@@ -1,56 +1,62 @@
 /* Final role color lock. Loaded last on purpose. */
-:root{--ec-supporter:#ffd400;--ec-supporter-dark:#4f3b00;--ec-supporter-black:#050505}
+:root{--ec-supporter:#ffd400;--ec-supporter-gold:#b98d00;--ec-supporter-black:#050505}
 
-/* Supporter member cards must never fall back to green. */
-.member-card.supporter,
-.member-card.role-theme-supporter,
+/* Supporter member cards: no green fallback, regardless of custom card theme. */
+article.member-card.supporter.role-theme-supporter[data-role-theme="supporter"],
+article.member-card.supporter[data-role-theme="supporter"],
+article.member-card.role-theme-supporter[data-role-theme="supporter"],
 .member-card[data-role-theme="supporter"],
+.member-card:has(.role-chip.supporter),
 .member-card:has(.supporter-star),
-.member-card:has(img[src*="supporter-star"]),
-article.member-card:has(.member-role.role-supporter),
-article.member-card:has(.role-chip.supporter){
-  background:linear-gradient(145deg,#ffe633 0%,#d4a900 28%,#7a5d00 49%,#332700 66%,#111000 82%,#050505 100%)!important;
-  background-color:#3b2d00!important;
-  border-color:var(--ec-supporter)!important;
-  box-shadow:0 0 0 1px rgba(255,212,0,.55),0 0 26px rgba(255,212,0,.52),0 18px 34px rgba(0,0,0,.34)!important;
+.member-card:has(img[src*="supporter-star"]){
+  background:#050505!important;
+  background-color:#050505!important;
+  background-image:linear-gradient(145deg,#ffe537 0%,#d6aa00 24%,#8e6900 43%,#493700 60%,#211900 74%,#0c0a00 88%,#050505 100%)!important;
+  background-repeat:no-repeat!important;
+  background-size:100% 100%!important;
+  background-blend-mode:normal!important;
+  border:4px solid var(--ec-supporter)!important;
+  box-shadow:0 0 0 1px rgba(255,212,0,.62),0 0 28px rgba(255,212,0,.5),0 18px 34px rgba(0,0,0,.36)!important;
+  color:#fff!important;
 }
-.member-card.supporter .member-nickname,
-.member-card.role-theme-supporter .member-nickname,
-.member-card[data-role-theme="supporter"] .member-nickname,
-.member-card:has(.supporter-star) .member-nickname,
-.member-card:has(img[src*="supporter-star"]) .member-nickname,
-.member-card:has(.role-chip.supporter) .member-nickname{color:var(--ec-supporter)!important;text-shadow:0 1px 2px #000,0 0 10px rgba(255,212,0,.45)!important}
-.member-card.supporter .member-avatar,
-.member-card.role-theme-supporter .member-avatar,
-.member-card[data-role-theme="supporter"] .member-avatar,
-.member-card:has(.supporter-star) .member-avatar,
-.member-card:has(img[src*="supporter-star"]) .member-avatar,
-.member-card:has(.role-chip.supporter) .member-avatar{border-color:var(--ec-supporter)!important;box-shadow:0 0 0 2px rgba(255,255,255,.72),0 0 18px rgba(255,212,0,.82)!important}
+article.member-card.supporter.role-theme-supporter[data-role-theme="supporter"]::before,
+article.member-card.supporter[data-role-theme="supporter"]::before,
+.member-card[data-role-theme="supporter"]::before,
+.member-card:has(.role-chip.supporter)::before{
+  background:linear-gradient(180deg,rgba(255,245,156,.2) 0%,rgba(255,212,0,.06) 22%,transparent 45%,rgba(0,0,0,.18) 100%)!important;
+}
+article.member-card.supporter.role-theme-supporter[data-role-theme="supporter"]::after,
+article.member-card.supporter[data-role-theme="supporter"]::after,
+.member-card[data-role-theme="supporter"]::after,
+.member-card:has(.role-chip.supporter)::after{background:transparent!important}
 
-/* Supporter profile identity: nickname/accent is yellow, never green. */
+.member-card[data-role-theme="supporter"] .member-nickname,
+.member-card:has(.role-chip.supporter) .member-nickname,
+.member-card:has(.supporter-star) .member-nickname,
+.member-card:has(img[src*="supporter-star"]) .member-nickname{color:var(--ec-supporter)!important;text-shadow:0 1px 2px #000,0 0 10px rgba(255,212,0,.48)!important}
+.member-card[data-role-theme="supporter"] .member-avatar,
+.member-card:has(.role-chip.supporter) .member-avatar,
+.member-card:has(.supporter-star) .member-avatar,
+.member-card:has(img[src*="supporter-star"]) .member-avatar{border-color:var(--ec-supporter)!important;box-shadow:0 0 0 2px rgba(255,255,255,.72),0 0 18px rgba(255,212,0,.82)!important}
+
+/* Supporter profile identity: yellow accent, never green. */
 .profile-view:has(.profile-role-badge.supporter),
 .integrated-profile-view:has(.profile-role-badge.supporter),
-.profile-header:has(.supporter-star),
-.profile-hero:has(.supporter-star),
-.profile-header:has(img[src*="supporter-star"]),
-.profile-hero:has(img[src*="supporter-star"]),
+.profile-header:has(.supporter-star),.profile-hero:has(.supporter-star),
+.profile-header:has(img[src*="supporter-star"]),.profile-hero:has(img[src*="supporter-star"]),
 .profile-supporter,.supporter-profile,[data-role="SUPPORTER"],[data-role="supporter"],[data-role-theme="supporter"]{--role-accent:var(--ec-supporter)!important}
 .profile-view:has(.profile-role-badge.supporter) .integrated-profile-title h1,
 .integrated-profile-view:has(.profile-role-badge.supporter) .integrated-profile-title h1,
-.profile-header:has(.supporter-star) .profile-nickname,
-.profile-hero:has(.supporter-star) .profile-nickname,
-.profile-header:has(img[src*="supporter-star"]) .profile-nickname,
-.profile-hero:has(img[src*="supporter-star"]) .profile-nickname,
+.profile-header:has(.supporter-star) .profile-nickname,.profile-hero:has(.supporter-star) .profile-nickname,
+.profile-header:has(img[src*="supporter-star"]) .profile-nickname,.profile-hero:has(img[src*="supporter-star"]) .profile-nickname,
 .profile-supporter .profile-nickname,.supporter-profile .profile-nickname,
 [data-role="SUPPORTER"] .profile-nickname,[data-role="supporter"] .profile-nickname,[data-role-theme="supporter"] .profile-nickname{color:var(--ec-supporter)!important;text-shadow:0 0 12px rgba(255,212,0,.58)!important}
 .profile-role-badge.supporter{color:var(--ec-supporter)!important;background:rgba(255,212,0,.12)!important;border-color:rgba(255,212,0,.48)!important}
 .profile-role-badge.supporter .profile-role-icon{color:var(--ec-supporter)!important;text-shadow:0 0 10px rgba(255,212,0,.65)!important}
 .profile-view:has(.profile-role-badge.supporter) .integrated-avatar-wrap,
 .integrated-profile-view:has(.profile-role-badge.supporter) .integrated-avatar-wrap,
-.profile-header:has(.supporter-star) .profile-avatar,
-.profile-hero:has(.supporter-star) .profile-avatar,
-.profile-header:has(img[src*="supporter-star"]) .profile-avatar,
-.profile-hero:has(img[src*="supporter-star"]) .profile-avatar{border-color:var(--ec-supporter)!important;box-shadow:0 0 0 2px rgba(255,255,255,.7),0 0 18px rgba(255,212,0,.72)!important}
+.profile-header:has(.supporter-star) .profile-avatar,.profile-hero:has(.supporter-star) .profile-avatar,
+.profile-header:has(img[src*="supporter-star"]) .profile-avatar,.profile-hero:has(img[src*="supporter-star"]) .profile-avatar{border-color:var(--ec-supporter)!important;box-shadow:0 0 0 2px rgba(255,255,255,.7),0 0 18px rgba(255,212,0,.72)!important}
 
 /* Supporter feed rows remain yellow/gold/black. */
 .profile-visitor:has(.supporter-star),.profile-visitor-item:has(.supporter-star),.visitor-item:has(.supporter-star),
