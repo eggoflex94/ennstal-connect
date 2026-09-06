@@ -1,13 +1,23 @@
 const THEMES={
   supporter:{color:'#ffd400',bg:'linear-gradient(145deg,#ffe522 0%,#bd9200 28%,#4a3a00 48%,#171300 65%,#050505 84%,#000 100%)',border:'#ffd400',shadow:'0 0 0 1px rgba(255,212,0,.4),0 0 22px rgba(255,212,0,.42),0 18px 34px rgba(0,0,0,.3)',row:'linear-gradient(105deg,rgba(255,218,0,.94) 0%,rgba(171,132,0,.82) 28%,rgba(45,37,2,.97) 58%,#050505 100%)'},
-  admin:{color:'#ef4444',bg:'linear-gradient(145deg,#ff3b46 0%,#c91828 34%,#68111b 62%,#160609 100%)',border:'#ff4652',shadow:'0 0 0 1px rgba(255,70,82,.35),0 0 22px rgba(255,40,55,.32),0 18px 34px rgba(0,0,0,.3)',row:'linear-gradient(105deg,rgba(239,68,68,.94) 0%,rgba(145,20,32,.86) 38%,#170609 100%)'},
+  admin:{color:'#050505',bg:'linear-gradient(145deg,#ff3b46 0%,#c91828 34%,#68111b 62%,#160609 100%)',border:'#ff4652',shadow:'0 0 0 1px rgba(255,70,82,.35),0 0 22px rgba(255,40,55,.32),0 18px 34px rgba(0,0,0,.3)',row:'linear-gradient(105deg,rgba(239,68,68,.94) 0%,rgba(145,20,32,.86) 38%,#170609 100%)'},
   business:{color:'#45c7ff',bg:'linear-gradient(145deg,#22b9ff 0%,#087bb8 35%,#06476d 62%,#04131d 100%)',border:'#45c7ff',shadow:'0 0 0 1px rgba(69,199,255,.38),0 0 22px rgba(69,199,255,.34),0 18px 34px rgba(0,0,0,.3)',row:'linear-gradient(105deg,rgba(69,199,255,.94) 0%,rgba(10,105,157,.86) 38%,#04131d 100%)'},
   member:{color:'#e5e7eb',bg:'linear-gradient(145deg,#cfd4da 0%,#9aa3ad 26%,#56616d 50%,#26323d 72%,#111820 100%)',border:'#b9c0c8',shadow:'0 0 0 1px rgba(207,212,218,.28),0 0 18px rgba(190,198,207,.20),0 18px 34px rgba(0,0,0,.28)',row:'linear-gradient(105deg,rgba(207,212,218,.90) 0%,rgba(113,124,136,.82) 38%,#18222c 100%)'}
 };
 function setImportant(el,p,v){if(el.style.getPropertyValue(p)===v&&el.style.getPropertyPriority(p)==='important')return;el.style.setProperty(p,v,'important')}
 function paint(selector,key){const t=THEMES[key];document.querySelectorAll(selector).forEach(el=>{el.classList.add(`role-theme-${key}`);setImportant(el,'background',t.bg);setImportant(el,'border-color',t.border);setImportant(el,'box-shadow',t.shadow)})}
 function paintRows(selector,key){const t=THEMES[key];document.querySelectorAll(selector).forEach(el=>{setImportant(el,'border',`1px solid ${t.border}`);setImportant(el,'background',t.row);setImportant(el,'box-shadow',`0 0 14px ${t.border}55`)})}
-function paintNames(selector,key){const t=THEMES[key];document.querySelectorAll(selector).forEach(el=>{setImportant(el,'color',t.color);setImportant(el,'text-shadow',`0 0 12px ${t.color}44`)})}
+function paintNames(selector,key){const t=THEMES[key];document.querySelectorAll(selector).forEach(el=>{setImportant(el,'color',t.color);setImportant(el,'text-shadow',key==='admin'?'none':`0 0 12px ${t.color}44`)})}
+function paintSupporterFrames(){
+  document.querySelectorAll('.member-card.ec-role-supporter,.member-card:has(.ec-pro-supporter),.member-card:has(img[alt="Supporter"])').forEach(card=>{
+    setImportant(card,'background',THEMES.supporter.bg);
+    card.querySelectorAll('.member-avatar-wrap,.member-avatar-container,.avatar-wrap,.avatar-container,.profile-image-wrap,.profile-image-container').forEach(frame=>{
+      setImportant(frame,'background','linear-gradient(145deg,#3d3100 0%,#171300 55%,#050505 100%)');
+      setImportant(frame,'border-color','#ffd400');
+      setImportant(frame,'box-shadow','0 0 0 2px rgba(255,212,0,.42),0 0 18px rgba(255,212,0,.45)');
+    });
+  });
+}
 function formatMemberAges(){
   document.querySelectorAll('.member-card').forEach(card=>{
     if(card.dataset.ecAgeStacked==='1')return;
@@ -46,8 +56,9 @@ function paintRoles(){
   paintNames('.ec-pro-admin .ec-pro-nickname,.ec-pro-head-admin .ec-pro-nickname,.ec-role-admin .ec-pro-nickname,.ec-role-head-admin .ec-pro-nickname','admin');
   paintNames('.ec-pro-business .ec-pro-nickname,.ec-role-business .ec-pro-nickname','business');
   paintNames('.ec-pro-member .ec-pro-nickname,.ec-role-member .ec-pro-nickname','member');
+  paintSupporterFrames();
   formatMemberAges();
 }
 let scheduled=false;function schedulePaint(){if(scheduled)return;scheduled=true;requestAnimationFrame(()=>{scheduled=false;paintRoles()})}
-const start=()=>{paintRoles();const o=new MutationObserver(r=>{if(r.some(x=>x.addedNodes?.length))schedulePaint()});o.observe(document.body||document.documentElement,{subtree:true,childList:true})};
+const start=()=>{paintRoles();const o=new MutationObserver(r=>{if(r.some(x=>x.addedNodes?.length))schedulePaint()});o.observe(document.body||document.documentElement,{subtree:true,childList:true});window.setInterval(paintRoles,3000)};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
