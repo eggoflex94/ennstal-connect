@@ -48,6 +48,7 @@ import "./admin-dashboard-modern.css";
 import "./admin-compact-enhancements.js";
 import "./admin-compact-enhancements.css";
 import "./sidebar-overview.js";
+import "./sidebar-badge-sync.js";
 import "./sidebar-overview.css";
 import "./sidebar-overview-final.css";
 import "./sidebar-news-popup.js";
