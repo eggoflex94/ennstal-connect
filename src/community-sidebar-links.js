@@ -39,6 +39,8 @@ function sweep(){
   sweepQueued=false;
   const sidebar=q('.ec-sidebar-refactor');
   if(sidebar){
+    const nav=q('.modern-nav');
+    qa('.ec-help-entry,.ec-privacy-entry,.ec-legal-entry,.ec-admin-workspace-entry',sidebar).forEach(node=>{node.hidden=true;node.setAttribute('aria-hidden','true');node.classList.add('ec-legacy-nav-hidden');nav?.append(node);});
     qa('.modern-nav > *').forEach(node=>{if(node!==sidebar&&!node.classList.contains('ec-force-hide-legacy'))node.classList.add('ec-force-hide-legacy');});
     const self=q('.ec-rf-user',sidebar),me=profiles.get(uid);if(self&&me)syncIdentity(self,me,false);
     qa('[data-profile]',sidebar).forEach(row=>{const p=profiles.get(row.dataset.profile);if(p)syncIdentity(row,p,true);});
