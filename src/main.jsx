@@ -50,6 +50,8 @@ import "./admin-compact-enhancements.css";
 import "./sidebar-overview.js";
 import "./sidebar-overview.css";
 import "./sidebar-overview-final.css";
+import "./sidebar-news-popup.js";
+import "./sidebar-news-popup.css";
 
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
