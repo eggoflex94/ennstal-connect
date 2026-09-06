@@ -5,7 +5,7 @@ const TEAM_ROLES = new Set(["HEAD_ADMIN", "ADMIN", "SUPPORTER"]);
 const ROLE_ORDER = { HEAD_ADMIN: 0, ADMIN: 1, SUPPORTER: 2 };
 const PUBLIC_RESPONSIBILITIES = {
   HEAD_ADMIN: ["Datenschutz", "Technischer Support", "Sicherheit", "Community-Verwaltung"],
-  ADMIN: ["Community-Support", "Hilfe bei Fragen & Problemen", "Gruppen & Community-Bereiche", "Marktplatz-Support", "Neuigkeiten & Informationen", "Unterstützung bei Meldungen"],
+  ADMIN: ["Community-Support", "Hilfe bei Fragen & Problemen", "Gruppen & Community-Bereiche", "Neuigkeiten & Informationen", "Unterstützung bei Meldungen"],
   SUPPORTER: ["Community-Support", "Hilfe bei Fragen & Problemen", "Unterstützung für Mitglieder"]
 };
 let refreshRunning = false;
