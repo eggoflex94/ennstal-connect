@@ -34,8 +34,9 @@ import "./account-deletion-admin.js";
 import "./account-deletion-admin.css";
 import "./help-center.js";
 import "./help-center.css";
-import "./live-notifications.js";
+import "./notification-center.js";
 import "./live-notifications.css";
+import "./notification-center.css";
 
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
