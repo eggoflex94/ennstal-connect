@@ -55,6 +55,8 @@ import "./sidebar-overview-final.css";
 import "./sidebar-cleanup-links.css";
 import "./sidebar-clarity.js";
 import "./sidebar-clarity.css";
+import "./sidebar-community-activity.js";
+import "./sidebar-community-activity.css";
 import "./sidebar-news-popup.js";
 import "./sidebar-news-popup.css";
 
