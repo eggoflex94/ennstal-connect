@@ -21,7 +21,7 @@ function syncIdentity(root,p,showFriend){
   if(stack){
     qa('.ec-pro-role-star',stack).slice(1).forEach(x=>x.remove());
     const existing=qa('.ec-pro-friend-badge',stack);
-    if(showFriend&&(friends.has(p.id)||Boolean(q('.friend-indicator',root)))){if(!existing.length)stack.appendChild(addImage('ec-pro-friend-badge','/badge-friend.svg','Befreundet'));existing.slice(1).forEach(x=>x.remove());}
+    if(showFriend&&(friends.has(p.id)||Boolean(q('.friend-indicator',root)))){if(!existing.length)stack.appendChild(addImage('ec-pro-friend-badge','/badge-friendship.svg','Befreundet'));existing.slice(1).forEach(x=>x.remove());}
     else existing.forEach(x=>x.remove());
   }
   const badges=qa('.ec-pro-verified-badge,.ec-member-name-verified,img[src*="badge-verified"]',root);
