@@ -6,15 +6,10 @@ const isVerified=p=>['ADMIN','HEAD_ADMIN'].includes(String(p?.role||'').toUpperC
 let uid=null,role='',profiles=new Map(),names=new Map(),friends=new Set(),sweepQueued=false;
 
 function profileFor(root){const id=root?.dataset?.profile||root?.dataset?.memberId||q('[data-member-id]',root)?.dataset?.memberId;if(id&&profiles.has(id))return profiles.get(id);return names.get(norm(q('.ec-pro-nickname,.member-nickname,.ec-rf-user-copy strong',root)?.textContent))||null;}
-function legacyButton(label){return qa('.modern-nav button,.modern-nav a').find(node=>!node.closest('.ec-sidebar-refactor')&&norm(node.textContent).includes(norm(label)));}
 function openProfile(id){
-  if(!id)return;
-  if(id===uid){legacyButton('Mein Profil')?.click();return;}
-  const openCard=()=>{const p=profiles.get(id),card=qa('.member-card').find(node=>node.dataset.memberId===id||norm(q('.ec-pro-nickname,.member-nickname',node)?.textContent)===norm(p?.nickname));if(!card)return false;card.click();return true;};
-  if(openCard())return;
-  legacyButton('Mitglieder')?.click();
-  let attempts=0;
-  const timer=setInterval(()=>{attempts+=1;if(openCard()||attempts>=40)clearInterval(timer);},75);
+  if(!id||!profiles.has(id))return;
+  window.dispatchEvent(new CustomEvent('ec:open-profile',{detail:{profileId:id}}));
+  if(matchMedia('(max-width:900px)').matches)requestAnimationFrame(()=>q('.modern-main')?.scrollIntoView({behavior:'smooth',block:'start'}));
 }
 function addImage(className,src,title){const img=document.createElement('img');img.className=className;img.src=src;img.alt=title;img.title=title;return img;}
 
