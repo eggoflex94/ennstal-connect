@@ -74,3 +74,50 @@ html body .modern-main .member-card img.ec-pro-friend-badge{
     max-height:19px!important
   }
 }
+
+/* Profile header: friendship badge stays inline with the role star. */
+html body .ec-pro-profile-identity .ec-pro-role-stack{
+  display:inline-flex!important;
+  flex-direction:row!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  width:auto!important;
+  min-width:0!important;
+  height:auto!important;
+  gap:5px!important;
+  position:static!important;
+  overflow:visible!important
+}
+html body .ec-pro-profile-identity img.ec-pro-friend-badge{
+  position:static!important;
+  inset:auto!important;
+  display:block!important;
+  visibility:visible!important;
+  flex:0 0 18px!important;
+  width:18px!important;
+  height:18px!important;
+  min-width:18px!important;
+  max-width:18px!important;
+  min-height:18px!important;
+  max-height:18px!important;
+  margin:0!important;
+  padding:2px!important;
+  border:1px solid rgba(110,235,244,.72)!important;
+  border-radius:50%!important;
+  background:rgba(10,42,61,.72)!important;
+  object-fit:contain!important;
+  transform:none!important;
+  box-sizing:border-box!important;
+  filter:drop-shadow(0 0 4px rgba(92,225,230,.65))!important
+}
+@media(max-width:560px){
+  html body .ec-pro-profile-identity img.ec-pro-friend-badge{
+    flex-basis:16px!important;
+    width:16px!important;
+    height:16px!important;
+    min-width:16px!important;
+    max-width:16px!important;
+    min-height:16px!important;
+    max-height:16px!important
+  }
+}
