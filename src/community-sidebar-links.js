@@ -49,7 +49,7 @@ document.addEventListener('click',event=>{const target=event.target.closest?.('.
 async function load(){
   const {data:{user}}=await supabase.auth.getUser();uid=user?.id||null;if(!uid)return;
   const [{data:ps},{data:fs}]=await Promise.all([
-    supabase.from('profiles').select('id,nickname,role,account_badge,is_verified,verified,verification_status,account_status').eq('account_status','ACTIVE'),
+    supabase.from('profiles').select('id,nickname,role,account_badge,is_verified,verification_status,account_status').eq('account_status','ACTIVE'),
     supabase.from('friendships').select('requester_id,receiver_id,status').or(`requester_id.eq.${uid},receiver_id.eq.${uid}`).eq('status','ACCEPTED')
   ]);
   profiles=new Map((ps||[]).map(p=>[p.id,p]));names=new Map((ps||[]).map(p=>[norm(p.nickname),p]));
