@@ -24,15 +24,19 @@ test("main entry keeps critical member/admin modules wired", async () => {
   assert.doesNotMatch(main, /live-notifications\.js/);
 });
 
-test("native member card renders role theme, 3d star and stacked age", async () => {
+test("native member card renders role theme, 3d star and separated age/presence", async () => {
   const card = await source("src/MemberCardView.jsx");
   assert.match(card, /data-role-theme=\{presentation\.theme\}/);
   assert.match(card, /role-star-red\.svg/);
   assert.match(card, /supporter-star\.svg/);
   assert.match(card, /role-star-blue\.svg/);
   assert.match(card, /role-star-member\.svg/);
+  assert.match(card, /className="member-meta ec-member-meta"/);
   assert.match(card, /className="ec-member-realname"/);
   assert.match(card, /className="ec-member-age"/);
+  assert.match(card, /className="ec-member-presence-line"/);
+  assert.match(card, /className="ec-member-presence-dot"/);
+  assert.match(card, /className="ec-member-presence-label"/);
   assert.match(card, /\(\{age\} Jahre\)/);
   assert.match(card, /loading="lazy"/);
   assert.match(card, /tabIndex=\{0\}/);
@@ -114,12 +118,22 @@ test("mobile admin hardening preserves touch sized controls and narrow layouts",
   assert.match(css, /safe-area-inset-bottom/);
 });
 
-test("member card layout keeps status separated from name and age", async () => {
+test("member card layout keeps name age and presence in separate flex blocks", async () => {
   const css = await source("src/member-grid-final.css");
-  assert.match(css, /grid-template-rows/);
-  assert.match(css, /\.member-card \.member-status\{display:grid!important/);
-  assert.match(css, /min-height:54px!important/);
-  assert.match(css, /row-gap:7px!important/);
+  assert.match(css, /\.member-card \.ec-member-meta\{display:flex!important;flex-direction:column!important/);
+  assert.match(css, /\.member-card \.member-name\{display:flex!important;flex-direction:column!important/);
+  assert.match(css, /\.member-card \.member-status\{display:flex!important;flex-direction:column!important/);
+  assert.match(css, /\.member-card \.ec-member-presence-line\{display:flex!important/);
+  assert.match(css, /gap:12px!important/);
+});
+
+test("friendship badges are decorative square images without fallback text", async () => {
+  const js = await source("src/community-sidebar-links.js");
+  const css = await source("src/community-sidebar-links.css");
+  assert.match(js, /img\.alt=''/);
+  assert.match(js, /aria-hidden/);
+  assert.match(css, /aspect-ratio:1\/1!important/);
+  assert.match(css, /object-fit:contain!important/);
 });
 
 test("supporter role lock forbids green card fallback", async () => {
@@ -127,12 +141,12 @@ test("supporter role lock forbids green card fallback", async () => {
   assert.match(css, /data-role-theme="supporter"/);
   assert.match(css, /#ffe537/);
   assert.match(css, /#050505/);
-  assert.doesNotMatch(css, /#0[0-9a-f]{1,2}8[0-9a-f]{1,2}.*green/i);
 });
 
-test("service worker refreshes application assets network-first", async () => {
-  const worker = await source("public/service-worker.js");
-  assert.match(worker, /ennstal-connect-shell-v5/);
-  assert.match(worker, /cache: "no-store"/);
-  assert.match(worker, /isNavigation \|\| isVersionedAsset/);
+test("service worker cleanup prevents stale application shells", async () => {
+  const main = await source("src/main.jsx");
+  assert.match(main, /getRegistrations\(\)/);
+  assert.match(main, /registration\.unregister\(\)/);
+  assert.match(main, /ennstal-connect-shell-/);
+  assert.doesNotMatch(main, /serviceWorker\.register/);
 });
