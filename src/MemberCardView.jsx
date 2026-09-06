@@ -62,8 +62,22 @@ export default function MemberCardView({ member, profile, friendships, onOpen, o
     >
       <span className={`ec-role-surface ec-role-surface-${presentation.theme}`} aria-hidden="true" />
 
-      {friend && <img className="ec-pro-friend-badge ec-native-friend-badge" src="/badge-friendship.svg" alt="" title="Befreundet" aria-hidden="true" />}
-      {verified && <img className="ec-pro-verified-badge ec-native-verified-badge" src="/badge-verified.svg" alt="" title="Verifiziert" aria-hidden="true" />}
+      {(friend || verified) && (
+        <div className="ec-card-badge-rail" aria-label="Profilkennzeichnungen">
+          {friend && (
+            <span className="ec-card-badge-item ec-card-badge-friend" title="Befreundet">
+              <img className="ec-pro-friend-badge ec-native-friend-badge" src="/badge-friendship.svg" alt="" aria-hidden="true" />
+              <span>Befreundet</span>
+            </span>
+          )}
+          {verified && (
+            <span className="ec-card-badge-item ec-card-badge-verified" title="Verifiziert">
+              <img className="ec-pro-verified-badge ec-native-verified-badge" src="/badge-verified.svg" alt="" aria-hidden="true" />
+              <span>Verifiziert</span>
+            </span>
+          )}
+        </div>
+      )}
 
       <div className="member-role-line ec-native-role-line">
         <span className={`role-chip ${presentation.theme}`}>
