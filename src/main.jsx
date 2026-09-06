@@ -53,6 +53,8 @@ import "./sidebar-cleanup-links.js";
 import "./sidebar-overview.css";
 import "./sidebar-overview-final.css";
 import "./sidebar-cleanup-links.css";
+import "./sidebar-clarity.js";
+import "./sidebar-clarity.css";
 import "./sidebar-news-popup.js";
 import "./sidebar-news-popup.css";
 
