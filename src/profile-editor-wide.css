@@ -1,0 +1,92 @@
+/* Wide, uncluttered own-profile editor. Profile activity already lives in the left sidebar. */
+.profile-page-layout{
+  display:block!important;
+  width:100%!important;
+  max-width:1280px!important;
+  margin:0 auto!important;
+}
+.profile-page-layout>.profile-activity-dashboard{display:none!important}
+.profile-page-layout>section:first-child{
+  display:block!important;
+  width:100%!important;
+  max-width:none!important;
+}
+.profile-page-layout .my-area-layout{
+  display:grid!important;
+  grid-template-columns:320px minmax(0,1fr)!important;
+  align-items:start!important;
+  gap:28px!important;
+  width:100%!important;
+  max-width:none!important;
+}
+.profile-page-layout .my-profile-card{
+  width:320px!important;
+  max-width:100%!important;
+  position:sticky!important;
+  top:108px!important;
+}
+.profile-page-layout .profile-form{
+  width:100%!important;
+  max-width:none!important;
+  min-width:0!important;
+  padding:28px 32px!important;
+  gap:13px!important;
+  box-sizing:border-box!important;
+}
+.profile-page-layout .profile-form>input:not([type="hidden"]),
+.profile-page-layout .profile-form>select,
+.profile-page-layout .profile-form>textarea,
+.profile-page-layout .profile-form>.profile-file-input{
+  width:100%!important;
+  max-width:none!important;
+  box-sizing:border-box!important;
+}
+.profile-page-layout .profile-form .form-grid{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:16px!important;
+}
+.profile-page-layout .profile-form .profile-typography-grid{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+}
+.profile-page-layout .profile-form textarea{
+  min-height:150px!important;
+  resize:vertical!important;
+}
+.profile-page-layout .profile-form .privacy-settings{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:12px 18px!important;
+}
+.profile-page-layout .profile-form .privacy-settings>span,
+.profile-page-layout .profile-form .privacy-settings>h3,
+.profile-page-layout .profile-form .privacy-settings>p{
+  grid-column:1/-1!important;
+}
+.profile-page-layout .profile-qr-card,
+.profile-page-layout>.profile-gallery,
+.profile-page-layout>.profile-welcome-badges{
+  width:100%!important;
+  max-width:none!important;
+  margin-top:24px!important;
+  box-sizing:border-box!important;
+}
+
+@media(max-width:900px){
+  .profile-page-layout{max-width:760px!important;padding:0 10px!important;box-sizing:border-box!important}
+  .profile-page-layout .my-area-layout{grid-template-columns:1fr!important;gap:18px!important}
+  .profile-page-layout .my-profile-card{position:relative!important;top:auto!important;width:min(100%,420px)!important;margin:0 auto!important;min-height:auto!important}
+  .profile-page-layout .profile-form{padding:22px 18px!important}
+}
+@media(max-width:560px){
+  .profile-page-layout{padding:0 4px!important}
+  .profile-page-layout .profile-form{padding:18px 14px!important;border-radius:16px!important}
+  .profile-page-layout .profile-form .form-grid,
+  .profile-page-layout .profile-form .profile-typography-grid,
+  .profile-page-layout .profile-form .privacy-settings{grid-template-columns:1fr!important}
+  .profile-page-layout .profile-form input,
+  .profile-page-layout .profile-form select,
+  .profile-page-layout .profile-form textarea,
+  .profile-page-layout .profile-form button{max-width:100%!important;min-width:0!important}
+  .profile-page-layout .profile-form input[type="file"]{font-size:14px!important;overflow:hidden!important}
+}
