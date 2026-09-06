@@ -1,7 +1,7 @@
 import { supabase } from './supabaseClient';
 
 let currentUser=null,currentProfile=null,profileCache=new Map();
-const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const $=(s,r=document)=>r?.querySelector?.(s)||null, $=(s,r=document)=>r?.querySelectorAll?[...r.querySelectorAll(s)]:[];
 const isMobile=()=>matchMedia('(max-width:900px)').matches;
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
@@ -18,7 +18,7 @@ function ensureAdminSidebar(){if(!currentProfile||!['HEAD_ADMIN','ADMIN'].includ
 
 async function freshProfile(id){if(!id)return null;const cached=profileCache.get(id);if(cached&&Date.now()-cached.at<15000)return cached.data;const {data}=await supabase.from('profiles').select('id,nickname,role,forum_moderator,admin_responsibilities,head_admin_responsibilities,account_badge,nickname_color').eq('id',id).maybeSingle();profileCache.set(id,{data,at:Date.now()});return data}
 
-async function syncVisibleResponsibilities(){const page=$('.member-profile-page');const hero=$('.member-profile-hero',page);if(!page||!hero)return;let id=new URLSearchParams(location.search).get('profile');if(!id){const name=$('h1',hero)?.textContent?.trim();if(name){const {data}=await supabase.from('profiles').select('id').eq('nickname',name).maybeSingle();id=data?.id}}
+async function syncVisibleResponsibilities(){const page=$('.member-profile-page');if(!page)return;const hero=$('.member-profile-hero',page);if(!hero)return;let id=new URLSearchParams(location.search).get('profile');if(!id){const name=$('h1',hero)?.textContent?.trim();if(name){const {data}=await supabase.from('profiles').select('id').eq('nickname',name).maybeSingle();id=data?.id}}
  const p=await freshProfile(id);if(!p)return;const text=hero.querySelector(':scope > div');if(!text)return;text.querySelector('.admin-responsibilities')?.remove();let list=[];if(p.role==='HEAD_ADMIN')list=[p.head_admin_responsibilities||'Gesamtverantwortung, Sicherheit & Regeln'];else{const saved=Array.isArray(p.admin_responsibilities)?p.admin_responsibilities.filter(Boolean):[];list=[...saved];if(p.forum_moderator&&!list.some(v=>/forum/i.test(String(v))))list.push('Forum-Moderation · Meldungen und respektvoller Austausch')}
  if(!list.length)return;const box=document.createElement('p');box.className='admin-responsibilities';box.textContent=`Zuständig für: ${list.join(' · ')}`;text.append(box)}
 
