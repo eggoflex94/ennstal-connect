@@ -66,6 +66,7 @@ import "./supporter-runtime-fix.js";
 import "./mobile-admin-production.css";
 import "./profile-editor-stability.css";
 import "./member-grid-final.css";
+import "./role-theme-lock.css";
 
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
