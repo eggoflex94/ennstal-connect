@@ -157,8 +157,9 @@ export default function App() {
 
   useEffect(() => {
     if (!user?.id || !members.length) return undefined;
-    const openProfileById = (profileId) => {
-      const member = members.find((item) => item.id === profileId);
+    const openProfileById = (profileId, nickname = "") => {
+      const wantedName = String(nickname || "").trim().toLowerCase();
+      const member = members.find((item) => item.id === profileId) || members.find((item) => wantedName && String(item.nickname || "").trim().toLowerCase() === wantedName);
       if (!member) return false;
       setViewingMember(member.id === user.id ? null : member);
       setViewingFriends([]);
@@ -167,7 +168,7 @@ export default function App() {
     };
     const sharedProfileId = new URLSearchParams(window.location.search).get("profile");
     if (sharedProfileId) openProfileById(sharedProfileId);
-    const handleSidebarProfile = (event) => openProfileById(String(event.detail?.profileId || ""));
+    const handleSidebarProfile = (event) => openProfileById(String(event.detail?.profileId || ""), String(event.detail?.nickname || ""));
     window.addEventListener("ec:open-profile", handleSidebarProfile);
     return () => window.removeEventListener("ec:open-profile", handleSidebarProfile);
   }, [user?.id, members]);
