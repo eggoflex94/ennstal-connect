@@ -24,6 +24,8 @@ import "./auth-compact.css";
 import "./ad-form-fix.js";
 import "./ad-management.js";
 import "./ad-management.css";
+import "./member-extras.js";
+import "./member-extras.css";
 
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
