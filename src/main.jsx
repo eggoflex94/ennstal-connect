@@ -63,6 +63,7 @@ import "./sidebar-news-popup.js";
 import "./sidebar-news-popup.css";
 import "./layout-mountain-backgrounds.css";
 import "./sidebar-polish-final.css";
+import "./sidebar-role-display-fix.js";
 
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
