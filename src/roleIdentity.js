@@ -5,7 +5,7 @@ export function roleIdentity(profile = {}) {
   const badge = String(profile.account_badge || "").toUpperCase();
   if (role === "HEAD_ADMIN") return { key:"head-admin", label:"Hauptadmin", mark:"", icon:"/role-star-red.svg", color:"#ef4444" };
   if (role === "ADMIN") return { key:"admin", label:"Admin", mark:"", icon:"/role-star-red.svg", color:"#ef4444" };
-  if (role === "SUPPORTER") return { key:"supporter", label:"Supporter", mark:"", icon:"/role-star-green.svg", color:"#45d89f" };
+  if (role === "SUPPORTER") return { key:"supporter", label:"Supporter", mark:"", icon:"/supporter-star.svg", color:"#ffd400" };
   if (badge === "BUSINESS" || badge.includes("UNTERNEHM")) return { key:"business", label:"Unternehmenskonto", mark:"", icon:"/role-star-blue.svg", color:"#45c7ff" };
   return { key:"member", label:"Mitglied", mark:"", icon:"/role-star-member.svg", color:profile.nickname_color || "#f7fbff" };
 }
