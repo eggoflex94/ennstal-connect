@@ -30,6 +30,8 @@ import "./legal-evidence-admin.js";
 import "./legal-evidence-admin.css";
 import "./privacy-center.js";
 import "./privacy-center.css";
+import "./account-deletion-admin.js";
+import "./account-deletion-admin.css";
 
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
