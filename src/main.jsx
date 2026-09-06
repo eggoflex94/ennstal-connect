@@ -49,8 +49,10 @@ import "./admin-compact-enhancements.js";
 import "./admin-compact-enhancements.css";
 import "./sidebar-overview.js";
 import "./sidebar-badge-sync.js";
+import "./sidebar-cleanup-links.js";
 import "./sidebar-overview.css";
 import "./sidebar-overview-final.css";
+import "./sidebar-cleanup-links.css";
 import "./sidebar-news-popup.js";
 import "./sidebar-news-popup.css";
 
