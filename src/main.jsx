@@ -61,6 +61,7 @@ import "./mobile-admin-parity.js";
 import "./mobile-admin-parity.css";
 import "./sidebar-news-popup.js";
 import "./sidebar-news-popup.css";
+import "./layout-mountain-backgrounds.css";
 
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
