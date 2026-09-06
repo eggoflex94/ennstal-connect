@@ -1,0 +1,18 @@
+{
+  "name": "Ennstal Connect",
+  "short_name": "Ennstal Connect",
+  "description": "Die Community für das Ennstal und die Obersteiermark.",
+  "lang": "de-AT",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#172635",
+  "theme_color": "#172635",
+  "icons": [
+    {
+      "src": "/ennstal-connect-logo-v2.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
