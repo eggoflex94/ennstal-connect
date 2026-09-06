@@ -4,7 +4,7 @@ const el=(t,c,x)=>{const n=document.createElement(t);if(c)n.className=c;if(x!==u
 const sections=[
 ["Was ist Ennstal Connect?","Ennstal Connect ist eine regionale Community-Plattform für Austausch, Gruppen, Veranstaltungen, Forum, Nachrichten und gemeinsame Aktivitäten. Dein Profil, deine Privatsphäre und deine Sichtbarkeit kannst du selbst steuern."],
 ["Erste Schritte","Gestalte zuerst dein Profil, lege deine Sichtbarkeit fest und entdecke anschließend Mitglieder, Gruppen, Veranstaltungen und das Forum. Freundschaftsanfragen und Privatnachrichten helfen dir beim direkten Austausch."],
-["Punkte & Belohnungen","Aktivität in der Community kann Punkte, Auszeichnungen und freischaltbare Profildesigns bringen. Online-Aktivität wird berücksichtigt; besondere Layouts werden schrittweise freigeschaltet. Deinen aktuellen Stand findest du in deinem Profil bzw. in den Belohnungsbereichen."],
+["Online-Zeit & Profildesigns","Ennstal Connect hat kein allgemeines Punktesystem. Bestimmte Profildesigns werden stattdessen abhängig von deiner gesammelten Online-Zeit freigeschaltet. Welche Designs für dich verfügbar sind, siehst du direkt bei der Profilgestaltung."],
 ["Gruppen & Veranstaltungen","Du kannst Gruppen beitreten, dich austauschen und an Veranstaltungen teilnehmen. Hervorgehobene Gruppen erscheinen zusätzlich als Gruppe der Woche."],
 ["Forum & Kommentare","Im Forum kannst du eigene Beiträge erstellen und auf andere Beiträge antworten. Wenn jemand auf einen von dir erstellten Forenbeitrag kommentiert, erhältst du automatisch einen Hinweis."],
 ["Nachrichten & Freundschaftsanfragen","Neue Privatnachrichten und neue Freundschaftsanfragen werden dir automatisch als Hinweis eingeblendet. Über die jeweiligen Bereiche kannst du direkt reagieren."],
