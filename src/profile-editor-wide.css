@@ -90,3 +90,16 @@
   .profile-page-layout .profile-form button{max-width:100%!important;min-width:0!important}
   .profile-page-layout .profile-form input[type="file"]{font-size:14px!important;overflow:hidden!important}
 }
+
+/* Stack before the editor column becomes too narrow beside the fixed sidebar. */
+@media(max-width:1250px){
+  .profile-page-layout .my-area-layout{grid-template-columns:1fr!important;gap:20px!important}
+  .profile-page-layout .my-profile-card{position:relative!important;top:auto!important;width:min(100%,420px)!important;margin:0 auto!important}
+  .profile-page-layout .profile-form{width:100%!important;max-width:100%!important}
+  .profile-page-layout .profile-form .profile-typography-grid{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))!important}
+}
+@media(max-width:800px){
+  .profile-page-layout .profile-form .form-grid,
+  .profile-page-layout .profile-form .profile-typography-grid,
+  .profile-page-layout .profile-form .privacy-settings{grid-template-columns:1fr!important}
+}
