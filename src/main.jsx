@@ -59,6 +59,7 @@ import "./community-final-runtime.js";
 import "./community-final-runtime.css";
 import "./community-sidebar-links.js";
 import "./community-sidebar-links.css";
+import "./profile-editor-wide.css";
 import "./legal-footer-modern.css";
 
 class AppErrorBoundary extends React.Component {
