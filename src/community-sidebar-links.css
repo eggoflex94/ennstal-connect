@@ -1,43 +1,18 @@
-/* Final compact identity + sidebar usability layer. */
+/* Final, authoritative compact identity layer. */
 .ec-force-hide-legacy{display:none!important}
-
-.member-card .ec-final-card-identity,
-.member-card .ec-pro-identity{display:flex!important;align-items:flex-start!important;gap:8px!important;min-width:0!important;padding:10px 12px 0!important}
-.member-card .ec-pro-role-stack{display:flex!important;flex:0 0 54px!important;width:54px!important;min-width:54px!important;flex-direction:column!important;align-items:center!important;gap:3px!important}
-.member-card .ec-pro-role-star{display:block!important;width:50px!important;height:50px!important;object-fit:contain!important}
-.member-card .ec-pro-friend-badge{display:block!important;width:19px!important;height:19px!important;max-width:19px!important;max-height:19px!important;object-fit:contain!important;margin:0!important;filter:drop-shadow(0 0 4px rgba(120,230,255,.6))!important}
-.member-card .ec-pro-name-row{display:flex!important;align-items:center!important;gap:5px!important;min-width:0!important;flex:1!important;padding-top:10px!important}
-.member-card .ec-pro-nickname{min-width:0!important;max-width:100%!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
-.member-card .ec-pro-verified-badge,
-.member-card .ec-member-name-verified{display:inline-block!important;width:14px!important;height:14px!important;min-width:14px!important;max-width:14px!important;max-height:14px!important;object-fit:contain!important;margin:0 4px 0 0!important;vertical-align:-2px!important;filter:drop-shadow(0 0 2px rgba(90,210,255,.55))!important}
-.member-card .member-name{display:flex!important;align-items:center!important;justify-content:center!important;gap:3px!important;max-width:calc(100% - 20px)!important;margin-left:auto!important;margin-right:auto!important;text-align:center!important;line-height:1.2!important;overflow-wrap:anywhere!important}
-
-.ec-sidebar-refactor .ec-rf-person{cursor:pointer!important;pointer-events:auto!important;touch-action:manipulation!important}
-.ec-sidebar-refactor .ec-rf-person:hover .ec-pro-nickname{text-decoration:underline!important}
-.ec-sidebar-refactor .ec-pro-role-star{filter:drop-shadow(0 0 7px var(--ec-id-color,#5bc8ff))!important}
-.ec-sidebar-refactor .ec-pro-friend-badge{width:12px!important;height:12px!important;max-width:12px!important;max-height:12px!important}
-.ec-sidebar-refactor .ec-pro-verified-badge{width:11px!important;height:11px!important;max-width:11px!important;max-height:11px!important}
-
+.member-card .ec-pro-role-stack{display:flex!important;flex:0 0 46px!important;width:46px!important;min-width:46px!important;flex-direction:column!important;align-items:center!important;gap:1px!important}
+.member-card .ec-pro-role-star{display:block!important;width:44px!important;height:44px!important;min-width:44px!important;max-width:44px!important;object-fit:contain!important;margin:0!important}
+.member-card .ec-pro-role-star~.ec-pro-role-star{display:none!important}
+.member-card .ec-pro-friend-badge{display:block!important;visibility:visible!important;width:14px!important;height:14px!important;min-width:14px!important;max-width:14px!important;object-fit:contain!important;margin:0!important;padding:0!important;border:0!important}
+.member-card .ec-pro-verified-badge,.member-card .ec-member-name-verified,.member-card img[src*="badge-verified"]{display:inline-block!important;width:8px!important;height:8px!important;min-width:8px!important;max-width:8px!important;max-height:8px!important;flex:0 0 8px!important;object-fit:contain!important;margin:0 2px 0 0!important;padding:0!important;border:0!important;filter:none!important}
+.member-card .ec-pro-name-row{display:flex!important;align-items:center!important;gap:3px!important;min-width:0!important;flex:1!important;padding-top:9px!important}
+.member-card .ec-pro-nickname{min-width:0!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+.ec-sidebar-refactor [data-profile]{cursor:pointer!important;pointer-events:auto!important;touch-action:manipulation!important}
+.ec-sidebar-refactor .ec-pro-role-stack{flex-basis:24px!important;width:24px!important;min-width:24px!important}
+.ec-sidebar-refactor .ec-pro-role-star{width:22px!important;height:22px!important;min-width:22px!important;max-width:22px!important}
+.ec-sidebar-refactor .ec-pro-friend-badge{width:10px!important;height:10px!important;min-width:10px!important;max-width:10px!important}
+.ec-sidebar-refactor .ec-pro-verified-badge,.ec-sidebar-refactor img[src*="badge-verified"]{width:7px!important;height:7px!important;min-width:7px!important;max-width:7px!important;flex-basis:7px!important}
+html.ec-can-see-last-active .member-status small,html.ec-can-see-last-active .last-active,html.ec-can-see-last-active .last-active-at,html.ec-can-see-last-active [data-last-active],html.ec-can-see-last-active time[data-last-active],html.ec-can-see-last-active .ec-last-active-text{display:block!important;visibility:visible!important}
 .ec-sidebar-refactor .ec-rf-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:10px 7px!important}
-.ec-sidebar-refactor .ec-rf-grid>button{min-width:0!important;max-width:100%!important;overflow:hidden!important;padding:8px 3px!important}
-.ec-sidebar-refactor .ec-rf-grid>button span{display:block!important;max-width:100%!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;font-size:.76rem!important}
-.ec-sidebar-refactor .ec-rf-grid>button i{font-size:1.42rem!important;line-height:1!important;filter:drop-shadow(0 0 7px currentColor)!important}
-
-@media(max-width:900px){
-  .modern-sidebar:has(.ec-sidebar-refactor),.modern-nav:has(.ec-sidebar-refactor){width:100%!important;max-width:none!important;height:auto!important;max-height:none!important;overflow:visible!important;position:relative!important;inset:auto!important}
-  .ec-sidebar-refactor{width:100%!important;max-width:none!important;overflow:visible!important}
-  .ec-sidebar-refactor .ec-rf-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:8px 5px!important}
-  .ec-sidebar-refactor .ec-rf-grid>button{min-height:60px!important;padding:7px 2px!important}
-  .ec-sidebar-refactor .ec-rf-grid>button span{font-size:.72rem!important}
-  .ec-sidebar-refactor .ec-rf-person{min-height:48px!important}
-  .member-card .ec-pro-role-stack{flex-basis:44px!important;width:44px!important;min-width:44px!important}
-  .member-card .ec-pro-role-star{width:42px!important;height:42px!important}
-  .member-card .ec-pro-friend-badge{width:16px!important;height:16px!important;max-width:16px!important;max-height:16px!important}
-  .member-card .ec-pro-verified-badge,.member-card .ec-member-name-verified{width:12px!important;height:12px!important;min-width:12px!important;max-width:12px!important;max-height:12px!important}
-}
-@media(max-width:520px){
-  .ec-sidebar-refactor .ec-rf-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
-  .ec-sidebar-refactor .ec-rf-grid>button span{font-size:.7rem!important}
-  .member-card .ec-final-card-identity,.member-card .ec-pro-identity{padding:8px 8px 0!important;gap:6px!important}
-  .member-card .ec-pro-nickname{font-size:.95rem!important}
-}
+@media(max-width:900px){.ec-sidebar-refactor .ec-rf-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important}.member-card .ec-pro-role-stack{flex-basis:42px!important;width:42px!important;min-width:42px!important}.member-card .ec-pro-role-star{width:40px!important;height:40px!important;min-width:40px!important;max-width:40px!important}.member-card .ec-pro-friend-badge{width:13px!important;height:13px!important;min-width:13px!important;max-width:13px!important}.member-card .ec-pro-verified-badge,.member-card .ec-member-name-verified,.member-card img[src*="badge-verified"]{width:7px!important;height:7px!important;min-width:7px!important;max-width:7px!important;flex-basis:7px!important}}
+@media(max-width:520px){.ec-sidebar-refactor .ec-rf-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}}
