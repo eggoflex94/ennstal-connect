@@ -4,18 +4,41 @@
 .member-card .ec-pro-role-star{display:block!important;width:44px!important;height:44px!important;min-width:44px!important;max-width:44px!important;object-fit:contain!important;margin:0!important}
 .member-card .ec-pro-role-star~.ec-pro-role-star{display:none!important}
 .member-card .ec-pro-friend-badge{display:block!important;visibility:visible!important;width:14px!important;height:14px!important;min-width:14px!important;max-width:14px!important;object-fit:contain!important;margin:0!important;padding:0!important;border:0!important}
-.member-card .ec-pro-verified-badge,.member-card .ec-member-name-verified,.member-card img[src*="badge-verified"]{display:inline-block!important;width:8px!important;height:8px!important;min-width:8px!important;max-width:8px!important;max-height:8px!important;flex:0 0 8px!important;object-fit:contain!important;margin:0 2px 0 0!important;padding:0!important;border:0!important;filter:none!important}
 .member-card .ec-pro-name-row{display:flex!important;align-items:center!important;gap:3px!important;min-width:0!important;flex:1!important;padding-top:9px!important}
 .member-card .ec-pro-nickname{min-width:0!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
 .ec-sidebar-refactor [data-profile]{cursor:pointer!important;pointer-events:auto!important;touch-action:manipulation!important}
 .ec-sidebar-refactor .ec-pro-role-stack{flex-basis:24px!important;width:24px!important;min-width:24px!important}
 .ec-sidebar-refactor .ec-pro-role-star{width:22px!important;height:22px!important;min-width:22px!important;max-width:22px!important}
 .ec-sidebar-refactor .ec-pro-friend-badge{width:13px!important;height:13px!important;min-width:13px!important;max-width:13px!important}
-.ec-sidebar-refactor .ec-pro-verified-badge,.ec-sidebar-refactor img[src*="badge-verified"]{display:inline-block!important;visibility:visible!important;width:9px!important;height:9px!important;min-width:9px!important;max-width:9px!important;flex:0 0 9px!important;opacity:1!important}
 html.ec-can-see-last-active .member-status small,html.ec-can-see-last-active .last-active,html.ec-can-see-last-active .last-active-at,html.ec-can-see-last-active [data-last-active],html.ec-can-see-last-active time[data-last-active],html.ec-can-see-last-active .ec-last-active-text{display:block!important;visibility:visible!important}
 .ec-sidebar-refactor .ec-rf-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:10px 7px!important}
-@media(max-width:900px){.ec-sidebar-refactor .ec-rf-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important}.member-card .ec-pro-role-stack{flex-basis:42px!important;width:42px!important;min-width:42px!important}.member-card .ec-pro-role-star{width:40px!important;height:40px!important;min-width:40px!important;max-width:40px!important}.member-card .ec-pro-friend-badge{width:13px!important;height:13px!important;min-width:13px!important;max-width:13px!important}.member-card .ec-pro-verified-badge,.member-card .ec-member-name-verified,.member-card img[src*="badge-verified"]{width:7px!important;height:7px!important;min-width:7px!important;max-width:7px!important;flex-basis:7px!important}}
+@media(max-width:900px){.ec-sidebar-refactor .ec-rf-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important}.member-card .ec-pro-role-stack{flex-basis:42px!important;width:42px!important;min-width:42px!important}.member-card .ec-pro-role-star{width:40px!important;height:40px!important;min-width:40px!important;max-width:40px!important}.member-card .ec-pro-friend-badge{width:13px!important;height:13px!important;min-width:13px!important;max-width:13px!important}}
 @media(max-width:520px){.ec-sidebar-refactor .ec-rf-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}}
+
+/* Verification is a readable trust mark, not a tiny decorative pixel. */
+html body .member-card{position:relative!important}
+html body .modern-main .member-card img.ec-pro-verified-badge,
+html body .modern-main .member-card img.ec-member-name-verified,
+html body .modern-main .member-card img[src*="badge-verified"]{
+  position:absolute!important;top:14px!important;right:14px!important;left:auto!important;bottom:auto!important;z-index:15!important;
+  display:block!important;visibility:visible!important;width:28px!important;height:28px!important;min-width:28px!important;max-width:28px!important;min-height:28px!important;max-height:28px!important;
+  margin:0!important;padding:3px!important;border:1px solid rgba(255,255,255,.9)!important;border-radius:50%!important;background:rgba(5,28,49,.9)!important;box-sizing:border-box!important;
+  object-fit:contain!important;object-position:center!important;filter:drop-shadow(0 0 6px rgba(66,190,255,.75))!important;pointer-events:none!important
+}
+html body .ec-sidebar-refactor img.ec-pro-verified-badge,
+html body .ec-sidebar-refactor img[src*="badge-verified"]{
+  position:static!important;display:inline-block!important;visibility:visible!important;width:16px!important;height:16px!important;min-width:16px!important;max-width:16px!important;min-height:16px!important;max-height:16px!important;flex:0 0 16px!important;
+  margin:0 0 0 4px!important;padding:1px!important;border:0!important;border-radius:50%!important;background:rgba(5,28,49,.72)!important;box-sizing:border-box!important;object-fit:contain!important;filter:drop-shadow(0 0 3px rgba(66,190,255,.7))!important
+}
+html body .ec-pro-profile-identity img.ec-pro-verified-badge,
+html body .profile-header img.ec-pro-verified-badge,
+html body .profile-hero img.ec-pro-verified-badge{
+  position:static!important;display:inline-block!important;vertical-align:middle!important;width:22px!important;height:22px!important;min-width:22px!important;max-width:22px!important;margin:0 0 0 7px!important;padding:2px!important;border:1px solid rgba(255,255,255,.85)!important;border-radius:50%!important;background:rgba(5,28,49,.84)!important;box-sizing:border-box!important;object-fit:contain!important;filter:drop-shadow(0 0 5px rgba(66,190,255,.7))!important
+}
+@media(max-width:560px){
+  html body .modern-main .member-card img.ec-pro-verified-badge,html body .modern-main .member-card img.ec-member-name-verified,html body .modern-main .member-card img[src*="badge-verified"]{top:10px!important;right:10px!important;width:26px!important;height:26px!important;min-width:26px!important;max-width:26px!important;min-height:26px!important;max-height:26px!important;padding:3px!important}
+  html body .ec-sidebar-refactor img.ec-pro-verified-badge,html body .ec-sidebar-refactor img[src*="badge-verified"]{width:15px!important;height:15px!important;min-width:15px!important;max-width:15px!important;min-height:15px!important;max-height:15px!important;flex-basis:15px!important}
+}
 
 /* Mobile identity QA: reserve space below the role star and keep badges legible. */
 @media(max-width:760px){
@@ -24,7 +47,6 @@ html.ec-can-see-last-active .member-status small,html.ec-can-see-last-active .la
   .member-card .ec-pro-role-stack{position:relative!important;display:flex!important;flex:0 0 46px!important;width:46px!important;min-width:46px!important;height:58px!important;overflow:visible!important}
   .member-card .ec-pro-role-star{width:42px!important;height:42px!important;min-width:42px!important;max-width:42px!important}
   .member-card .ec-pro-name-row{padding-top:10px!important;max-width:calc(100% - 52px)!important;overflow:visible!important}
-  .member-card .ec-pro-verified-badge,.member-card .ec-member-name-verified,.member-card img[src*="badge-verified"]{display:inline-block!important;visibility:visible!important;width:9px!important;height:9px!important;min-width:9px!important;max-width:9px!important;flex:0 0 9px!important;opacity:1!important}
   .ec-sidebar-refactor{width:100%!important;max-width:100%!important;overflow:hidden!important}
   .ec-sidebar-refactor .ec-rf-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:7px!important}
   .ec-sidebar-refactor .ec-rf-grid>button{width:100%!important;min-width:0!important;max-width:100%!important;overflow:hidden!important}
@@ -33,58 +55,13 @@ html.ec-can-see-last-active .member-status small,html.ec-can-see-last-active .la
 }
 
 /* Friendship badge: one square icon box, never stretched and never followed by fallback text. */
-html body img.ec-pro-friend-badge{
-  font-size:0!important;
-  line-height:0!important;
-  overflow:hidden!important;
-  text-indent:-9999px!important;
-  object-fit:contain!important;
-  object-position:center!important;
-  aspect-ratio:1/1!important;
-  transform:none!important;
-}
-html body .modern-main .member-card{position:relative!important}
-html body .modern-main .member-card .ec-final-card-identity,
-html body .modern-main .member-card>.ec-pro-identity,
-html body .modern-main .member-card .ec-pro-role-stack{position:static!important}
-html body .modern-main .member-card img.ec-pro-friend-badge{
-  position:absolute!important;
-  inset:14px auto auto 14px!important;
-  z-index:12!important;
-  display:block!important;
-  visibility:visible!important;
-  width:24px!important;
-  height:24px!important;
-  min-width:24px!important;
-  max-width:24px!important;
-  min-height:24px!important;
-  max-height:24px!important;
-  margin:0!important;
-  padding:3px!important;
-  border:1px solid rgba(110,235,244,.8)!important;
-  border-radius:50%!important;
-  background:rgba(10,42,61,.82)!important;
-  box-sizing:border-box!important;
-  filter:drop-shadow(0 0 5px rgba(92,225,230,.75))!important;
-  pointer-events:none!important
-}
-@media(max-width:900px){
-  html body .modern-main .member-card img.ec-pro-friend-badge{
-    inset:12px auto auto 12px!important;
-    width:24px!important;height:24px!important;min-width:24px!important;max-width:24px!important;min-height:24px!important;max-height:24px!important
-  }
-}
-@media(max-width:560px){
-  html body .modern-main .member-card img.ec-pro-friend-badge{
-    inset:10px auto auto 10px!important;
-    width:22px!important;height:22px!important;min-width:22px!important;max-width:22px!important;min-height:22px!important;max-height:22px!important;padding:3px!important
-  }
-}
+html body img.ec-pro-friend-badge{font-size:0!important;line-height:0!important;overflow:hidden!important;text-indent:-9999px!important;object-fit:contain!important;object-position:center!important;aspect-ratio:1/1!important;transform:none!important}
+html body .modern-main .member-card .ec-final-card-identity,html body .modern-main .member-card>.ec-pro-identity,html body .modern-main .member-card .ec-pro-role-stack{position:static!important}
+html body .modern-main .member-card img.ec-pro-friend-badge{position:absolute!important;inset:14px auto auto 14px!important;z-index:12!important;display:block!important;visibility:visible!important;width:24px!important;height:24px!important;min-width:24px!important;max-width:24px!important;min-height:24px!important;max-height:24px!important;margin:0!important;padding:3px!important;border:1px solid rgba(110,235,244,.8)!important;border-radius:50%!important;background:rgba(10,42,61,.82)!important;box-sizing:border-box!important;filter:drop-shadow(0 0 5px rgba(92,225,230,.75))!important;pointer-events:none!important}
+@media(max-width:900px){html body .modern-main .member-card img.ec-pro-friend-badge{inset:12px auto auto 12px!important;width:24px!important;height:24px!important;min-width:24px!important;max-width:24px!important;min-height:24px!important;max-height:24px!important}}
+@media(max-width:560px){html body .modern-main .member-card img.ec-pro-friend-badge{inset:10px auto auto 10px!important;width:22px!important;height:22px!important;min-width:22px!important;max-width:22px!important;min-height:22px!important;max-height:22px!important;padding:3px!important}}
 
-/* Profile/sidebar badges stay inline and square on phones. */
+/* Profile/sidebar friendship badges stay inline and square on phones. */
 html body .ec-pro-profile-identity .ec-pro-role-stack{display:inline-flex!important;flex-direction:row!important;align-items:center!important;justify-content:flex-start!important;width:auto!important;min-width:0!important;height:auto!important;gap:5px!important;position:static!important;overflow:visible!important}
-html body .ec-pro-profile-identity img.ec-pro-friend-badge,
-html body .ec-sidebar-refactor img.ec-pro-friend-badge{
-  position:static!important;inset:auto!important;display:block!important;visibility:visible!important;flex:0 0 18px!important;width:18px!important;height:18px!important;min-width:18px!important;max-width:18px!important;min-height:18px!important;max-height:18px!important;margin:0!important;padding:2px!important;border:1px solid rgba(110,235,244,.72)!important;border-radius:50%!important;background:rgba(10,42,61,.72)!important;box-sizing:border-box!important;filter:drop-shadow(0 0 4px rgba(92,225,230,.65))!important
-}
+html body .ec-pro-profile-identity img.ec-pro-friend-badge,html body .ec-sidebar-refactor img.ec-pro-friend-badge{position:static!important;inset:auto!important;display:block!important;visibility:visible!important;flex:0 0 18px!important;width:18px!important;height:18px!important;min-width:18px!important;max-width:18px!important;min-height:18px!important;max-height:18px!important;margin:0!important;padding:2px!important;border:1px solid rgba(110,235,244,.72)!important;border-radius:50%!important;background:rgba(10,42,61,.72)!important;box-sizing:border-box!important;filter:drop-shadow(0 0 4px rgba(92,225,230,.65))!important}
 @media(max-width:560px){html body .ec-pro-profile-identity img.ec-pro-friend-badge,html body .ec-sidebar-refactor img.ec-pro-friend-badge{flex-basis:18px!important;width:18px!important;height:18px!important;min-width:18px!important;max-width:18px!important;min-height:18px!important;max-height:18px!important}}
