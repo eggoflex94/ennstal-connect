@@ -6,6 +6,8 @@ import "./release-final.css";
 import "./launch-fixes.css";
 import "./profile-simple.css";
 import "./profile-customization.js";
+import "./support-contacts-modern.js";
+import "./support-contacts-modern.css";
 import "./homepage-author.css";
 import "./profile-tools.css";
 import "./admin-online-status.js";
