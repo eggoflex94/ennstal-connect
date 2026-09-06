@@ -11,7 +11,9 @@ const requiredMainModules = [
   "./legal-evidence-admin.js",
   "./admin-workspace.js",
   "./admin-dashboard-modern.js",
-  "./admin-compact-enhancements.js"
+  "./admin-compact-enhancements.js",
+  "./mobile-admin-production.css",
+  "./supporter-runtime-fix.js"
 ];
 
 test("main entry keeps critical member/admin modules wired", async () => {
@@ -65,4 +67,28 @@ test("member privacy controls use server-side RPCs", async () => {
   assert.match(center, /member_cancel_account_deletion/);
   assert.match(lastName, /set_last_name_privacy/);
   assert.match(lastName, /ADMIN_ONLY/);
+});
+
+test("role runtime is event driven and has no recurring repaint loop", async () => {
+  const code = await source("src/supporter-runtime-fix.js");
+  assert.match(code, /MutationObserver/);
+  assert.match(code, /requestAnimationFrame/);
+  assert.doesNotMatch(code, /setInterval\s*\(/);
+  assert.doesNotMatch(code, /attributes\s*:\s*true/);
+});
+
+test("mobile admin hardening preserves touch sized controls and narrow layouts", async () => {
+  const css = await source("src/mobile-admin-production.css");
+  assert.match(css, /@media\(max-width:900px\)/);
+  assert.match(css, /min-height:44px/);
+  assert.match(css, /font-size:16px/);
+  assert.match(css, /overflow-x:auto/);
+  assert.match(css, /safe-area-inset-bottom/);
+});
+
+test("Cloudflare production entry keeps stability assets wired", async () => {
+  const html = await source("dist/index.html");
+  assert.match(html, /mobile-admin-production\.css/);
+  assert.match(html, /supporter-runtime-fix\.js/);
+  assert.match(html, /viewport-fit=cover/);
 });
