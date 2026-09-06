@@ -9,9 +9,9 @@ Community-Webseite für Ennstal & Obersteiermark.
 4. `npm run dev`
 
 ## Hosting
-- Netlify: Build command `npm run build`, Publish directory `dist`
-- Vercel: Repository importieren; Vite wird erkannt.
-- In beiden Hostern dieselben `VITE_SUPABASE_*` Variablen setzen.
+- Cloudflare: Build-Befehl `npm run build`, Ausgabeordner `dist`.
+- Die Anwendung wird mit `wrangler.json` als Single-Page-App ausgeliefert.
+- In Cloudflare dieselben `VITE_SUPABASE_*` Variablen setzen.
 
 ## Datenbank
 `supabase.sql` ist ein sicherer Ausgangspunkt. Nicht blind über eine bestehende Produktionsdatenbank laufen lassen: Dein vorhandenes Frontend verwendet zusätzliche Tabellen und RPCs, die vor einer destruktiven Migration abgeglichen werden müssen.
