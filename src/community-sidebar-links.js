@@ -11,7 +11,7 @@ function openProfile(id,source){
   const resolved=profiles.get(id)||names.get(shown);
   const profileId=resolved?.id||id;
   if(!profileId)return;
-  window.dispatchEvent(new CustomEvent('ec:open-profile',{detail:{profileId}}));
+  window.dispatchEvent(new CustomEvent('ec:open-profile',{detail:{profileId,nickname:resolved?.nickname||shown}}));
   if(matchMedia('(max-width:900px)').matches)requestAnimationFrame(()=>q('.modern-main')?.scrollIntoView({behavior:'smooth',block:'start'}));
 }
 function addImage(className,src,title){const img=document.createElement('img');img.className=className;img.src=src;img.alt=title;img.title=title;return img;}
