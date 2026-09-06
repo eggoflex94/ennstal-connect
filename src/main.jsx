@@ -42,6 +42,7 @@ import "./member-onboarding.css";
 import "./sidebar-dedupe.js";
 import "./admin-workspace.js";
 import "./admin-workspace.css";
+import "./sidebar-friendly.css";
 
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
