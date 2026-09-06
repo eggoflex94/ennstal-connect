@@ -12,6 +12,7 @@ import "./homepage-author.css";
 import "./profile-tools.css";
 import "./admin-online-status.js";
 import "./last-name-privacy.js";
+import "./last-active-privacy.js";
 import "./online-status-sync.js";
 import "./featured-group-admin.js";
 import "./featured-group-admin.css";
