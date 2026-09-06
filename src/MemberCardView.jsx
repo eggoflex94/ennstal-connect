@@ -64,16 +64,16 @@ export default function MemberCardView({ member, profile, friendships, onOpen, o
 
       <div className="ec-card-badge-rail" aria-label="Profilkennzeichnungen">
         <span className={`ec-card-badge-icon ec-card-badge-role ec-card-badge-role-${presentation.theme}`} title={presentation.label}>
-          <img src={presentation.star} alt="" aria-hidden="true" />
+          <img className="ec-card-badge-img ec-card-badge-role-img" src={presentation.star} alt="" aria-hidden="true" />
         </span>
         {friend && (
           <span className="ec-card-badge-icon ec-card-badge-friend" title="Befreundet">
-            <img className="ec-pro-friend-badge ec-native-friend-badge" src="/badge-friendship.svg" alt="" aria-hidden="true" />
+            <img className="ec-card-badge-img ec-card-badge-friend-img" src="/badge-friendship.svg" alt="" aria-hidden="true" />
           </span>
         )}
         {verified && (
           <span className="ec-card-badge-icon ec-card-badge-verified" title="Verifiziert">
-            <img className="ec-pro-verified-badge ec-native-verified-badge" src="/badge-verified.svg" alt="" aria-hidden="true" />
+            <img className="ec-card-badge-img ec-card-badge-verified-img" src="/badge-verified.svg" alt="" aria-hidden="true" />
           </span>
         )}
       </div>
