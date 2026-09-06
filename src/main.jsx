@@ -59,6 +59,8 @@ import "./community-sidebar-refactor.css";
 import "./sidebar-layout-stability.css";
 import "./community-final-runtime.js";
 import "./community-final-runtime.css";
+import "./community-sidebar-links.js";
+import "./community-sidebar-links.css";
 import "./legal-footer-modern.css";
 
 class AppErrorBoundary extends React.Component {
