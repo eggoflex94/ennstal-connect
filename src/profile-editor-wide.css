@@ -103,3 +103,20 @@
   .profile-page-layout .profile-form .profile-typography-grid,
   .profile-page-layout .profile-form .privacy-settings{grid-template-columns:1fr!important}
 }
+
+/* Business accounts keep the MEMBER permission role but use their own public identity. */
+.profile-page-layout .my-profile-card.business{
+  --profile-accent:#38bdf8!important;
+  border-color:#38bdf8!important;
+  box-shadow:0 0 0 2px rgba(56,189,248,.28),0 18px 44px rgba(3,105,161,.22)!important;
+}
+.profile-page-layout .my-profile-card.business .profile-role-mark{
+  background:#0ea5e9!important;
+  border-color:#7dd3fc!important;
+}
+.profile-page-layout .my-profile-card.business .profile-role-label{
+  display:inline-flex!important;
+  background:#075985!important;
+  border-color:#38bdf8!important;
+  color:#e0f2fe!important;
+}
