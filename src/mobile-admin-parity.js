@@ -29,5 +29,5 @@ function enforceMobileModeration(){if(!isMobile())return;$$('.member-admin-tools
 
 let pending=false;async function sweep(){if(pending)return;pending=true;try{ensureAdminSidebar();enforceMobileModeration();await syncVisibleResponsibilities()}finally{pending=false}}
 
-await loadCurrent();void sweep();
+void loadCurrent().then(sweep).catch((error)=>console.error('Mobile Admin Parity konnte nicht initialisiert werden:',error));
 const obs=new MutationObserver(()=>{clearTimeout(window.__ecMobileParityDelay);window.__ecMobileParityDelay=setTimeout(sweep,100)});obs.observe(document.documentElement,{childList:true,subtree:true});window.addEventListener('resize',sweep);window.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){profileCache.clear();void loadCurrent().then(sweep)}});window.addEventListener('pagehide',()=>obs.disconnect(),{once:true});
