@@ -39,6 +39,7 @@ import "./live-notifications.css";
 import "./notification-center.css";
 import "./member-onboarding.js";
 import "./member-onboarding.css";
+import "./sidebar-dedupe.js";
 
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
