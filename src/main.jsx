@@ -50,6 +50,7 @@ import "./mobile-admin-parity.css";
 import "./sidebar-news-popup.js";
 import "./sidebar-news-popup.css";
 import "./layout-mountain-backgrounds.css";
+import "./identity-badges.css";
 import "./community-sidebar-refactor.js";
 import "./community-sidebar-refactor.css";
 import "./sidebar-layout-stability.css";
