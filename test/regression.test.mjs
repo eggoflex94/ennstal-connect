@@ -22,6 +22,28 @@ test("main entry keeps critical member/admin modules wired", async () => {
   assert.doesNotMatch(main, /live-notifications\.js/);
 });
 
+test("native member card renders role theme, 3d star and stacked age", async () => {
+  const card = await source("src/MemberCardView.jsx");
+  assert.match(card, /data-role-theme=\{presentation\.theme\}/);
+  assert.match(card, /role-star-red\.svg/);
+  assert.match(card, /supporter-star\.svg/);
+  assert.match(card, /role-star-blue\.svg/);
+  assert.match(card, /role-star-member\.svg/);
+  assert.match(card, /className="ec-member-realname"/);
+  assert.match(card, /className="ec-member-age"/);
+  assert.match(card, /\(\{age\} Jahre\)/);
+  assert.match(card, /loading="lazy"/);
+  assert.match(card, /tabIndex=\{0\}/);
+});
+
+test("vite build swaps only the known MemberCard renderer", async () => {
+  const config = await source("vite.config.js");
+  assert.match(config, /ennstal-native-member-card/);
+  assert.match(config, /MemberCardView\.jsx/);
+  assert.match(config, /MemberCard renderer markers not found/);
+  assert.match(config, /function MemberCard\(props\) \{ return <MemberCardView \{\.\.\.props\}\/>; \}/);
+});
+
 test("notification center remains private and realtime", async () => {
   const code = await source("src/notification-center.js");
   assert.match(code, /auth\.getUser\(\)/);
@@ -69,12 +91,16 @@ test("member privacy controls use server-side RPCs", async () => {
   assert.match(lastName, /ADMIN_ONLY/);
 });
 
-test("role runtime is event driven and has no recurring repaint loop", async () => {
+test("role runtime is limited to feeds and never rewrites member cards", async () => {
   const code = await source("src/supporter-runtime-fix.js");
   assert.match(code, /MutationObserver/);
   assert.match(code, /requestAnimationFrame/);
+  assert.match(code, /ec-rf-person/);
+  assert.match(code, /ec-rf-update/);
+  assert.match(code, /ec-rf-activity/);
   assert.doesNotMatch(code, /setInterval\s*\(/);
-  assert.doesNotMatch(code, /attributes\s*:\s*true/);
+  assert.doesNotMatch(code, /\.member-card/);
+  assert.doesNotMatch(code, /ecAgeStacked|formatMemberAges|member-avatar/);
 });
 
 test("mobile admin hardening preserves touch sized controls and narrow layouts", async () => {
@@ -89,6 +115,6 @@ test("mobile admin hardening preserves touch sized controls and narrow layouts",
 test("Cloudflare production entry keeps stability assets wired", async () => {
   const html = await source("dist/index.html");
   assert.match(html, /mobile-admin-production\.css/);
-  assert.match(html, /supporter-runtime-fix\.js/);
+  assert.match(html, /supporter-runtime-fix\.js\?v=d2252741/);
   assert.match(html, /viewport-fit=cover/);
 });
