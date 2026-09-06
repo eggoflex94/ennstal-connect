@@ -64,6 +64,7 @@ import "./legal-footer-modern.css";
 import "./supporter-theme.css";
 import "./supporter-runtime-fix.js";
 import "./mobile-admin-production.css";
+import "./profile-editor-stability.css";
 
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
