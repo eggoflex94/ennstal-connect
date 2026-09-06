@@ -73,20 +73,24 @@ export default function MemberCardView({ member, profile, friendships, onOpen, o
         onError={(event) => { event.currentTarget.src = DEFAULT_AVATAR; }}
       />
 
-      <div className="member-name ec-native-member-name">
-        <span className="ec-member-realname">{fullName}</span>
-        {age !== null && <small className="ec-member-age">({age} Jahre)</small>}
-      </div>
-
-      {!member.hide_online_status && (
-        <div className={`member-status ${online ? "online" : "offline"}`}>
-          <span aria-hidden="true" />
-          <span>{statusLabel}</span>
-          {!online && member.last_active_at && (
-            <small>zuletzt aktiv {new Date(member.last_active_at).toLocaleString("de-AT", { dateStyle: "short", timeStyle: "short" })}</small>
-          )}
+      <div className="member-meta ec-member-meta">
+        <div className="member-name ec-native-member-name">
+          <span className="ec-member-realname">{fullName}</span>
+          {age !== null && <small className="ec-member-age">({age} Jahre)</small>}
         </div>
-      )}
+
+        {!member.hide_online_status && (
+          <div className={`member-status ${online ? "online" : "offline"}`}>
+            <div className="ec-member-presence-line">
+              <span className="ec-member-presence-dot" aria-hidden="true" />
+              <span className="ec-member-presence-label">{statusLabel}</span>
+            </div>
+            {!online && member.last_active_at && (
+              <small className="ec-member-last-active">zuletzt aktiv {new Date(member.last_active_at).toLocaleString("de-AT", { dateStyle: "short", timeStyle: "short" })}</small>
+            )}
+          </div>
+        )}
+      </div>
 
       {member.id !== profile?.id && (
         <button
