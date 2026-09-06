@@ -8,57 +8,9 @@ function setImportant(el,p,v){if(el.style.getPropertyValue(p)===v&&el.style.getP
 function paint(selector,key){const t=THEMES[key];document.querySelectorAll(selector).forEach(el=>{el.classList.add(`role-theme-${key}`);setImportant(el,'background',t.bg);setImportant(el,'border-color',t.border);setImportant(el,'box-shadow',t.shadow)})}
 function paintRows(selector,key){const t=THEMES[key];document.querySelectorAll(selector).forEach(el=>{setImportant(el,'border',`1px solid ${t.border}`);setImportant(el,'background',t.row);setImportant(el,'box-shadow',`0 0 14px ${t.border}55`)})}
 function paintNames(selector,key){const t=THEMES[key];document.querySelectorAll(selector).forEach(el=>{setImportant(el,'color',t.color);setImportant(el,'text-shadow',key==='admin'?'none':`0 0 12px ${t.color}44`)})}
-function paintSupporterFrames(){
-  document.querySelectorAll('.member-card.ec-role-supporter,.member-card:has(.ec-pro-supporter),.member-card:has(img[alt="Supporter"])').forEach(card=>{
-    setImportant(card,'background',THEMES.supporter.bg);
-    card.querySelectorAll('.member-avatar-wrap,.member-avatar-container,.avatar-wrap,.avatar-container,.profile-image-wrap,.profile-image-container').forEach(frame=>{
-      setImportant(frame,'background','linear-gradient(145deg,#3d3100 0%,#171300 55%,#050505 100%)');
-      setImportant(frame,'border-color','#ffd400');
-      setImportant(frame,'box-shadow','0 0 0 2px rgba(255,212,0,.42),0 0 18px rgba(255,212,0,.45)');
-    });
-  });
-}
-function formatMemberAges(){
-  document.querySelectorAll('.member-card').forEach(card=>{
-    if(card.dataset.ecAgeStacked==='1')return;
-    const nodes=[...card.querySelectorAll('.member-name,strong,p,div,span')].filter(el=>!el.children.length);
-    const target=nodes.find(el=>/^\s*.+?\s*[·•-]\s*\d{1,3}\s*Jahre\s*$/i.test(el.textContent||''));
-    if(!target)return;
-    const m=String(target.textContent||'').trim().match(/^(.+?)\s*[·•-]\s*(\d{1,3})\s*Jahre$/i);
-    if(!m)return;
-    target.textContent='';
-    const name=document.createElement('span');name.className='ec-member-realname';name.textContent=m[1].trim();
-    const age=document.createElement('small');age.className='ec-member-age';age.textContent=`(${m[2]} Jahre)`;
-    target.append(name,age);
-    target.style.setProperty('display','flex','important');
-    target.style.setProperty('flex-direction','column','important');
-    target.style.setProperty('align-items','center','important');
-    target.style.setProperty('gap','3px','important');
-    name.style.setProperty('display','block','important');
-    age.style.setProperty('display','block','important');
-    age.style.setProperty('font-size','0.72em','important');
-    age.style.setProperty('font-weight','700','important');
-    age.style.setProperty('line-height','1.1','important');
-    age.style.setProperty('opacity','.9','important');
-    card.dataset.ecAgeStacked='1';
-  });
-}
-function paintRoles(){
-  paint('.member-card.ec-role-supporter,.member-card:has(.ec-pro-supporter),.member-card:has(img[alt="Supporter"])','supporter');
-  paint('.member-card.ec-role-admin,.member-card.ec-role-head-admin,.member-card:has(.ec-pro-admin),.member-card:has(.ec-pro-head-admin),.member-card:has(img[alt="Admin"]),.member-card:has(img[alt="Hauptadmin"])','admin');
-  paint('.member-card.ec-role-business,.member-card:has(.ec-pro-business),.member-card:has(img[alt="Unternehmenskonto"])','business');
-  paint('.member-card.ec-role-member,.member-card:has(.ec-pro-member),.member-card:has(img[alt="Mitglied"])','member');
-  paintRows('.ec-rf-person:has(.ec-pro-supporter),.ec-rf-update:has(.ec-pro-supporter),.ec-rf-activity:has(.ec-pro-supporter)','supporter');
-  paintRows('.ec-rf-person:has(.ec-pro-admin),.ec-rf-person:has(.ec-pro-head-admin),.ec-rf-update:has(.ec-pro-admin),.ec-rf-update:has(.ec-pro-head-admin),.ec-rf-activity:has(.ec-pro-admin),.ec-rf-activity:has(.ec-pro-head-admin)','admin');
-  paintRows('.ec-rf-person:has(.ec-pro-business),.ec-rf-update:has(.ec-pro-business),.ec-rf-activity:has(.ec-pro-business)','business');
-  paintRows('.ec-rf-person:has(.ec-pro-member),.ec-rf-update:has(.ec-pro-member),.ec-rf-activity:has(.ec-pro-member)','member');
-  paintNames('.ec-pro-supporter .ec-pro-nickname,.ec-role-supporter .ec-pro-nickname','supporter');
-  paintNames('.ec-pro-admin .ec-pro-nickname,.ec-pro-head-admin .ec-pro-nickname,.ec-role-admin .ec-pro-nickname,.ec-role-head-admin .ec-pro-nickname','admin');
-  paintNames('.ec-pro-business .ec-pro-nickname,.ec-role-business .ec-pro-nickname','business');
-  paintNames('.ec-pro-member .ec-pro-nickname,.ec-role-member .ec-pro-nickname','member');
-  paintSupporterFrames();
-  formatMemberAges();
-}
+function paintSupporterFrames(){document.querySelectorAll('.member-card.ec-role-supporter,.member-card:has(.ec-pro-supporter),.member-card:has(img[alt="Supporter"])').forEach(card=>{setImportant(card,'background',THEMES.supporter.bg);card.querySelectorAll('.member-avatar-wrap,.member-avatar-container,.avatar-wrap,.avatar-container,.profile-image-wrap,.profile-image-container').forEach(frame=>{setImportant(frame,'background','linear-gradient(145deg,#3d3100 0%,#171300 55%,#050505 100%)');setImportant(frame,'border-color','#ffd400');setImportant(frame,'box-shadow','0 0 0 2px rgba(255,212,0,.42),0 0 18px rgba(255,212,0,.45)')})})}
+function formatMemberAges(){document.querySelectorAll('.member-card').forEach(card=>{if(card.dataset.ecAgeStacked==='1')return;const nodes=[...card.querySelectorAll('.member-name,strong,p,div,span')].filter(el=>!el.children.length);const target=nodes.find(el=>/^\s*.+?\s*[·•-]\s*\d{1,3}\s*Jahre\s*$/i.test(el.textContent||''));if(!target)return;const m=String(target.textContent||'').trim().match(/^(.+?)\s*[·•-]\s*(\d{1,3})\s*Jahre$/i);if(!m)return;target.textContent='';const name=document.createElement('span');name.className='ec-member-realname';name.textContent=m[1].trim();const age=document.createElement('small');age.className='ec-member-age';age.textContent=`(${m[2]} Jahre)`;target.append(name,age);target.style.setProperty('display','flex','important');target.style.setProperty('flex-direction','column','important');target.style.setProperty('align-items','center','important');target.style.setProperty('gap','3px','important');name.style.setProperty('display','block','important');age.style.setProperty('display','block','important');age.style.setProperty('font-size','0.72em','important');age.style.setProperty('font-weight','700','important');age.style.setProperty('line-height','1.1','important');age.style.setProperty('opacity','.9','important');card.dataset.ecAgeStacked='1'})}
+function paintRoles(){paint('.member-card.ec-role-supporter,.member-card:has(.ec-pro-supporter),.member-card:has(img[alt="Supporter"])','supporter');paint('.member-card.ec-role-admin,.member-card.ec-role-head-admin,.member-card:has(.ec-pro-admin),.member-card:has(.ec-pro-head-admin),.member-card:has(img[alt="Admin"]),.member-card:has(img[alt="Hauptadmin"])','admin');paint('.member-card.ec-role-business,.member-card:has(.ec-pro-business),.member-card:has(img[alt="Unternehmenskonto"])','business');paint('.member-card.ec-role-member,.member-card:has(.ec-pro-member),.member-card:has(img[alt="Mitglied"])','member');paintRows('.ec-rf-person:has(.ec-pro-supporter),.ec-rf-update:has(.ec-pro-supporter),.ec-rf-activity:has(.ec-pro-supporter)','supporter');paintRows('.ec-rf-person:has(.ec-pro-admin),.ec-rf-person:has(.ec-pro-head-admin),.ec-rf-update:has(.ec-pro-admin),.ec-rf-update:has(.ec-pro-head-admin),.ec-rf-activity:has(.ec-pro-admin),.ec-rf-activity:has(.ec-pro-head-admin)','admin');paintRows('.ec-rf-person:has(.ec-pro-business),.ec-rf-update:has(.ec-pro-business),.ec-rf-activity:has(.ec-pro-business)','business');paintRows('.ec-rf-person:has(.ec-pro-member),.ec-rf-update:has(.ec-pro-member),.ec-rf-activity:has(.ec-pro-member)','member');paintNames('.ec-pro-supporter .ec-pro-nickname,.ec-role-supporter .ec-pro-nickname','supporter');paintNames('.ec-pro-admin .ec-pro-nickname,.ec-pro-head-admin .ec-pro-nickname,.ec-role-admin .ec-pro-nickname,.ec-role-head-admin .ec-pro-nickname','admin');paintNames('.ec-pro-business .ec-pro-nickname,.ec-role-business .ec-pro-nickname','business');paintNames('.ec-pro-member .ec-pro-nickname,.ec-role-member .ec-pro-nickname','member');paintSupporterFrames();formatMemberAges()}
 let scheduled=false;function schedulePaint(){if(scheduled)return;scheduled=true;requestAnimationFrame(()=>{scheduled=false;paintRoles()})}
-const start=()=>{paintRoles();const o=new MutationObserver(r=>{if(r.some(x=>x.addedNodes?.length))schedulePaint()});o.observe(document.body||document.documentElement,{subtree:true,childList:true});window.setInterval(paintRoles,3000)};
+const start=()=>{paintRoles();const o=new MutationObserver(records=>{if(records.some(r=>r.addedNodes?.length))schedulePaint()});o.observe(document.body||document.documentElement,{subtree:true,childList:true})};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
