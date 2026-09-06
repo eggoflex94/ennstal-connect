@@ -2,7 +2,7 @@ import { supabase } from './supabaseClient';
 
 const q=(s,r=document)=>r.querySelector(s),qa=(s,r=document)=>[...r.querySelectorAll(s)];
 const norm=v=>String(v||'').replace(/[★♛♥✓]/g,'').trim().toLowerCase();
-const isVerified=p=>p?.is_verified===true||p?.verified===true||String(p?.verification_status||'').toUpperCase()==='VERIFIED'||String(p?.account_status||'').toUpperCase()==='VERIFIED';
+const isVerified=p=>['ADMIN','HEAD_ADMIN'].includes(String(p?.role||'').toUpperCase())||p?.is_verified===true||p?.verified===true||String(p?.verification_status||'').toUpperCase()==='VERIFIED'||String(p?.account_status||'').toUpperCase()==='VERIFIED';
 let uid=null,role='',profiles=new Map(),names=new Map(),friends=new Set(),sweepQueued=false;
 
 function profileFor(root){const id=root?.dataset?.profile||root?.dataset?.memberId||q('[data-member-id]',root)?.dataset?.memberId;if(id&&profiles.has(id))return profiles.get(id);return names.get(norm(q('.ec-pro-nickname,.member-nickname,.ec-rf-user-copy strong',root)?.textContent))||null;}
