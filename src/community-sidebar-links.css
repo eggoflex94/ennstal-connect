@@ -33,3 +33,39 @@ html.ec-can-see-last-active .member-status small,html.ec-can-see-last-active .la
   .ec-sidebar-refactor .ec-rf-person{width:100%!important;min-width:0!important;overflow:visible!important}
   .ec-sidebar-refactor .ec-rf-person .ec-pro-friend-badge{width:13px!important;height:13px!important;min-width:13px!important;max-width:13px!important}
 }
+
+
+/* Friend badge: fixed top-left position inside every member card. */
+.member-card{position:relative!important}
+.member-card .ec-final-card-identity,
+.member-card>.ec-pro-identity,
+.member-card .ec-pro-role-stack{position:static!important}
+.member-card .ec-pro-friend-badge{
+  position:absolute!important;
+  top:14px!important;
+  left:14px!important;
+  z-index:8!important;
+  display:block!important;
+  visibility:visible!important;
+  width:18px!important;
+  height:18px!important;
+  min-width:18px!important;
+  max-width:18px!important;
+  max-height:18px!important;
+  margin:0!important;
+  padding:0!important;
+  object-fit:contain!important;
+  pointer-events:none!important;
+  filter:drop-shadow(0 0 5px rgba(92,225,230,.95))!important
+}
+@media(max-width:900px){
+  .member-card .ec-pro-friend-badge{
+    top:11px!important;
+    left:11px!important;
+    width:17px!important;
+    height:17px!important;
+    min-width:17px!important;
+    max-width:17px!important;
+    max-height:17px!important
+  }
+}
