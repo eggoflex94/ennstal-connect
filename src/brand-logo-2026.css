@@ -19,6 +19,17 @@
 .auth-intro{overflow:visible!important;min-width:0!important}
 .auth-welcome,.auth-page{overflow-x:hidden!important}
 
+/* Highly visible reward banner at the very top of login/registration. */
+.ec-auth-reward-banner{position:relative;z-index:20;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:18px;width:calc(100% - 28px);margin:12px 14px 22px;padding:17px 22px;box-sizing:border-box;border:2px solid #29b6ff;border-radius:18px;background:linear-gradient(110deg,#361063 0%,#121c75 48%,#063a75 100%);color:#fff;box-shadow:0 0 0 2px rgba(201,61,255,.55),0 0 28px rgba(68,83,255,.55),0 10px 30px rgba(0,0,0,.28)}
+.ec-auth-reward-icon{font-size:38px;line-height:1;color:#f4a8ff;text-shadow:0 0 16px #e333ff}
+.ec-auth-reward-copy{display:flex;flex-direction:column;gap:5px;min-width:0}
+.ec-auth-reward-copy strong{font-size:22px;color:#fff;text-shadow:0 0 10px rgba(238,86,255,.8)}
+.ec-auth-reward-copy span{font-size:15px;line-height:1.45;color:#fff}
+.ec-auth-reward-copy span b{display:inline-block;padding:2px 7px;border:1px solid #00d9ff;border-radius:7px;color:#3ce8ff;box-shadow:0 0 10px rgba(0,217,255,.35)}
+.ec-auth-reward-copy small{font-size:13px;color:#d9ddff}
+.ec-auth-reward-action{border:0;border-radius:12px;padding:13px 18px;background:linear-gradient(135deg,#d84cff,#5145ff);color:#fff;font-weight:800;white-space:nowrap;cursor:pointer;box-shadow:0 7px 20px rgba(81,69,255,.35)}
+.ec-auth-reward-action:hover{filter:brightness(1.08);transform:translateY(-1px)}
+
 @media(max-width:760px){
   .modern-topbar{min-height:72px!important;padding:7px 10px!important;gap:10px!important}
   .topbar-brand{flex-basis:220px!important;width:220px!important;min-width:220px!important;height:56px!important;border-radius:10px!important;padding:4px 8px!important}
@@ -27,6 +38,9 @@
   .auth-intro>img[alt="Ennstal Connect"]{width:100%!important;max-height:210px!important;border-radius:13px!important;margin:0 auto 16px!important;padding:8px 10px!important}
   .community-logo-hero{border-radius:16px!important;padding:10px!important}
   .community-logo-hero>img,.community-logo-hero img[alt="Ennstal Connect Community-Logo"]{max-height:210px!important}
+  .ec-auth-reward-banner{grid-template-columns:auto 1fr;width:calc(100% - 18px);margin:9px 9px 18px;padding:14px;gap:12px}
+  .ec-auth-reward-action{grid-column:1/-1;width:100%}
+  .ec-auth-reward-copy strong{font-size:19px}
 }
 
 @media(max-width:480px){
@@ -35,4 +49,7 @@
   .modern-topbar .breadcrumb{display:none!important}
   .auth-intro>img[alt="Ennstal Connect"]{max-height:180px!important;padding:7px 8px!important}
   .community-logo-hero>img,.community-logo-hero img[alt="Ennstal Connect Community-Logo"]{max-height:180px!important}
+  .ec-auth-reward-banner{grid-template-columns:1fr;text-align:center}
+  .ec-auth-reward-icon{font-size:32px}
+  .ec-auth-reward-copy span{font-size:14px}
 }
