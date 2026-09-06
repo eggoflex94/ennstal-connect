@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" role="img" aria-labelledby="title">
+  <title id="title">Befreundet</title>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="8" cy="8" r="3" stroke="#eafcff" stroke-width="1.8"/>
+    <circle cx="16" cy="8" r="3" stroke="#eafcff" stroke-width="1.8"/>
+    <path d="M3.5 19c.35-3.45 2.35-5.35 5.5-5.35 1.18 0 2.2.27 3 .78" stroke="#57e5f2" stroke-width="2"/>
+    <path d="M20.5 19c-.35-3.45-2.35-5.35-5.5-5.35-1.18 0-2.2.27-3 .78" stroke="#57e5f2" stroke-width="2"/>
+    <path d="m9.1 17.25 2.9 2.25 2.9-2.25" stroke="#ffffff" stroke-width="1.8"/>
+  </g>
+</svg>
