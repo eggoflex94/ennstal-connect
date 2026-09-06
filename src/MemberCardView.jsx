@@ -20,6 +20,11 @@ function isRecentlyActive(member) {
   return Number.isFinite(lastActive) && Date.now() - lastActive < 5 * 60 * 1000;
 }
 
+function isVerified(member) {
+  const role = String(member?.role || "").toUpperCase();
+  return role === "HEAD_ADMIN" || role === "ADMIN" || member?.is_verified === true || member?.verified === true || String(member?.verification_status || "").toUpperCase() === "VERIFIED";
+}
+
 function rolePresentation(member) {
   const role = String(member?.role || "MEMBER").toUpperCase();
   if (role === "HEAD_ADMIN" || role === "ADMIN") {
@@ -34,6 +39,7 @@ export default function MemberCardView({ member, profile, friendships, onOpen, o
   const presentation = rolePresentation(member);
   const friendship = friendships.find((item) => (item.requester_id === profile?.id && item.receiver_id === member.id) || (item.receiver_id === profile?.id && item.requester_id === member.id));
   const friend = friendship?.status === "ACCEPTED";
+  const verified = isVerified(member);
   const online = isRecentlyActive(member);
   const fullName = [member.first_name, member.last_name].filter(Boolean).join(" ").trim() || getName(member);
   const age = getAge(member.birth_date);
@@ -54,12 +60,16 @@ export default function MemberCardView({ member, profile, friendships, onOpen, o
       tabIndex={0}
       aria-label={`Profil von ${getName(member)} öffnen`}
     >
+      <span className={`ec-role-surface ec-role-surface-${presentation.theme}`} aria-hidden="true" />
+
+      {friend && <img className="ec-pro-friend-badge ec-native-friend-badge" src="/badge-friendship.svg" alt="" title="Befreundet" aria-hidden="true" />}
+      {verified && <img className="ec-pro-verified-badge ec-native-verified-badge" src="/badge-verified.svg" alt="" title="Verifiziert" aria-hidden="true" />}
+
       <div className="member-role-line ec-native-role-line">
         <span className={`role-chip ${presentation.theme}`}>
           <img className="ec-native-role-star" src={presentation.star} alt="" aria-hidden="true" />
           <span className="ec-native-role-label">{presentation.label}</span>
         </span>
-        {friend && <span className="friend-indicator" title="Befreundet" aria-label="Befreundet">♥</span>}
       </div>
 
       <strong className={`member-nickname ec-native-nickname ${presentation.theme}`}>{getName(member)}</strong>
