@@ -57,6 +57,8 @@ import "./sidebar-clarity.js";
 import "./sidebar-clarity.css";
 import "./sidebar-community-activity.js";
 import "./sidebar-community-activity.css";
+import "./mobile-admin-parity.js";
+import "./mobile-admin-parity.css";
 import "./sidebar-news-popup.js";
 import "./sidebar-news-popup.css";
 
