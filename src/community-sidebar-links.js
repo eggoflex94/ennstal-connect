@@ -16,7 +16,7 @@ function openProfile(id,source){
   window.dispatchEvent(new CustomEvent('ec:open-profile',{detail}));
   if(matchMedia('(max-width:900px)').matches)requestAnimationFrame(()=>q('.modern-main')?.scrollIntoView({behavior:'smooth',block:'start'}));
 }
-function addImage(className,src,title){const img=document.createElement('img');img.className=className;img.src=src;img.alt=title;img.title=title;return img;}
+function addImage(className,src,title){const img=document.createElement('img');img.className=className;img.src=src;img.alt='';img.title=title;img.setAttribute('aria-hidden','true');img.decoding='async';return img;}
 
 function syncIdentity(root,p,showFriend){
   const stack=q('.ec-pro-role-stack',root);
