@@ -1,110 +1,179 @@
-/* Wide, uncluttered own-profile editor. Profile activity already lives in the left sidebar. */
+/* Authoritative profile editor layout. Profile activity is already available in the left sidebar. */
 .profile-page-layout{
   display:block!important;
   width:100%!important;
-  max-width:1280px!important;
+  max-width:1380px!important;
+  min-width:0!important;
   margin:0 auto!important;
+  padding:0!important;
+  box-sizing:border-box!important;
 }
 .profile-page-layout>.profile-activity-dashboard{display:none!important}
 .profile-page-layout>section:first-child{
   display:block!important;
   width:100%!important;
   max-width:none!important;
+  min-width:0!important;
+  margin:0!important;
 }
 .profile-page-layout .my-area-layout{
   display:grid!important;
-  grid-template-columns:320px minmax(0,1fr)!important;
+  grid-template-columns:minmax(260px,320px) minmax(520px,1fr)!important;
   align-items:start!important;
   gap:28px!important;
   width:100%!important;
   max-width:none!important;
+  min-width:0!important;
+  margin:0!important;
 }
 .profile-page-layout .my-profile-card{
-  width:320px!important;
-  max-width:100%!important;
+  width:100%!important;
+  max-width:320px!important;
+  min-width:0!important;
   position:sticky!important;
   top:108px!important;
+  box-sizing:border-box!important;
 }
-.profile-page-layout .profile-form{
+.profile-page-layout .profile-form.profile-editor{
+  display:flex!important;
+  flex-direction:column!important;
   width:100%!important;
   max-width:none!important;
   min-width:0!important;
-  padding:28px 32px!important;
-  gap:13px!important;
+  margin:0!important;
+  padding:30px!important;
+  gap:22px!important;
+  overflow:visible!important;
   box-sizing:border-box!important;
 }
-.profile-page-layout .profile-form>input:not([type="hidden"]),
-.profile-page-layout .profile-form>select,
-.profile-page-layout .profile-form>textarea,
-.profile-page-layout .profile-form>.profile-file-input{
+.profile-editor-header{display:block!important;margin:0!important}
+.profile-editor-header h2{margin:5px 0 8px!important;font-size:clamp(28px,3vw,40px)!important;line-height:1.08!important}
+.profile-editor-note{max-width:760px!important;margin:0!important;line-height:1.55!important}
+.profile-editor-section{
+  display:block!important;
+  min-width:0!important;
+  margin:0!important;
+  padding:20px!important;
+  border:1px solid #d6e1ec!important;
+  border-radius:16px!important;
+  background:rgba(244,248,252,.72)!important;
+  box-sizing:border-box!important;
+}
+.profile-editor-section>legend{
+  padding:0 8px!important;
+  color:#30465d!important;
+  font-size:16px!important;
+  font-weight:900!important;
+  line-height:1.3!important;
+}
+.profile-editor-grid,
+.profile-editor .profile-typography-grid{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:16px 18px!important;
+  width:100%!important;
+  min-width:0!important;
+}
+.profile-editor .profile-typography-grid{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  margin-top:16px!important;
+}
+.profile-editor-field,
+.profile-upload-field{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:stretch!important;
+  min-width:0!important;
+  margin:0!important;
+  gap:7px!important;
+}
+.profile-editor-field-wide{grid-column:1/-1!important}
+.profile-editor-field>span,
+.profile-upload-field>span{
+  display:block!important;
+  min-width:0!important;
+  color:#405166!important;
+  font-size:14px!important;
+  font-weight:850!important;
+  line-height:1.35!important;
+}
+.profile-editor input:not([type="hidden"]),
+.profile-editor select,
+.profile-editor textarea{
+  display:block!important;
   width:100%!important;
   max-width:none!important;
+  min-width:0!important;
   box-sizing:border-box!important;
 }
-.profile-page-layout .profile-form .form-grid{
-  display:grid!important;
-  grid-template-columns:repeat(2,minmax(0,1fr))!important;
-  gap:16px!important;
+.profile-editor textarea{min-height:150px!important;resize:vertical!important;line-height:1.5!important}
+.profile-editor .profile-color-field input[type="color"]{
+  width:100%!important;
+  min-height:48px!important;
+  padding:5px!important;
+  cursor:pointer!important;
 }
-.profile-page-layout .profile-form .profile-typography-grid{
-  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+.profile-upload-field{
+  padding:15px!important;
+  border:1px dashed #9db2c7!important;
+  border-radius:13px!important;
+  background:#fff!important;
 }
-.profile-page-layout .profile-form textarea{
-  min-height:150px!important;
-  resize:vertical!important;
+.profile-upload-field small{margin:0!important;color:#6d7f92!important;font-size:12px!important}
+.profile-upload-field input[type="file"]{
+  padding:10px!important;
+  overflow:hidden!important;
+  font-size:14px!important;
 }
-.profile-page-layout .profile-form .privacy-settings{
-  display:grid!important;
-  grid-template-columns:repeat(2,minmax(0,1fr))!important;
-  gap:12px 18px!important;
+.profile-editor-help{display:block!important;margin:0!important;color:#6d7f92!important}
+.profile-editor-actions{
+  display:flex!important;
+  justify-content:flex-end!important;
+  width:100%!important;
+  padding-top:2px!important;
 }
-.profile-page-layout .profile-form .privacy-settings>span,
-.profile-page-layout .profile-form .privacy-settings>h3,
-.profile-page-layout .profile-form .privacy-settings>p{
-  grid-column:1/-1!important;
-}
+.profile-editor-actions .primary-button{min-width:220px!important;min-height:48px!important}
 .profile-page-layout .profile-qr-card,
 .profile-page-layout>.profile-gallery,
 .profile-page-layout>.profile-welcome-badges{
   width:100%!important;
   max-width:none!important;
+  min-width:0!important;
   margin-top:24px!important;
   box-sizing:border-box!important;
 }
 
-@media(max-width:900px){
-  .profile-page-layout{max-width:760px!important;padding:0 10px!important;box-sizing:border-box!important}
-  .profile-page-layout .my-area-layout{grid-template-columns:1fr!important;gap:18px!important}
-  .profile-page-layout .my-profile-card{position:relative!important;top:auto!important;width:min(100%,420px)!important;margin:0 auto!important;min-height:auto!important}
-  .profile-page-layout .profile-form{padding:22px 18px!important}
-}
-@media(max-width:560px){
-  .profile-page-layout{padding:0 4px!important}
-  .profile-page-layout .profile-form{padding:18px 14px!important;border-radius:16px!important}
-  .profile-page-layout .profile-form .form-grid,
-  .profile-page-layout .profile-form .profile-typography-grid,
-  .profile-page-layout .profile-form .privacy-settings{grid-template-columns:1fr!important}
-  .profile-page-layout .profile-form input,
-  .profile-page-layout .profile-form select,
-  .profile-page-layout .profile-form textarea,
-  .profile-page-layout .profile-form button{max-width:100%!important;min-width:0!important}
-  .profile-page-layout .profile-form input[type="file"]{font-size:14px!important;overflow:hidden!important}
-}
-
-/* Stack before the editor column becomes too narrow beside the fixed sidebar. */
-@media(max-width:1250px){
-  .profile-page-layout .my-area-layout{grid-template-columns:1fr!important;gap:20px!important}
-  .profile-page-layout .my-profile-card{position:relative!important;top:auto!important;width:min(100%,420px)!important;margin:0 auto!important}
-  .profile-page-layout .profile-form{width:100%!important;max-width:100%!important}
-  .profile-page-layout .profile-form .profile-typography-grid{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))!important}
+/* Stack early because the persistent community sidebar reduces the usable page width. */
+@media(max-width:1450px){
+  .profile-page-layout{max-width:980px!important}
+  .profile-page-layout .my-area-layout{grid-template-columns:1fr!important;gap:22px!important}
+  .profile-page-layout .my-profile-card{
+    position:relative!important;
+    top:auto!important;
+    width:min(100%,420px)!important;
+    max-width:420px!important;
+    margin:0 auto!important
+  }
 }
 @media(max-width:800px){
-  .profile-page-layout .profile-form .form-grid,
-  .profile-page-layout .profile-form .profile-typography-grid,
-  .profile-page-layout .profile-form .privacy-settings{grid-template-columns:1fr!important}
+  .profile-page-layout{max-width:100%!important;padding:0 6px!important}
+  .profile-page-layout .profile-form.profile-editor{padding:22px 18px!important;gap:18px!important;border-radius:18px!important}
+  .profile-editor-section{padding:17px 14px!important}
+  .profile-editor-grid,
+  .profile-editor .profile-typography-grid{grid-template-columns:1fr!important}
+  .profile-editor-field-wide{grid-column:auto!important}
+}
+@media(max-width:560px){
+  .profile-page-layout{padding:0!important}
+  .profile-page-layout .profile-form.profile-editor{padding:18px 12px!important;border-radius:15px!important}
+  .profile-editor-section{padding:15px 11px!important;border-radius:13px!important}
+  .profile-upload-field{padding:12px!important}
+  .profile-upload-field input[type="file"]{font-size:13px!important;padding:8px!important}
+  .profile-editor-actions{justify-content:stretch!important}
+  .profile-editor-actions .primary-button{width:100%!important;min-width:0!important}
 }
 
-/* Business accounts keep the MEMBER permission role but use their own public identity. */
+/* Business accounts keep member permissions but have their own visible identity. */
 .profile-page-layout .my-profile-card.business{
   --profile-accent:#38bdf8!important;
   border-color:#38bdf8!important;
