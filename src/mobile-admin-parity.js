@@ -1,7 +1,7 @@
 import { supabase } from './supabaseClient';
 
 let currentUser=null,currentProfile=null,profileCache=new Map();
-const $=(s,r=document)=>r?.querySelector?.(s)||null, $=(s,r=document)=>r?.querySelectorAll?[...r.querySelectorAll(s)]:[];
+const $=(s,r=document)=>r?.querySelector?.(s)||null, $$=(s,r=document)=>r?.querySelectorAll?[...r.querySelectorAll(s)]:[];
 const isMobile=()=>matchMedia('(max-width:900px)').matches;
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
