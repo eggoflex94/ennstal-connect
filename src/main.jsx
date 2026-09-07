@@ -71,6 +71,8 @@ import "./member-card-authoritative.css";
 import "./brand-regional.css";
 import "./regional-shell.css";
 import "./regional-shell.js";
+import "./profile-overhaul.css";
+import "./profile-overhaul.js";
 
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
