@@ -49,6 +49,10 @@ import "./global-role-identity-polish.js";
 /* Final profile/footer authority: compact QR sharing and integrated legal navigation. */
 import "./profile-footer-polish.css";
 
+/* Stable personal dashboard: fixed icon layout, restored admin tools, one scroll context. */
+import "./sidebar-layout-stabilizer.css";
+import "./sidebar-layout-stabilizer.js";
+
 /* Last runtime pin: keeps the sidebar role star stable even when other DOM enhancers refresh. */
 import "./sidebar-role-pin.js";
 
