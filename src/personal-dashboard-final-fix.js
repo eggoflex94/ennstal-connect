@@ -17,6 +17,14 @@ function go(page){
   window.dispatchEvent(new CustomEvent('ec:navigate',{detail:{page}}));
 }
 
+function placeDockInPageFlow(){
+  const dock=document.querySelector('.ec-right-dock');
+  const main=document.querySelector('.modern-main');
+  if(!dock||!main)return;
+  dock.classList.add('ec-document-flow-dock');
+  if(dock.parentElement!==main)main.appendChild(dock);
+}
+
 function openPopupManager(){
   closeOverlay();
   go('admin');
@@ -66,7 +74,6 @@ function ensureUtilityButtons(){
   const dock=document.querySelector('.ec-right-dock');
   const grid=dock?.querySelector('.ec-compact-menu-grid');
   if(!dock||!grid)return;
-  dock.classList.add('ec-document-flow-dock');
   if(!grid.querySelector('.ec-dashboard-info-button'))grid.appendChild(makeUtilityButton('info'));
   const existing=grid.querySelector('.ec-dashboard-popups-button');
   if(canManagePopups&&!existing)grid.appendChild(makeUtilityButton('popups'));
@@ -103,6 +110,7 @@ function normalizeActivityStars(){
 }
 
 function apply(){
+  placeDockInPageFlow();
   ensureUtilityButtons();
   normalizeProfileVisits();
   normalizeActivityStars();
