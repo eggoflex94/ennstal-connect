@@ -27,12 +27,10 @@ async function load(force=false){
 
 function roleInfo(p){
   const base=String(p?.role||'MEMBER').toUpperCase(),here=activeRegion(),assigned=assignmentsFor(p),regionalHere=Boolean(here&&assigned.some(a=>a.region_id===here.id));
-  if(base==='HEAD_ADMIN')return{label:'Hauptadmin',theme:'admin',star:'/role-star-red.svg'};
-  if(base==='ADMIN')return{label:'Community Admin',theme:'admin',star:'/role-star-red.svg'};
-  if(regionalHere)return{label:`Regional Admin · ${here.name}`,theme:'admin',star:'/role-star-red.svg'};
-  if(base==='SUPPORTER')return{label:'Supporter',theme:'supporter',star:'/supporter-star.svg'};
-  if(p?.account_badge==='BUSINESS')return{label:'Unternehmenskonto',theme:'business',star:'/role-star-blue.svg'};
-  return{label:'Mitglied',theme:'member',star:''};
+  if(base==='HEAD_ADMIN'||base==='ADMIN'||regionalHere)return{theme:'admin',star:'/role-star-red.svg'};
+  if(base==='SUPPORTER')return{theme:'supporter',star:'/supporter-star.svg'};
+  if(p?.account_badge==='BUSINESS')return{theme:'business',star:'/role-star-blue.svg'};
+  return{theme:'member',star:''};
 }
 
 function visible(p,field){if(!p)return false;if(cache.viewer?.id===p.id||isHead())return true;const setting=String(p?.privacy_settings?.[field]||'PUBLIC').toUpperCase();return setting==='PUBLIC'||(setting==='FRIENDS'&&cache.friends.has(p.id))}
@@ -52,7 +50,7 @@ async function saveAdmin(member,action,slug,status){
 }
 function openMemberAdmin(member){
   if(!isHead()||!member||member.id===cache.viewer?.id)return;closeAdmin();const assigned=assignmentsFor(member),role=String(member.role||'MEMBER').toUpperCase(),modal=document.createElement('div');modal.className='ec-clean-admin-modal';
-  modal.innerHTML=`<div class="ec-clean-admin-box"><header><div><span>HEAD ADMIN</span><h2>${esc(member.nickname||'Mitglied')} verwalten</h2><p>${esc(roleInfo(member).label)}</p></div><button type="button" class="close" aria-label="Schließen">×</button></header><div class="ec-clean-admin-summary"><div><small>Heimatregion</small><strong>${esc(regionName(member.home_region_id))}</strong></div><div><small>Regional Admin</small><strong>${assigned.length?assigned.map(a=>esc(regionName(a.region_id))).join(', '):'Keine Zuweisung'}</strong></div></div><label>Heimatregion<select class="home">${cache.regions.map(r=>`<option value="${r.slug}" ${r.id===member.home_region_id?'selected':''}>${esc(r.name)}</option>`).join('')}</select></label><button data-action="home">Heimatregion speichern</button><label>Regionale Adminrechte<select class="region"><option value="">Region wählen</option>${cache.regions.map(r=>`<option value="${r.slug}">${esc(r.name)}</option>`).join('')}</select></label><div class="ec-clean-admin-actions"><button data-action="regional-on">Regional Admin vergeben</button><button data-action="regional-off">Regional Admin entfernen</button></div>${role==='ADMIN'?'<button data-action="demote">Global Admin → Regional Admin</button><button data-action="global-off">Global Admin entfernen</button>':'<button data-action="global-on">Global Admin vergeben</button>'}<p class="ec-clean-admin-status"></p></div>`;
+  modal.innerHTML=`<div class="ec-clean-admin-box"><header><div><span>HEAD ADMIN</span><h2>${esc(member.nickname||'Mitglied')} verwalten</h2></div><button type="button" class="close" aria-label="Schließen">×</button></header><div class="ec-clean-admin-summary"><div><small>Heimatregion</small><strong>${esc(regionName(member.home_region_id))}</strong></div><div><small>Regionale Rechte</small><strong>${assigned.length?assigned.map(a=>esc(regionName(a.region_id))).join(', '):'Keine Zuweisung'}</strong></div></div><label>Heimatregion<select class="home">${cache.regions.map(r=>`<option value="${r.slug}" ${r.id===member.home_region_id?'selected':''}>${esc(r.name)}</option>`).join('')}</select></label><button data-action="home">Heimatregion speichern</button><label>Regionale Adminrechte<select class="region"><option value="">Region wählen</option>${cache.regions.map(r=>`<option value="${r.slug}">${esc(r.name)}</option>`).join('')}</select></label><div class="ec-clean-admin-actions"><button data-action="regional-on">Regionalrecht vergeben</button><button data-action="regional-off">Regionalrecht entfernen</button></div>${role==='ADMIN'?'<button data-action="demote">Globalrecht → Regionalrecht</button><button data-action="global-off">Globalrecht entfernen</button>':'<button data-action="global-on">Globalrecht vergeben</button>'}<p class="ec-clean-admin-status"></p></div>`;
   document.body.appendChild(modal);modal.querySelector('.close').onclick=closeAdmin;modal.onclick=e=>{if(e.target===modal)closeAdmin()};const status=modal.querySelector('.ec-clean-admin-status');
   modal.querySelectorAll('[data-action]').forEach(button=>button.onclick=async()=>{const action=button.dataset.action,slug=(action==='home'?modal.querySelector('.home'):modal.querySelector('.region')).value;if(!['global-on','global-off'].includes(action)&&!slug){status.textContent='Bitte Region auswählen.';return}button.disabled=true;status.textContent='Wird gespeichert …';try{await saveAdmin(member,action,slug,status);setTimeout(()=>openMemberAdmin(cache.profiles.find(p=>p.id===member.id)||member),250)}catch(error){status.textContent=error.message||'Speichern fehlgeschlagen';status.className='ec-clean-admin-status error'}finally{button.disabled=false}})
 }
@@ -69,8 +67,9 @@ function buildProfile(root,member){
   if(canSee('name'))rows.push(row('Vorname',member.first_name),row('Nachname',member.last_name));
   if(canSee('birth_date'))rows.push(row('Geburtsdatum',fmtDate(member.birth_date)),row('Alter',fmtAge(member.birth_date)));
   rows.push(row('Heimatregion',regionName(member.home_region_id)));
-  const starMarkup=role.star?`<img src="${role.star}" alt="">`:'';
-  shell.innerHTML='<div class="ec-clean-profile-left"><div class="ec-clean-profile-photo"></div><div class="ec-clean-profile-role role-'+role.theme+'"><span>FUNKTION</span><strong>'+starMarkup+esc(role.label)+'</strong><small>Heimatregion: '+esc(regionName(member.home_region_id))+'</small></div></div><div class="ec-clean-profile-main"><header><span>'+ (preview?'PROFILVORSCHAU':'MITGLIEDSPROFIL')+'</span><h1>'+esc(member.nickname||'Mitglied')+'</h1></header><div class="ec-clean-profile-data">'+rows.join('')+'</div>'+'</div><div class="ec-clean-profile-actions" aria-label="Profilaktionen"></div>';
+  const starMarkup=role.star?`<img src="${role.star}" alt="" aria-hidden="true">`:'';
+  const identityMarkup=`${starMarkup}<span>${esc(member.nickname||'Mitglied')}</span>`;
+  shell.innerHTML='<div class="ec-clean-profile-left"><div class="ec-clean-profile-photo"></div><div class="ec-clean-profile-role role-'+role.theme+'"><span>FUNKTION</span><strong>'+identityMarkup+'</strong><small>Heimatregion: '+esc(regionName(member.home_region_id))+'</small></div></div><div class="ec-clean-profile-main"><header><span>'+ (preview?'PROFILVORSCHAU':'MITGLIEDSPROFIL')+'</span><h1>'+esc(member.nickname||'Mitglied')+'</h1></header><div class="ec-clean-profile-data">'+rows.join('')+'</div>'+'</div><div class="ec-clean-profile-actions" aria-label="Profilaktionen"></div>';
   if(avatar)shell.querySelector('.ec-clean-profile-photo').appendChild(avatar.cloneNode(true));
   if(member.is_verified){const badge=document.createElement('span');badge.className='ec-profile-verified';badge.textContent='✓ Verifiziert';shell.querySelector('.ec-clean-profile-main header').appendChild(badge)}
   const actions=shell.querySelector('.ec-clean-profile-actions');
