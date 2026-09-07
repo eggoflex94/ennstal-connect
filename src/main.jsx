@@ -94,6 +94,9 @@ import "./profile-role-action-fix.js";
 import "./sidebar-interaction-fix.css";
 import "./sidebar-interaction-fix.js";
 
+/* Remove duplicate administration/moderation people once the regional responsibility panel is present. */
+import "./community-contact-cleanup.js";
+
 /* Login description plus final onboarding/mobile stability authority. */
 import "./auth-community-intro.js";
 import "./community-stability-final.css";
