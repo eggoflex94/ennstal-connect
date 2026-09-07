@@ -29,15 +29,17 @@
 
 .member-card>.ec-role-surface{position:absolute!important;inset:0!important;pointer-events:none!important}
 
+/* Role/friend badges stay together in the upper-left corner. */
 .member-card>.ec-card-badge-rail{
   position:absolute!important;
   top:12px!important;
   left:12px!important;
-  z-index:3!important;
+  z-index:4!important;
   display:flex!important;
   gap:5px!important;
   align-items:center!important;
-  max-width:60px!important;
+  max-width:62px!important;
+  min-height:24px!important;
 }
 .member-card .ec-card-badge-icon,.member-card .ec-card-badge-img{
   width:22px!important;
@@ -49,21 +51,33 @@
   object-fit:contain!important;
 }
 
+/* Admin star: same artwork, only a restrained red glow for stronger visibility. */
+.member-card.role-theme-admin .ec-card-badge-role,
+.member-card[data-role-theme="admin"] .ec-card-badge-role{
+  border-radius:7px!important;
+  filter:drop-shadow(0 0 4px rgba(255,68,92,.68)) drop-shadow(0 0 9px rgba(255,40,70,.28))!important;
+}
+.member-card.role-theme-admin .ec-card-badge-role-img,
+.member-card[data-role-theme="admin"] .ec-card-badge-role-img{
+  filter:drop-shadow(0 0 3px rgba(255,90,105,.72))!important;
+}
+
+/* Nickname belongs to the same top-left identity zone and is never truncated. */
 .member-card>.member-nickname{
   position:relative!important;
-  z-index:2!important;
+  z-index:3!important;
   grid-row:1!important;
   width:100%!important;
-  max-width:calc(100% - 58px)!important;
-  margin:0 auto 2px!important;
-  padding:2px 0!important;
+  max-width:100%!important;
+  margin:0 0 4px!important;
+  padding:2px 2px 2px 58px!important;
   min-height:28px!important;
   display:block!important;
   color:inherit!important;
-  font-size:17px!important;
+  font-size:16.5px!important;
   font-weight:900!important;
   line-height:1.2!important;
-  text-align:center!important;
+  text-align:left!important;
   white-space:normal!important;
   overflow:visible!important;
   text-overflow:clip!important;
@@ -196,7 +210,7 @@
 @media(max-width:520px){
   .member-grid,.members-grid{grid-template-columns:1fr!important;gap:12px!important}
   .member-card{width:100%!important;max-width:100%!important;padding:13px 14px 15px!important}
-  .member-card>.member-nickname{font-size:16px!important;max-width:calc(100% - 54px)!important}
+  .member-card>.member-nickname{font-size:15.5px!important;padding-left:56px!important}
   .member-card>.member-avatar{width:78px!important;height:78px!important;min-width:78px!important;min-height:78px!important;max-width:78px!important;max-height:78px!important}
   .member-card .member-name{font-size:12.5px!important}
 }
