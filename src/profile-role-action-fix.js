@@ -13,8 +13,7 @@ const assignmentsFor=id=>cache.assignments.filter(a=>a.user_id===id&&a.active);
 
 function effectiveRole(member){
   const base=role(member);
-  if(base==='HEAD_ADMIN')return{theme:'admin',star:ADMIN_STAR,label:'Global Admin'};
-  if(base==='ADMIN')return{theme:'admin',star:ADMIN_STAR,label:'Global Admin'};
+  if(base==='HEAD_ADMIN'||base==='ADMIN')return{theme:'admin',star:ADMIN_STAR,label:'Global Admin'};
   const regional=assignmentsFor(member?.id);
   if(regional.length){
     const names=[...new Set(regional.map(a=>regionName(a.region_id)).filter(Boolean))];
@@ -39,52 +38,25 @@ function fixRoleBox(page,member){
   box.classList.remove('role-admin','role-supporter','role-business','role-member');
   box.classList.add(`role-${info.theme}`);
   box.dataset.ecEffectiveRole=info.label;
-
   let strong=box.querySelector('strong');
   if(!strong){strong=document.createElement('strong');box.appendChild(strong)}
   strong.dataset.ecRoleLabel=info.label;
   strong.setAttribute('aria-label',info.label);
   strong.innerHTML=`${info.star?`<img class="ec-profile-function-star" src="${esc(info.star)}" alt="" aria-hidden="true">`:''}<span class="ec-profile-function-text">${esc(info.label)}</span>`;
-
   const small=box.querySelector('small');
   if(small)small.textContent=`Heimatregion: ${regionName(member.home_region_id)}`;
 }
 
-function isProfileActionButton(button){
-  const text=String(button.textContent||'').replace(/\s+/g,' ').trim();
-  return /^(💬\s*)?Nachricht$|Befreundet|Freundschaft|Blockieren|Nutzer melden/i.test(text);
-}
-
-function hideDuplicateActionBars(page){
-  const canonical=page.querySelector('.ec-clean-profile .ec-clean-profile-actions');
-  const duplicateButtons=[...page.querySelectorAll('button,a')].filter(el=>!canonical?.contains(el)&&isProfileActionButton(el));
-  duplicateButtons.forEach(button=>button.classList.add('ec-profile-duplicate-action-button'));
-
-  const parents=new Set();
-  for(const button of duplicateButtons){
-    const parent=button.parentElement;
-    if(!parent||parent===canonical)continue;
-    const directActions=[...parent.children].filter(el=>el.matches?.('button,a')&&isProfileActionButton(el));
-    const meaningfulNonActions=[...parent.children].filter(el=>{
-      if(el.matches?.('button,a')&&isProfileActionButton(el))return false;
-      return String(el.textContent||'').trim()!=='' || ['SECTION','ARTICLE','FORM'].includes(el.tagName);
-    });
-    if(directActions.length>=2&&meaningfulNonActions.length===0)parents.add(parent);
-  }
-  parents.forEach(node=>node.classList.add('ec-profile-duplicate-actions-hidden'));
-
-  if(canonical){
-    page.querySelectorAll('.member-profile-actions,.profile-actions,.member-action-bar,.profile-action-bar').forEach(node=>{
-      if(!canonical.contains(node)&&node!==canonical)node.classList.add('ec-profile-duplicate-actions-hidden');
-    });
-  }
+function clearLegacyActionFlags(page){
+  page.querySelectorAll('.ec-profile-duplicate-action-button').forEach(node=>node.classList.remove('ec-profile-duplicate-action-button'));
+  page.querySelectorAll('.ec-profile-duplicate-actions-hidden').forEach(node=>node.classList.remove('ec-profile-duplicate-actions-hidden'));
 }
 
 function apply(){
   document.querySelectorAll('.member-profile-page').forEach(page=>{
     const member=findMember(page);
     if(member)fixRoleBox(page,member);
-    hideDuplicateActionBars(page);
+    clearLegacyActionFlags(page);
   });
 }
 
@@ -104,10 +76,9 @@ async function load(force=false){
 
 function boot(){
   void load(true);
-  const observer=new MutationObserver(()=>{clearTimeout(window.__ecProfileRoleActionFix);window.__ecProfileRoleActionFix=setTimeout(apply,25)});
+  const observer=new MutationObserver(()=>{clearTimeout(window.__ecProfileRoleActionFix);window.__ecProfileRoleActionFix=setTimeout(apply,40)});
   observer.observe(document.documentElement,{childList:true,subtree:true,characterData:true});
   window.addEventListener('ec:region-change',()=>setTimeout(()=>{apply();void load(true)},50));
-  window.setInterval(apply,750);
 }
 
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
