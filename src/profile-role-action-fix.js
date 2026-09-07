@@ -13,7 +13,7 @@ const assignmentsFor=id=>cache.assignments.filter(a=>a.user_id===id&&a.active);
 
 function effectiveRole(member){
   const base=role(member);
-  if(base==='HEAD_ADMIN')return{theme:'admin',star:ADMIN_STAR,label:'Global Admin · Betreiber'};
+  if(base==='HEAD_ADMIN')return{theme:'admin',star:ADMIN_STAR,label:'Global Admin'};
   if(base==='ADMIN')return{theme:'admin',star:ADMIN_STAR,label:'Global Admin'};
   const regional=assignmentsFor(member?.id);
   if(regional.length){
@@ -57,9 +57,6 @@ function isProfileActionButton(button){
 
 function hideDuplicateActionBars(page){
   const canonical=page.querySelector('.ec-clean-profile .ec-clean-profile-actions');
-
-  // Any matching action outside the clean profile is legacy/duplicate. Hide the
-  // button itself first, then its wrapper when that wrapper is only an action bar.
   const duplicateButtons=[...page.querySelectorAll('button,a')].filter(el=>!canonical?.contains(el)&&isProfileActionButton(el));
   duplicateButtons.forEach(button=>button.classList.add('ec-profile-duplicate-action-button'));
 
@@ -76,9 +73,6 @@ function hideDuplicateActionBars(page){
   }
   parents.forEach(node=>node.classList.add('ec-profile-duplicate-actions-hidden'));
 
-  // Known legacy action containers are always duplicates once the clean action
-  // row exists. This also covers a page-level action row where the parent is the
-  // profile page itself.
   if(canonical){
     page.querySelectorAll('.member-profile-actions,.profile-actions,.member-action-bar,.profile-action-bar').forEach(node=>{
       if(!canonical.contains(node)&&node!==canonical)node.classList.add('ec-profile-duplicate-actions-hidden');
