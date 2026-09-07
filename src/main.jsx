@@ -76,6 +76,8 @@ import "./profile-overhaul.js";
 import "./layout-final-fix.css";
 import "./community-dock-details.css";
 import "./community-dock-details.js";
+import "./member-profile-final.js";
+import "./member-profile-final.css";
 
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
