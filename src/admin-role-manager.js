@@ -22,7 +22,7 @@ const assignedRegions=id=>assignments.filter(a=>a.user_id===id&&a.active).map(a=
 const moderationFor=id=>moderation.filter(a=>a.user_id===id&&a.active);
 const regionName=id=>regions.find(r=>r.id===id)?.name||'Region';
 const isRegionalAdmin=id=>assignedRegions(id).length>0;
-const permissionLabels={FORUM:'Forum',GROUPS:'Gruppen',EVENTS:'Veranstaltungen',NEWS:'Neuigkeiten',HOMEPAGE:'Startseite',MEMBERS:'Mitglieder',BUSINESSES:'Unternehmenskonten'};
+const permissionLabels={FORUM:'Forum',GROUPS:'Gruppen',EVENTS:'Veranstaltungen',NEWS:'Neuigkeiten',HOMEPAGE:'Startseite',MEMBERS:'Mitglieder',BUSINESSES:'Unternehmenskonten',ANNOUNCEMENTS:'Community-Popups'};
 const permissionLabel=p=>permissionLabels[String(p).toUpperCase()]||String(p);
 const roleStar=member=>{
   const base=String(member?.role||'MEMBER').toUpperCase();
@@ -75,7 +75,7 @@ async function setRegional(member,regionSlug,enabled,status){
   if(enabled)await ensureSupporter(member);
   const {error}=await supabase.rpc('ec_set_regional_admin',{p_target:member.id,p_region_slug:regionSlug,p_enabled:enabled});
   if(error)throw error;
-  status.textContent=enabled?'Regionaladmin vergeben – Startseite, Neuigkeiten und Veranstaltungen sind für diese Region freigegeben.':'Regionaladmin entfernt.';
+  status.textContent=enabled?'Regionaladmin vergeben – Startseite, Neuigkeiten und Veranstaltungen sind für diese Region freigegeben. Weitere Rechte wie Community-Popups kannst du darunter gezielt aktivieren.':'Regionaladmin entfernt.';
 }
 
 async function setRegionalRights(member,regionSlugs,permissions,enabled,status){
@@ -155,6 +155,7 @@ function buildManager(card,member,force=false){
         <label><input type="checkbox" value="HOMEPAGE"> Startseite</label>
         <label><input type="checkbox" value="NEWS"> Neuigkeiten</label>
         <label><input type="checkbox" value="EVENTS"> Veranstaltungen</label>
+        <label><input type="checkbox" value="ANNOUNCEMENTS"> Community-Popups</label>
         <label><input type="checkbox" value="FORUM"> Forum</label>
         <label><input type="checkbox" value="GROUPS"> Gruppen</label>
         <label><input type="checkbox" value="MEMBERS"> Mitglieder</label>
