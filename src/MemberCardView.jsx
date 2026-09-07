@@ -62,20 +62,21 @@ export default function MemberCardView({ member, profile, friendships, onOpen, o
     >
       <span className={`ec-role-surface ec-role-surface-${presentation.theme}`} aria-hidden="true" />
 
-      <div className="ec-card-badge-rail" aria-label="Profilkennzeichnungen">
-        {presentation.star && (
-          <span className={`ec-card-badge-icon ec-card-badge-role ec-card-badge-role-${presentation.theme}`} title={presentation.label} aria-label={presentation.label}>
-            <img className="ec-card-badge-img ec-card-badge-role-img" src={presentation.star} alt="" aria-hidden="true" />
-          </span>
-        )}
-        {friend && (
-          <span className="ec-card-badge-icon ec-card-badge-friend" title="Befreundet" aria-label="Befreundet">
-            <img className="ec-card-badge-img ec-card-badge-friend-img" src="/badge-friendship.svg" alt="" aria-hidden="true" />
-          </span>
-        )}
+      <div className="ec-member-card-topline">
+        <div className="ec-card-badge-rail" aria-label="Profilkennzeichnungen">
+          {presentation.star && (
+            <span className={`ec-card-badge-icon ec-card-badge-role ec-card-badge-role-${presentation.theme}`} title={presentation.label} aria-label={presentation.label}>
+              <img className="ec-card-badge-img ec-card-badge-role-img" src={presentation.star} alt="" aria-hidden="true" />
+            </span>
+          )}
+          {friend && (
+            <span className="ec-card-badge-icon ec-card-badge-friend" title="Befreundet" aria-label="Befreundet">
+              <img className="ec-card-badge-img ec-card-badge-friend-img" src="/badge-friendship.svg" alt="" aria-hidden="true" />
+            </span>
+          )}
+        </div>
+        <strong className={`member-nickname ec-native-nickname ${presentation.theme}`}>{getName(member)}</strong>
       </div>
-
-      <strong className={`member-nickname ec-native-nickname ${presentation.theme}`}>{getName(member)}</strong>
 
       <img
         className={`member-avatar ec-native-avatar ${presentation.theme}`}
