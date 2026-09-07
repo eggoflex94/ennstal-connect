@@ -1,0 +1,88 @@
+/* Final authority for role badges and regional responsibility rows. Matches member-card badge size everywhere. */
+:root{--ec-role-badge-size:22px;--ec-responsibility-avatar-size:38px}
+
+/* Same visual size as the role badge used in member cards. */
+.ec-region-responsibility-person .ec-responsibility-star,
+.ec-region-responsibility-person .ec-role-person-star,
+.ec-region-responsibility-person .ec-global-role-star,
+.ec-region-responsibility-person-head img[src*="role-star-red.svg"],
+.ec-region-responsibility-person-head img[src*="role-star-blue.svg"],
+.ec-region-responsibility-person-head img[src*="supporter-star.svg"],
+.ec-team-panel img.ec-responsibility-star,
+.ec-team-panel img.ec-role-person-star,
+.ec-team-panel img.ec-global-role-star{
+  width:var(--ec-role-badge-size)!important;
+  height:var(--ec-role-badge-size)!important;
+  min-width:var(--ec-role-badge-size)!important;
+  max-width:var(--ec-role-badge-size)!important;
+  min-height:var(--ec-role-badge-size)!important;
+  max-height:var(--ec-role-badge-size)!important;
+  flex:0 0 var(--ec-role-badge-size)!important;
+  object-fit:contain!important;
+  margin:0!important;
+}
+.ec-region-responsibility-person.ec-role-frame-admin .ec-responsibility-star,
+.ec-region-responsibility-person.ec-role-frame-admin .ec-role-person-star,
+.ec-region-responsibility-person.ec-role-frame-admin .ec-global-role-star,
+.ec-team-panel .ec-role-frame-admin img[src*="role-star-red.svg"]{
+  filter:drop-shadow(0 0 4px rgba(255,68,92,.76)) drop-shadow(0 0 9px rgba(255,40,70,.34))!important;
+}
+
+/* One predictable row in every region: star, avatar, identity/content. */
+.ec-region-responsibility-person{
+  width:100%!important;
+  min-width:0!important;
+  overflow:hidden!important;
+}
+.ec-region-responsibility-person-head{
+  display:grid!important;
+  grid-template-columns:var(--ec-role-badge-size) var(--ec-responsibility-avatar-size) minmax(0,1fr)!important;
+  align-items:center!important;
+  column-gap:8px!important;
+  width:100%!important;
+  min-width:0!important;
+  writing-mode:horizontal-tb!important;
+}
+.ec-region-responsibility-person-head .ec-responsibility-avatar{
+  display:block!important;
+  width:var(--ec-responsibility-avatar-size)!important;
+  height:var(--ec-responsibility-avatar-size)!important;
+  min-width:var(--ec-responsibility-avatar-size)!important;
+  max-width:var(--ec-responsibility-avatar-size)!important;
+  min-height:var(--ec-responsibility-avatar-size)!important;
+  max-height:var(--ec-responsibility-avatar-size)!important;
+  border-radius:50%!important;
+  object-fit:cover!important;
+  margin:0!important;
+}
+.ec-region-responsibility-person-head strong,
+.ec-region-responsibility-person-head .ec-profile-native-link,
+.ec-region-responsibility-person-head .ec-profile-link{
+  min-width:0!important;
+  max-width:100%!important;
+  white-space:normal!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  overflow-wrap:anywhere!important;
+  writing-mode:horizontal-tb!important;
+  line-height:1.2!important;
+}
+.ec-region-responsibility-person ul{
+  margin:7px 0 0 calc(var(--ec-role-badge-size) + var(--ec-responsibility-avatar-size) + 16px)!important;
+  padding-left:16px!important;
+  min-width:0!important;
+}
+.ec-region-responsibility-person li{overflow-wrap:anywhere!important;line-height:1.35!important}
+
+/* Old duplicated loose responsibility identities must never remain below the regional panel. */
+.ec-team-panel[data-ec-regional-responsibilities="true"] ~ .admin-responsibilities,
+.ec-team-panel[data-ec-regional-responsibilities="true"] ~ .head-admin-profile-badge,
+.ec-team-panel[data-ec-regional-responsibilities="true"] ~ .ec-role-person-row{
+  display:none!important;
+}
+
+@media(max-width:760px){
+  :root{--ec-responsibility-avatar-size:34px}
+  .ec-region-responsibility-person-head{column-gap:7px!important}
+  .ec-region-responsibility-person ul{margin-left:0!important;margin-top:8px!important}
+}
