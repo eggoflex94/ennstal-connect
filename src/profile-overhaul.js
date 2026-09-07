@@ -33,8 +33,7 @@ async function resolveTarget(root){
 
 function textValue(v,fallback='Nicht freigegeben'){return v==null||String(v).trim()===''?fallback:String(v)}
 function formatDate(v){if(!v)return'Nicht freigegeben';const d=new Date(v);return Number.isNaN(d.getTime())?'Nicht freigegeben':d.toLocaleDateString('de-AT')}
-
-function makeRow(label,value){const row=document.createElement('div');row.className='ec-profile-data-row';row.innerHTML=`<span>${label}</span><strong>${textValue(value)}</strong>`;return row}
+function makeRow(label,value){const row=document.createElement('div');row.className='ec-profile-data-row';const l=document.createElement('span');l.textContent=label;const v=document.createElement('strong');v.textContent=textValue(value);row.append(l,v);return row}
 
 async function createQuickActions(root,target,mine){
   let bar=root.querySelector('.ec-profile-actionbar');
@@ -42,13 +41,13 @@ async function createQuickActions(root,target,mine){
   bar=document.createElement('div');bar.className='ec-profile-actionbar';
   const functionBox=root.querySelector('.ec-profile-functionbox');
   if(functionBox)functionBox.after(bar);
-  if(mine){bar.innerHTML='<span class="ec-profile-own-note">Dein Profil</span>';return}
+  if(mine){bar.innerHTML='<span class="ec-profile-own-note">Eigenes Profil</span>';return}
 
   const findAction=(words)=>[...root.querySelectorAll('button')].find(b=>words.some(w=>(b.textContent||'').toLowerCase().includes(w))&&!b.closest('.ec-profile-actionbar'));
   const message=findAction(['nachricht']);
   const friend=findAction(['freundschaft','freund']);
-  if(message){message.classList.add('ec-profile-mini-action');bar.appendChild(message)}
-  if(friend){friend.classList.add('ec-profile-mini-action');bar.appendChild(friend)}
+  if(message){message.classList.add('ec-profile-mini-action');message.textContent='Nachricht';bar.appendChild(message)}
+  if(friend){friend.classList.add('ec-profile-mini-action');friend.textContent='Freundschaft';bar.appendChild(friend)}
 
   const block=document.createElement('button');block.type='button';block.className='ec-profile-mini-action';block.textContent='Blockieren';block.onclick=async()=>{
     if(!confirm(`${target.nickname||'Dieses Mitglied'} wirklich blockieren?`))return;
@@ -106,6 +105,28 @@ async function roleLabel(target){
   return'Mitglied';
 }
 
+async function buildContent(root,target){
+  if(root.querySelector('.ec-profile-content'))return;
+  const content=document.createElement('div');content.className='ec-profile-content';
+  const about=document.createElement('section');about.className='ec-profile-about';
+  about.innerHTML='<div class="ec-profile-section-head"><span>ÜBER MICH</span><h2>Persönliches Profil</h2></div>';
+  const aboutText=document.createElement('p');aboutText.textContent=textValue(target.bio,'Noch keine Beschreibung hinterlegt.');about.appendChild(aboutText);
+
+  const info=document.createElement('section');info.className='ec-profile-secondary-info';
+  info.innerHTML='<div class="ec-profile-section-head"><span>WEITERE ANGABEN</span><h2>Interessen & Kontakt</h2></div>';
+  const infoGrid=document.createElement('div');infoGrid.className='ec-profile-info-grid';
+  [['Interessen',Array.isArray(target.interests)?target.interests.join(', '):target.interests],['Website',target.website],['Wohnort',target.location]].forEach(([label,value])=>{const item=document.createElement('div');item.className='ec-profile-info-item';const s=document.createElement('span');s.textContent=label;const p=document.createElement('p');p.textContent=textValue(value,'Keine Angabe');item.append(s,p);infoGrid.appendChild(item)});info.appendChild(infoGrid);
+
+  const photos=document.createElement('section');photos.className='ec-profile-photos';photos.innerHTML='<div class="ec-profile-section-head"><span>FOTOS</span><h2>Profilfotos</h2></div>';
+  const {data:media}=await supabase.from('profile_media').select('id,media_url,caption,created_at').eq('user_id',target.id).eq('media_type','PHOTO').order('created_at',{ascending:false}).limit(12);
+  const gallery=document.createElement('div');gallery.className='ec-profile-photo-grid';
+  if(media?.length){media.forEach(item=>{const figure=document.createElement('figure');const img=document.createElement('img');img.src=item.media_url;img.alt=item.caption||`Foto von ${target.nickname||'Mitglied'}`;img.loading='lazy';figure.appendChild(img);if(item.caption){const cap=document.createElement('figcaption');cap.textContent=item.caption;figure.appendChild(cap)}gallery.appendChild(figure)})}else{const empty=document.createElement('p');empty.className='ec-profile-empty';empty.textContent='Noch keine Fotos freigegeben.';gallery.appendChild(empty)}photos.appendChild(gallery);
+
+  content.append(about,info,photos);
+  const legacyDetails=root.querySelector('.integrated-profile-details');if(legacyDetails)legacyDetails.hidden=true;
+  const adminPanel=root.querySelector('.ec-profile-admin-panel');if(adminPanel)root.insertBefore(content,adminPanel);else root.appendChild(content);
+}
+
 async function rebuild(root){
   if(root.dataset.ecProfileBuilt==='1')return;
   const target=await resolveTarget(root);if(!target)return;
@@ -120,7 +141,7 @@ async function rebuild(root){
 
   const left=document.createElement('div');left.className='ec-profile-left';avatar.before(left);left.appendChild(avatar);
   const role=await roleLabel(target);
-  const functionBox=document.createElement('div');functionBox.className='ec-profile-functionbox';functionBox.innerHTML=`<span>Funktion</span><strong>${role}</strong>`;left.appendChild(functionBox);
+  const functionBox=document.createElement('div');functionBox.className='ec-profile-functionbox';functionBox.innerHTML='<span>Funktion</span>';const functionStrong=document.createElement('strong');functionStrong.textContent=role;functionBox.appendChild(functionStrong);left.appendChild(functionBox);
 
   const data=document.createElement('div');data.className='ec-profile-data';data.innerHTML='<div class="ec-profile-data-head"><span>PROFIL</span><strong>Mitgliedsdaten</strong></div>';
   data.appendChild(makeRow('Nickname',target.nickname));
@@ -136,11 +157,7 @@ async function rebuild(root){
   if(actions)actions.classList.add('ec-profile-actions-source');
   await createQuickActions(root,target,mine);
   await createAdminTools(root,target,mine);
-
-  const details=root.querySelector('.integrated-profile-details');
-  if(details){
-    const about=document.createElement('section');about.className='ec-profile-about';about.innerHTML=`<div><span>ÜBER MICH</span><h2>Persönliches Profil</h2></div><p>${textValue(target.bio,'Noch keine Beschreibung hinterlegt.')}</p>`;details.before(about);
-  }
+  await buildContent(root,target);
 }
 
 let queued=false;
