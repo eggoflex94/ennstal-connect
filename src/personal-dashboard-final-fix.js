@@ -27,7 +27,7 @@ function openStatistics(){closeOverlay();document.body.classList.remove('ec-dock
 
 function openInfo(){
   closeOverlay();const overlay=document.createElement('div');overlay.className='ec-dashboard-info-overlay';
-  overlay.innerHTML=`<section class="ec-dashboard-info-card" role="dialog" aria-modal="true" aria-labelledby="ec-info-title"><header><div><span>ENNSTAL CONNECT</span><h2 id="ec-info-title">Info & Orientierung</h2></div><button type="button" class="ec-dashboard-info-close" aria-label="Schließen">×</button></header><div class="ec-dashboard-info-grid"><article><b>Region</b><p>Die gewählte Region steuert regionale Mitglieder, Neuigkeiten, Events und Zuständigkeiten.</p></article><article><b>Mein Bereich</b><p>Profil, Nachrichten, Freunde, Benachrichtigungen und Community-Aktivitäten bleiben direkt erreichbar.</p></article><article><b>Profilbesuche</b><p>Es werden die letzten unterschiedlichen Besucher angezeigt. Ein Klick öffnet direkt das jeweilige Profil.</p></article><article><b>Hilfe</b><p>Für Erklärungen und Support steht zusätzlich der Hilfe-Bereich zur Verfügung.</p></article></div><footer><button type="button" data-info-action="help">Hilfe öffnen</button>${canViewStatistics?'<button type="button" data-info-action="stats">Statistik</button>':''}${canManagePopups?'<button type="button" class="primary" data-info-action="popups">Popups verwalten</button>':''}</footer></section>`;
+  overlay.innerHTML=`<section class="ec-dashboard-info-card" role="dialog" aria-modal="true" aria-labelledby="ec-info-title"><header><div><span>ENNSTAL CONNECT</span><h2 id="ec-info-title">Info & Orientierung</h2></div><button type="button" class="ec-dashboard-info-close" aria-label="Schließen">×</button></header><div class="ec-dashboard-info-grid"><article><b>Region</b><p>Die gewählte Region steuert regionale Mitglieder, Neuigkeiten, Events und Zuständigkeiten.</p></article><article><b>Mein Bereich</b><p>Profil, Nachrichten, Freunde, Benachrichtigungen und Community-Aktivitäten bleiben direkt erreichbar.</p></article><article><b>Profilbesuche</b><p>Es werden die letzten unterschiedlichen Besucher angezeigt. Ein Klick öffnet direkt das jeweilige Profil.</p></article><article><b>Hilfe</b><p>Für Erklärungen und Support steht zusätzlich der Hilfe-Bereich zur Verfügung.</p></article></div><footer><button type="button" data-info-action="help">Hilfe öffnen</button>${canViewStatistics?'<button type="button" data-info-action="stats">Statistik</button>':''}${canManagePopups?'<button type="button" class="primary" data-info-action="popups">News-Popups</button>':''}</footer></section>`;
   document.body.appendChild(overlay);document.body.classList.add('ec-dashboard-info-open');overlay.querySelector('.ec-dashboard-info-close').onclick=closeOverlay;overlay.addEventListener('click',e=>{if(e.target===overlay)closeOverlay()});overlay.querySelector('[data-info-action="help"]').onclick=()=>{closeOverlay();go('help')};overlay.querySelector('[data-info-action="stats"]')?.addEventListener('click',openStatistics);overlay.querySelector('[data-info-action="popups"]')?.addEventListener('click',openPopupManager);overlay.querySelector('.ec-dashboard-info-close').focus()
 }
 
@@ -53,7 +53,7 @@ function apply(){placeDockInPageFlow();ensureUtilityButtons();normalizeProfileVi
 async function loadRights(){
   if(!supabase)return;
   try{
-    const {data:{user}}=await supabase.auth.getUser();if(!user)return;viewerId=user.id;
+    const {data:{user}}=await supabase.auth.getUser();if(!user)return;viewerId=user.id;canViewStatistics=true;
     const [{data:profile},{data:assignments},{data:moderation},{data:profiles}]=await Promise.all([
       supabase.from('profiles').select('role').eq('id',user.id).maybeSingle(),
       supabase.from('regional_admin_assignments').select('region_id,active').eq('user_id',user.id).eq('active',true),
@@ -62,10 +62,9 @@ async function loadRights(){
     ]);
     people=new Map((profiles||[]).map(p=>[p.id,p]));
     const role=String(profile?.role||'').toUpperCase(),globalAdmin=['HEAD_ADMIN','ADMIN'].includes(role),assigned=new Set((assignments||[]).filter(x=>x.active).map(x=>x.region_id));
-    canViewStatistics=globalAdmin||assigned.size>0;
     canManagePopups=globalAdmin||(moderation||[]).some(m=>m.active&&assigned.has(m.region_id)&&Array.isArray(m.permissions)&&m.permissions.includes('ANNOUNCEMENTS'));
     apply();
-  }catch(error){console.warn('Dashboard-Zusatzfunktionen konnten nicht vollständig geladen werden:',error)}
+  }catch(error){console.warn('Dashboard-Zusatzfunktionen konnten nicht vollständig geladen werden:',error);canViewStatistics=Boolean(viewerId);apply()}
 }
 function schedule(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;apply()})}
 function boot(){apply();void loadRights();const observer=new MutationObserver(schedule);observer.observe(document.documentElement,{childList:true,subtree:true});window.addEventListener('ec:region-change',()=>setTimeout(()=>{apply();void loadRights()},100));window.addEventListener('ec:community-announcements-refresh',()=>setTimeout(apply,80));window.addEventListener('keydown',e=>{if(e.key==='Escape')closeOverlay()})}
