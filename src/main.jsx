@@ -49,6 +49,9 @@ import "./global-role-identity-polish.js";
 /* Final profile/footer authority: compact QR sharing and integrated legal navigation. */
 import "./profile-footer-polish.css";
 
+/* Last runtime pin: keeps the sidebar role star stable even when other DOM enhancers refresh. */
+import "./sidebar-role-pin.js";
+
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
   static getDerivedStateFromError() { return { failed: true }; }
