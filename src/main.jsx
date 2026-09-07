@@ -49,9 +49,11 @@ import "./global-role-identity-polish.js";
 /* Final profile/footer authority: compact QR sharing and integrated legal navigation. */
 import "./profile-footer-polish.css";
 
-/* Stable personal dashboard: fixed icon layout, restored admin tools, one scroll context. */
+/* Stable personal dashboard: restored admin tools, no nested scroll. */
 import "./sidebar-layout-stabilizer.css";
 import "./sidebar-layout-stabilizer.js";
+import "./sidebar-final-stability.css";
+import "./sidebar-final-stability.js";
 
 /* Region-aware admin rights cards: compact images and effective regional roles. */
 import "./admin-rights-region-polish.css";
