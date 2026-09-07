@@ -84,6 +84,8 @@ import "./site-final-authority.css";
 import "./desktop-recovery.css";
 import "./stable-app.js";
 import "./stable-app.css";
+import "./final-ui-lock.js";
+import "./final-ui-lock.css";
 
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
