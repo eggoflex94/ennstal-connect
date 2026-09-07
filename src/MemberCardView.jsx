@@ -28,7 +28,7 @@ function isVerified(member) {
 function rolePresentation(member) {
   const role = String(member?.role || "MEMBER").toUpperCase();
   if (role === "HEAD_ADMIN" || role === "ADMIN") {
-    return { key: role === "HEAD_ADMIN" ? "head-admin" : "admin", theme: "admin", label: role === "HEAD_ADMIN" ? "Global Admin" : "Community Admin", star: "/role-star-red.svg" };
+    return { key: role === "HEAD_ADMIN" ? "head-admin" : "admin", theme: "admin", label: role === "HEAD_ADMIN" ? "Hauptadmin" : "Global Admin", star: "/role-star-red.svg" };
   }
   if (role === "SUPPORTER") return { key: "supporter", theme: "supporter", label: "Supporter", star: "/supporter-star.svg" };
   if (member?.account_badge === "BUSINESS") return { key: "business", theme: "business", label: "Unternehmenskonto", star: "/role-star-blue.svg" };
@@ -48,6 +48,9 @@ export default function MemberCardView({ member, profile, friendships, onOpen, o
   return (
     <article
       className={`member-card ${presentation.key} role-theme-${presentation.theme}`}
+      data-member-id={member.id}
+      data-base-role={String(member.role || "MEMBER").toUpperCase()}
+      data-home-region-id={member.home_region_id || ""}
       data-role-theme={presentation.theme}
       onClick={() => onOpen(member)}
       onKeyDown={(event) => {
