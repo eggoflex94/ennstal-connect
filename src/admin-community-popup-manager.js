@@ -35,7 +35,7 @@ async function loadItems(){
 
 function panelMarkup(){
   const items=state.items.map(item=>`<article class="ec-popup-admin-item" data-id="${esc(item.id)}"><div><span class="ec-popup-scope ${item.region_id?'regional':'global'}">${item.region_id?`REGION · ${esc(item.region_name||'Region')}`:'GLOBAL'}</span><strong>${esc(item.title)}</strong><small>${item.active?'Aktiv':'Inaktiv'} · Version ${Number(item.version||1)}</small></div><div><button type="button" data-action="preview">Ansehen</button><button type="button" data-action="edit">Bearbeiten</button><button type="button" data-action="delete" class="danger">Löschen</button></div></article>`).join('');
-  return `<header class="ec-popup-admin-head"><div><span class="eyebrow">COMMUNITY-POPUPS</span><h2>Ankündigungen verwalten</h2><p>${isGlobalAdmin()?'Globale oder regionale Popups erstellen und freigeben.':'Du kannst Popups nur für deine freigegebene Region verwalten.'}</p></div><button type="button" class="ec-popup-new">+ Neues Popup</button></header><div class="ec-popup-admin-list">${items||'<p class="ec-popup-admin-empty">Noch keine verwaltbaren Popups vorhanden.</p>'}</div>`;
+  return `<header class="ec-popup-admin-head"><div><span class="eyebrow">COMMUNITY-POPUPS</span><h2>Ankündigungen verwalten</h2><p>${isGlobalAdmin()?'Globale oder regionale News-Popups erstellen, prüfen und freigeben.':'Du verwaltest nur die Popups deiner freigegebenen Region.'}</p></div><button type="button" class="ec-popup-new">+ Neues Popup</button></header><div class="ec-popup-admin-list">${items||'<p class="ec-popup-admin-empty">Noch keine verwaltbaren Popups vorhanden.</p>'}</div>`;
 }
 
 function wirePanel(panel){
@@ -48,17 +48,30 @@ function wirePanel(panel){
   });
 }
 
-async function load(){
-  if(loading||!supabase)return;
-  loading=true;
+function closePage(){
+  document.querySelector('.ec-popup-manager-page')?.remove();
+  document.body.classList.remove('ec-popup-manager-page-open');
+  window.dispatchEvent(new CustomEvent('ec:layout-refresh-requested'));
+}
+
+async function renderPage(){
+  const root=document.querySelector('.content-root');if(!root)return;
+  let page=root.querySelector('.ec-popup-manager-page');
+  if(!page){
+    page=document.createElement('section');
+    page.className='ec-popup-manager-page';
+    root.appendChild(page);
+  }
+  document.body.classList.add('ec-popup-manager-page-open');
+  page.innerHTML='<div class="ec-tool-page-head"><button type="button" class="ec-tool-page-back">← Zurück</button><div><span class="eyebrow">ADMIN TOOLS</span><h1>News-Popups</h1><p>Erstelle und verwalte Community-Ankündigungen direkt auf einer eigenen Seite.</p></div></div><section class="ec-popup-admin-manager panel"><p class="ec-admin-tool-loading">Popup-Verwaltung wird geladen …</p></section>';
+  page.querySelector('.ec-tool-page-back').onclick=()=>{closePage();window.dispatchEvent(new CustomEvent('ec:navigate',{detail:{page:'admin'}}))};
   try{
     const allowed=await loadItems();
-    const root=document.querySelector('.admin-page');
-    if(!root||!allowed){root?.querySelector('.ec-popup-admin-manager')?.remove();return}
-    let panel=root.querySelector('.ec-popup-admin-manager');
-    if(!panel){panel=document.createElement('section');panel.className='ec-popup-admin-manager panel';const anchor=root.querySelector('.ec-hours-statistics,.ec-admin-role-overview,.admin-member-cards');if(anchor)anchor.before(panel);else root.appendChild(panel)}
+    const panel=page.querySelector('.ec-popup-admin-manager');
+    if(!allowed){panel.innerHTML='<p class="ec-admin-tool-error">Keine Berechtigung für Community-Popups.</p>';return}
     panel.innerHTML=panelMarkup();wirePanel(panel);
-  }catch(error){console.warn('Community-Popup-Verwaltung konnte nicht geladen werden:',error)}finally{loading=false}
+  }catch(error){page.querySelector('.ec-popup-admin-manager').innerHTML=`<p class="ec-admin-tool-error">Popup-Verwaltung konnte nicht geladen werden: ${esc(error.message||error)}</p>`}
+  window.dispatchEvent(new CustomEvent('ec:layout-refresh-requested'));
 }
 
 function scopeOptions(item){
@@ -76,23 +89,19 @@ function openEditor(item){
   const form=overlay.querySelector('form');if(defaultRegion&&!form.scope.value)form.scope.value=defaultRegion;
   const close=()=>{overlay.remove();document.body.classList.remove('ec-popup-admin-editing')};overlay.querySelectorAll('[data-close]').forEach(b=>b.onclick=close);overlay.onclick=e=>{if(e.target===overlay)close()};
   form.onsubmit=async e=>{e.preventDefault();const status=form.querySelector('.ec-popup-admin-status');const submit=form.querySelector('[type="submit"]');submit.disabled=true;status.textContent='Wird gespeichert …';
-    try{const {error}=await supabase.rpc('ec_save_community_announcement',{p_id:item?.id||null,p_title:form.title.value,p_subtitle:form.subtitle.value,p_sections:parseSections(form.sections.value),p_image_url:form.image.value,p_region_slug:form.scope.value||null,p_active:form.active.checked});if(error)throw error;status.textContent='Gespeichert.';window.dispatchEvent(new CustomEvent('ec:community-announcements-refresh'));close();await load();document.querySelector('.ec-admin-direct-overlay[data-tool="popups"]')?.remove();window.dispatchEvent(new CustomEvent('ec:open-community-popup-manager'))}catch(error){status.textContent=error.message||'Speichern fehlgeschlagen.'}finally{submit.disabled=false}};
+    try{const {error}=await supabase.rpc('ec_save_community_announcement',{p_id:item?.id||null,p_title:form.title.value,p_subtitle:form.subtitle.value,p_sections:parseSections(form.sections.value),p_image_url:form.image.value,p_region_slug:form.scope.value||null,p_active:form.active.checked});if(error)throw error;status.textContent='Gespeichert.';window.dispatchEvent(new CustomEvent('ec:community-announcements-refresh'));close();await renderPage()}catch(error){status.textContent=error.message||'Speichern fehlgeschlagen.'}finally{submit.disabled=false}};
 }
 
 async function removeItem(item){
   if(!confirm(`Popup „${item.title}“ wirklich löschen?`))return;
-  const {error}=await supabase.rpc('ec_delete_community_announcement',{p_id:item.id});if(error){alert(error.message);return}window.dispatchEvent(new CustomEvent('ec:community-announcements-refresh'));await load();document.querySelector('.ec-admin-direct-overlay[data-tool="popups"]')?.remove();window.dispatchEvent(new CustomEvent('ec:open-community-popup-manager'));
+  const {error}=await supabase.rpc('ec_delete_community_announcement',{p_id:item.id});if(error){alert(error.message);return}window.dispatchEvent(new CustomEvent('ec:community-announcements-refresh'));await renderPage();
 }
 
-async function openManagerOverlay(){
-  document.querySelector('.ec-admin-direct-overlay[data-tool="popups"]')?.remove();
-  const overlay=document.createElement('div');overlay.className='ec-admin-direct-overlay';overlay.dataset.tool='popups';
-  overlay.innerHTML='<section class="ec-admin-direct-modal" role="dialog" aria-modal="true"><header class="ec-admin-direct-head"><div><span>ADMIN TOOLS</span><h2>News-Popups</h2></div><button type="button" class="ec-admin-direct-close" aria-label="Schließen">×</button></header><div class="ec-admin-direct-content"><p class="ec-admin-tool-loading">Popup-Verwaltung wird geladen …</p></div></section>';
-  document.body.appendChild(overlay);document.body.classList.add('ec-admin-direct-open');
-  const close=()=>{overlay.remove();document.body.classList.remove('ec-admin-direct-open')};overlay.querySelector('.ec-admin-direct-close').onclick=close;overlay.onclick=e=>{if(e.target===overlay)close()};
-  const content=overlay.querySelector('.ec-admin-direct-content');
-  try{const allowed=await loadItems();if(!allowed){content.innerHTML='<p class="ec-admin-tool-error">Keine Berechtigung für Community-Popups.</p>';return}const panel=document.createElement('section');panel.className='ec-popup-admin-manager panel';panel.innerHTML=panelMarkup();content.innerHTML='';content.appendChild(panel);wirePanel(panel)}catch(error){content.innerHTML=`<p class="ec-admin-tool-error">Popup-Verwaltung konnte nicht geladen werden: ${esc(error.message||error)}</p>`}
+function boot(){
+  window.addEventListener('ec:open-community-popup-manager',()=>void renderPage());
+  window.addEventListener('ec:region-change',()=>{if(document.body.classList.contains('ec-popup-manager-page-open'))setTimeout(()=>void renderPage(),120)});
+  window.addEventListener('ec:community-announcements-refresh',()=>{if(document.body.classList.contains('ec-popup-manager-page-open'))setTimeout(()=>void renderPage(),80)});
+  window.addEventListener('ec:navigate',()=>{if(document.body.classList.contains('ec-popup-manager-page-open'))closePage()});
+  window.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.querySelector('.ec-popup-admin-editor'))document.querySelector('.ec-popup-admin-editor [data-close]')?.click()});
 }
-
-function boot(){void load();const observer=new MutationObserver(()=>{if(document.querySelector('.admin-page')&&!document.querySelector('.ec-popup-admin-manager')){clearTimeout(window.__ecPopupAdmin);window.__ecPopupAdmin=setTimeout(()=>void load(),140)}});observer.observe(document.documentElement,{childList:true,subtree:true});window.addEventListener('ec:region-change',()=>setTimeout(()=>void load(),120));window.addEventListener('ec:community-announcements-refresh',()=>setTimeout(()=>void load(),80));window.addEventListener('ec:open-community-popup-manager',()=>void openManagerOverlay());window.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelector('.ec-admin-direct-overlay[data-tool="popups"] .ec-admin-direct-close')?.click()})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
