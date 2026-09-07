@@ -1,0 +1,43 @@
+/* Final responsive geometry authority. Prevents stale legacy snippets from forcing overlaps. */
+:root{--ec-shell-bottom:130px;--ec-page-top:154px;--ec-dock-top:148px}
+*,*::before,*::after{box-sizing:border-box}
+html,body,#root{width:100%;max-width:100%;overflow-x:hidden}
+img,video,canvas,svg{max-width:100%;height:auto}
+.modern-main,.content-root,.admin-page,.member-profile-page,.my-area-layout,.profile-page-layout,.panel,.member-grid,.member-card,.ec-right-dock,.admin-central-modern,.ec-admin-central-modern{min-width:0!important;max-width:100%}
+
+@media(min-width:1181px){
+  .ec-regional-ui .modern-main{display:grid!important;grid-template-columns:minmax(0,1fr) 300px!important;column-gap:24px!important;align-items:start!important;width:100%!important;max-width:100%!important;padding:var(--ec-page-top) 18px 46px 28px!important}
+  .ec-regional-ui .modern-main>.content-root{grid-column:1!important;width:100%!important;max-width:1360px!important;margin:0 auto!important}
+  .ec-right-dock.ec-stable-personal-dock.ec-document-flow-dock{grid-column:2!important;position:sticky!important;top:var(--ec-dock-top)!important;right:auto!important;bottom:auto!important;width:300px!important;max-width:300px!important;height:auto!important;max-height:none!important;overflow:visible!important;align-self:start!important}
+}
+@media(min-width:901px) and (max-width:1180px){
+  .ec-regional-ui .modern-main{display:grid!important;grid-template-columns:minmax(0,1fr) 270px!important;column-gap:16px!important;align-items:start!important;width:100%!important;max-width:100%!important;padding:var(--ec-page-top) 14px 40px 18px!important}
+  .ec-regional-ui .modern-main>.content-root{grid-column:1!important;width:100%!important;margin:0!important}
+  .ec-right-dock.ec-stable-personal-dock.ec-document-flow-dock{grid-column:2!important;position:sticky!important;top:var(--ec-dock-top)!important;right:auto!important;bottom:auto!important;width:270px!important;max-width:270px!important;height:auto!important;max-height:none!important;overflow:visible!important;align-self:start!important}
+}
+.member-grid{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(min(286px,100%),320px))!important;justify-content:center!important;align-items:stretch!important;gap:16px!important;width:100%!important}
+.member-card{width:100%!important;max-width:320px!important;min-width:0!important;overflow:hidden!important}
+.member-card .member-nickname,.member-card .ec-native-nickname{min-width:0!important;max-width:100%!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;overflow-wrap:anywhere!important;line-height:1.12!important}
+.member-card .member-meta,.member-card .ec-member-meta,.member-card .member-message{width:100%!important;min-width:0!important;max-width:100%!important}
+.my-area-layout,.ec-clean-editor.my-area-layout{display:grid!important;grid-template-columns:minmax(260px,320px) minmax(0,1fr)!important;gap:18px!important;align-items:start!important;width:100%!important}
+.my-area-layout .my-profile-card{width:100%!important;max-width:320px!important;margin:0!important}
+.profile-editor-grid,.profile-typography-grid,.ec-clean-profile-data,.form-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+.profile-form input,.profile-form select,.profile-form textarea,.profile-editor input,.profile-editor select,.profile-editor textarea{width:100%!important;min-width:0!important;max-width:100%!important}
+.member-profile-actions,.ec-clean-profile-actions,.profile-actions,.integrated-profile-actions,.content-card-actions,.group-details-actions,.suspend-actions,.admin-member-card-actions,.role-card-actions,.permission-card-actions{flex-wrap:wrap!important;max-width:100%!important}
+.ec-dashboard-info-card,.ec-notification-panel,.ec-popup-admin-editor-card,.ec-popup-manager-card,.ec-admin-hours-card,.ec-admin-workspace-box,.ec-clean-admin-box,.group-details,.profile-modal,.content-editor-modal,.modal-card{width:min(760px,calc(100vw - 24px))!important;max-width:calc(100vw - 24px)!important;max-height:calc(100dvh - 24px)!important;overflow:auto!important}
+@media(max-width:900px){
+  .ec-regional-ui .modern-main{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:16px!important;width:100%!important;max-width:100%!important;padding-left:14px!important;padding-right:14px!important}
+  .ec-regional-ui .modern-main>.content-root{grid-column:1!important;width:100%!important;max-width:100%!important;margin:0!important}
+  .ec-right-dock.ec-stable-personal-dock.ec-document-flow-dock{grid-column:1!important;position:static!important;inset:auto!important;width:100%!important;max-width:100%!important;height:auto!important;max-height:none!important;overflow:visible!important}
+  .my-area-layout,.ec-clean-editor.my-area-layout{grid-template-columns:minmax(0,1fr)!important}
+  .my-area-layout .my-profile-card{max-width:min(360px,100%)!important;margin:0 auto!important}
+  .profile-editor-grid,.profile-typography-grid,.ec-clean-profile-data,.form-grid{grid-template-columns:minmax(0,1fr)!important}
+}
+@media(max-width:700px){
+  .ec-regional-ui .modern-main{padding-left:10px!important;padding-right:10px!important}
+  .member-grid{grid-template-columns:minmax(0,1fr)!important;justify-items:center!important}
+  .member-card{max-width:min(320px,100%)!important}
+  .ec-top-nav{display:flex!important;align-items:center!important;gap:6px!important;overflow-x:auto!important;overflow-y:hidden!important;padding-left:8px!important;padding-right:96px!important;scrollbar-width:none!important;-webkit-overflow-scrolling:touch!important}
+  .ec-top-nav::-webkit-scrollbar{display:none!important}
+  .ec-top-nav>button,.ec-top-nav>a{flex:0 0 auto!important;min-width:max-content!important;max-width:none!important}
+}
