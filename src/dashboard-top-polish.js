@@ -3,7 +3,6 @@ import { supabase } from './supabaseClient';
 const ADMIN_STAR='/role-star-red.svg';
 const SUPPORTER_STAR='/supporter-star.svg';
 const BUSINESS_STAR='/role-star-blue.svg';
-const DEFAULT_AVATAR='/community-default-avatar.png';
 const ONLINE_WINDOW_MS=5*60*1000;
 let state={profile:null,regions:[],regionalAdmins:[],friends:[],adminAlerts:0};
 let loading=false;
@@ -31,7 +30,7 @@ async function load(){
     state.profile=profile||null;state.regions=regions||[];state.regionalAdmins=assignments||[];
     const friendIds=(friendships||[]).map(f=>f.requester_id===user.id?f.receiver_id:f.requester_id).filter(Boolean);
     if(friendIds.length){
-      const {data:friends}=await supabase.from('profiles').select('id,nickname,role,account_badge,avatar_url,is_online,hide_online_status,last_active_at,last_seen_at,home_region_id,account_status').in('id',friendIds).eq('account_status','ACTIVE');
+      const {data:friends}=await supabase.from('profiles').select('id,nickname,role,account_badge,is_online,hide_online_status,last_active_at,last_seen_at,home_region_id,account_status').in('id',friendIds).eq('account_status','ACTIVE');
       state.friends=(friends||[]).filter(isActuallyOnline).sort((a,b)=>String(a.nickname||'').localeCompare(String(b.nickname||''),'de'));
     }else state.friends=[];
     if(['HEAD_ADMIN','ADMIN'].includes(role(profile))){const [reports,verifications,deletions,groupChanges]=await Promise.all([count('user_reports',q=>q.not('status','in','(RESOLVED,CLOSED,REJECTED,UNFOUNDED)')),count('verification_requests',q=>q.not('status','in','(APPROVED,REJECTED)')),count('account_deletion_requests',q=>q.in('status',['PENDING','ON_HOLD','READY_FOR_REVIEW'])),count('community_group_owner_change_requests',q=>q.eq('status','PENDING'))]);state.adminAlerts=reports+verifications+deletions+groupChanges}else state.adminAlerts=0;
@@ -49,7 +48,11 @@ function ensureOnlineFriends(dock){
   if(!panel){panel=document.createElement('section');panel.className='ec-online-friends-panel';const grid=dock.querySelector('.ec-compact-menu-grid');(grid||dock.querySelector('.ec-dock-head'))?.insertAdjacentElement('afterend',panel)}
   panel.classList.add('is-always-open');panel.hidden=false;panel.removeAttribute('aria-expanded');
   const region=activeRegion();
-  const rows=state.friends.map(friend=>{const star=starFor(friend,region?.id||null);return `<button type="button" class="ec-online-friend" data-profile-id="${esc(friend.id)}" title="Profil von ${esc(friend.nickname||'Mitglied')} öffnen"><span class="ec-online-dot" aria-hidden="true"></span><img class="ec-online-friend-avatar" src="${esc(friend.avatar_url||DEFAULT_AVATAR)}" alt="" aria-hidden="true"><strong class="ec-online-friend-name">${esc(friend.nickname||'Mitglied')}</strong>${star?`<img class="ec-online-friend-star" src="${esc(star)}" alt="" aria-hidden="true">`:'<span class="ec-online-friend-star-spacer" aria-hidden="true"></span>'}</button>`}).join('');
+  const rows=state.friends.map(friend=>{
+    const star=starFor(friend,region?.id||null);
+    const name=esc(friend.nickname||'Mitglied');
+    return `<button type="button" class="ec-online-friend" data-profile-id="${esc(friend.id)}" title="Profil von ${name} öffnen"><span class="ec-online-dot" aria-hidden="true"></span>${star?`<img class="ec-online-friend-star" src="${esc(star)}" alt="" aria-hidden="true">`:''}<strong class="ec-online-friend-name">${name}</strong></button>`;
+  }).join('');
   panel.innerHTML=`<div class="ec-online-friends-head"><span>FREUNDE ONLINE</span><em>${state.friends.length}</em></div><div class="ec-online-friends-list">${rows||'<small>Derzeit keine Freunde online.</small>'}</div>`;
   panel.querySelectorAll('[data-profile-id]').forEach(btn=>btn.onclick=()=>window.dispatchEvent(new CustomEvent('ec:open-profile',{detail:{profileId:btn.dataset.profileId}})));
 }
