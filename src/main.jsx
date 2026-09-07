@@ -34,6 +34,10 @@ import "./clean-profile-runtime.js";
 import "./clean-layout.css";
 import "./clean-components.css";
 
+/* Final role/region authority layer: role-colored frames, compact identities and regional responsibilities. */
+import "./role-region-polish.css";
+import "./role-region-polish.js";
+
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
   static getDerivedStateFromError() { return { failed: true }; }
