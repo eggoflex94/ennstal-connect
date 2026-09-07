@@ -108,6 +108,9 @@ import "./mobile-authority.css";
 import "./people-links-polish.css";
 import "./people-links-polish.js";
 
+/* Final touch/click authority: removes legacy profile responsibility text and prevents hidden mobile layers from blocking taps. */
+import "./mobile-interaction-authority.css";
+
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
   static getDerivedStateFromError() { return { failed: true }; }
