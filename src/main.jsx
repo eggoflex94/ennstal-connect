@@ -84,6 +84,10 @@ import "./profile-final-stability.css";
 import "./profile-community-modules.css";
 import "./profile-community-modules.js";
 
+/* Final profile identity cleanup: effective role text + star, no nickname in function box, no duplicate action bar. */
+import "./profile-role-action-fix.css";
+import "./profile-role-action-fix.js";
+
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
   static getDerivedStateFromError() { return { failed: true }; }
