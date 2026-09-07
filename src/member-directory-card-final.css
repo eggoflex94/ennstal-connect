@@ -1,46 +1,49 @@
 /* Final member directory card authority. Compact, narrow and overlap-safe. */
 .member-grid,.members-grid{
   display:grid!important;
-  grid-template-columns:repeat(auto-fit,minmax(240px,270px))!important;
-  gap:16px!important;
-  align-items:stretch!important;
+  grid-template-columns:repeat(auto-fill,minmax(230px,260px))!important;
+  grid-auto-rows:max-content!important;
+  gap:14px!important;
+  align-items:start!important;
   justify-content:start!important;
 }
 
 .member-card{
   position:relative!important;
   width:100%!important;
-  max-width:270px!important;
+  max-width:260px!important;
   min-width:0!important;
-  min-height:286px!important;
+  min-height:250px!important;
   height:auto!important;
   margin:0!important;
-  padding:14px 14px 16px!important;
-  display:grid!important;
-  grid-template-columns:1fr!important;
-  grid-template-rows:auto auto auto 1fr auto!important;
-  align-items:start!important;
-  justify-items:center!important;
-  gap:8px!important;
+  padding:13px 13px 14px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:stretch!important;
+  justify-content:flex-start!important;
+  gap:9px!important;
   overflow:hidden!important;
   text-align:center!important;
   box-sizing:border-box!important;
+  writing-mode:horizontal-tb!important;
 }
 .member-card>.ec-role-surface{position:absolute!important;inset:0!important;pointer-events:none!important}
 
-/* Hard top-left identity row. Badges can no longer fall to the bottom through older layout rules. */
+/* One stable top line: role/friend badges on the left, full nickname beside them. */
 .member-card>.ec-member-card-topline{
   position:relative!important;
   z-index:5!important;
-  grid-row:1!important;
   width:100%!important;
   min-width:0!important;
-  display:grid!important;
-  grid-template-columns:auto minmax(0,1fr)!important;
-  align-items:start!important;
-  justify-items:start!important;
+  min-height:28px!important;
+  display:flex!important;
+  flex-direction:row!important;
+  align-items:flex-start!important;
+  justify-content:flex-start!important;
   gap:7px!important;
-  margin:0 0 4px!important;
+  margin:0!important;
+  padding:0!important;
+  writing-mode:horizontal-tb!important;
 }
 .member-card>.ec-member-card-topline>.ec-card-badge-rail{
   position:static!important;
@@ -48,10 +51,12 @@
   transform:none!important;
   display:flex!important;
   flex:0 0 auto!important;
+  flex-direction:row!important;
   align-items:center!important;
   justify-content:flex-start!important;
   gap:5px!important;
   width:auto!important;
+  min-width:0!important;
   max-width:none!important;
   min-height:24px!important;
   margin:0!important;
@@ -65,99 +70,144 @@
   min-height:22px!important;
   max-height:22px!important;
   object-fit:contain!important;
+  flex:0 0 22px!important;
 }
 .member-card.role-theme-admin .ec-card-badge-role,
 .member-card[data-role-theme="admin"] .ec-card-badge-role{
   border-radius:7px!important;
-  filter:drop-shadow(0 0 4px rgba(255,68,92,.7)) drop-shadow(0 0 10px rgba(255,40,70,.34))!important;
+  filter:drop-shadow(0 0 4px rgba(255,68,92,.7)) drop-shadow(0 0 9px rgba(255,40,70,.3))!important;
 }
 .member-card.role-theme-admin .ec-card-badge-role-img,
 .member-card[data-role-theme="admin"] .ec-card-badge-role-img{
-  filter:drop-shadow(0 0 3px rgba(255,90,105,.76))!important;
+  filter:drop-shadow(0 0 3px rgba(255,90,105,.74))!important;
 }
 .member-card>.ec-member-card-topline>.member-nickname{
   position:static!important;
   inset:auto!important;
   transform:none!important;
-  width:100%!important;
-  max-width:100%!important;
+  flex:1 1 auto!important;
+  width:auto!important;
+  max-width:none!important;
   min-width:0!important;
   min-height:24px!important;
   margin:0!important;
   padding:1px 0!important;
   display:block!important;
   color:inherit!important;
-  font-size:16px!important;
+  font-size:15px!important;
   font-weight:900!important;
-  line-height:1.22!important;
+  line-height:1.25!important;
   text-align:left!important;
   white-space:normal!important;
+  word-break:keep-all!important;
+  overflow-wrap:normal!important;
+  hyphens:none!important;
+  writing-mode:horizontal-tb!important;
   overflow:visible!important;
   text-overflow:clip!important;
-  overflow-wrap:anywhere!important;
-  word-break:normal!important;
 }
 
 .member-card>.member-avatar{
   position:relative!important;
   z-index:2!important;
-  grid-row:2!important;
-  width:82px!important;
-  height:82px!important;
-  min-width:82px!important;
-  min-height:82px!important;
-  max-width:82px!important;
-  max-height:82px!important;
-  margin:2px auto 0!important;
+  width:76px!important;
+  height:76px!important;
+  min-width:76px!important;
+  min-height:76px!important;
+  max-width:76px!important;
+  max-height:76px!important;
+  margin:0 auto!important;
   border-radius:50%!important;
   object-fit:cover!important;
-  flex:none!important;
+  flex:0 0 76px!important;
 }
 .member-card>.member-meta{
   position:relative!important;
   z-index:2!important;
-  grid-row:3!important;
   width:100%!important;
   min-width:0!important;
-  display:grid!important;
-  gap:8px!important;
-  justify-items:center!important;
-  align-content:start!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  gap:7px!important;
   text-align:center!important;
 }
 .member-card .member-name{
   width:100%!important;
   min-width:0!important;
-  min-height:auto!important;
   margin:0!important;
   display:flex!important;
   flex-wrap:wrap!important;
-  align-items:center!important;
+  align-items:baseline!important;
   justify-content:center!important;
   gap:3px!important;
-  font-size:13px!important;
-  line-height:1.28!important;
+  font-size:12.5px!important;
+  font-weight:700!important;
+  line-height:1.3!important;
   text-align:center!important;
+  white-space:normal!important;
+  word-break:keep-all!important;
+  overflow-wrap:normal!important;
+  hyphens:none!important;
+  writing-mode:horizontal-tb!important;
   overflow:visible!important;
-  overflow-wrap:anywhere!important;
-  word-break:normal!important;
 }
-.member-card .ec-member-realname{max-width:100%!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;overflow-wrap:anywhere!important}
-.member-card .ec-member-age{max-width:100%!important;white-space:normal!important;font-size:12px!important}
-.member-card .member-status{width:100%!important;min-height:42px!important;margin:0!important;display:grid!important;gap:2px!important;justify-items:center!important;align-content:start!important;font-size:12px!important;line-height:1.25!important}
-.member-card .ec-member-presence-line{display:flex!important;align-items:center!important;justify-content:center!important;gap:7px!important;min-height:20px!important}
-.member-card .ec-member-presence-dot{display:inline-block!important;width:9px!important;height:9px!important;min-width:9px!important;min-height:9px!important;border-radius:50%!important;flex:none!important}
-.member-card .ec-member-last-active{display:block!important;width:100%!important;margin:0!important;font-size:10.5px!important;line-height:1.25!important;text-align:center!important;white-space:normal!important;overflow-wrap:anywhere!important}
-.member-card>.member-message{position:relative!important;z-index:2!important;grid-row:5!important;align-self:end!important;width:100%!important;min-height:40px!important;height:auto!important;margin:6px 0 0!important;padding:8px 10px!important;border-radius:10px!important;white-space:normal!important}
+.member-card .ec-member-realname{
+  max-width:100%!important;
+  white-space:normal!important;
+  word-break:keep-all!important;
+  overflow-wrap:normal!important;
+  hyphens:none!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+}
+.member-card .ec-member-age{max-width:100%!important;white-space:nowrap!important;font-size:11.5px!important}
+.member-card .member-status{
+  width:100%!important;
+  min-height:38px!important;
+  margin:0!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  gap:2px!important;
+  font-size:12px!important;
+  line-height:1.25!important;
+}
+.member-card .ec-member-presence-line{display:flex!important;align-items:center!important;justify-content:center!important;gap:6px!important;min-height:18px!important}
+.member-card .ec-member-presence-dot{display:inline-block!important;width:9px!important;height:9px!important;min-width:9px!important;min-height:9px!important;border-radius:50%!important;flex:0 0 9px!important}
+.member-card .ec-member-last-active{display:block!important;width:100%!important;margin:0!important;font-size:10px!important;line-height:1.25!important;text-align:center!important;white-space:normal!important;word-break:normal!important;overflow-wrap:normal!important}
+.member-card>.member-message{
+  position:relative!important;
+  z-index:2!important;
+  width:100%!important;
+  min-height:36px!important;
+  height:auto!important;
+  margin:auto 0 0!important;
+  padding:7px 9px!important;
+  border-radius:10px!important;
+  font-size:12.5px!important;
+  white-space:normal!important;
+}
+
+/* Never allow legacy name rules to turn text into vertical letter stacks. */
+.member-card .member-nickname,.member-card .member-name,.member-card .ec-member-realname,.member-card .ec-member-age{
+  writing-mode:horizontal-tb!important;
+  text-orientation:mixed!important;
+}
+
+/* The personal dashboard may receive the same role star from two older enhancers; show it once. */
+.ec-dock-head strong>.ec-sidebar-role-star~.ec-sidebar-role-star{display:none!important}
 
 @media(max-width:760px){
-  .member-grid,.members-grid{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))!important;justify-content:stretch!important}
-  .member-card{max-width:none!important;min-height:276px!important}
+  .member-grid,.members-grid{grid-template-columns:repeat(auto-fill,minmax(215px,250px))!important;gap:12px!important;justify-content:start!important}
+  .member-card{max-width:250px!important;min-height:242px!important}
 }
 @media(max-width:520px){
   .member-grid,.members-grid{grid-template-columns:1fr!important;gap:12px!important}
-  .member-card{width:100%!important;max-width:100%!important;padding:13px 14px 15px!important}
-  .member-card>.ec-member-card-topline>.member-nickname{font-size:15px!important}
-  .member-card>.member-avatar{width:78px!important;height:78px!important;min-width:78px!important;min-height:78px!important;max-width:78px!important;max-height:78px!important}
-  .member-card .member-name{font-size:12.5px!important}
+  .member-card{width:100%!important;max-width:100%!important;min-height:236px!important;padding:12px 13px 13px!important}
+  .member-card>.ec-member-card-topline>.member-nickname{font-size:14.5px!important}
+  .member-card>.member-avatar{width:72px!important;height:72px!important;min-width:72px!important;min-height:72px!important;max-width:72px!important;max-height:72px!important;flex-basis:72px!important}
+  .member-card .member-name{font-size:12px!important}
 }
