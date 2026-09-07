@@ -117,6 +117,10 @@ import "./global-community-news-popup.js";
 import "./admin-community-popup-manager.css";
 import "./admin-community-popup-manager.js";
 
+/* Final personal dashboard authority: document-flow sidebar, correct profile visits, info and popup management shortcuts. */
+import "./personal-dashboard-final-fix.css";
+import "./personal-dashboard-final-fix.js";
+
 /* Absolute last mobile runtime: if a browser swallows the native tap, synthesize exactly one click. */
 import "./mobile-single-tap-fix.js";
 
