@@ -42,15 +42,15 @@ async function setBusiness(profileId,enabled){
     });
     if(error)throw error;
 
-    /* Verify the effective value instead of pretending success when an old RPC did nothing. */
     const {data:check,error:checkError}=await supabase.from('profiles').select('account_badge,company_name').eq('id',profileId).maybeSingle();
     if(checkError)throw checkError;
     const effective=String(check?.account_badge||'').toUpperCase()==='BUSINESS';
     if(effective!==enabled)throw new Error('Die Änderung wurde von der Datenbank nicht übernommen.');
 
     notice(enabled?'Unternehmenskonto wurde vergeben.':'Unternehmenskonto wurde entfernt.',true);
-    window.dispatchEvent(new CustomEvent('ec:business-account-changed',{detail:{profileId,enabled}}));
-    setTimeout(()=>window.location.reload(),650);
+    window.dispatchEvent(new CustomEvent('ec:business-account-changed',{detail:{profileId,enabled,companyName:check?.company_name||null}}));
+    window.dispatchEvent(new CustomEvent('ec:layout-refresh-requested'));
+    setTimeout(()=>void ensureTool(),80);
   }catch(error){
     console.error('Unternehmenskonto konnte nicht geändert werden:',error);
     notice(`Unternehmenskonto konnte nicht ${enabled?'vergeben':'entfernt'} werden: ${error?.message||error}`);
@@ -90,6 +90,7 @@ function boot(){
   const observer=new MutationObserver(()=>{clearTimeout(window.__ecBusinessToolTimer);window.__ecBusinessToolTimer=setTimeout(()=>void ensureTool(),80)});
   observer.observe(document.documentElement,{childList:true,subtree:true});
   window.addEventListener('ec:open-profile',()=>setTimeout(()=>void ensureTool(),120));
+  window.addEventListener('ec:business-account-changed',()=>setTimeout(()=>void ensureTool(),80));
 }
 
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
