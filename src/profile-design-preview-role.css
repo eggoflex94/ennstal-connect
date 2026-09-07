@@ -1,0 +1,49 @@
+/* Role-aware profile design preview. Mirrors the member directory colour language. */
+.my-area-layout .my-profile-card{
+  position:relative!important;
+  overflow:hidden!important;
+  border-radius:18px!important;
+  border:1px solid rgba(255,255,255,.18)!important;
+  color:#fff!important;
+  box-shadow:0 16px 34px rgba(24,43,58,.14)!important;
+}
+.my-area-layout .my-profile-card.head-admin,
+.my-area-layout .my-profile-card.admin{
+  background:linear-gradient(150deg,#b11834 0%,#8b1027 44%,#650a1c 100%)!important;
+  border-color:#d83650!important;
+  box-shadow:0 16px 36px rgba(145,15,40,.24)!important;
+}
+.my-area-layout .my-profile-card.supporter{
+  background:linear-gradient(145deg,#ffe537 0%,#d6aa00 28%,#806000 58%,#241b00 82%,#050505 100%)!important;
+  border-color:#ffd400!important;
+  color:#111!important;
+}
+.my-area-layout .my-profile-card.business{
+  background:linear-gradient(150deg,#177db1 0%,#0d5d8a 48%,#0a456b 100%)!important;
+  border-color:#2c96cf!important;
+  box-shadow:0 16px 36px rgba(14,91,134,.22)!important;
+}
+.my-area-layout .my-profile-card.member{
+  background:linear-gradient(150deg,#42586b 0%,#2c4051 48%,#1d2f3d 100%)!important;
+  border-color:#6d7b88!important;
+}
+.my-area-layout .my-profile-card .profile-role-star{width:28px!important;height:28px!important;min-width:28px!important;max-width:28px!important;object-fit:contain!important}
+.my-area-layout .my-profile-card.head-admin .profile-role-star,
+.my-area-layout .my-profile-card.admin .profile-role-star{filter:drop-shadow(0 0 4px rgba(255,52,77,.95)) drop-shadow(0 0 11px rgba(255,31,58,.58))!important}
+.my-area-layout .my-profile-card.supporter .profile-role-star{filter:drop-shadow(0 0 6px rgba(255,214,0,.5))!important}
+.my-area-layout .my-profile-card.business .profile-role-star{filter:drop-shadow(0 0 6px rgba(45,151,219,.5))!important}
+.my-area-layout .my-profile-card.member .profile-role-star{display:none!important}
+.my-area-layout .my-profile-card .profile-role-label{background:rgba(255,255,255,.10)!important;border:1px solid rgba(255,255,255,.16)!important;color:inherit!important}
+.my-area-layout .my-profile-card.supporter .profile-role-label{background:rgba(0,0,0,.12)!important;border-color:rgba(0,0,0,.18)!important;color:#111!important}
+.my-area-layout .my-profile-card .my-avatar{border:3px solid rgba(255,255,255,.82)!important;box-shadow:0 8px 22px rgba(0,0,0,.22)!important}
+.my-area-layout .my-profile-card.head-admin .my-avatar,.my-area-layout .my-profile-card.admin .my-avatar{border-color:#ff4a63!important}
+.my-area-layout .my-profile-card.supporter .my-avatar{border-color:#ffd400!important}
+.my-area-layout .my-profile-card.business .my-avatar{border-color:#36a8e5!important}
+.my-area-layout .my-profile-card.member .my-avatar{border-color:#91a3b2!important}
+.my-area-layout .my-profile-card h1,.my-area-layout .my-profile-card h2,.my-area-layout .my-profile-card .profile-bio{color:inherit!important;-webkit-text-fill-color:currentColor!important}
+.my-area-layout .my-profile-card.supporter h1,.my-area-layout .my-profile-card.supporter h2,.my-area-layout .my-profile-card.supporter .profile-bio{color:#111!important;-webkit-text-fill-color:#111!important}
+
+.public-profile-preview .member-profile-hero.ec-preview-admin{background:linear-gradient(150deg,#b11834 0%,#8b1027 44%,#650a1c 100%)!important;border-color:#d83650!important}
+.public-profile-preview .member-profile-hero.ec-preview-supporter{background:linear-gradient(145deg,#ffe537 0%,#d6aa00 32%,#6b5100 68%,#211900 100%)!important;border-color:#ffd400!important;color:#111!important}
+.public-profile-preview .member-profile-hero.ec-preview-business{background:linear-gradient(150deg,#177db1 0%,#0d5d8a 48%,#0a456b 100%)!important;border-color:#2c96cf!important}
+.public-profile-preview .member-profile-hero.ec-preview-member{background:linear-gradient(150deg,#42586b 0%,#2c4051 48%,#1d2f3d 100%)!important;border-color:#6d7b88!important}
