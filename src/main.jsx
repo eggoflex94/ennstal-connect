@@ -93,6 +93,10 @@ import "./profile-role-action-fix.js";
 import "./sidebar-interaction-fix.css";
 import "./sidebar-interaction-fix.js";
 
+/* Login description plus final onboarding/mobile stability authority. */
+import "./auth-community-intro.js";
+import "./community-stability-final.css";
+
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
   static getDerivedStateFromError() { return { failed: true }; }
