@@ -24,6 +24,7 @@ import "./account-deletion-admin.js";
 import "./help-center.js";
 import "./notification-center.js";
 import "./member-onboarding.js";
+import "./admin-workspace.css";
 import "./admin-workspace.js";
 import "./admin-dashboard-modern.js";
 import "./admin-compact-enhancements.js";
@@ -87,6 +88,10 @@ import "./profile-community-modules.js";
 /* Final profile identity cleanup: effective role text + star, no nickname in function box, no duplicate action bar. */
 import "./profile-role-action-fix.css";
 import "./profile-role-action-fix.js";
+
+/* Final interaction authority: correct sidebar clicks, linked nicknames, compact message images and modal admin tools. */
+import "./sidebar-interaction-fix.css";
+import "./sidebar-interaction-fix.js";
 
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
