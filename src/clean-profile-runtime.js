@@ -2,7 +2,7 @@ import { supabase } from './supabaseClient';
 
 let cache={viewer:null,profiles:[],regions:[],assignments:[],friends:new Set()};
 let loading=false;
-const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
 const regionName=id=>cache.regions.find(r=>r.id===id)?.name||'Nicht festgelegt';
 const activeRegion=()=>{const slug=document.querySelector('.ec-region-picker select')?.value||localStorage.getItem('ec-active-region');return cache.regions.find(r=>r.slug===slug)||cache.regions.find(r=>r.id===cache.viewer?.home_region_id)||cache.regions[0]||null};
 const isHead=()=>String(cache.viewer?.role||'').toUpperCase()==='HEAD_ADMIN';
@@ -42,8 +42,9 @@ function visible(p,field){if(!p)return false;if(cache.viewer?.id===p.id||isHead(
 function row(label,value){if(value===undefined||value===null||String(value).trim()==='')return'';return`<div class="ec-clean-profile-row"><span>${esc(label)}</span><strong>${esc(value)}</strong></div>`}
 function findMember(root){return cache.profiles.find(p=>p.id===root.dataset.profileId)||null}
 function extractAvatar(root){return root.querySelector('.member-profile-hero img,.member-profile-avatar,img.profile-avatar,.profile-photo img')}
-function extractActions(root){return root.querySelector(':scope > .member-profile-actions,.member-profile-actions')}
+function extractActions(root){return root.querySelector(':scope > .member-profile-actions,.member-profile-actions,.profile-actions,.member-action-bar,.profile-action-bar')}
 function closeAdmin(){document.querySelector('.ec-clean-admin-modal')?.remove()}
+function cleanActionClassName(node){return String(node?.className||'').split(/\s+/).filter(cls=>cls&&!['ec-profile-duplicate-action-button','ec-profile-duplicate-actions-hidden','ec-clean-profile-hidden'].includes(cls)).join(' ')}
 
 async function saveAdmin(member,action,slug,status){
   let response;
@@ -81,7 +82,18 @@ function buildProfile(root,member){
   if(avatar)shell.querySelector('.ec-clean-profile-photo').appendChild(avatar.cloneNode(true));
   if(member.is_verified){const badge=document.createElement('span');badge.className='ec-profile-verified';badge.textContent='✓ Verifiziert';shell.querySelector('.ec-clean-profile-main header').appendChild(badge)}
   const actions=shell.querySelector('.ec-clean-profile-actions');
-  if(!preview&&actionsSource){[...actionsSource.querySelectorAll('button,a')].forEach(original=>{const button=document.createElement('button');button.type='button';button.className='ec-clean-profile-action '+original.className;button.textContent=original.textContent;button.disabled=original.disabled;button.onclick=()=>original.click();actions.appendChild(button)})}
+  if(!preview&&actionsSource){
+    [...actionsSource.querySelectorAll('button,a')].forEach(original=>{
+      const button=document.createElement('button');
+      button.type='button';
+      const originalClasses=cleanActionClassName(original);
+      button.className=`ec-clean-profile-action${originalClasses?` ${originalClasses}`:''}`;
+      button.textContent=String(original.textContent||'').trim();
+      button.disabled=original.disabled;
+      button.onclick=()=>original.click();
+      actions.appendChild(button);
+    });
+  }
   if(!preview&&isHead()&&cache.viewer?.id!==member.id){const admin=document.createElement('button');admin.type='button';admin.className='ec-clean-profile-admin';admin.textContent='Admin Tools';admin.onclick=()=>openMemberAdmin(member);actions.appendChild(admin)}
   if(!actions.children.length)actions.remove();
   root.querySelectorAll(':scope > .member-profile-hero,:scope > .member-profile-actions,:scope > .profile-visible-details').forEach(el=>el.classList.add('ec-clean-profile-hidden'));
