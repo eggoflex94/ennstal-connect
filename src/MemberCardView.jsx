@@ -20,20 +20,20 @@ function isRecentlyActive(member) {
   return Number.isFinite(lastActive) && Date.now() - lastActive < 5 * 60 * 1000;
 }
 
-
-
 function rolePresentation(member) {
   const role = String(member?.role || "MEMBER").toUpperCase();
   if (role === "HEAD_ADMIN" || role === "ADMIN") {
-    return { key: role === "HEAD_ADMIN" ? "head-admin" : "admin", theme: "admin", label: role === "HEAD_ADMIN" ? "Hauptadmin" : "Global Admin", star: "/role-star-red.svg" };
+    return { key: role === "HEAD_ADMIN" ? "head-admin" : "admin", theme: "admin", label: role === "HEAD_ADMIN" ? "Hauptadmin" : "Admin", star: "/role-star-red.svg" };
   }
   if (role === "SUPPORTER") return { key: "supporter", theme: "supporter", label: "Supporter", star: "/supporter-star.svg" };
   if (member?.account_badge === "BUSINESS") return { key: "business", theme: "business", label: "Unternehmenskonto", star: "/role-star-blue.svg" };
-  return { key: "member", theme: "member", label: "Mitglied", star: "/role-star-member.svg" };
+  return { key: "member", theme: "member", label: "Mitglied", star: null };
 }
 
 export default function MemberCardView({ member, profile, friendships, onOpen, onMessage }) {
   const presentation = rolePresentation(member);
+  const baseRole = String(member?.role || "MEMBER").toUpperCase();
+  const isAdminCard = baseRole === "HEAD_ADMIN" || baseRole === "ADMIN";
   const friendship = (friendships || []).find((item) => (item.requester_id === profile?.id && item.receiver_id === member.id) || (item.receiver_id === profile?.id && item.requester_id === member.id));
   const friend = friendship?.status === "ACCEPTED";
   const online = isRecentlyActive(member);
@@ -45,7 +45,7 @@ export default function MemberCardView({ member, profile, friendships, onOpen, o
     <article
       className={`member-card ${presentation.key} role-theme-${presentation.theme}`}
       data-member-id={member.id}
-      data-base-role={String(member.role || "MEMBER").toUpperCase()}
+      data-base-role={baseRole}
       data-home-region-id={member.home_region_id || ""}
       data-role-theme={presentation.theme}
       onClick={() => onOpen(member)}
@@ -63,9 +63,11 @@ export default function MemberCardView({ member, profile, friendships, onOpen, o
       <span className={`ec-role-surface ec-role-surface-${presentation.theme}`} aria-hidden="true" />
 
       <div className="ec-card-badge-rail" aria-label="Profilkennzeichnungen">
-        <span className={`ec-card-badge-icon ec-card-badge-role ec-card-badge-role-${presentation.theme}`} title={presentation.label} aria-label={presentation.label}>
-          <img className="ec-card-badge-img ec-card-badge-role-img" src={presentation.star} alt="" aria-hidden="true" />
-        </span>
+        {presentation.star && (
+          <span className={`ec-card-badge-icon ec-card-badge-role ec-card-badge-role-${presentation.theme}`} title={presentation.label} aria-label={presentation.label}>
+            <img className="ec-card-badge-img ec-card-badge-role-img" src={presentation.star} alt="" aria-hidden="true" />
+          </span>
+        )}
         {friend && (
           <span className="ec-card-badge-icon ec-card-badge-friend" title="Befreundet" aria-label="Befreundet">
             <img className="ec-card-badge-img ec-card-badge-friend-img" src="/badge-friendship.svg" alt="" aria-hidden="true" />
@@ -96,7 +98,7 @@ export default function MemberCardView({ member, profile, friendships, onOpen, o
               <span className="ec-member-presence-dot" aria-hidden="true" />
               <span className="ec-member-presence-label">{statusLabel}</span>
             </div>
-            {!online && member.last_active_at && (
+            {isAdminCard && member.last_active_at && (
               <small className="ec-member-last-active">zuletzt aktiv {new Date(member.last_active_at).toLocaleString("de-AT", { dateStyle: "short", timeStyle: "short" })}</small>
             )}
           </div>
