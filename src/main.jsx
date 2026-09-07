@@ -91,6 +91,8 @@ import "./go-live-runtime.js";
 import "./go-live-final.css";
 import "./launch-stable.js";
 import "./launch-stable.css";
+import "./production-hotfix.js";
+import "./production-hotfix.css";
 
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
