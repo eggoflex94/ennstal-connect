@@ -1,0 +1,23 @@
+/* Final interaction/layout authority for sidebar and messages. */
+.ec-admin-tool-hidden{display:none!important}
+.ec-right-dock .ec-compact-menu-item[aria-hidden="true"],.ec-right-dock .ec-compact-menu-item[hidden]{display:none!important}
+.ec-right-dock .ec-profile-nickname-link{cursor:pointer!important;text-decoration:none!important;text-underline-offset:2px!important}
+.ec-right-dock .ec-profile-nickname-link:hover,.ec-right-dock .ec-profile-nickname-link:focus-visible{text-decoration:underline!important;outline:none!important}
+.ec-right-dock .ec-profile-row-link{cursor:pointer!important}
+
+/* Messages: never allow attached images to become page-sized. */
+.messages-page .message-bubble img:not(.avatar):not(.role-star),
+.messages-page .message-item img:not(.avatar):not(.role-star),
+.messages-page .chat-message img:not(.avatar):not(.role-star),
+.messages-page .message-content img:not(.avatar):not(.role-star),
+.messages-page .message-body img:not(.avatar):not(.role-star),
+.messages-page img[data-message-image],
+.messages-page img[src*="message" i],
+.chat-page .message-bubble img:not(.avatar):not(.role-star),
+.chat-page .chat-message img:not(.avatar):not(.role-star){display:block!important;width:auto!important;height:auto!important;max-width:min(420px,100%)!important;max-height:360px!important;margin:8px 0!important;border-radius:12px!important;object-fit:contain!important;background:#f5f7f8!important}
+@media(max-width:700px){.messages-page .message-bubble img:not(.avatar):not(.role-star),.messages-page .message-item img:not(.avatar):not(.role-star),.messages-page .chat-message img:not(.avatar):not(.role-star),.messages-page .message-content img:not(.avatar):not(.role-star),.messages-page .message-body img:not(.avatar):not(.role-star),.chat-page .message-bubble img:not(.avatar):not(.role-star),.chat-page .chat-message img:not(.avatar):not(.role-star){max-width:100%!important;max-height:280px!important}}
+
+/* Admin workspace must remain a modal and never leak into the page flow. */
+.ec-admin-workspace{position:fixed!important;inset:0!important;z-index:11800!important;display:grid!important;place-items:center!important}
+.ec-admin-workspace-box{width:min(560px,calc(100vw - 28px))!important;max-height:78vh!important;overflow:auto!important}
+body>.ec-admin-workspace~.ec-admin-workspace{display:none!important}
