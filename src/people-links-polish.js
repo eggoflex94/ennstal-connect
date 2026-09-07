@@ -2,21 +2,37 @@ function profileHref(profileId){
   return `/?profile=${encodeURIComponent(profileId)}`;
 }
 
+function bindLink(link,profileId){
+  if(!link||!profileId)return;
+  link.href=profileHref(profileId);
+  link.dataset.profileId=profileId;
+}
+
 function makeVisualLink(container,profileId,selector){
   if(!container||!profileId)return;
   const current=container.querySelector(selector);
   if(!current)return;
-  if(current.matches('a.ec-profile-native-link')){
-    current.href=profileHref(profileId);
-    current.dataset.profileId=profileId;
-    return;
-  }
+  if(current.matches('a.ec-profile-native-link')){bindLink(current,profileId);return;}
   const link=document.createElement('a');
   link.className='ec-profile-native-link';
-  link.href=profileHref(profileId);
-  link.dataset.profileId=profileId;
   link.textContent=current.textContent.trim();
-  if(current.matches('strong,.ec-online-friend-name'))current.replaceWith(link);else current.replaceChildren(link);
+  bindLink(link,profileId);
+  if(current.matches('.ec-online-friend-name'))current.replaceWith(link);else current.replaceChildren(link);
+}
+
+function makeDockIdentityLink(row,profileId){
+  const strong=row.querySelector('span>strong');
+  if(!strong||!profileId)return;
+  let link=strong.querySelector('a.ec-profile-native-link');
+  if(!link){
+    const text=[...strong.childNodes].filter(node=>node.nodeType===Node.TEXT_NODE).map(node=>node.textContent).join(' ').trim();
+    [...strong.childNodes].filter(node=>node.nodeType===Node.TEXT_NODE).forEach(node=>node.remove());
+    link=document.createElement('a');
+    link.className='ec-profile-native-link ec-dock-profile-link';
+    link.textContent=text||'Mitglied';
+    strong.appendChild(link);
+  }
+  bindLink(link,profileId);
 }
 
 function normalizeOnlineFriends(){
@@ -27,7 +43,6 @@ function normalizeOnlineFriends(){
         if(!img.classList.contains('ec-online-friend-star')&&!img.classList.contains('ec-role-person-star'))img.remove();
       });
       const id=row.dataset.profileId;
-      row.type='button';
       row.dataset.profileHref=profileHref(id);
       row.setAttribute('aria-label',`Profil von ${(row.querySelector('.ec-online-friend-name,.ec-profile-native-link')?.textContent||'Mitglied').trim()} öffnen`);
       makeVisualLink(row,id,'.ec-online-friend-name,.ec-profile-native-link');
@@ -57,12 +72,11 @@ function linkDashboardActivity(){
     const id=row.dataset.profileId;
     if(!id)return;
     row.dataset.profileHref=profileHref(id);
-    makeVisualLink(row,id,'strong,.ec-profile-native-link');
+    makeDockIdentityLink(row,id);
   });
 }
 
 function hardProfileNavigation(event){
-  if(event.defaultPrevented&&event.type!=='click')return;
   if(event.type==='click'&&(event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey))return;
   const target=event.target.closest?.('a.ec-profile-native-link[data-profile-id],.ec-online-friend[data-profile-id],.ec-region-responsibility-person[data-profile-id],.ec-role-person[data-profile-id],.ec-dock-detail-row[data-profile-id]');
   if(!target)return;
