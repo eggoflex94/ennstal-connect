@@ -1,0 +1,46 @@
+/* Community-wide stability feedback without redesigning the product. */
+.ec-runtime-toast{
+  position:fixed!important;
+  right:18px!important;
+  bottom:18px!important;
+  z-index:30000!important;
+  width:min(360px,calc(100vw - 28px))!important;
+  padding:12px 14px!important;
+  border-radius:13px!important;
+  background:#17202a!important;
+  color:#fff!important;
+  font-size:13px!important;
+  font-weight:750!important;
+  line-height:1.35!important;
+  box-shadow:0 16px 38px rgba(0,0,0,.24)!important;
+  border:1px solid rgba(255,255,255,.12)!important;
+}
+.ec-runtime-toast.is-warning{border-color:#ff8a50!important}
+.ec-runtime-toast.is-success{border-color:#5ecb83!important}
+
+/* Admin stars remain visually stronger than other role stars. */
+.ec-role-star-admin-glow{
+  filter:drop-shadow(0 0 4px rgba(255,55,76,.82)) drop-shadow(0 0 10px rgba(255,45,65,.42))!important;
+}
+
+/* Generic overflow protection for community surfaces. */
+.modern-main,.content-root,.panel,.member-card,.ec-right-dock,.member-profile-page{min-width:0!important}
+.modern-main *,.content-root *,.panel *,.member-card *,.ec-right-dock *,.member-profile-page *{box-sizing:border-box}
+button,a,[role="button"]{touch-action:manipulation}
+button:disabled,[aria-disabled="true"]{cursor:not-allowed!important;opacity:.58!important}
+
+/* Keep long user content readable instead of breaking layouts. */
+.profile-bio,.forum-post,.forum-reply,.news-card p,.group-card p,.community-request-list p,.message-bubble,.chat-message p{
+  overflow-wrap:anywhere!important;
+  word-break:normal!important;
+}
+
+/* Modal/dialog safety. */
+.ec-dashboard-info-card,.ec-notification-panel,.ec-popup-admin-editor-box,.ec-admin-hours-dialog,.ec-popup-manager-dialog{
+  max-width:calc(100vw - 24px)!important;
+  max-height:calc(100vh - 24px)!important;
+}
+
+@media(max-width:700px){
+  .ec-runtime-toast{left:10px!important;right:10px!important;bottom:10px!important;width:auto!important}
+}
