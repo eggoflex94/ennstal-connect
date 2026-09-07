@@ -7,6 +7,7 @@ import "./styles.css";
 
 /* Functional enhancers kept because they add behavior, not competing page layouts. */
 import "./profile-customization.js";
+import "./support-contacts-modern.css";
 import "./support-contacts-modern.js";
 import "./admin-online-status.js";
 import "./last-name-privacy.js";
