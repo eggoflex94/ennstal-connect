@@ -57,6 +57,10 @@ import "./sidebar-layout-stabilizer.js";
 import "./admin-rights-region-polish.css";
 import "./admin-rights-region-polish.js";
 
+/* Member profile guards: regional role in the active region and hard size limits for the legacy hero fallback. */
+import "./member-profile-guard.css";
+import "./member-profile-region-polish.js";
+
 /* Last runtime pin: keeps the sidebar role star stable even when other DOM enhancers refresh. */
 import "./sidebar-role-pin.js";
 
