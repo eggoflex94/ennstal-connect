@@ -1,0 +1,55 @@
+/* FINAL UI LOCK — loaded last. No legacy layer should override this file. */
+@media (min-width:901px){
+  .ec-regional-ui .modern-main{padding:124px 286px 42px 28px!important;overflow:visible!important}
+  .ec-regional-ui .content-root,.ec-regional-ui .members-page,.ec-regional-ui .home-page,.ec-regional-ui .forum-page,.ec-regional-ui .groups-page,.ec-regional-ui .events-page,.ec-regional-ui .news-page,.ec-regional-ui .ads-page,.ec-regional-ui .member-profile-page,.ec-regional-ui .profile-page-layout{position:relative!important;inset:auto!important;float:none!important;width:100%!important;max-width:1320px!important;min-width:0!important;height:auto!important;margin:0 auto!important;padding-left:0!important;padding-right:0!important;transform:none!important;overflow:visible!important}
+  .ec-regional-ui .content-root>*{max-width:100%!important}
+
+  /* Members are always a real raster on desktop. */
+  .ec-regional-ui .member-grid,.ec-regional-ui .members-grid,.ec-regional-ui .ec-final-member-grid{display:grid!important;grid-template-columns:repeat(3,minmax(240px,1fr))!important;gap:22px!important;align-items:start!important;justify-items:stretch!important;width:100%!important;max-width:none!important;min-width:0!important;margin:0!important;padding:0!important}
+  .ec-regional-ui .member-grid>.member-card,.ec-regional-ui .members-grid>.member-card,.ec-regional-ui .ec-final-member-grid>.member-card{width:100%!important;max-width:none!important;min-width:0!important;margin:0!important;justify-self:stretch!important}
+  .ec-stable-member-toolbar{grid-column:1/-1!important}
+
+  /* Home/admin panels must never collapse into the old narrow sidebar column. */
+  .ec-regional-ui .home-page,.ec-regional-ui .admin-dashboard,.ec-regional-ui .admin-page,.ec-regional-ui .community-page{display:block!important}
+  .ec-regional-ui .home-page .panel,.ec-regional-ui .home-page .card,.ec-regional-ui .admin-dashboard .panel,.ec-regional-ui .admin-page .panel,.ec-regional-ui .community-page .panel{position:relative!important;inset:auto!important;float:none!important;width:auto!important;max-width:100%!important;min-width:0!important;height:auto!important;transform:none!important}
+  .ec-regional-ui .home-grid,.ec-regional-ui .overview-grid,.ec-regional-ui .dashboard-grid,.ec-regional-ui .community-grid{display:grid!important;grid-template-columns:repeat(3,minmax(220px,1fr))!important;gap:18px!important;width:100%!important;max-width:none!important}
+
+  /* Fixed personal dock: absolutely no internal scrolling on desktop. */
+  .ec-right-dock{position:fixed!important;top:124px!important;right:18px!important;bottom:18px!important;left:auto!important;z-index:1000!important;display:grid!important;grid-template-columns:1fr!important;grid-auto-rows:min-content!important;align-content:start!important;width:248px!important;max-width:248px!important;height:auto!important;max-height:none!important;margin:0!important;padding:12px!important;border-radius:18px!important;background:rgba(255,255,255,.98)!important;overflow:visible!important;overscroll-behavior:none!important;box-shadow:0 16px 42px rgba(24,44,58,.14)!important}
+  .ec-right-dock::-webkit-scrollbar{display:none!important}
+  .ec-right-dock>*{min-height:0!important;flex:none!important}
+  .ec-right-dock button{min-height:33px!important;height:33px!important;padding:5px 7px!important;border-radius:8px!important}
+  .ec-right-dock button b{font-size:14px!important}.ec-right-dock button span{font-size:10px!important;line-height:1.1!important}
+  .ec-right-dock .ec-dock-head{padding:2px 6px 7px!important;margin:0 0 3px!important}
+  .ec-right-dock .ec-dock-head span,.ec-right-dock .ec-dock-section-label{font-size:8px!important;letter-spacing:.11em!important}
+  .ec-right-dock .ec-dock-head strong{font-size:13px!important}
+  .ec-right-dock .ec-dock-divider{margin:4px 0!important}
+  .ec-right-dock .ec-logout{margin-top:5px!important;background:#171b1f!important;color:#fff!important}
+  .ec-right-dock .ec-dock-close,.ec-dock-toggle{display:none!important}
+  .ec-dock-detail-panel{position:fixed!important;right:280px!important;top:124px!important;max-height:calc(100vh - 150px)!important;overflow:auto!important}
+
+  .ec-dock-identity{display:grid!important;grid-template-columns:34px minmax(0,1fr)!important;gap:8px!important;align-items:center!important;margin:0 0 7px!important;padding:8px!important;border:1px solid #e0e6ea!important;border-radius:11px!important;background:#f7f9fa!important}
+  .ec-dock-role-star{display:grid!important;place-items:center!important;width:32px!important;height:32px!important;border-radius:9px!important;background:#1a2b39!important;color:#fff!important;font-size:20px!important;line-height:1!important}
+  .ec-dock-identity strong{display:block!important;color:#172534!important;font-size:12px!important;line-height:1.1!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}.ec-dock-identity small{display:block!important;margin-top:2px!important;color:#6d7b86!important;font-size:8px!important;line-height:1.2!important}
+  .ec-stable-admin-dock{display:block!important;margin:0!important}
+  .ec-stable-admin-dock .ec-dock-section-label{padding:4px 6px 2px!important}
+  .ec-stable-admin-dock button{min-height:33px!important;height:33px!important;padding:5px 7px!important}
+}
+
+/* Profile layout: hard reset against every old absolute-position rule. */
+.ec-stable-profile-page.ec-profile-layout-locked{display:block!important;width:100%!important;max-width:1100px!important;margin:0 auto!important;padding:0 0 34px!important;overflow:visible!important}
+.ec-profile-layout-locked .ec-stable-profile-card.ec-profile-card-locked{position:relative!important;inset:auto!important;display:grid!important;grid-template-columns:250px minmax(0,1fr)!important;gap:24px!important;align-items:start!important;width:100%!important;max-width:1100px!important;min-width:0!important;height:auto!important;margin:0!important;padding:22px!important;border-radius:18px!important;background:#fff!important;transform:none!important;overflow:visible!important}
+.ec-profile-layout-locked .ec-stable-profile-left,.ec-profile-layout-locked .ec-stable-profile-data,.ec-profile-layout-locked .ec-stable-photo,.ec-profile-layout-locked .ec-stable-role,.ec-profile-layout-locked .ec-stable-actions,.ec-profile-layout-locked .ec-stable-data-grid,.ec-profile-layout-locked .ec-stable-row{position:static!important;inset:auto!important;float:none!important;transform:none!important}
+.ec-profile-layout-locked .ec-stable-photo{width:100%!important;height:230px!important;min-height:230px!important}.ec-profile-layout-locked .ec-stable-photo img{width:205px!important;height:205px!important;min-width:205px!important;min-height:205px!important;max-width:205px!important;max-height:205px!important;border-radius:12px!important;object-fit:cover!important}
+.ec-profile-layout-locked .ec-stable-data-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}.ec-profile-layout-locked .ec-stable-row{width:100%!important;min-width:0!important;height:auto!important;padding:12px 14px!important;writing-mode:horizontal-tb!important;word-break:normal!important}.ec-profile-layout-locked .ec-stable-row span,.ec-profile-layout-locked .ec-stable-row strong{writing-mode:horizontal-tb!important;white-space:normal!important;word-break:normal!important}
+.ec-profile-layout-locked .ec-stable-actions{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important}.ec-profile-layout-locked .ec-stable-actions button,.ec-profile-layout-locked .ec-stable-admin-toggle{position:static!important;width:100%!important;min-width:0!important;height:auto!important;min-height:38px!important;transform:none!important}
+
+@media (min-width:1400px){.ec-regional-ui .member-grid,.ec-regional-ui .members-grid,.ec-regional-ui .ec-final-member-grid{grid-template-columns:repeat(4,minmax(220px,1fr))!important}}
+@media (max-width:1100px) and (min-width:901px){.ec-regional-ui .member-grid,.ec-regional-ui .members-grid,.ec-regional-ui .ec-final-member-grid{grid-template-columns:repeat(2,minmax(230px,1fr))!important}.ec-regional-ui .home-grid,.ec-regional-ui .overview-grid,.ec-regional-ui .dashboard-grid,.ec-regional-ui .community-grid{grid-template-columns:repeat(2,minmax(220px,1fr))!important}}
+@media (max-width:900px){
+  .ec-right-dock{overflow-y:auto!important;max-height:100dvh!important}
+  .ec-dock-identity{display:grid!important;grid-template-columns:34px minmax(0,1fr)!important;gap:8px!important;align-items:center!important;margin:0 0 8px!important;padding:8px!important;border:1px solid #e0e6ea!important;border-radius:11px!important;background:#f7f9fa!important}.ec-dock-role-star{display:grid!important;place-items:center!important;width:32px!important;height:32px!important;border-radius:9px!important;background:#1a2b39!important;color:#fff!important;font-size:20px!important}.ec-dock-identity strong{font-size:12px!important}.ec-dock-identity small{font-size:9px!important}
+  .ec-regional-ui .member-grid,.ec-regional-ui .members-grid,.ec-regional-ui .ec-final-member-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important}
+  .ec-profile-layout-locked .ec-stable-profile-card.ec-profile-card-locked{grid-template-columns:1fr!important;padding:14px!important}.ec-profile-layout-locked .ec-stable-data-grid{grid-template-columns:1fr!important}
+}
+@media (max-width:560px){.ec-regional-ui .member-grid,.ec-regional-ui .members-grid,.ec-regional-ui .ec-final-member-grid{grid-template-columns:1fr!important}}
