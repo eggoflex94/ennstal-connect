@@ -26,9 +26,10 @@ function roleInfo(member){
   const current=activeRegion();
   const assigned=state.assignments.filter(a=>a.user_id===member?.id&&a.active);
   const assignedHere=Boolean(current&&assigned.some(a=>a.region_id===current.id));
+  const isHomeHere=Boolean(current&&member?.home_region_id===current.id);
   if(base==='HEAD_ADMIN')return{theme:'admin',star:'/role-star-red.svg',card:'Hauptadmin',profile:'★ Hauptadmin'};
   if(base==='ADMIN')return{theme:'admin',star:'/role-star-red.svg',card:'Global Admin',profile:'★ Global Admin'};
-  if(assignedHere)return{theme:'admin',star:'/role-star-red.svg',card:`Regional Admin ${current.name}`,profile:`★ Regional Admin ${current.name}`};
+  if(assignedHere&&isHomeHere)return{theme:'admin',star:'/role-star-red.svg',card:`Regional Admin ${current.name}`,profile:`★ Regional Admin ${current.name}`};
   if(assigned.length)return{theme:'supporter',star:'/supporter-star.svg',card:'Supporter',profile:`★ Regional Admin ${assigned.map(a=>regionName(a.region_id)).join(', ')}`};
   if(base==='SUPPORTER')return{theme:'supporter',star:'/supporter-star.svg',card:'Supporter',profile:'★ Supporter'};
   if(member?.account_badge==='BUSINESS')return{theme:'business',star:'/role-star-blue.svg',card:'Unternehmenskonto',profile:'Unternehmenskonto'};
@@ -43,7 +44,7 @@ function fixRegionalCards(){
     card.classList.remove('role-theme-admin','role-theme-supporter','role-theme-business','role-theme-member','admin','supporter','business','member');
     card.classList.add(`role-theme-${info.theme}`,info.theme);
     const star=card.querySelector('.ec-card-badge-role-img');if(star)star.src=info.star;
-    const nick=card.querySelector('.member-nickname');if(nick&&info.theme==='supporter'){nick.style.setProperty('color','#050505','important');nick.style.setProperty('-webkit-text-fill-color','#050505','important');nick.style.setProperty('text-shadow','none','important')}
+    const nick=card.querySelector('.member-nickname');if(nick){nick.style.removeProperty('color');nick.style.removeProperty('-webkit-text-fill-color');nick.style.removeProperty('text-shadow');if(info.theme==='supporter'){nick.style.setProperty('color','#050505','important');nick.style.setProperty('-webkit-text-fill-color','#050505','important');nick.style.setProperty('text-shadow','none','important')}}
   });
 }
 
@@ -73,6 +74,27 @@ function findProfile(root){
 const fmtDate=v=>{if(!v)return'';const d=new Date(v);return Number.isNaN(d.getTime())?'':d.toLocaleDateString('de-AT')};
 const fmtAge=v=>{if(!v)return'';const b=new Date(v),n=new Date();if(Number.isNaN(b.getTime()))return'';let a=n.getFullYear()-b.getFullYear();if(n.getMonth()<b.getMonth()||(n.getMonth()===b.getMonth()&&n.getDate()<b.getDate()))a--;return `${a} Jahre`};
 
+async function openAdminTools(member){
+  if(!isHead()||member.id===state.viewer?.id)return;
+  document.querySelector('.ec-launch-admin-modal')?.remove();
+  const modal=document.createElement('div');modal.className='ec-launch-admin-modal';
+  modal.innerHTML=`<div class="ec-launch-admin-box"><header><div><span>HEAD ADMIN</span><h2>${esc(member.nickname||'Mitglied')} verwalten</h2></div><button type="button" class="close">×</button></header><label>Heimatregion<select class="home">${state.regions.map(r=>`<option value="${r.slug}" ${r.id===member.home_region_id?'selected':''}>${esc(r.name)}</option>`).join('')}</select></label><button type="button" data-act="home">Heimatregion speichern</button><label>Regionale Admin-Rechte<select class="region"><option value="">Region wählen</option>${state.regions.map(r=>`<option value="${r.slug}">${esc(r.name)}</option>`).join('')}</select></label><div class="row"><button type="button" data-act="on">Regional Admin vergeben</button><button type="button" data-act="off">Regional Admin entfernen</button></div>${String(member.role||'').toUpperCase()==='ADMIN'?'<button type="button" data-act="demote">Global Admin → Regional Admin</button>':''}<p class="status"></p></div>`;
+  document.body.appendChild(modal);modal.querySelector('.close').onclick=()=>modal.remove();modal.onclick=e=>{if(e.target===modal)modal.remove()};
+  const status=modal.querySelector('.status');
+  modal.querySelectorAll('[data-act]').forEach(btn=>btn.onclick=async()=>{
+    const act=btn.dataset.act;const slug=(act==='home'?modal.querySelector('.home'):modal.querySelector('.region')).value;if(act!=='home'&&!slug){status.textContent='Bitte Region auswählen.';return}
+    btn.disabled=true;status.textContent='Wird gespeichert …';
+    try{
+      let result=null;
+      if(act==='home')result=await supabase.rpc('ec_head_set_home_region',{p_target:member.id,p_region_slug:slug});
+      if(act==='on'||act==='off')result=await supabase.rpc('ec_set_regional_admin',{p_target:member.id,p_region_slug:slug,p_enabled:act==='on'});
+      if(act==='demote')result=await supabase.rpc('ec_demote_global_to_regional_admin',{p_target:member.id,p_region_slug:slug});
+      if(result?.error)throw result.error;
+      status.textContent='Gespeichert.';await load(true);setTimeout(()=>window.location.reload(),250);
+    }catch(error){status.textContent=error?.message||'Speichern fehlgeschlagen.'}finally{btn.disabled=false}
+  });
+}
+
 function fixProfiles(){
   document.querySelectorAll('.member-profile-page:not(.public-profile-preview)').forEach(root=>{
     if(root.dataset.ecLaunchFixed==='1')return;const member=findProfile(root);if(!member)return;root.dataset.ecLaunchFixed='1';
@@ -81,6 +103,7 @@ function fixProfiles(){
     shell.innerHTML=`<div class="ec-launch-profile-left"><div class="photo"></div><div class="role"><span>FUNKTION</span><strong>${esc(info.profile)}</strong><small>Heimatregion: ${esc(regionName(member.home_region_id))}</small></div><div class="actions"></div></div><div class="ec-launch-profile-data"><header><span>MITGLIEDSPROFIL</span><h1>${esc(member.nickname||'Mitglied')}</h1></header><div class="data"><div><small>Nickname</small><strong>${esc(member.nickname||'')}</strong></div><div><small>Vorname</small><strong>${esc(member.first_name||'')}</strong></div><div><small>Nachname</small><strong>${esc(member.last_name||'')}</strong></div><div><small>Geburtsdatum</small><strong>${esc(fmtDate(member.birth_date))}</strong></div><div><small>Alter</small><strong>${esc(fmtAge(member.birth_date))}</strong></div><div><small>Wohnort</small><strong>${esc(member.location||'')}</strong></div><div><small>Heimatregion</small><strong>${esc(regionName(member.home_region_id))}</strong></div></div>${member.bio?`<section class="about"><span>ÜBER MICH</span><p>${esc(member.bio)}</p></section>`:''}</div>`;
     if(avatar)shell.querySelector('.photo').appendChild(avatar);
     if(oldActions)[...oldActions.querySelectorAll('button')].forEach(b=>shell.querySelector('.actions').appendChild(b));
+    if(isHead()&&member.id!==state.viewer?.id){const admin=document.createElement('button');admin.type='button';admin.className='admin';admin.textContent='Admin Tools';admin.onclick=()=>openAdminTools(member);shell.querySelector('.actions').appendChild(admin)}
     [...root.children].forEach(ch=>{if(ch!==shell)ch.classList.add('ec-launch-hide-profile')});root.prepend(shell);
   });
 }
@@ -92,5 +115,5 @@ function cleanDock(){
 
 async function run(){await load();fixBrand();fixRegionalCards();fixHome();fixProfiles();cleanDock()}
 let queued=false;new MutationObserver(()=>{if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;run()})}).observe(document.documentElement,{subtree:true,childList:true});
-window.addEventListener('ec:region-change',()=>setTimeout(()=>{document.querySelector('.ec-launch-home')?.remove();document.querySelectorAll('.ec-launch-hidden-home').forEach(x=>x.classList.remove('ec-launch-hidden-home'));run()},30));
+window.addEventListener('ec:region-change',()=>setTimeout(()=>{document.querySelector('.ec-launch-home')?.remove();document.querySelectorAll('.ec-launch-hidden-home').forEach(x=>x.classList.remove('ec-launch-hidden-home'));document.querySelectorAll('.member-profile-page').forEach(x=>{x.dataset.ecLaunchFixed='';x.querySelector('.ec-launch-profile')?.remove();x.querySelectorAll('.ec-launch-hide-profile').forEach(y=>y.classList.remove('ec-launch-hide-profile'))});run()},30));
 window.addEventListener('DOMContentLoaded',run);run();
