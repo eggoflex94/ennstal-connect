@@ -39,24 +39,42 @@ function expectedTargets(){
   return[];
 }
 
+function adminSlotIsCorrect(slot,targets){
+  const buttons=[...slot.querySelectorAll(':scope > .ec-admin-icon-button')];
+  if(buttons.length!==targets.length)return false;
+  return targets.every((target,index)=>buttons[index]?.dataset.ecPage===target);
+}
+
 function ensureAdminDock(){
   const dock=document.querySelector('.ec-right-dock');
   const slot=dock?.querySelector('.ec-dock-admin-slot');
   if(!dock||!slot)return;
   const targets=expectedTargets();
-  if(!targets.length){slot.replaceChildren();slot.hidden=true;return;}
+  if(!targets.length){slot.replaceChildren();slot.hidden=true;slot.removeAttribute('data-ec-admin-signature');return;}
+
   slot.hidden=false;
-  slot.classList.add('ec-admin-icon-grid');
+  slot.className='ec-dock-admin-slot ec-admin-icon-grid';
   const signature=targets.join('|');
-  if(slot.dataset.ecAdminSignature!==signature){
+  if(slot.dataset.ecAdminSignature!==signature||!adminSlotIsCorrect(slot,targets)){
     slot.replaceChildren(...targets.map(makeButton));
     slot.dataset.ecAdminSignature=signature;
   }
-  const communityLabel=[...dock.querySelectorAll('.ec-dock-section-label')].find(el=>/COMMUNITY/i.test(el.textContent||''));
+
+  const communityLabel=[...dock.querySelectorAll(':scope > .ec-dock-section-label')].find(el=>/COMMUNITY/i.test(el.textContent||''));
   const communityDivider=communityLabel?.previousElementSibling;
   if(communityDivider&&slot.nextElementSibling!==communityDivider){
     communityDivider.parentElement.insertBefore(slot,communityDivider);
   }
+}
+
+function removeNestedScroll(){
+  const dock=document.querySelector('.ec-right-dock');
+  if(!dock)return;
+  dock.removeAttribute('tabindex');
+  dock.querySelectorAll('.ec-dock-detail').forEach(panel=>{
+    panel.style.removeProperty('max-height');
+    panel.style.removeProperty('overflow');
+  });
 }
 
 function stabilizeLayout(){
@@ -64,6 +82,7 @@ function stabilizeLayout(){
   if(!dock)return;
   dock.classList.add('ec-stable-personal-dock');
   ensureAdminDock();
+  removeNestedScroll();
 }
 
 async function loadRole(){
