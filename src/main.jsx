@@ -73,6 +73,7 @@ import "./regional-shell.css";
 import "./regional-shell.js";
 import "./profile-overhaul.css";
 import "./profile-overhaul.js";
+import "./layout-final-fix.css";
 
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
