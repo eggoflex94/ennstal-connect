@@ -82,17 +82,10 @@ import "./admin-rights-recovery.js";
 import "./ui-stability-rescue.css";
 import "./site-final-authority.css";
 import "./desktop-recovery.css";
+
+/* One final controller only. Older emergency/go-live/launch hotfix runtimes are intentionally not loaded. */
 import "./stable-app.js";
 import "./stable-app.css";
-import "./final-ui-lock.js";
-import "./final-ui-lock.css";
-import "./emergency-production.css";
-import "./go-live-runtime.js";
-import "./go-live-final.css";
-import "./launch-stable.js";
-import "./launch-stable.css";
-import "./production-hotfix.js";
-import "./production-hotfix.css";
 
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
