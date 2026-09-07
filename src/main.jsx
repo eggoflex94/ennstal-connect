@@ -131,6 +131,11 @@ import "./profile-image-upload-fix.js";
 import "./community-runtime-stability.css";
 import "./community-runtime-stability.js";
 
+/* Role-aware profile design preview and permission-aware Admin-Zentrale. */
+import "./profile-design-preview-role.css";
+import "./admin-central-modern.css";
+import "./admin-central-permissions.js";
+
 /* Absolute last mobile runtime: if a browser swallows the native tap, synthesize exactly one click. */
 import "./mobile-single-tap-fix.js";
 
