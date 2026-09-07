@@ -28,8 +28,9 @@ import "./admin-dashboard-modern.js";
 import "./admin-compact-enhancements.js";
 import "./sidebar-news-popup.js";
 
-/* Exactly one regional shell/controller and exactly one layout stylesheet. */
+/* One regional shell, one clean profile runtime and one layout stylesheet. */
 import "./regional-shell.js";
+import "./clean-profile-runtime.js";
 import "./clean-layout.css";
 
 class AppErrorBoundary extends React.Component {
