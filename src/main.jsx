@@ -46,6 +46,9 @@ import "./sidebar-compact-polish.js";
 import "./global-role-identity-polish.css";
 import "./global-role-identity-polish.js";
 
+/* Final profile/footer authority: compact QR sharing and integrated legal navigation. */
+import "./profile-footer-polish.css";
+
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
   static getDerivedStateFromError() { return { failed: true }; }
