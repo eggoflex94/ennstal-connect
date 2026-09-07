@@ -122,6 +122,9 @@ import "./admin-community-popup-manager.js";
 import "./personal-dashboard-final-fix.css";
 import "./personal-dashboard-final-fix.js";
 
+/* Final member directory card authority: narrow cards, centered nicknames and overlap-safe content. */
+import "./member-directory-card-final.css";
+
 /* Absolute last mobile runtime: if a browser swallows the native tap, synthesize exactly one click. */
 import "./mobile-single-tap-fix.js";
 
