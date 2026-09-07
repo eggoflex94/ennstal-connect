@@ -1,0 +1,16 @@
+/* Modern permission-aware Admin-Zentrale */
+.ec-admin-central-modern{margin:0 0 18px!important;padding:22px!important;border:1px solid #dbe4ea!important;border-radius:22px!important;background:linear-gradient(180deg,#fff 0%,#f8fbfd 100%)!important;box-shadow:0 12px 28px rgba(23,40,58,.08)!important}
+.ec-admin-central-modern .ec-admin-central-head{margin-bottom:16px!important}
+.ec-admin-central-modern .ec-admin-central-head .eyebrow{color:#ef5b1c!important;font-weight:900!important;letter-spacing:.12em!important}
+.ec-admin-central-modern .ec-admin-central-head h2{margin:5px 0 7px!important;color:#31485f!important;font-size:clamp(1.5rem,2.2vw,2rem)!important;line-height:1.15!important}
+.ec-admin-central-modern .ec-admin-central-head p{margin:0!important;color:#647786!important;font-size:.95rem!important}
+.ec-admin-central-grid{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))!important;gap:12px!important}
+.ec-admin-central-card{display:grid!important;grid-template-columns:42px minmax(0,1fr) 20px!important;align-items:center!important;gap:12px!important;min-height:92px!important;padding:15px!important;border:1px solid #d9e3e9!important;border-radius:16px!important;background:#fff!important;color:#17283a!important;text-align:left!important;cursor:pointer!important;box-shadow:0 5px 14px rgba(23,40,58,.04)!important;transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease!important}
+.ec-admin-central-card:hover,.ec-admin-central-card:focus-visible{transform:translateY(-2px)!important;border-color:#ff6a2d!important;box-shadow:0 12px 24px rgba(255,106,45,.12)!important;outline:none!important}
+.ec-admin-central-icon{display:grid!important;place-items:center!important;width:42px!important;height:42px!important;border-radius:12px!important;background:linear-gradient(135deg,#ff7b31,#ff5600)!important;color:#fff!important;font-size:19px!important}
+.ec-admin-central-copy{display:grid!important;gap:3px!important;min-width:0!important}
+.ec-admin-central-copy strong{font-size:.98rem!important;color:#17283a!important}
+.ec-admin-central-copy small{font-size:.78rem!important;line-height:1.35!important;color:#6a7b88!important}
+.ec-admin-central-arrow{font-size:1.15rem!important;color:#91a0ac!important}
+.ec-admin-central-empty{padding:14px!important;border:1px dashed #d5dfe6!important;border-radius:14px!important;background:#fff!important;color:#6f808c!important}
+@media(max-width:700px){.ec-admin-central-modern{padding:16px!important;border-radius:18px!important}.ec-admin-central-grid{grid-template-columns:1fr!important}.ec-admin-central-card{min-height:82px!important;padding:13px!important}}
