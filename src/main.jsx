@@ -56,6 +56,8 @@ import "./sidebar-layout-stabilizer.js";
 /* Region-aware admin rights cards: compact images and effective regional roles. */
 import "./admin-rights-region-polish.css";
 import "./admin-rights-region-polish.js";
+import "./admin-role-manager.css";
+import "./admin-role-manager.js";
 
 /* Member profile guards: regional role in the active region and hard size limits for the legacy hero fallback. */
 import "./member-profile-guard.css";
