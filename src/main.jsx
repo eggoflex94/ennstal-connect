@@ -80,6 +80,7 @@ import "./member-profile-final.js";
 import "./member-profile-final.css";
 import "./admin-rights-recovery.js";
 import "./ui-stability-rescue.css";
+import "./site-final-authority.css";
 
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
