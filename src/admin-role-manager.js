@@ -15,7 +15,7 @@ const memberForCard=card=>{
 const assignedRegions=id=>assignments.filter(a=>a.user_id===id&&a.active).map(a=>a.region_id);
 const moderationFor=id=>moderation.filter(a=>a.user_id===id&&a.active);
 const regionName=id=>regions.find(r=>r.id===id)?.name||'Region';
-const permissionLabel=p=>String(p).toLowerCase().includes('group')||String(p).toLowerCase().includes('gruppe')?'Gruppen':'Forum';
+const permissionLabel=p=>String(p).toUpperCase()==='GROUPS'?'Gruppen':String(p).toUpperCase()==='FORUM'?'Forum':String(p);
 
 async function refresh(){
   if(loading||!supabase)return;
@@ -69,6 +69,12 @@ async function setModeration(member,regionSlugs,permissions,enabled,status){
 function currentModerationText(member){
   const rows=moderationFor(member.id);
   if(!rows.length)return'Keine Moderationsrechte';
+  const allRegionIds=new Set(regions.map(r=>r.id));
+  const moderatedIds=new Set(rows.map(r=>r.region_id));
+  const samePermissions=rows.length>0&&rows.every(r=>JSON.stringify([...(r.permissions||[])].sort())===JSON.stringify([...(rows[0].permissions||[])].sort()));
+  if(allRegionIds.size&&moderatedIds.size===allRegionIds.size&&[...allRegionIds].every(id=>moderatedIds.has(id))&&samePermissions){
+    return `Global: ${(rows[0].permissions||[]).map(permissionLabel).join(' + ')||'Moderation'}`;
+  }
   return rows.map(row=>`${regionName(row.region_id)}: ${(row.permissions||[]).map(permissionLabel).join(' + ')||'Moderation'}`).join(' · ');
 }
 
@@ -89,7 +95,7 @@ function buildManager(card,member,force=false){
     <div class="ec-role-manager-current">${assigned.length?`Regional Admin: ${assigned.map(regionName).join(', ')}`:'Keine regionale Adminrolle'}</div>
     <div class="ec-moderation-manager">
       <div class="ec-moderation-title"><strong>Supporter-Moderation</strong><small>Regional oder global über alle aktiven Regionen</small></div>
-      <div class="ec-moderation-permissions"><label><input type="checkbox" value="FORUM_MODERATION" checked> Forum</label><label><input type="checkbox" value="GROUP_MODERATION"> Gruppen</label></div>
+      <div class="ec-moderation-permissions"><label><input type="checkbox" value="FORUM" checked> Forum</label><label><input type="checkbox" value="GROUPS"> Gruppen</label></div>
       <div class="ec-role-manager-actions ec-moderation-actions"><button type="button" data-action="moderation-region-on">Regional vergeben</button><button type="button" data-action="moderation-region-off">Regional entfernen</button><button type="button" data-action="moderation-global-on">Global vergeben</button><button type="button" data-action="moderation-global-off">Global entfernen</button></div>
       <div class="ec-role-manager-current ec-moderation-current">${currentModerationText(member)}</div>
     </div>
