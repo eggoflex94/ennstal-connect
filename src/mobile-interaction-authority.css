@@ -1,0 +1,74 @@
+/* Final phone/tablet interaction authority. Loaded last. */
+.admin-responsibilities{display:none!important}
+
+@media(max-width:900px){
+  html,body,#root{touch-action:manipulation}
+  button,a,input,select,textarea,[role="button"],[tabindex]{pointer-events:auto}
+
+  /* The regional shell must never become an invisible click shield over the app. */
+  .ec-regional-shell{pointer-events:none!important}
+  .ec-regional-shell>.ec-brand-masthead,
+  .ec-regional-shell>.ec-top-nav,
+  .ec-regional-shell>.ec-right-dock{pointer-events:auto!important}
+
+  /* Closed personal dock is truly non-interactive and cannot cover page controls. */
+  body:not(.ec-dock-open) .ec-right-dock{
+    transform:translate3d(105%,0,0)!important;
+    visibility:hidden!important;
+    opacity:0!important;
+    pointer-events:none!important;
+  }
+  body:not(.ec-dock-open) .ec-right-dock *{pointer-events:none!important}
+  body.ec-dock-open .ec-right-dock{
+    position:fixed!important;
+    top:0!important;
+    right:0!important;
+    bottom:0!important;
+    left:auto!important;
+    width:min(92vw,360px)!important;
+    height:100dvh!important;
+    max-height:100dvh!important;
+    transform:none!important;
+    visibility:visible!important;
+    opacity:1!important;
+    pointer-events:auto!important;
+    overflow-y:auto!important;
+    overscroll-behavior:contain!important;
+    z-index:12000!important;
+  }
+
+  /* Only actual open dialogs may intercept the screen. */
+  .ec-admin-workspace[hidden],
+  .content-editor-overlay[hidden],
+  .ec-clean-admin-modal[hidden],
+  .ec-mobile-zoom-overlay[hidden],
+  .profile-modal[hidden]{display:none!important;pointer-events:none!important}
+
+  /* Old profile layers stay out of the hit-test tree once the clean profile exists. */
+  .member-profile-page:has(.ec-clean-profile)>.member-profile-hero,
+  .member-profile-page:has(.ec-clean-profile)>.member-profile-actions,
+  .member-profile-page:has(.ec-clean-profile)>.profile-visible-details{
+    display:none!important;
+    pointer-events:none!important;
+  }
+
+  .modern-main,.content-root,.panel,.community-card,.member-profile-page,.profile-page,.admin-page{
+    position:relative;
+    z-index:auto!important;
+  }
+
+  /* Comfortable touch targets without changing desktop layout. */
+  .ec-top-nav button,.ec-dock-toggle,.ec-region-picker select,
+  .ec-compact-menu-item,.ec-admin-icon-button,
+  .member-profile-page button,.admin-page button,.profile-page button,
+  .messages-page button,.community-page button,.forum-page button,.groups-page button{
+    min-height:44px;
+  }
+}
+
+@media(max-width:560px){
+  body.ec-dock-open{overflow:hidden!important}
+  .ec-right-dock{width:min(94vw,350px)!important}
+  .ec-top-nav{isolation:isolate!important}
+  .ec-dock-toggle,.ec-region-picker{position:relative!important;z-index:12001!important}
+}
