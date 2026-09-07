@@ -43,13 +43,14 @@ function fixRegionalCards(){
     card.dataset.memberId=member.id;card.dataset.homeRegionId=member.home_region_id||'';card.dataset.roleTheme=info.theme;card.dataset.effectiveRole=info.card;
     card.classList.remove('role-theme-admin','role-theme-supporter','role-theme-business','role-theme-member','admin','supporter','business','member');
     card.classList.add(`role-theme-${info.theme}`,info.theme);
-    const star=card.querySelector('.ec-card-badge-role-img');if(star)star.src=info.star;
+    const star=card.querySelector('.ec-card-badge-role-img');if(star&&star.getAttribute('src')!==info.star)star.src=info.star;
     const nick=card.querySelector('.member-nickname');if(nick){nick.style.removeProperty('color');nick.style.removeProperty('-webkit-text-fill-color');nick.style.removeProperty('text-shadow');if(info.theme==='supporter'){nick.style.setProperty('color','#050505','important');nick.style.setProperty('-webkit-text-fill-color','#050505','important');nick.style.setProperty('text-shadow','none','important')}}
   });
 }
 
 function fixBrand(){
   document.querySelectorAll('.ec-brand-logo').forEach(el=>{
+    if(el.classList.contains('ec-launch-brand')&&el.querySelector('.ec-launch-mark')&&el.querySelector('.ec-launch-word'))return;
     el.classList.add('ec-launch-brand');
     el.innerHTML='<span class="ec-launch-mark">★</span><span class="ec-launch-word"><b>ennstal</b><strong>connect</strong><small>REGIONAL. ECHT. GEMEINSAM.</small></span>';
   });
