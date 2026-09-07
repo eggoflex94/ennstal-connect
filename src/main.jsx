@@ -42,6 +42,10 @@ import "./role-region-polish.js";
 import "./sidebar-compact-polish.css";
 import "./sidebar-compact-polish.js";
 
+/* Final global identity authority: person references are rendered once as role star + nickname. */
+import "./global-role-identity-polish.css";
+import "./global-role-identity-polish.js";
+
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
   static getDerivedStateFromError() { return { failed: true }; }
