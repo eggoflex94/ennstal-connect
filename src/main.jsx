@@ -136,6 +136,13 @@ import "./profile-design-preview-role.css";
 import "./admin-central-modern.css";
 import "./admin-central-permissions.js";
 
+/* Final geometry and Admin-Zentrale authority: prevent overlap and style the actual shortcut markup. */
+import "./layout-overlap-authority.css";
+import "./admin-central-final.css";
+
+/* Restore reliable Head-Admin business-account assignment/removal on member profiles. */
+import "./business-account-admin-fix.js";
+
 /* Absolute last mobile runtime: if a browser swallows the native tap, synthesize exactly one click. */
 import "./mobile-single-tap-fix.js";
 
