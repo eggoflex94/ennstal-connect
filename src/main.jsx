@@ -143,6 +143,9 @@ import "./admin-central-final.css";
 /* Restore reliable Head-Admin business-account assignment/removal on member profiles. */
 import "./business-account-admin-fix.js";
 
+/* Synchronize dynamic shell heights/layout after React and DOM enhancers finish rendering. */
+import "./layout-runtime-sync.js";
+
 /* Absolute last mobile runtime: if a browser swallows the native tap, synthesize exactly one click. */
 import "./mobile-single-tap-fix.js";
 
