@@ -1,0 +1,29 @@
+/* Desktop recovery: laptop/desktop must never collapse into the old phone-like strips. */
+@media (min-width:1051px){
+  html,body,#root{width:100%!important;max-width:none!important;min-width:0!important}
+  body{overflow-x:hidden!important}
+  .ec-regional-ui .modern-main{position:relative!important;display:block!important;width:100%!important;max-width:none!important;min-width:0!important;min-height:100vh!important;margin:0!important;padding:142px 292px 48px 32px!important;overflow:visible!important}
+  .ec-regional-ui .content-root{position:relative!important;display:block!important;width:min(1280px,100%)!important;max-width:1280px!important;min-width:0!important;min-height:560px!important;margin:0 auto!important;padding:0!important;overflow:visible!important;transform:none!important}
+  .ec-regional-ui .content-root>section{position:relative!important;inset:auto!important;left:auto!important;right:auto!important;top:auto!important;bottom:auto!important;display:block!important;width:100%!important;max-width:none!important;min-width:0!important;height:auto!important;min-height:0!important;margin:0!important;padding-left:0!important;transform:none!important;float:none!important;overflow:visible!important}
+  .ec-regional-ui .page-heading{position:relative!important;display:flex!important;width:100%!important;max-width:none!important;height:auto!important;margin:0 0 22px!important;padding:0!important;transform:none!important}
+  .ec-regional-ui .panel{position:relative!important;inset:auto!important;left:auto!important;top:auto!important;width:auto!important;max-width:100%!important;height:auto!important;min-height:0!important;margin:0!important;transform:none!important;float:none!important;overflow:visible!important}
+  .ec-regional-ui .member-grid{position:relative!important;display:grid!important;grid-template-columns:repeat(3,minmax(230px,1fr))!important;gap:20px!important;width:100%!important;max-width:none!important;margin:0!important;padding:0!important;transform:none!important;overflow:visible!important}
+  .ec-regional-ui .member-grid>.member-card{position:relative!important;width:100%!important;max-width:none!important;min-width:0!important;margin:0!important;transform:none!important}
+  .ec-regional-ui .groups-page{display:grid!important;grid-template-columns:360px minmax(0,1fr)!important;gap:22px!important;align-items:start!important}
+  .ec-regional-ui .groups-page>.page-heading,.ec-regional-ui .groups-page>.group-moderators,.ec-regional-ui .groups-page>.group-transfer-queue{grid-column:1/-1!important}
+  .ec-regional-ui .groups-page>.group-create-form{grid-column:1!important;width:100%!important}
+  .ec-regional-ui .groups-page>.group-grid{grid-column:2!important;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:18px!important;width:100%!important}
+  .ec-regional-ui .forum-page,.ec-regional-ui .news-page,.ec-regional-ui .events-page,.ec-regional-ui .ads-page,.ec-regional-ui .admin-page,.ec-regional-ui .account-review-page{display:block!important;width:100%!important}
+  .ec-regional-ui .news-grid,.ec-regional-ui .event-grid,.ec-regional-ui .ad-grid,.ec-regional-ui .cards{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:18px!important;width:100%!important}
+  .ec-regional-ui .message-overview{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important;width:100%!important}
+  .ec-regional-ui .ec-right-dock{position:fixed!important;top:142px!important;right:22px!important;bottom:22px!important;left:auto!important;display:flex!important;flex-direction:column!important;width:248px!important;max-width:248px!important;height:auto!important;max-height:none!important;margin:0!important;padding:14px!important;border-radius:20px!important;overflow-y:auto!important;overflow-x:hidden!important;transform:none!important;z-index:800!important}
+  .ec-regional-ui .ec-right-dock button{width:100%!important;min-height:39px!important;flex:0 0 auto!important}
+  .ec-regional-ui .ec-right-dock .ec-dock-admin-slot,.ec-regional-ui .ec-right-dock .ec-dock-admin-recovery{display:block!important;flex:0 0 auto!important;width:100%!important}
+  .ec-regional-ui .ec-right-dock .ec-dock-admin-slot:empty{display:none!important}
+  .ec-regional-ui .ec-dock-toggle,.ec-regional-ui .ec-dock-close{display:none!important}
+  .ec-regional-ui .member-profile-page.ec-member-profile-final{width:100%!important;max-width:1100px!important;margin:0 auto!important}
+  .ec-regional-ui .ec-member-profile-final .ec-mp-card{display:grid!important;grid-template-columns:250px minmax(0,1fr)!important;gap:28px!important;width:100%!important}
+  .ec-regional-ui .ec-member-profile-final .ec-mp-photo{width:100%!important;height:230px!important}
+  .ec-regional-ui .ec-member-profile-final .ec-mp-photo img{width:208px!important;height:208px!important;max-width:208px!important;max-height:208px!important}
+}
+@media (min-width:1450px){.ec-regional-ui .modern-main{padding-left:44px!important;padding-right:310px!important}.ec-regional-ui .content-root{max-width:1380px!important}.ec-regional-ui .member-grid{grid-template-columns:repeat(4,minmax(220px,1fr))!important}.ec-regional-ui .ec-right-dock{right:28px!important;width:260px!important;max-width:260px!important}}
