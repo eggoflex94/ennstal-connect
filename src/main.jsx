@@ -75,7 +75,7 @@ import "./sidebar-role-pin.js";
 import "./dashboard-top-polish.css";
 import "./dashboard-top-polish.js";
 
-/* Member engagement: active online-time rewards plus Head-Admin-only hours/inactivity statistics. */
+/* Member engagement: online-time rewards plus global/regional admin hours and inactivity statistics. */
 import "./admin-hours-statistics.css";
 import "./admin-hours-statistics.js";
 
@@ -111,9 +111,14 @@ import "./people-links-polish.js";
 /* Final touch/click authority: removes legacy profile responsibility text and prevents hidden mobile layers from blocking taps. */
 import "./mobile-interaction-authority.css";
 
-/* Global Community News popup: versioned for all members, editable/deletable by Head Admin. */
+/* Global + regional Community News popups and their admin management surface. */
 import "./global-community-news-popup.css";
 import "./global-community-news-popup.js";
+import "./admin-community-popup-manager.css";
+import "./admin-community-popup-manager.js";
+
+/* Absolute last mobile runtime: if a browser swallows the native tap, synthesize exactly one click. */
+import "./mobile-single-tap-fix.js";
 
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
@@ -133,8 +138,7 @@ async function removeLegacyAppShell() {
     }
     if ("caches" in window) {
       const keys = await caches.keys();
-      await Promise.all(keys.map(key => caches.delete(key))
-      );
+      await Promise.all(keys.map(key => caches.delete(key)));
     }
   } catch (error) {
     console.warn("Alter App-Cache konnte nicht vollständig entfernt werden:", error);
