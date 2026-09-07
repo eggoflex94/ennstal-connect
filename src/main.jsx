@@ -23,6 +23,7 @@ import "./legal-evidence-admin.js";
 import "./privacy-center.js";
 import "./account-deletion-admin.js";
 import "./help-center.js";
+import "./notification-center.css";
 import "./notification-center.js";
 import "./member-onboarding.js";
 import "./admin-workspace.css";
