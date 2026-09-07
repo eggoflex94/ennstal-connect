@@ -89,6 +89,8 @@ import "./final-ui-lock.css";
 import "./emergency-production.css";
 import "./go-live-runtime.js";
 import "./go-live-final.css";
+import "./launch-stable.js";
+import "./launch-stable.css";
 
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
