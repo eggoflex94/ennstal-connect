@@ -25,6 +25,22 @@ function cleanupCommunityContacts(){
     if(!remaining && !meaningful)panel.dataset.ecSuperseded='true';
   });
 
+  /* Remove the older standalone responsibility card that can still be rendered
+     below the new regional responsibility panel. It duplicates the same person
+     and begins with "Zuständig für". */
+  const host=regionalPanel.closest('section,article,.card,.dashboard-card,.home-card,.panel')||regionalPanel.parentElement;
+  if(host){
+    [...host.querySelectorAll(':scope > div,:scope > section,:scope > article,:scope > aside')].forEach((node)=>{
+      if(node===regionalPanel||node.contains(regionalPanel)||regionalPanel.contains(node))return;
+      if(node.closest('.ec-team-panel'))return;
+      const content=text(node);
+      if(!/Zuständig\s*für\s*:/i.test(content))return;
+      const hasRepresented=[...represented].some((nickname)=>nickname&&normalize(content).includes(nickname));
+      if(hasRepresented){node.remove();return;}
+      if(/Datenschutz|Technischer Support|Einhaltung der Regeln|Sicherheit|Community-Verwaltung/i.test(content))node.remove();
+    });
+  }
+
   regionalPanel.querySelectorAll('.ec-region-responsibility-person').forEach((row)=>{
     const nickname=row.querySelector('.ec-region-responsibility-person-head strong');
     if(nickname)nickname.setAttribute('title','Profil öffnen');
