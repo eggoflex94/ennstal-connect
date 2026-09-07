@@ -4,17 +4,19 @@ import { readFile } from "node:fs/promises";
 
 const source = async path => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
-const requiredMainModules = ["./notification-center.js","./privacy-center.js","./account-deletion-admin.js","./legal-evidence-admin.js","./admin-workspace.js","./admin-dashboard-modern.js","./admin-compact-enhancements.js","./mobile-admin-production.css","./supporter-runtime-fix.js","./member-grid-final.css","./role-theme-lock.css","./regional-shell.css","./regional-shell.js"];
+const requiredMainModules = ["./notification-center.js","./privacy-center.js","./account-deletion-admin.js","./legal-evidence-admin.js","./admin-workspace.js","./admin-dashboard-modern.js","./admin-compact-enhancements.js","./regional-shell.js","./clean-profile-runtime.js","./clean-layout.css","./clean-components.css"];
 
-test("main entry keeps critical member/admin/regional modules wired", async () => {const main=await source("src/main.jsx");for(const module of requiredMainModules) assert.match(main,new RegExp(module.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")));assert.doesNotMatch(main,/live-notifications\.js/);});
+test("main entry keeps critical member/admin/regional modules wired without legacy layout stack", async () => {const main=await source("src/main.jsx");for(const module of requiredMainModules) assert.match(main,new RegExp(module.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")));for(const legacy of ["mobile-admin-production.css","member-grid-final.css","role-theme-lock.css","profile-simple.css","regional-shell.css"])assert.doesNotMatch(main,new RegExp(legacy.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")));assert.doesNotMatch(main,/live-notifications\.js/);});
 
-test("native member card renders role theme, identity, 3d star and separated age/presence", async()=>{const card=await source("src/MemberCardView.jsx");assert.match(card,/data-member-id=\{member\.id\}/);assert.match(card,/data-home-region-id=\{member\.home_region_id/);assert.match(card,/data-role-theme=\{presentation\.theme\}/);for(const x of ['role-star-red.svg','supporter-star.svg','role-star-blue.svg','role-star-member.svg'])assert.match(card,new RegExp(x.replace('.','\\.')));assert.match(card,/className="ec-member-realname"/);assert.match(card,/className="ec-member-age"/);assert.match(card,/loading="lazy"/);assert.match(card,/tabIndex=\{0\}/);});
+test("native member card renders role theme, identity, star and separated age/presence", async()=>{const card=await source("src/MemberCardView.jsx");assert.match(card,/data-member-id=\{member\.id\}/);assert.match(card,/data-home-region-id=\{member\.home_region_id/);assert.match(card,/data-role-theme=\{presentation\.theme\}/);for(const x of ['role-star-red.svg','supporter-star.svg','role-star-blue.svg','role-star-member.svg'])assert.match(card,new RegExp(x.replace('.','\\.')));assert.match(card,/className="ec-member-realname"/);assert.match(card,/className="ec-member-age"/);assert.match(card,/loading="lazy"/);assert.match(card,/tabIndex=\{0\}/);});
 
 test("vite build swaps only the known MemberCard renderer",async()=>{const config=await source("vite.config.js");assert.match(config,/ennstal-native-member-card/);assert.match(config,/MemberCardView\.jsx/);assert.match(config,/MemberCard renderer markers not found/);assert.match(config,/home_region_slug/);});
 
-test("regional shell loads server regions and enforces region directory rules",async()=>{const code=await source("src/regional-shell.js");assert.match(code,/from\('regions'\)/);assert.match(code,/regional_admin_assignments/);assert.match(code,/homeRegionId|home-region-id/i);assert.match(code,/role==='HEAD_ADMIN'\|\|role==='ADMIN'/);assert.match(code,/ec:region-change/);assert.doesNotMatch(code,/location\.reload\(\)/);});
+test("regional shell loads server regions, regional roles and home-region directory rules",async()=>{const code=await source("src/regional-shell.js");assert.match(code,/from\('regions'\)/);assert.match(code,/regional_admin_assignments/);assert.match(code,/homeRegionId|home-region-id/i);assert.match(code,/HEAD_ADMIN/);assert.match(code,/ADMIN/);assert.match(code,/Regional Admin/);assert.match(code,/home_region_id===activeRegion\.id/);assert.match(code,/ec:region-change/);assert.doesNotMatch(code,/location\.reload\(\)/);});
 
-test("regional shell has mobile icon dock and single-column member fallback",async()=>{const css=await source("src/regional-shell.css");assert.match(css,/@media\(max-width:700px\)/);assert.match(css,/\.ec-right-dock/);assert.match(css,/grid-template-columns:minmax\(0,1fr\)!important/);assert.match(css,/max-width:100vw!important/);});
+test("clean layout has mobile dock and single-column member fallback",async()=>{const css=await source("src/clean-layout.css");assert.match(css,/@media\(max-width:900px\)/);assert.match(css,/\.ec-right-dock/);assert.match(css,/grid-template-columns:1fr!important/);assert.match(css,/member-grid/);});
+
+test("clean components keep compact profile and dock surfaces",async()=>{const css=await source("src/clean-components.css");assert.match(css,/\.ec-clean-profile/);assert.match(css,/\.ec-dock-identity/);assert.match(css,/\.ec-dock-detail/);assert.match(css,/member-card/);});
 
 test("notification center remains private and realtime",async()=>{const code=await source("src/notification-center.js");assert.match(code,/auth\.getUser\(\)/);assert.match(code,/\.eq\("user_id",uid\)/);assert.match(code,/member_mark_notification_read/);assert.match(code,/removeChannel\(channel\)/);});
 
@@ -26,10 +28,8 @@ test("legal evidence and deletion flows keep explicit confirmations",async()=>{c
 
 test("member privacy controls use server-side RPCs",async()=>{const center=await source("src/privacy-center.js"),lastName=await source("src/last-name-privacy.js");assert.match(center,/member_privacy_export/);assert.match(lastName,/set_last_name_privacy/);});
 
-test("role runtime is limited to feeds and never rewrites member cards",async()=>{const code=await source("src/supporter-runtime-fix.js");assert.match(code,/MutationObserver/);assert.doesNotMatch(code,/setInterval\s*\(/);assert.doesNotMatch(code,/\.member-card/);});
+test("clean profile runtime respects privacy and regional roles",async()=>{const code=await source("src/clean-profile-runtime.js");assert.match(code,/privacy_settings/);assert.match(code,/regional_admin_assignments/);assert.match(code,/Hauptadmin · Betreiber/);assert.match(code,/Regional Admin/);assert.match(code,/ec-clean-profile/);});
 
-test("mobile admin hardening preserves touch sized controls and narrow layouts",async()=>{const css=await source("src/mobile-admin-production.css");assert.match(css,/@media\(max-width:900px\)/);assert.match(css,/min-height:44px/);assert.match(css,/safe-area-inset-bottom/);});
-
-test("supporter role lock forbids green card fallback",async()=>{const css=await source("src/role-theme-lock.css");assert.match(css,/data-role-theme="supporter"/);assert.match(css,/#ffe537/);assert.match(css,/#050505/);});
+test("supporter role remains gold with black nickname in clean layout",async()=>{const css=await source("src/clean-layout.css");assert.match(css,/data-role-theme="supporter"/);assert.match(css,/#ffe532/);assert.match(css,/#050505/);});
 
 test("service worker cleanup prevents stale application shells",async()=>{const main=await source("src/main.jsx");assert.match(main,/getRegistrations\(\)/);assert.match(main,/registration\.unregister\(\)/);assert.doesNotMatch(main,/serviceWorker\.register/);});
