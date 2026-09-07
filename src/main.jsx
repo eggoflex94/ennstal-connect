@@ -80,6 +80,10 @@ import "./admin-hours-statistics.js";
 /* Final profile stability authority: one compact visible member profile and admin tool grid. */
 import "./profile-final-stability.css";
 
+/* Additive profile community modules: groups, rides/hikes and role-colored image rings. */
+import "./profile-community-modules.css";
+import "./profile-community-modules.js";
+
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
   static getDerivedStateFromError() { return { failed: true }; }
