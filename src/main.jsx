@@ -53,6 +53,10 @@ import "./profile-footer-polish.css";
 import "./sidebar-layout-stabilizer.css";
 import "./sidebar-layout-stabilizer.js";
 
+/* Region-aware admin rights cards: compact images and effective regional roles. */
+import "./admin-rights-region-polish.css";
+import "./admin-rights-region-polish.js";
+
 /* Last runtime pin: keeps the sidebar role star stable even when other DOM enhancers refresh. */
 import "./sidebar-role-pin.js";
 
