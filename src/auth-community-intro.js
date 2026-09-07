@@ -1,18 +1,22 @@
 const items=[
-  ['Regional verbunden','Regionale Startseiten, Termine, Neuigkeiten und Ansprechpartner.'],
-  ['Menschen finden','Mitglieder, Freunde, Nachrichten, Gruppen und Profile an einem Ort.'],
-  ['Gemeinsam aktiv','Forum, Veranstaltungen, Gruppen, Mitfahrgelegenheiten und gemeinsame Aktivitäten.'],
-  ['Sicher & persönlich','Privatsphäre, Rollen, Moderation, Meldungen und automatische Profil-Belohnungen.']
+  ['Regional','Regionale Startseite, Termine und Neuigkeiten.'],
+  ['Menschen','Mitglieder, Freunde und Nachrichten.'],
+  ['Gemeinsam','Forum, Gruppen, Events und gemeinsame Aktivitäten.'],
+  ['Sicher','Privatsphäre, Moderation und Profil-Belohnungen.']
 ];
 
 function mount(){
   const page=document.querySelector('.auth-page');
-  const box=document.querySelector('.auth-box');
-  if(!page||!box||page.querySelector('.ec-auth-community-intro'))return;
+  const welcome=page?.querySelector('.ec-auth-welcome');
+  const intro=welcome?.querySelector('.ec-auth-intro');
+  if(!page||!welcome||!intro)return;
+  page.classList.add('ec-auth-page-clean');
+  if(welcome.querySelector('.ec-auth-community-intro'))return;
   const section=document.createElement('section');
   section.className='ec-auth-community-intro';
-  section.innerHTML=`<span class="ec-auth-intro-kicker">ENNSTAL CONNECT COMMUNITY</span><h2>Regional vernetzt. Einfach gemeinsam.</h2><p class="ec-auth-intro-copy">Ennstal Connect verbindet Menschen aus deiner Region – für Austausch, Freundschaften, Gruppen, Veranstaltungen und gemeinsame Aktivitäten. Deine Community bleibt regional, übersichtlich und direkt erreichbar.</p><div class="ec-auth-intro-grid">${items.map(([title,text])=>`<article><strong>${title}</strong><span>${text}</span></article>`).join('')}</div>`;
-  box.insertAdjacentElement('afterend',section);
+  section.innerHTML=`<span class="ec-auth-intro-kicker">ENNSTAL CONNECT COMMUNITY</span><h2>Regional vernetzt. Einfach gemeinsam.</h2><p class="ec-auth-intro-copy">Deine regionale Community für Kontakte, Austausch und gemeinsame Aktivitäten.</p><div class="ec-auth-intro-grid">${items.map(([title,text])=>`<article><strong>${title}</strong><span>${text}</span></article>`).join('')}</div>`;
+  const updates=intro.querySelector('.public-auth-updates');
+  if(updates)intro.insertBefore(section,updates);else intro.appendChild(section);
 }
 
 let queued=false;
