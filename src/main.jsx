@@ -124,6 +124,13 @@ import "./member-directory-card-final.css";
 /* Absolute final profile authority: keep only the clean action bar and normalize presence lines. */
 import "./profile-action-final-authority.css";
 
+/* Harden profile image uploads and surface useful storage/network errors. */
+import "./profile-image-upload-fix.js";
+
+/* Community-wide runtime guardrails: recover network/UI failures, image fallbacks and stale overlays without redesign. */
+import "./community-runtime-stability.css";
+import "./community-runtime-stability.js";
+
 /* Absolute last mobile runtime: if a browser swallows the native tap, synthesize exactly one click. */
 import "./mobile-single-tap-fix.js";
 
