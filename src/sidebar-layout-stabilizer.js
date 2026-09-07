@@ -75,14 +75,8 @@ function removeNestedScroll(){
     panel.style.setProperty('max-height','none','important');
     panel.style.setProperty('height','auto','important');
   });
-}
-
-function reservePageHeight(){
-  const dock=document.querySelector('.ec-right-dock');
   const main=document.querySelector('.modern-main');
-  if(!dock||!main||window.innerWidth<=900)return;
-  const needed=Math.max(720,Math.ceil(dock.scrollHeight+150));
-  main.style.minHeight=`${needed}px`;
+  if(main)main.style.removeProperty('min-height');
 }
 
 function stabilizeLayout(){
@@ -91,7 +85,6 @@ function stabilizeLayout(){
   dock.classList.add('ec-stable-personal-dock');
   ensureAdminDock();
   removeNestedScroll();
-  requestAnimationFrame(reservePageHeight);
 }
 
 async function loadRole(){
