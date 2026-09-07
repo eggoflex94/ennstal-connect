@@ -22,9 +22,8 @@ function personStar(p){
 function closeOverlay(){document.querySelector('.ec-dashboard-info-overlay')?.remove();document.body.classList.remove('ec-dashboard-info-open')}
 function go(page){document.body.classList.remove('ec-dock-open');window.dispatchEvent(new CustomEvent('ec:navigate',{detail:{page}}))}
 function placeDockInPageFlow(){const dock=document.querySelector('.ec-right-dock'),main=document.querySelector('.modern-main');if(!dock||!main)return;dock.classList.add('ec-document-flow-dock');if(dock.parentElement!==main)main.appendChild(dock)}
-function openAdminSection(selector){closeOverlay();go('admin');let tries=0;const timer=setInterval(()=>{tries+=1;const panel=document.querySelector(selector);if(panel){clearInterval(timer);panel.scrollIntoView({behavior:'smooth',block:'start'});panel.classList.add('ec-popup-admin-manager-focus');setTimeout(()=>panel.classList.remove('ec-popup-admin-manager-focus'),1500)}else if(tries>30)clearInterval(timer)},120)}
-function openPopupManager(){openAdminSection('.ec-popup-admin-manager')}
-function openStatistics(){openAdminSection('.ec-hours-statistics')}
+function openPopupManager(){closeOverlay();document.body.classList.remove('ec-dock-open');window.dispatchEvent(new CustomEvent('ec:open-community-popup-manager'))}
+function openStatistics(){closeOverlay();document.body.classList.remove('ec-dock-open');window.dispatchEvent(new CustomEvent('ec:open-admin-statistics'))}
 
 function openInfo(){
   closeOverlay();const overlay=document.createElement('div');overlay.className='ec-dashboard-info-overlay';
@@ -34,7 +33,7 @@ function openInfo(){
 
 function makeUtilityButton(kind){
   const button=document.createElement('button');button.type='button';button.className=`ec-compact-menu-item ec-dashboard-utility-button ec-dashboard-${kind}-button`;
-  const labels={info:'Info',popups:'Popups verwalten',stats:'Statistik'};const label=labels[kind]||kind;button.title=label;button.setAttribute('aria-label',label);
+  const labels={info:'Info',popups:'News-Popups',stats:'Statistik'};const label=labels[kind]||kind;button.title=label;button.setAttribute('aria-label',label);
   const icon=kind==='info'?INFO_ICON:kind==='stats'?STATS_ICON:POPUP_ICON;
   button.innerHTML=`<span class="ec-compact-menu-icon">${icon}</span><span class="ec-compact-menu-label">${label}</span>`;
   button.onclick=kind==='info'?openInfo:kind==='stats'?openStatistics:openPopupManager;return button
