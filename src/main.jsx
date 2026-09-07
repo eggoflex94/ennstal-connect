@@ -69,6 +69,8 @@ import "./member-grid-final.css";
 import "./role-theme-lock.css";
 import "./member-card-authoritative.css";
 import "./brand-regional.css";
+import "./regional-shell.css";
+import "./regional-shell.js";
 
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
