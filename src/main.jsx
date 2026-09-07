@@ -111,6 +111,10 @@ import "./people-links-polish.js";
 /* Final touch/click authority: removes legacy profile responsibility text and prevents hidden mobile layers from blocking taps. */
 import "./mobile-interaction-authority.css";
 
+/* Global Community News popup: versioned for all members, editable/deletable by Head Admin. */
+import "./global-community-news-popup.css";
+import "./global-community-news-popup.js";
+
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
   static getDerivedStateFromError() { return { failed: true }; }
