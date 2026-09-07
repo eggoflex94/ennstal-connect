@@ -8,6 +8,7 @@ const DEFAULT_AVATAR = '/community-default-avatar.png';
 let regions = [];
 let profiles = [];
 let regionalAdmins = [];
+let regionalModeration = [];
 let currentUserId = null;
 let refreshRunning = false;
 let lastRefresh = 0;
@@ -17,21 +18,30 @@ const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
 }[char]));
 const role = (profile) => String(profile?.role || 'MEMBER').toUpperCase();
 const nickname = (profile) => profile?.nickname || 'Mitglied';
-const moderatorTasks = (profile) => {
-  const tasks = [];
-  if (profile?.forum_moderator) tasks.push('Forum-Moderation');
-  if (profile?.group_moderator) tasks.push('Gruppen-Moderation');
-  return tasks;
-};
 const assignmentsFor = (profile) => regionalAdmins.filter((item) => item.user_id === profile?.id && item.active);
+const moderationFor = (profile, regionId = null) => regionalModeration.filter((item) => item.user_id === profile?.id && item.active && (!regionId || item.region_id === regionId));
 const isRegionalAdminIn = (profile, regionId) => assignmentsFor(profile).some((item) => item.region_id === regionId);
 const isRegionalAdminAnywhere = (profile) => assignmentsFor(profile).length > 0;
-const isPlainMember = (profile) => role(profile) === 'MEMBER' && !profile?.account_badge && !isRegionalAdminAnywhere(profile);
+const isBusiness = (profile) => String(profile?.account_badge || '').toUpperCase() === 'BUSINESS';
+const isPlainMember = (profile) => role(profile) === 'MEMBER' && !isBusiness(profile) && !isRegionalAdminAnywhere(profile) && !moderationFor(profile).length;
+const regionName = (regionId) => regions.find((item) => item.id === regionId)?.name || 'Region';
+const activeRegion = () => {
+  const slug = document.documentElement.dataset.ecRegion || localStorage.getItem('ec-active-region') || '';
+  return regions.find((item) => item.slug === slug) || regions.find((item) => item.id === currentProfile()?.home_region_id) || regions[0] || null;
+};
+const permissionTasks = (profile, regionId) => {
+  const permissions = moderationFor(profile, regionId).flatMap((item) => Array.isArray(item.permissions) ? item.permissions : []);
+  const tasks = [];
+  if (permissions.some((item) => /forum/i.test(String(item)))) tasks.push('Forum-Moderation');
+  if (permissions.some((item) => /group|gruppe/i.test(String(item)))) tasks.push('Gruppen-Moderation');
+  if (profile?.forum_moderator && profile?.home_region_id === regionId && !tasks.includes('Forum-Moderation')) tasks.push('Forum-Moderation');
+  return tasks;
+};
 const roleTheme = (profile, regionId = null) => {
   const base = role(profile);
   if (base === 'HEAD_ADMIN' || base === 'ADMIN' || (regionId && isRegionalAdminIn(profile, regionId))) return 'admin';
-  if (base === 'SUPPORTER' || isRegionalAdminAnywhere(profile)) return 'supporter';
-  if (profile?.account_badge === 'BUSINESS') return 'business';
+  if (base === 'SUPPORTER' || moderationFor(profile, regionId).length || isRegionalAdminAnywhere(profile)) return 'supporter';
+  if (isBusiness(profile)) return 'business';
   return 'member';
 };
 const starFor = (profile, regionId = null) => {
@@ -41,21 +51,22 @@ const starFor = (profile, regionId = null) => {
   if (theme === 'business') return BUSINESS_STAR;
   return '';
 };
-const regionName = (regionId) => regions.find((item) => item.id === regionId)?.name || 'Region';
 
 async function loadContext(force = false) {
   if (!supabase || refreshRunning) return;
   if (!force && Date.now() - lastRefresh < 10000 && profiles.length) return;
   refreshRunning = true;
   try {
-    const [{ data: regionRows }, { data: assignmentRows }, { data: profileRows }, { data: authData }] = await Promise.all([
+    const [{ data: regionRows }, { data: assignmentRows }, { data: moderationRows }, { data: profileRows }, { data: authData }] = await Promise.all([
       supabase.from('regions').select('id,slug,name,short_name,sort_order,is_active').eq('is_active', true).order('sort_order'),
       supabase.from('regional_admin_assignments').select('user_id,region_id,active').eq('active', true),
-      supabase.from('profiles').select('id,nickname,role,home_region_id,account_badge,avatar_url,forum_moderator,group_moderator,account_status').eq('account_status', 'ACTIVE'),
+      supabase.from('regional_moderation_assignments').select('user_id,region_id,permissions,active').eq('active', true),
+      supabase.from('profiles').select('id,nickname,role,home_region_id,account_badge,avatar_url,forum_moderator,account_status').eq('account_status', 'ACTIVE'),
       supabase.auth.getUser()
     ]);
     regions = regionRows || [];
     regionalAdmins = assignmentRows || [];
+    regionalModeration = moderationRows || [];
     profiles = profileRows || [];
     currentUserId = authData?.user?.id || null;
     lastRefresh = Date.now();
@@ -80,11 +91,18 @@ function profileForCard(card) {
   return profiles.find((profile) => nickname(profile) === name) || null;
 }
 
+function identityMarkup(profile, regionId = null, title = '') {
+  if (!profile) return '';
+  const star = starFor(profile, regionId);
+  return `<span class="ec-role-person" data-profile-id="${esc(profile.id)}"${title ? ` title="${esc(title)}"` : ''}>${star ? `<img class="ec-role-person-star" src="${esc(star)}" alt="" aria-hidden="true">` : ''}<strong>${esc(nickname(profile))}</strong></span>`;
+}
+
 function personMarkup(profile, regionId, tasks = []) {
   const star = starFor(profile, regionId);
   const theme = roleTheme(profile, regionId);
+  const title = regionId && isRegionalAdminIn(profile, regionId) ? `Regionaladmin · ${regionName(regionId)}` : tasks.join(', ');
   return `<article class="ec-region-responsibility-person ec-role-frame-${theme}" data-profile-id="${esc(profile.id)}">
-    <div class="ec-region-responsibility-person-head">
+    <div class="ec-region-responsibility-person-head"${title ? ` title="${esc(title)}"` : ''}>
       ${star ? `<img class="ec-responsibility-star" src="${esc(star)}" alt="" aria-hidden="true">` : ''}
       <img class="ec-responsibility-avatar" src="${esc(profile.avatar_url || DEFAULT_AVATAR)}" alt="">
       <strong>${esc(nickname(profile))}</strong>
@@ -114,27 +132,49 @@ function renderRegionalResponsibilities() {
   const operators = profiles.filter((profile) => role(profile) === 'HEAD_ADMIN');
   const globalAdmins = profiles.filter((profile) => role(profile) === 'ADMIN');
   const regionBlocks = regions.map((region) => {
-    const regional = profiles.filter((profile) => isRegionalAdminIn(profile, region.id) && role(profile) !== 'HEAD_ADMIN' && role(profile) !== 'ADMIN');
-    const moderators = profiles.filter((profile) => {
-      if (role(profile) !== 'SUPPORTER') return false;
-      if (!moderatorTasks(profile).length) return false;
-      if (isRegionalAdminIn(profile, region.id)) return false;
-      return profile.home_region_id === region.id;
-    });
+    const regional = profiles.filter((profile) => isRegionalAdminIn(profile, region.id) && !['HEAD_ADMIN', 'ADMIN'].includes(role(profile)));
+    const moderators = profiles.filter((profile) => permissionTasks(profile, region.id).length && !regional.includes(profile));
     if (!regional.length && !moderators.length) return '';
     return `<section class="ec-region-responsibility-block">
       <header><span>REGION</span><h3>${esc(region.name)}</h3></header>
-      ${regional.length ? `<div class="ec-region-responsibility-group"><strong class="ec-region-responsibility-label">Regional zuständig</strong>${regional.map((profile) => personMarkup(profile, region.id, ['Administration dieser Region', 'Community-Support', 'Meldungen & regionale Inhalte'])).join('')}</div>` : ''}
-      ${moderators.length ? `<div class="ec-region-responsibility-group"><strong class="ec-region-responsibility-label">Moderation</strong>${moderators.map((profile) => personMarkup(profile, region.id, moderatorTasks(profile))).join('')}</div>` : ''}
+      ${regional.length ? `<div class="ec-region-responsibility-group"><strong class="ec-region-responsibility-label">Regionaladministration</strong>${regional.map((profile) => personMarkup(profile, region.id, ['Administration dieser Region', 'Community-Support', 'Meldungen & regionale Inhalte'])).join('')}</div>` : ''}
+      ${moderators.length ? `<div class="ec-region-responsibility-group"><strong class="ec-region-responsibility-label">Moderation</strong>${moderators.map((profile) => personMarkup(profile, region.id, permissionTasks(profile, region.id))).join('')}</div>` : ''}
     </section>`;
   }).join('');
 
-  panel.innerHTML = `<div class="ec-team-intro ec-responsibility-intro"><div><strong>Support & Ansprechpartner</strong><p>Die Zuständigkeiten sind nach Regionen geordnet. Angezeigt werden nur tatsächlich zuständige Admins und Moderatoren.</p></div><a class="ec-team-email" href="mailto:ennstal.connect@gmx.at">✉ E-Mail senden</a></div>
+  panel.innerHTML = `<div class="ec-team-intro ec-responsibility-intro"><div><strong>Support & Ansprechpartner</strong><p>Die Zuständigkeiten sind nach Regionen geordnet. Angezeigt werden nur tatsächlich zugewiesene Admins und Moderatoren.</p></div><a class="ec-team-email" href="mailto:ennstal.connect@gmx.at">✉ E-Mail senden</a></div>
     ${operators.length ? `<section class="ec-region-responsibility-owner"><header><span>BETREIBER</span><h3>Ennstal Connect</h3></header>${operators.map((profile) => personMarkup(profile, null, ['Betreiber & Gesamtverantwortung', 'Datenschutz & Sicherheit', 'Technischer Support'])).join('')}</section>` : ''}
     ${globalAdmins.length ? `<section class="ec-region-responsibility-global"><header><span>ADMINISTRATION</span><h3>Überregional</h3></header>${globalAdmins.map((profile) => personMarkup(profile, null, ['Überregionale Administration', 'Community-Support'])).join('')}</section>` : ''}
     ${regionBlocks || '<p class="ec-region-responsibility-empty">Noch keine regionalen Zuständigkeiten eingetragen.</p>'}`;
 
   panel.dataset.ecRegionalResponsibilities = 'true';
+}
+
+function renderModerationPanels() {
+  const region = activeRegion();
+  if (!region) return;
+  const regionalAdminsHere = profiles.filter((profile) => isRegionalAdminIn(profile, region.id));
+  const forumModerators = profiles.filter((profile) => permissionTasks(profile, region.id).includes('Forum-Moderation'));
+  const groupModerators = profiles.filter((profile) => permissionTasks(profile, region.id).includes('Gruppen-Moderation'));
+  const unique = (items) => [...new Map(items.map((item) => [item.id, item])).values()];
+
+  const groupPanel = document.querySelector('.groups-page .group-moderators');
+  if (groupPanel) {
+    const people = unique([...regionalAdminsHere, ...groupModerators]);
+    groupPanel.innerHTML = `<span class="eyebrow">ZUSTÄNDIG FÜR GRUPPEN · ${esc(region.name)}</span><h2>Gruppenmoderation</h2><div class="ec-moderator-identity-list">${people.length ? people.map((profile) => identityMarkup(profile, region.id, isRegionalAdminIn(profile, region.id) ? `Regionaladmin · ${region.name}` : `Gruppenmoderation · ${region.name}`)).join('') : '<small>Derzeit keine Gruppenmoderation eingetragen.</small>'}</div>`;
+  }
+
+  const forumPage = document.querySelector('.forum-page');
+  if (forumPage) {
+    let panel = forumPage.querySelector('.ec-forum-moderator-panel');
+    if (!panel) {
+      panel = document.createElement('aside');
+      panel.className = 'ec-forum-moderator-panel panel';
+      forumPage.querySelector('.page-heading')?.insertAdjacentElement('afterend', panel);
+    }
+    const people = unique([...regionalAdminsHere, ...forumModerators]);
+    panel.innerHTML = `<span class="eyebrow">ZUSTÄNDIG FÜR FORUM · ${esc(region.name)}</span><div class="ec-forum-moderator-line"><h2>Forummoderation</h2><div class="ec-moderator-identity-list">${people.length ? people.map((profile) => identityMarkup(profile, region.id, isRegionalAdminIn(profile, region.id) ? `Regionaladmin · ${region.name}` : `Forummoderation · ${region.name}`)).join('') : '<small>Derzeit keine Forummoderation eingetragen.</small>'}</div></div>`;
+  }
 }
 
 function bindAdminButton(button) {
@@ -180,10 +220,12 @@ function restoreAdminDock(profile) {
 
 function renderSidebarIdentity(profile) {
   if (!profile) return;
-  const star = starFor(profile);
+  const region = activeRegion();
+  const star = starFor(profile, region?.id || null);
   const heading = document.querySelector('.ec-dock-head strong');
   if (heading) {
     heading.innerHTML = `${star ? `<img class="ec-sidebar-role-star" src="${esc(star)}" alt="" aria-hidden="true">` : ''}<span>${esc(nickname(profile))}</span>`;
+    heading.title = region && isRegionalAdminIn(profile, region.id) ? `Regionaladmin · ${region.name}` : nickname(profile);
   }
   const identity = document.querySelector('.ec-dock-identity');
   if (identity) {
@@ -193,14 +235,15 @@ function renderSidebarIdentity(profile) {
 }
 
 function applyMemberRoleVisuals() {
+  const region = activeRegion();
   document.querySelectorAll('.member-card').forEach((card) => {
     const profile = profileForCard(card);
     if (!profile) return;
-    const theme = roleTheme(profile);
+    const theme = roleTheme(profile, region?.id || null);
     card.dataset.roleTheme = theme;
     card.classList.remove('role-theme-admin', 'role-theme-supporter', 'role-theme-business', 'role-theme-member');
     card.classList.add(`role-theme-${theme}`);
-    const star = starFor(profile);
+    const star = starFor(profile, region?.id || null);
     card.querySelectorAll('.ec-card-badge-role,.member-role-star,.ec-inline-role-star').forEach((node) => {
       if (isPlainMember(profile)) {
         node.style.display = 'none';
@@ -216,25 +259,51 @@ function applyMemberRoleVisuals() {
       if (star) roleImg.src = star;
     }
   });
-
-  const own = currentProfile();
-  const profileStar = document.querySelector('.profile-role-star');
-  if (profileStar && own) {
-    profileStar.style.display = isPlainMember(own) ? 'none' : '';
-    const star = starFor(own);
-    if (star) profileStar.src = star;
-  }
 }
 
 function applyRoleFrames() {
+  const region = activeRegion();
   document.querySelectorAll('.member-card').forEach((card) => {
     const profile = profileForCard(card);
-    if (profile) card.dataset.roleFrame = roleTheme(profile);
+    if (profile) card.dataset.roleFrame = roleTheme(profile, region?.id || null);
   });
   document.querySelectorAll('.ec-dock-detail-row').forEach((row) => {
     const profileId = row.dataset.profileId;
     const profile = profiles.find((item) => item.id === profileId);
-    if (profile) row.dataset.roleFrame = roleTheme(profile);
+    if (profile) row.dataset.roleFrame = roleTheme(profile, region?.id || null);
+  });
+}
+
+function polishInlinePeople() {
+  const region = activeRegion();
+  const regionId = region?.id || null;
+  document.querySelectorAll('.group-moderator,.role-author,.content-author,.event-author,.forum-reply small,.forum-post-head p strong').forEach((node) => {
+    const text = String(node.textContent || '').replace(/\s+/g, ' ').trim();
+    const profile = profiles.find((item) => text.includes(nickname(item)));
+    if (!profile) return;
+    const prefix = /^Erstellt von\b/i.test(text) ? 'Erstellt von ' : /^von\b/i.test(text) ? 'von ' : '';
+    const dateMatch = text.match(/(\d{1,2}\.\d{1,2}\.\d{2,4}[^]*)$/);
+    const suffix = dateMatch ? ` · ${esc(dateMatch[1].replace(/^·\s*/, ''))}` : '';
+    node.innerHTML = `${prefix ? `<span class="ec-role-prefix-inline">${esc(prefix.trim())}</span> ` : ''}${identityMarkup(profile, regionId)}${suffix}`;
+    node.classList.add('ec-role-person-row');
+  });
+
+  document.querySelectorAll('.group-ownership').forEach((box) => {
+    const rows = [...box.querySelectorAll(':scope > span')];
+    if (rows.length < 2) return;
+    const creator = rows.find((row) => /Erstellt von/i.test(row.textContent || ''));
+    const owner = rows.find((row) => /Inhaber/i.test(row.textContent || ''));
+    if (!creator || !owner) return;
+    const creatorProfile = profiles.find((item) => creator.textContent.includes(nickname(item)));
+    const ownerProfile = profiles.find((item) => owner.textContent.includes(nickname(item)));
+    if (creatorProfile) creator.innerHTML = `<span class="ec-role-prefix-inline">Erstellt von</span> ${identityMarkup(creatorProfile, regionId)}`;
+    if (ownerProfile) owner.innerHTML = `<span class="ec-role-prefix-inline">Inhaber</span> ${identityMarkup(ownerProfile, regionId)}`;
+    if (creatorProfile && ownerProfile && creatorProfile.id === ownerProfile.id) owner.style.display = 'none';
+  });
+
+  document.querySelectorAll('.hub-row').forEach((row) => {
+    const authorRows = [...row.querySelectorAll('.event-author,.content-author,[data-ec-identity-polished="true"]')];
+    if (authorRows.length > 1) authorRows.slice(1).forEach((item) => { item.style.display = 'none'; });
   });
 }
 
@@ -245,6 +314,8 @@ async function syncEverything(force = false) {
   applyMemberRoleVisuals();
   applyRoleFrames();
   renderRegionalResponsibilities();
+  renderModerationPanels();
+  polishInlinePeople();
 }
 
 function boot() {
