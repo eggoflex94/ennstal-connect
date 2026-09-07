@@ -28,12 +28,14 @@ function textOf(node) {
 
 function labelFor(button) {
   const text = textOf(button);
-  return MENU_LABELS.find((label) => text.includes(label)) || '';
+  return MENU_LABELS.find((label) => text.includes(label)) || button.dataset.ecCompactLabel || '';
 }
 
 function decorateButton(button, label) {
   button.classList.add('ec-compact-menu-item');
   button.dataset.ecCompactLabel = label;
+  button.title = label;
+  button.setAttribute('aria-label', label);
 
   let icon = button.querySelector(':scope > .ec-compact-menu-icon');
   if (!icon) {
@@ -62,6 +64,7 @@ function compactMenu(dock) {
   if (!grid) {
     grid = document.createElement('div');
     grid.className = 'ec-compact-menu-grid';
+    grid.setAttribute('aria-label', 'Persönliche Funktionen');
     const first = buttons[0].button;
     first.parentElement?.insertBefore(grid, first);
   }
