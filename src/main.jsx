@@ -12,6 +12,7 @@ import "./admin-online-status.js";
 import "./last-name-privacy.js";
 import "./last-active-privacy.js";
 import "./online-status-sync.js";
+import "./online-reward-tracker.js";
 import "./featured-group-admin.js";
 import "./mobile-zoom.js";
 import "./ad-form-fix.js";
@@ -72,6 +73,10 @@ import "./sidebar-role-pin.js";
 import "./dashboard-top-polish.css";
 import "./dashboard-top-polish.js";
 
+/* Member engagement: active online-time rewards plus Head-Admin-only hours/inactivity statistics. */
+import "./admin-hours-statistics.css";
+import "./admin-hours-statistics.js";
+
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
   static getDerivedStateFromError() { return { failed: true }; }
@@ -90,7 +95,8 @@ async function removeLegacyAppShell() {
     }
     if ("caches" in window) {
       const keys = await caches.keys();
-      await Promise.all(keys.map(key => caches.delete(key)));
+      await Promise.all(keys.map(key => caches.delete(key))
+      );
     }
   } catch (error) {
     console.warn("Alter App-Cache konnte nicht vollständig entfernt werden:", error);
