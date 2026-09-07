@@ -121,6 +121,9 @@ import "./personal-dashboard-final-fix.js";
 /* Final member directory card authority: compact cards and one stable identity row. */
 import "./member-directory-card-final.css";
 
+/* Absolute final profile authority: keep only the clean action bar and normalize presence lines. */
+import "./profile-action-final-authority.css";
+
 /* Absolute last mobile runtime: if a browser swallows the native tap, synthesize exactly one click. */
 import "./mobile-single-tap-fix.js";
 
