@@ -66,10 +66,11 @@ async function upload(file,input){
       throw Object.assign(updateError,{__stage:'profile'});
     }
 
-    document.querySelectorAll('img.my-avatar,img[alt="Profil"]').forEach(img=>{img.src=`${publicUrl}${publicUrl.includes('?')?'&':'?'}v=${Date.now()}`});
+    const cacheBusted=`${publicUrl}${publicUrl.includes('?')?'&':'?'}v=${Date.now()}`;
+    document.querySelectorAll('img.my-avatar,img[alt="Profil"],.sidebar-profile img,.ec-dock-avatar').forEach(img=>{img.src=cacheBusted});
     toast('Profilbild wurde gespeichert.',true);
     window.dispatchEvent(new CustomEvent('ec:profile-image-updated',{detail:{avatarUrl:publicUrl}}));
-    setTimeout(()=>window.location.reload(),650);
+    window.dispatchEvent(new CustomEvent('ec:layout-refresh-requested'));
   }catch(error){
     console.error('Profilbild-Upload fehlgeschlagen:',error);
     toast(messageFor(error,error?.__stage||'upload'));
