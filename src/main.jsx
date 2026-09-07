@@ -38,6 +38,10 @@ import "./clean-components.css";
 import "./role-region-polish.css";
 import "./role-region-polish.js";
 
+/* Final personal sidebar authority: compact identity plus modern black/white icon grid. */
+import "./sidebar-compact-polish.css";
+import "./sidebar-compact-polish.js";
+
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
   static getDerivedStateFromError() { return { failed: true }; }
