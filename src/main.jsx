@@ -146,6 +146,9 @@ import "./business-account-admin-fix.js";
 /* Synchronize dynamic shell heights/layout after React and DOM enhancers finish rendering. */
 import "./layout-runtime-sync.js";
 
+/* Absolute final role/responsibility geometry across every region. */
+import "./role-responsibility-final.css";
+
 /* Absolute last mobile runtime: if a browser swallows the native tap, synthesize exactly one click. */
 import "./mobile-single-tap-fix.js";
 
