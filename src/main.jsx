@@ -68,6 +68,10 @@ import "./member-profile-region-polish.js";
 /* Last runtime pin: keeps the sidebar role star stable even when other DOM enhancers refresh. */
 import "./sidebar-role-pin.js";
 
+/* Final top dashboard authority: visible admin/regional role, admin alerts and online friends. */
+import "./dashboard-top-polish.css";
+import "./dashboard-top-polish.js";
+
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
   static getDerivedStateFromError() { return { failed: true }; }
