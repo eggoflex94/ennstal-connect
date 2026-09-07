@@ -51,7 +51,6 @@ function ensureAdminDock(){
   if(!dock||!slot)return;
   const targets=expectedTargets();
   if(!targets.length){slot.replaceChildren();slot.hidden=true;slot.removeAttribute('data-ec-admin-signature');return;}
-
   slot.hidden=false;
   slot.className='ec-dock-admin-slot ec-admin-icon-grid';
   const signature=targets.join('|');
@@ -59,22 +58,31 @@ function ensureAdminDock(){
     slot.replaceChildren(...targets.map(makeButton));
     slot.dataset.ecAdminSignature=signature;
   }
-
   const communityLabel=[...dock.querySelectorAll(':scope > .ec-dock-section-label')].find(el=>/COMMUNITY/i.test(el.textContent||''));
   const communityDivider=communityLabel?.previousElementSibling;
-  if(communityDivider&&slot.nextElementSibling!==communityDivider){
-    communityDivider.parentElement.insertBefore(slot,communityDivider);
-  }
+  if(communityDivider&&slot.nextElementSibling!==communityDivider)communityDivider.parentElement.insertBefore(slot,communityDivider);
 }
 
 function removeNestedScroll(){
   const dock=document.querySelector('.ec-right-dock');
   if(!dock)return;
   dock.removeAttribute('tabindex');
+  dock.style.setProperty('overflow','visible','important');
+  dock.style.setProperty('height','auto','important');
+  dock.style.setProperty('max-height','none','important');
   dock.querySelectorAll('.ec-dock-detail').forEach(panel=>{
-    panel.style.removeProperty('max-height');
-    panel.style.removeProperty('overflow');
+    panel.style.setProperty('overflow','visible','important');
+    panel.style.setProperty('max-height','none','important');
+    panel.style.setProperty('height','auto','important');
   });
+}
+
+function reservePageHeight(){
+  const dock=document.querySelector('.ec-right-dock');
+  const main=document.querySelector('.modern-main');
+  if(!dock||!main||window.innerWidth<=900)return;
+  const needed=Math.max(720,Math.ceil(dock.scrollHeight+150));
+  main.style.minHeight=`${needed}px`;
 }
 
 function stabilizeLayout(){
@@ -83,6 +91,7 @@ function stabilizeLayout(){
   dock.classList.add('ec-stable-personal-dock');
   ensureAdminDock();
   removeNestedScroll();
+  requestAnimationFrame(reservePageHeight);
 }
 
 async function loadRole(){
@@ -108,6 +117,7 @@ function boot(){
   });
   observer.observe(document.documentElement,{childList:true,subtree:true});
   window.addEventListener('ec:region-change',()=>setTimeout(()=>{stabilizeLayout();void loadRole();},50));
+  window.addEventListener('resize',()=>setTimeout(stabilizeLayout,80),{passive:true});
 }
 
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
