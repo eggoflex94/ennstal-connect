@@ -18,7 +18,7 @@ test("regional directory is scoped normally and global only while searching",asy
 
 test("profile visits use their real timestamp and open the visitor profile",async()=>{const code=await source("src/regional-shell.js");assert.match(code,/order\('visited_at'/);assert.match(code,/row\.visited_at\|\|row\.created_at/);assert.match(code,/ec:open-profile/);assert.match(code,/avatar_url/);});
 
-test("clean layout has mobile dock and single-column member fallback",async()=>{const css=await source("src/clean-layout.css");assert.match(css,/@media\(max-width:900px\)/);assert.match(css,/\.ec-right-dock/);assert.match(css,/grid-template-columns:1fr!important/);assert.match(css,/member-grid/);});
+test("clean layout has mobile dock and single-column member fallback",async()=>{const css=await source("src/clean-layout.css");assert.match(css,/@media\(max-width:900px\)/);assert.match(css,/\.ec-right-dock/);assert.match(css,/grid-template-columns:1fr!important/);assert.match(await source("src/clean-components.css"),/repeat\(auto-fill,minmax\(min\(100%,235px\),1fr\)\)/);});
 
 test("clean components keep compact profile and dock surfaces",async()=>{const css=await source("src/clean-components.css");assert.match(css,/\.ec-clean-profile/);assert.match(css,/\.ec-dock-identity/);assert.match(css,/\.ec-dock-detail/);assert.match(css,/member-card/);});
 

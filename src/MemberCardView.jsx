@@ -20,10 +20,7 @@ function isRecentlyActive(member) {
   return Number.isFinite(lastActive) && Date.now() - lastActive < 5 * 60 * 1000;
 }
 
-function isVerified(member) {
-  const role = String(member?.role || "").toUpperCase();
-  return role === "HEAD_ADMIN" || role === "ADMIN" || member?.is_verified === true || member?.verified === true || String(member?.verification_status || "").toUpperCase() === "VERIFIED";
-}
+
 
 function rolePresentation(member) {
   const role = String(member?.role || "MEMBER").toUpperCase();
@@ -37,9 +34,8 @@ function rolePresentation(member) {
 
 export default function MemberCardView({ member, profile, friendships, onOpen, onMessage }) {
   const presentation = rolePresentation(member);
-  const friendship = friendships.find((item) => (item.requester_id === profile?.id && item.receiver_id === member.id) || (item.receiver_id === profile?.id && item.requester_id === member.id));
+  const friendship = (friendships || []).find((item) => (item.requester_id === profile?.id && item.receiver_id === member.id) || (item.receiver_id === profile?.id && item.requester_id === member.id));
   const friend = friendship?.status === "ACCEPTED";
-  const verified = isVerified(member);
   const online = isRecentlyActive(member);
   const fullName = [member.first_name, member.last_name].filter(Boolean).join(" ").trim() || getName(member);
   const age = getAge(member.birth_date);
@@ -54,6 +50,7 @@ export default function MemberCardView({ member, profile, friendships, onOpen, o
       data-role-theme={presentation.theme}
       onClick={() => onOpen(member)}
       onKeyDown={(event) => {
+        if (event.target !== event.currentTarget) return;
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
           onOpen(member);
@@ -66,17 +63,12 @@ export default function MemberCardView({ member, profile, friendships, onOpen, o
       <span className={`ec-role-surface ec-role-surface-${presentation.theme}`} aria-hidden="true" />
 
       <div className="ec-card-badge-rail" aria-label="Profilkennzeichnungen">
-        <span className={`ec-card-badge-icon ec-card-badge-role ec-card-badge-role-${presentation.theme}`} title={presentation.label}>
+        <span className={`ec-card-badge-icon ec-card-badge-role ec-card-badge-role-${presentation.theme}`} title={presentation.label} aria-label={presentation.label}>
           <img className="ec-card-badge-img ec-card-badge-role-img" src={presentation.star} alt="" aria-hidden="true" />
         </span>
         {friend && (
-          <span className="ec-card-badge-icon ec-card-badge-friend" title="Befreundet">
+          <span className="ec-card-badge-icon ec-card-badge-friend" title="Befreundet" aria-label="Befreundet">
             <img className="ec-card-badge-img ec-card-badge-friend-img" src="/badge-friendship.svg" alt="" aria-hidden="true" />
-          </span>
-        )}
-        {verified && (
-          <span className="ec-card-badge-icon ec-card-badge-verified" title="Verifiziert">
-            <img className="ec-card-badge-img ec-card-badge-verified-img" src="/badge-verified.svg" alt="" aria-hidden="true" />
           </span>
         )}
       </div>
@@ -89,7 +81,7 @@ export default function MemberCardView({ member, profile, friendships, onOpen, o
         alt={`Profilbild von ${getName(member)}`}
         loading="lazy"
         decoding="async"
-        onError={(event) => { event.currentTarget.src = DEFAULT_AVATAR; }}
+        onError={(event) => { event.currentTarget.onerror = null; if (!event.currentTarget.src.endsWith(DEFAULT_AVATAR)) event.currentTarget.src = DEFAULT_AVATAR; }}
       />
 
       <div className="member-meta ec-member-meta">
