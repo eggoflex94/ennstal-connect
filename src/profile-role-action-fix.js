@@ -39,8 +39,13 @@ function fixRoleBox(page,member){
   box.classList.remove('role-admin','role-supporter','role-business','role-member');
   box.classList.add(`role-${info.theme}`);
   box.dataset.ecEffectiveRole=info.label;
-  const strong=box.querySelector('strong');
-  if(strong)strong.innerHTML=`${info.star?`<img src="${esc(info.star)}" alt="" aria-hidden="true">`:''}<span>${esc(info.label)}</span>`;
+
+  let strong=box.querySelector('strong');
+  if(!strong){strong=document.createElement('strong');box.appendChild(strong)}
+  strong.dataset.ecRoleLabel=info.label;
+  strong.setAttribute('aria-label',info.label);
+  strong.innerHTML=`${info.star?`<img class="ec-profile-function-star" src="${esc(info.star)}" alt="" aria-hidden="true">`:''}<span class="ec-profile-function-text">${esc(info.label)}</span>`;
+
   const small=box.querySelector('small');
   if(small)small.textContent=`Heimatregion: ${regionName(member.home_region_id)}`;
 }
@@ -52,18 +57,33 @@ function isProfileActionButton(button){
 
 function hideDuplicateActionBars(page){
   const canonical=page.querySelector('.ec-clean-profile .ec-clean-profile-actions');
-  const candidates=[...page.querySelectorAll('button,a')].filter(el=>!canonical?.contains(el)&&isProfileActionButton(el));
+
+  // Any matching action outside the clean profile is legacy/duplicate. Hide the
+  // button itself first, then its wrapper when that wrapper is only an action bar.
+  const duplicateButtons=[...page.querySelectorAll('button,a')].filter(el=>!canonical?.contains(el)&&isProfileActionButton(el));
+  duplicateButtons.forEach(button=>button.classList.add('ec-profile-duplicate-action-button'));
+
   const parents=new Set();
-  for(const button of candidates){
-    let node=button.parentElement;
-    while(node&&node!==page){
-      const matches=[...node.querySelectorAll(':scope > button,:scope > a')].filter(isProfileActionButton);
-      if(matches.length>=2){parents.add(node);break}
-      node=node.parentElement;
-    }
+  for(const button of duplicateButtons){
+    const parent=button.parentElement;
+    if(!parent||parent===canonical)continue;
+    const directActions=[...parent.children].filter(el=>el.matches?.('button,a')&&isProfileActionButton(el));
+    const meaningfulNonActions=[...parent.children].filter(el=>{
+      if(el.matches?.('button,a')&&isProfileActionButton(el))return false;
+      return String(el.textContent||'').trim()!=='' || ['SECTION','ARTICLE','FORM'].includes(el.tagName);
+    });
+    if(directActions.length>=2&&meaningfulNonActions.length===0)parents.add(parent);
   }
   parents.forEach(node=>node.classList.add('ec-profile-duplicate-actions-hidden'));
-  page.querySelectorAll(':scope > .member-profile-actions,.member-profile-actions.ec-clean-profile-hidden').forEach(node=>node.classList.add('ec-profile-duplicate-actions-hidden'));
+
+  // Known legacy action containers are always duplicates once the clean action
+  // row exists. This also covers a page-level action row where the parent is the
+  // profile page itself.
+  if(canonical){
+    page.querySelectorAll('.member-profile-actions,.profile-actions,.member-action-bar,.profile-action-bar').forEach(node=>{
+      if(!canonical.contains(node)&&node!==canonical)node.classList.add('ec-profile-duplicate-actions-hidden');
+    });
+  }
 }
 
 function apply(){
@@ -90,9 +110,10 @@ async function load(force=false){
 
 function boot(){
   void load(true);
-  const observer=new MutationObserver(()=>{clearTimeout(window.__ecProfileRoleActionFix);window.__ecProfileRoleActionFix=setTimeout(apply,70)});
-  observer.observe(document.documentElement,{childList:true,subtree:true});
-  window.addEventListener('ec:region-change',()=>setTimeout(()=>{apply();void load(true)},80));
+  const observer=new MutationObserver(()=>{clearTimeout(window.__ecProfileRoleActionFix);window.__ecProfileRoleActionFix=setTimeout(apply,25)});
+  observer.observe(document.documentElement,{childList:true,subtree:true,characterData:true});
+  window.addEventListener('ec:region-change',()=>setTimeout(()=>{apply();void load(true)},50));
+  window.setInterval(apply,750);
 }
 
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
