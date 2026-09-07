@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 
 const source = async path => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
-const requiredMainModules = ["./notification-center.js","./privacy-center.js","./account-deletion-admin.js","./legal-evidence-admin.js","./admin-workspace.js","./admin-dashboard-modern.js","./admin-compact-enhancements.js","./regional-shell.js","./clean-profile-runtime.js","./clean-layout.css","./clean-components.css","./role-region-polish.css","./role-region-polish.js","./sidebar-compact-polish.css","./sidebar-compact-polish.js","./global-role-identity-polish.css","./global-role-identity-polish.js"];
+const requiredMainModules = ["./notification-center.js","./privacy-center.js","./account-deletion-admin.js","./legal-evidence-admin.js","./admin-workspace.js","./admin-dashboard-modern.js","./admin-compact-enhancements.js","./regional-shell.js","./clean-profile-runtime.js","./clean-layout.css","./clean-components.css","./role-region-polish.css","./role-region-polish.js","./sidebar-compact-polish.css","./sidebar-compact-polish.js","./global-role-identity-polish.css","./global-role-identity-polish.js","./people-links-polish.css","./people-links-polish.js"];
 
 test("main entry keeps critical member/admin/regional modules wired without legacy layout stack", async () => {const main=await source("src/main.jsx");for(const module of requiredMainModules) assert.match(main,new RegExp(module.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")));for(const legacy of ["mobile-admin-production.css","member-grid-final.css","role-theme-lock.css","profile-simple.css","regional-shell.css"])assert.doesNotMatch(main,new RegExp(legacy.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")));assert.doesNotMatch(main,/live-notifications\.js/);});
 
@@ -12,7 +12,7 @@ test("native member card renders role theme, identity and separated age/presence
 
 test("central role identity never gives normal members a role star", async()=>{const code=await source("src/roleIdentity.js");assert.match(code,/return \{ key:"member", label:"Mitglied", mark:"", icon:null/);assert.doesNotMatch(code,/role-star-member\.svg/);});
 
-test("global identity layer is loaded last and uses role star plus nickname only",async()=>{const main=await source("src/main.jsx"),code=await source("src/global-role-identity-polish.js"),css=await source("src/global-role-identity-polish.css");const globalIndex=main.indexOf('./global-role-identity-polish.js');const sidebarIndex=main.indexOf('./sidebar-compact-polish.js');assert.ok(globalIndex>sidebarIndex);assert.match(code,/ec-global-role-identity/);assert.match(code,/starFor\(p\)/);assert.match(code,/nick\(p\)/);assert.match(css,/\.ec-global-role-duplicate\{display:none!important\}/);});
+test("global identity layer is loaded last and uses role star plus nickname only",async()=>{const main=await source("src/main.jsx"),code=await source("src/global-role-identity-polish.js"),css=await source("src/global-role-identity-polish.css");const globalIndex=main.indexOf('./global-role-identity-polish.js');const sidebarIndex=main.indexOf('./sidebar-compact-polish.js');assert.ok(globalIndex>sidebarIndex);assert.match(code,/ec-global-role-identity/);assert.match(code,/starFor\(p(?:,[^)]*)?\)/);assert.match(code,/nick\(p\)/);assert.match(css,/\.ec-global-role-duplicate\{display:none!important\}/);});
 
 test("member card and registration are native source without build-time layout rewriting",async()=>{const app=await source("src/App.jsx"),config=await source("vite.config.js");assert.match(app,/import MemberCardView from "\.\/MemberCardView\.jsx"/);assert.match(app,/function MemberCard\(props\).*MemberCardView/s);assert.match(app,/home_region_slug/);assert.doesNotMatch(config,/ennstal-native-member-card|transform\(code/);});
 
@@ -40,8 +40,10 @@ test("legal evidence and deletion flows keep explicit confirmations",async()=>{c
 
 test("member privacy controls use server-side RPCs",async()=>{const center=await source("src/privacy-center.js"),lastName=await source("src/last-name-privacy.js");assert.match(center,/member_privacy_export/);assert.match(lastName,/set_last_name_privacy/);});
 
-test("clean profile runtime respects privacy and regional roles",async()=>{const code=await source("src/clean-profile-runtime.js");assert.match(code,/privacy_settings/);assert.match(code,/regional_admin_assignments/);assert.match(code,/Hauptadmin · Betreiber/);assert.match(code,/Regional Admin/);assert.match(code,/ec-clean-profile/);});
+test("clean profile runtime respects privacy and regional roles",async()=>{const code=await source("src/clean-profile-runtime.js");assert.match(code,/privacy_settings/);assert.match(code,/regional_admin_assignments/);assert.match(code,/roleInfo\(member\)/);assert.match(code,/identityMarkup/);assert.match(code,/ec-clean-profile/);});
 
 test("supporter role remains gold with black nickname in clean layout",async()=>{const css=await source("src/clean-layout.css");assert.match(css,/data-role-theme="supporter"/);assert.match(css,/#ffe532/);assert.match(css,/#050505/);});
+
+test("linked people presentation keeps online friends text-only and responsibilities profile-linked",async()=>{const code=await source("src/people-links-polish.js"),css=await source("src/people-links-polish.css");assert.match(code,/ec-online-friend/);assert.match(code,/ec-region-responsibility-person/);assert.match(code,/ec:open-profile/);assert.match(css,/\.ec-dock-detail-row>img\{display:none!important\}/);assert.match(css,/\.ec-responsibility-avatar\{display:block!important/);});
 
 test("service worker cleanup prevents stale application shells",async()=>{const main=await source("src/main.jsx");assert.match(main,/getRegistrations\(\)/);assert.match(main,/registration\.unregister\(\)/);assert.doesNotMatch(main,/serviceWorker\.register/);});
