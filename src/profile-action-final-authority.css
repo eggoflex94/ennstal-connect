@@ -1,0 +1,69 @@
+/* Absolute final profile action/presence authority. */
+.member-profile-page .member-profile-actions,
+.member-profile-page .profile-actions,
+.member-profile-page .member-action-bar,
+.member-profile-page .profile-action-bar{
+  display:none!important;
+}
+
+.member-profile-page .ec-clean-profile-actions{
+  display:flex!important;
+  flex-wrap:wrap!important;
+  align-items:center!important;
+  gap:8px!important;
+  width:100%!important;
+  margin-top:2px!important;
+  padding-top:14px!important;
+  border-top:1px solid #e5eaee!important;
+}
+.member-profile-page .ec-clean-profile-actions .ec-clean-profile-action,
+.member-profile-page .ec-clean-profile-actions .ec-clean-profile-admin{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:auto!important;
+  min-width:0!important;
+  min-height:40px!important;
+  height:auto!important;
+  margin:0!important;
+  padding:9px 13px!important;
+  border-radius:10px!important;
+  white-space:normal!important;
+  line-height:1.2!important;
+}
+
+.member-profile-page .ec-clean-profile-role .ec-profile-presence{
+  display:grid!important;
+  grid-template-columns:1fr!important;
+  gap:3px!important;
+  width:100%!important;
+  margin-top:8px!important;
+  padding-top:8px!important;
+  border-top:1px solid rgba(20,45,65,.14)!important;
+}
+.member-profile-page .ec-clean-profile-role .ec-profile-presence-status,
+.member-profile-page .ec-clean-profile-role .ec-profile-last-active{
+  display:flex!important;
+  align-items:center!important;
+  width:100%!important;
+  min-width:0!important;
+  margin:0!important;
+  white-space:normal!important;
+  line-height:1.25!important;
+}
+.member-profile-page .ec-clean-profile-role .ec-profile-presence-status{
+  gap:6px!important;
+  font-size:12px!important;
+  font-weight:800!important;
+}
+.member-profile-page .ec-clean-profile-role .ec-profile-last-active{
+  font-size:11px!important;
+  font-weight:650!important;
+  opacity:.78!important;
+}
+
+@media(max-width:700px){
+  .member-profile-page .ec-clean-profile-actions{gap:7px!important}
+  .member-profile-page .ec-clean-profile-actions .ec-clean-profile-action,
+  .member-profile-page .ec-clean-profile-actions .ec-clean-profile-admin{flex:1 1 150px!important}
+}
