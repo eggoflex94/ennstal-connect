@@ -87,10 +87,6 @@ import "./profile-final-stability.css";
 import "./profile-community-modules.css";
 import "./profile-community-modules.js";
 
-/* Final profile identity cleanup: effective role text + star, no nickname in function box, no duplicate action bar. */
-import "./profile-role-action-fix.css";
-import "./profile-role-action-fix.js";
-
 /* Final interaction authority: correct sidebar clicks, linked nicknames, compact message images and modal admin tools. */
 import "./sidebar-interaction-fix.css";
 import "./sidebar-interaction-fix.js";
@@ -122,7 +118,7 @@ import "./admin-community-popup-manager.js";
 import "./personal-dashboard-final-fix.css";
 import "./personal-dashboard-final-fix.js";
 
-/* Final member directory card authority: narrow cards, centered nicknames and overlap-safe content. */
+/* Final member directory card authority: compact cards and one stable identity row. */
 import "./member-directory-card-final.css";
 
 /* Absolute last mobile runtime: if a browser swallows the native tap, synthesize exactly one click. */
