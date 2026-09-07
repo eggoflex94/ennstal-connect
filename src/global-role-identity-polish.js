@@ -46,6 +46,32 @@ function identityHTML(p){
   return `<span class="ec-global-role-identity" data-profile-id="${esc(p.id)}">${star?`<img class="ec-global-role-star" src="${esc(star)}" alt="" aria-hidden="true">`:''}<strong>${esc(nick(p))}</strong></span>`;
 }
 
+function setIdentity(el,p){
+  if(!el||!p)return;
+  el.innerHTML=identityHTML(p);
+  el.classList.add('ec-global-role-person');
+  el.dataset.ecIdentityPolished='true';
+}
+
+function cleanDedicatedPersonBadges(){
+  const selectors=[
+    '.group-moderator',
+    '.forum-contact',
+    '.group-member-list > span',
+    '.role-author',
+    '.community-contact-row strong',
+    '.admin-responsibilities strong',
+    '.ec-responsibility-person',
+    '.ec-admin-person',
+    '.ec-support-person'
+  ].join(',');
+  document.querySelectorAll(selectors).forEach(el=>{
+    if(el.dataset.ecIdentityPolished==='true')return;
+    const p=findProfileFromText(el.textContent);
+    if(p)setIdentity(el,p);
+  });
+}
+
 function cleanCreatorOwnerRows(){
   const candidates=[...document.querySelectorAll('p,div,span,small,li')].filter(el=>{
     if(el.children.length>6)return false;
@@ -54,7 +80,7 @@ function cleanCreatorOwnerRows(){
   });
 
   candidates.forEach(el=>{
-    if(el.dataset.ecIdentityPolished==='true')return;
+    if(el.dataset.ecIdentityPolished==='true'||el.querySelector('.ec-global-role-identity'))return;
     const text=norm(el.textContent);
     const p=findProfileFromText(text);
     if(!p)return;
@@ -96,30 +122,29 @@ function removeDuplicateRoleLines(){
 }
 
 function stripWrittenRolesNearNames(){
-  document.querySelectorAll('strong,b,span,small').forEach(el=>{
-    if(el.closest('.ec-global-role-identity')||el.closest('.ec-role-person')||el.classList.contains('ec-compact-menu-label'))return;
+  document.querySelectorAll('strong,b,span,small,p').forEach(el=>{
+    if(el.closest('.ec-global-role-identity')||el.classList.contains('ec-compact-menu-label')||el.dataset.ecIdentityPolished==='true')return;
+    if(el.closest('button,select,option,label,input,textarea'))return;
     const t=norm(el.textContent);
-    if(t.length>100)return;
+    if(!t||t.length>120)return;
     const p=findProfileFromText(t);
     if(!p)return;
-    if(/Hauptadmin|Betreiber|Global Admin|Regional Admin|Supporter|Unternehmenskonto|Forum-Moderator|Gruppenmoderation|Moderator/i.test(t)){
-      const cleaned=t.replace(/\b(Hauptadmin|Betreiber|Global Admin|Regional Admin(?:\s+[^·,|]+)?|Supporter|Unternehmenskonto|Forum-Moderator|Gruppenmoderation|Moderator)\b/gi,'').replace(/[·|]/g,' ').replace(/\s{2,}/g,' ').replace(/^[-:,\s]+|[-:,\s]+$/g,'');
-      if(cleaned&&cleaned!==t)el.textContent=cleaned.includes(nick(p))?nick(p):cleaned;
-    }
+    if(/Hauptadmin|Betreiber|Global Admin|Regional Admin|Community Admin|Supporter|Unternehmenskonto|Forum-Moderator|Gruppenmoderation|Gruppenmoderator|Moderator|Moderation/i.test(t))setIdentity(el,p);
   });
 }
 
 function polish(){
   if(!profiles.length)return;
+  cleanDedicatedPersonBadges();
   cleanCreatorOwnerRows();
-  removeDuplicateRoleLines();
   stripWrittenRolesNearNames();
+  removeDuplicateRoleLines();
 }
 
 async function boot(){
   await loadProfiles();
   polish();
-  const obs=new MutationObserver(()=>{clearTimeout(window.__ecGlobalRolePolish);window.__ecGlobalRolePolish=setTimeout(polish,70)});
+  const obs=new MutationObserver(()=>{clearTimeout(window.__ecGlobalRolePolish);window.__ecGlobalRolePolish=setTimeout(polish,55)});
   obs.observe(document.documentElement,{childList:true,subtree:true,characterData:true});
   window.addEventListener('ec:region-change',async()=>{await loadProfiles();polish()});
 }
