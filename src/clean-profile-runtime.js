@@ -27,10 +27,12 @@ async function load(force=false){
 
 function roleInfo(p){
   const base=String(p?.role||'MEMBER').toUpperCase(),here=activeRegion(),assigned=assignmentsFor(p),regionalHere=Boolean(here&&assigned.some(a=>a.region_id===here.id));
-  if(base==='HEAD_ADMIN'||base==='ADMIN'||regionalHere)return{theme:'admin',star:'/role-star-red.svg'};
-  if(base==='SUPPORTER')return{theme:'supporter',star:'/supporter-star.svg'};
-  if(p?.account_badge==='BUSINESS')return{theme:'business',star:'/role-star-blue.svg'};
-  return{theme:'member',star:''};
+  if(base==='HEAD_ADMIN'||base==='ADMIN')return{theme:'admin',star:'/role-star-red.svg',label:'Global Admin'};
+  if(regionalHere)return{theme:'admin',star:'/role-star-red.svg',label:`Regional Admin · ${regionName(here.id)}`};
+  if(assigned.length)return{theme:'admin',star:'/role-star-red.svg',label:`Regional Admin · ${assigned.map(a=>regionName(a.region_id)).join(' · ')}`};
+  if(base==='SUPPORTER')return{theme:'supporter',star:'/supporter-star.svg',label:'Supporter'};
+  if(p?.account_badge==='BUSINESS')return{theme:'business',star:'/role-star-blue.svg',label:'Unternehmenskonto'};
+  return{theme:'member',star:'',label:'Mitglied'};
 }
 
 function visible(p,field){if(!p)return false;if(cache.viewer?.id===p.id||isHead())return true;const setting=String(p?.privacy_settings?.[field]||'PUBLIC').toUpperCase();return setting==='PUBLIC'||(setting==='FRIENDS'&&cache.friends.has(p.id))}
@@ -68,7 +70,7 @@ function buildProfile(root,member){
   if(canSee('birth_date'))rows.push(row('Geburtsdatum',fmtDate(member.birth_date)),row('Alter',fmtAge(member.birth_date)));
   rows.push(row('Heimatregion',regionName(member.home_region_id)));
   const starMarkup=role.star?`<img src="${role.star}" alt="" aria-hidden="true">`:'';
-  const identityMarkup=`${starMarkup}<span>${esc(member.nickname||'Mitglied')}</span>`;
+  const identityMarkup=`${starMarkup}<span>${esc(role.label)}</span>`;
   shell.innerHTML='<div class="ec-clean-profile-left"><div class="ec-clean-profile-photo"></div><div class="ec-clean-profile-role role-'+role.theme+'"><span>FUNKTION</span><strong>'+identityMarkup+'</strong><small>Heimatregion: '+esc(regionName(member.home_region_id))+'</small></div></div><div class="ec-clean-profile-main"><header><span>'+ (preview?'PROFILVORSCHAU':'MITGLIEDSPROFIL')+'</span><h1>'+esc(member.nickname||'Mitglied')+'</h1></header><div class="ec-clean-profile-data">'+rows.join('')+'</div>'+'</div><div class="ec-clean-profile-actions" aria-label="Profilaktionen"></div>';
   if(avatar)shell.querySelector('.ec-clean-profile-photo').appendChild(avatar.cloneNode(true));
   if(member.is_verified){const badge=document.createElement('span');badge.className='ec-profile-verified';badge.textContent='✓ Verifiziert';shell.querySelector('.ec-clean-profile-main header').appendChild(badge)}
