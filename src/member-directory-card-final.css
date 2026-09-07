@@ -18,7 +18,7 @@
   padding:14px 14px 16px!important;
   display:grid!important;
   grid-template-columns:1fr!important;
-  grid-template-rows:auto auto auto auto 1fr auto!important;
+  grid-template-rows:auto auto auto 1fr auto!important;
   align-items:start!important;
   justify-items:center!important;
   gap:8px!important;
@@ -26,20 +26,36 @@
   text-align:center!important;
   box-sizing:border-box!important;
 }
-
 .member-card>.ec-role-surface{position:absolute!important;inset:0!important;pointer-events:none!important}
 
-/* Role/friend badges stay together in the upper-left corner. */
-.member-card>.ec-card-badge-rail{
-  position:absolute!important;
-  top:12px!important;
-  left:12px!important;
-  z-index:4!important;
+/* Hard top-left identity row. Badges can no longer fall to the bottom through older layout rules. */
+.member-card>.ec-member-card-topline{
+  position:relative!important;
+  z-index:5!important;
+  grid-row:1!important;
+  width:100%!important;
+  min-width:0!important;
+  display:grid!important;
+  grid-template-columns:auto minmax(0,1fr)!important;
+  align-items:start!important;
+  justify-items:start!important;
+  gap:7px!important;
+  margin:0 0 4px!important;
+}
+.member-card>.ec-member-card-topline>.ec-card-badge-rail{
+  position:static!important;
+  inset:auto!important;
+  transform:none!important;
   display:flex!important;
-  gap:5px!important;
+  flex:0 0 auto!important;
   align-items:center!important;
-  max-width:62px!important;
+  justify-content:flex-start!important;
+  gap:5px!important;
+  width:auto!important;
+  max-width:none!important;
   min-height:24px!important;
+  margin:0!important;
+  padding:0!important;
 }
 .member-card .ec-card-badge-icon,.member-card .ec-card-badge-img{
   width:22px!important;
@@ -50,33 +66,30 @@
   max-height:22px!important;
   object-fit:contain!important;
 }
-
-/* Admin star: same artwork, only a restrained red glow for stronger visibility. */
 .member-card.role-theme-admin .ec-card-badge-role,
 .member-card[data-role-theme="admin"] .ec-card-badge-role{
   border-radius:7px!important;
-  filter:drop-shadow(0 0 4px rgba(255,68,92,.68)) drop-shadow(0 0 9px rgba(255,40,70,.28))!important;
+  filter:drop-shadow(0 0 4px rgba(255,68,92,.7)) drop-shadow(0 0 10px rgba(255,40,70,.34))!important;
 }
 .member-card.role-theme-admin .ec-card-badge-role-img,
 .member-card[data-role-theme="admin"] .ec-card-badge-role-img{
-  filter:drop-shadow(0 0 3px rgba(255,90,105,.72))!important;
+  filter:drop-shadow(0 0 3px rgba(255,90,105,.76))!important;
 }
-
-/* Nickname belongs to the same top-left identity zone and is never truncated. */
-.member-card>.member-nickname{
-  position:relative!important;
-  z-index:3!important;
-  grid-row:1!important;
+.member-card>.ec-member-card-topline>.member-nickname{
+  position:static!important;
+  inset:auto!important;
+  transform:none!important;
   width:100%!important;
   max-width:100%!important;
-  margin:0 0 4px!important;
-  padding:2px 2px 2px 58px!important;
-  min-height:28px!important;
+  min-width:0!important;
+  min-height:24px!important;
+  margin:0!important;
+  padding:1px 0!important;
   display:block!important;
   color:inherit!important;
-  font-size:16.5px!important;
+  font-size:16px!important;
   font-weight:900!important;
-  line-height:1.2!important;
+  line-height:1.22!important;
   text-align:left!important;
   white-space:normal!important;
   overflow:visible!important;
@@ -100,11 +113,10 @@
   object-fit:cover!important;
   flex:none!important;
 }
-
 .member-card>.member-meta{
   position:relative!important;
   z-index:2!important;
-  grid-row:3 / span 2!important;
+  grid-row:3!important;
   width:100%!important;
   min-width:0!important;
   display:grid!important;
@@ -113,7 +125,6 @@
   align-content:start!important;
   text-align:center!important;
 }
-
 .member-card .member-name{
   width:100%!important;
   min-width:0!important;
@@ -131,86 +142,22 @@
   overflow-wrap:anywhere!important;
   word-break:normal!important;
 }
-.member-card .ec-member-realname{
-  max-width:100%!important;
-  white-space:normal!important;
-  overflow:visible!important;
-  text-overflow:clip!important;
-  overflow-wrap:anywhere!important;
-}
-.member-card .ec-member-age{
-  max-width:100%!important;
-  white-space:normal!important;
-  font-size:12px!important;
-}
-
-.member-card .member-status{
-  width:100%!important;
-  min-height:42px!important;
-  margin:0!important;
-  display:grid!important;
-  gap:2px!important;
-  justify-items:center!important;
-  align-content:start!important;
-  font-size:12px!important;
-  line-height:1.25!important;
-}
-.member-card .ec-member-presence-line{
-  display:flex!important;
-  align-items:center!important;
-  justify-content:center!important;
-  gap:7px!important;
-  min-height:20px!important;
-}
-.member-card .ec-member-presence-dot{
-  display:inline-block!important;
-  width:9px!important;
-  height:9px!important;
-  min-width:9px!important;
-  min-height:9px!important;
-  border-radius:50%!important;
-  flex:none!important;
-}
-.member-card .ec-member-last-active{
-  display:block!important;
-  width:100%!important;
-  margin:0!important;
-  font-size:10.5px!important;
-  line-height:1.25!important;
-  text-align:center!important;
-  white-space:normal!important;
-  overflow-wrap:anywhere!important;
-}
-
-.member-card>.member-message{
-  position:relative!important;
-  z-index:2!important;
-  grid-row:6!important;
-  align-self:end!important;
-  width:100%!important;
-  min-height:40px!important;
-  height:auto!important;
-  margin:6px 0 0!important;
-  padding:8px 10px!important;
-  border-radius:10px!important;
-  white-space:normal!important;
-}
+.member-card .ec-member-realname{max-width:100%!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;overflow-wrap:anywhere!important}
+.member-card .ec-member-age{max-width:100%!important;white-space:normal!important;font-size:12px!important}
+.member-card .member-status{width:100%!important;min-height:42px!important;margin:0!important;display:grid!important;gap:2px!important;justify-items:center!important;align-content:start!important;font-size:12px!important;line-height:1.25!important}
+.member-card .ec-member-presence-line{display:flex!important;align-items:center!important;justify-content:center!important;gap:7px!important;min-height:20px!important}
+.member-card .ec-member-presence-dot{display:inline-block!important;width:9px!important;height:9px!important;min-width:9px!important;min-height:9px!important;border-radius:50%!important;flex:none!important}
+.member-card .ec-member-last-active{display:block!important;width:100%!important;margin:0!important;font-size:10.5px!important;line-height:1.25!important;text-align:center!important;white-space:normal!important;overflow-wrap:anywhere!important}
+.member-card>.member-message{position:relative!important;z-index:2!important;grid-row:5!important;align-self:end!important;width:100%!important;min-height:40px!important;height:auto!important;margin:6px 0 0!important;padding:8px 10px!important;border-radius:10px!important;white-space:normal!important}
 
 @media(max-width:760px){
-  .member-grid,.members-grid{
-    grid-template-columns:repeat(auto-fit,minmax(220px,1fr))!important;
-    justify-content:stretch!important;
-  }
-  .member-card{
-    max-width:none!important;
-    min-height:276px!important;
-  }
+  .member-grid,.members-grid{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))!important;justify-content:stretch!important}
+  .member-card{max-width:none!important;min-height:276px!important}
 }
-
 @media(max-width:520px){
   .member-grid,.members-grid{grid-template-columns:1fr!important;gap:12px!important}
   .member-card{width:100%!important;max-width:100%!important;padding:13px 14px 15px!important}
-  .member-card>.member-nickname{font-size:15.5px!important;padding-left:56px!important}
+  .member-card>.ec-member-card-topline>.member-nickname{font-size:15px!important}
   .member-card>.member-avatar{width:78px!important;height:78px!important;min-width:78px!important;min-height:78px!important;max-width:78px!important;max-height:78px!important}
   .member-card .member-name{font-size:12.5px!important}
 }
