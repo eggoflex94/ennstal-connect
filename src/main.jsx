@@ -28,10 +28,11 @@ import "./admin-dashboard-modern.js";
 import "./admin-compact-enhancements.js";
 import "./sidebar-news-popup.js";
 
-/* One regional shell, one clean profile runtime and one layout stylesheet. */
+/* One regional shell, one clean profile runtime and one clean layout family. */
 import "./regional-shell.js";
 import "./clean-profile-runtime.js";
 import "./clean-layout.css";
+import "./clean-components.css";
 
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
