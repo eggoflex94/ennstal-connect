@@ -13,7 +13,7 @@ function showRewardToast(rewards){
   if(!rewards)return;
   let toast=document.querySelector('.ec-online-reward-toast');
   if(!toast){toast=document.createElement('div');toast.className='ec-online-reward-toast';document.body.appendChild(toast)}
-  toast.innerHTML=`<strong>Online-Belohnung erhalten</strong><span>${rewards===1?'Ein neuer Zeit-Meilenstein wurde gutgeschrieben.':`${rewards} neue Zeit-Meilensteine wurden gutgeschrieben.`}</span>`;
+  toast.innerHTML=`<strong>Neue Profilgestaltung freigeschaltet</strong><span>${rewards===1?'Ein neuer Design-Meilenstein ist jetzt verfügbar.':`${rewards} neue Design-Meilensteine sind jetzt verfügbar.`}</span>`;
   toast.classList.add('is-visible');
   clearTimeout(window.__ecOnlineRewardToast);
   window.__ecOnlineRewardToast=setTimeout(()=>toast.classList.remove('is-visible'),4500);
