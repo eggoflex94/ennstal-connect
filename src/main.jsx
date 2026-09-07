@@ -101,6 +101,9 @@ import "./community-contact-cleanup.js";
 import "./auth-community-intro.js";
 import "./community-stability-final.css";
 
+/* Absolute last CSS authority for phone/tablet layout across community, admin, profiles and messages. */
+import "./mobile-authority.css";
+
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
   static getDerivedStateFromError() { return { failed: true }; }
