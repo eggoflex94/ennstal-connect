@@ -11,6 +11,7 @@ const fmtAge=v=>{if(!v)return'';const b=new Date(v),n=new Date();if(Number.isNaN
 const assignmentsFor=p=>cache.assignments.filter(a=>a.user_id===p?.id&&a.active);
 
 async function load(force=false){
+  if(!supabase)return;
   if(loading||(!force&&cache.viewer&&cache.profiles.length))return;loading=true;
   try{
     const [{data:{user}},{data:profiles},{data:regions},{data:assignments}]=await Promise.all([
@@ -37,7 +38,7 @@ function roleInfo(p){
 
 function visible(p,field){if(!p)return false;if(cache.viewer?.id===p.id||isHead())return true;const setting=String(p?.privacy_settings?.[field]||'PUBLIC').toUpperCase();return setting==='PUBLIC'||(setting==='FRIENDS'&&cache.friends.has(p.id))}
 function row(label,value){if(value===undefined||value===null||String(value).trim()==='')return'';return`<div class="ec-clean-profile-row"><span>${esc(label)}</span><strong>${esc(value)}</strong></div>`}
-function findMember(root){const candidates=[root.querySelector('.member-profile-hero h1')?.textContent,root.querySelector('.member-profile-hero .member-nickname')?.textContent,root.querySelector('h1')?.textContent].map(x=>String(x||'').trim()).filter(Boolean);for(const name of candidates){const hit=cache.profiles.find(p=>p.nickname===name)||cache.profiles.find(p=>[p.first_name,p.last_name].filter(Boolean).join(' ')===name);if(hit)return hit}const text=(root.textContent||'').toLowerCase();return cache.profiles.find(p=>p.nickname&&text.includes(String(p.nickname).toLowerCase()))||null}
+function findMember(root){return cache.profiles.find(p=>p.id===root.dataset.profileId)||null}
 function extractAvatar(root){return root.querySelector('.member-profile-hero img,.member-profile-avatar,img.profile-avatar,.profile-photo img')}
 function extractActions(root){return root.querySelector(':scope > .member-profile-actions,.member-profile-actions')}
 function closeAdmin(){document.querySelector('.ec-clean-admin-modal')?.remove()}
@@ -58,11 +59,33 @@ function openMemberAdmin(member){
 }
 
 function buildProfile(root,member){
-  if(root.dataset.ecCleanProfile==='1')return;root.dataset.ecCleanProfile='1';const role=roleInfo(member),avatar=extractAvatar(root),actionsSource=extractActions(root),shell=document.createElement('section');shell.className='ec-clean-profile';const rows=[row('Nickname',member.nickname)];if(visible(member,'name'))rows.push(row('Vorname',member.first_name),row('Nachname',member.last_name));if(visible(member,'birth_date'))rows.push(row('Geburtsdatum',fmtDate(member.birth_date)),row('Alter',fmtAge(member.birth_date)));if(visible(member,'location'))rows.push(row('Wohnort',member.location));rows.push(row('Heimatregion',regionName(member.home_region_id)));
-  shell.innerHTML=`<div class="ec-clean-profile-left"><div class="ec-clean-profile-photo"></div><div class="ec-clean-profile-role role-${role.theme}"><span>FUNKTION</span><strong><img src="${role.star}" alt="">${esc(role.label)}</strong><small>Heimatregion: ${esc(regionName(member.home_region_id))}</small></div><div class="ec-clean-profile-actions"></div></div><div class="ec-clean-profile-main"><header><span>MITGLIEDSPROFIL</span><h1>${esc(member.nickname||'Mitglied')}</h1></header><div class="ec-clean-profile-data">${rows.join('')}</div>${visible(member,'bio')&&member.bio?`<section class="ec-clean-profile-about"><span>ÜBER MICH</span><p>${esc(member.bio)}</p></section>`:''}</div>`;
-  if(avatar)shell.querySelector('.ec-clean-profile-photo').appendChild(avatar);const actions=shell.querySelector('.ec-clean-profile-actions');if(actionsSource){[...actionsSource.querySelectorAll('button,a')].forEach(el=>{el.classList.add('ec-clean-profile-action');actions.appendChild(el)});actionsSource.hidden=true}if(isHead()&&cache.viewer?.id!==member.id){const admin=document.createElement('button');admin.type='button';admin.className='ec-clean-profile-admin';admin.textContent='Admin Tools';admin.onclick=()=>openMemberAdmin(member);actions.appendChild(admin)}[...root.children].forEach(child=>{if(child!==shell)child.classList.add('ec-clean-profile-hidden')});root.prepend(shell)
+  const preview=root.classList.contains('public-profile-preview'),role=roleInfo(member),actionsSource=extractActions(root);
+  const canSee=field=>preview?String(member.privacy_settings?.[field]||'PUBLIC').toUpperCase()==='PUBLIC':visible(member,field);
+  const signature=JSON.stringify([member,role,preview,actionsSource?.textContent,cache.friends.has(member.id)]);
+  if(root.dataset.ecCleanProfile===signature)return;
+  root.dataset.ecCleanProfile=signature;
+  root.querySelector(':scope > .ec-clean-profile')?.remove();
+  const avatar=extractAvatar(root),shell=document.createElement('section');shell.className='ec-clean-profile';
+  const rows=[row('Nickname',member.nickname)];
+  if(canSee('name'))rows.push(row('Vorname',member.first_name),row('Nachname',member.last_name));
+  if(canSee('birth_date'))rows.push(row('Geburtsdatum',fmtDate(member.birth_date)),row('Alter',fmtAge(member.birth_date)));
+  
+  rows.push(row('Heimatregion',regionName(member.home_region_id)));
+  
+  
+  shell.innerHTML='<div class="ec-clean-profile-left"><div class="ec-clean-profile-photo"></div><div class="ec-clean-profile-role role-'+role.theme+'"><span>FUNKTION</span><strong><img src="'+role.star+'" alt="">'+esc(role.label)+'</strong><small>Heimatregion: '+esc(regionName(member.home_region_id))+'</small></div></div><div class="ec-clean-profile-main"><header><span>'+ (preview?'PROFILVORSCHAU':'MITGLIEDSPROFIL')+'</span><h1>'+esc(member.nickname||'Mitglied')+'</h1></header><div class="ec-clean-profile-data">'+rows.join('')+'</div>'+'</div><div class="ec-clean-profile-actions" aria-label="Profilaktionen"></div>';
+  // React keeps ownership of its nodes and event handlers. Proxies forward to the originals.
+  if(avatar)shell.querySelector('.ec-clean-profile-photo').appendChild(avatar.cloneNode(true));
+  if(member.is_verified){const badge=document.createElement('span');badge.className='ec-profile-verified';badge.textContent='✓ Verifiziert';shell.querySelector('.ec-clean-profile-main header').appendChild(badge)}
+  const actions=shell.querySelector('.ec-clean-profile-actions');
+  if(!preview&&actionsSource){[...actionsSource.querySelectorAll('button,a')].forEach(original=>{const button=document.createElement('button');button.type='button';button.className='ec-clean-profile-action '+original.className;button.textContent=original.textContent;button.disabled=original.disabled;button.onclick=()=>original.click();actions.appendChild(button)})}
+  if(!preview&&isHead()&&cache.viewer?.id!==member.id){const admin=document.createElement('button');admin.type='button';admin.className='ec-clean-profile-admin';admin.textContent='Admin Tools';admin.onclick=()=>openMemberAdmin(member);actions.appendChild(admin)}
+  if(!actions.children.length)actions.remove();
+  root.querySelectorAll(':scope > .member-profile-hero,:scope > .member-profile-actions,:scope > .profile-visible-details').forEach(el=>el.classList.add('ec-clean-profile-hidden'));
+  const hero=root.querySelector(':scope > .member-profile-hero');
+  if(hero)hero.before(shell);else root.prepend(shell);
 }
 
 function cleanEditor(){document.querySelectorAll('.profile-page-layout,.my-area-layout,.profile-form.profile-editor').forEach(el=>el.classList.add('ec-clean-editor'));document.querySelectorAll('img[src*="crown" i],img[src*="krone" i]').forEach(img=>img.remove())}
-async function run(){await load();document.querySelectorAll('.member-profile-page:not(.public-profile-preview)').forEach(root=>{const member=findMember(root);if(member)buildProfile(root,member)});cleanEditor()}
+async function run(){await load();document.querySelectorAll('.member-profile-page').forEach(root=>{const member=findMember(root);if(member)buildProfile(root,member)});cleanEditor()}
 let q=false;new MutationObserver(()=>{if(q)return;q=true;requestAnimationFrame(()=>{q=false;run()})}).observe(document.documentElement,{subtree:true,childList:true});window.addEventListener('ec:region-change',()=>setTimeout(()=>{document.querySelectorAll('.member-profile-page').forEach(root=>{root.dataset.ecCleanProfile='';root.querySelector('.ec-clean-profile')?.remove();root.querySelectorAll('.ec-clean-profile-hidden').forEach(el=>el.classList.remove('ec-clean-profile-hidden'))});load(true).then(run)},50));window.addEventListener('keydown',e=>{if(e.key==='Escape')closeAdmin()});window.addEventListener('DOMContentLoaded',run);run();
