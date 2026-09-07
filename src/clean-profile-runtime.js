@@ -26,14 +26,13 @@ async function load(force=false){
 }
 
 function roleInfo(p){
-  const base=String(p?.role||'MEMBER').toUpperCase(),here=activeRegion(),assigned=assignmentsFor(p),regionalHere=Boolean(here&&p?.home_region_id===here.id&&assigned.some(a=>a.region_id===here.id));
-  if(base==='HEAD_ADMIN')return{label:'Hauptadmin · Betreiber',theme:'admin',star:'/role-star-red.svg'};
-  if(base==='ADMIN')return{label:'Global Admin',theme:'admin',star:'/role-star-red.svg'};
-  if(regionalHere)return{label:`Regional Admin ${here.name}`,theme:'admin',star:'/role-star-red.svg'};
-  if(assigned.length)return{label:`Regional Admin ${assigned.map(a=>regionName(a.region_id)).join(', ')}`,theme:'supporter',star:'/supporter-star.svg'};
+  const base=String(p?.role||'MEMBER').toUpperCase(),here=activeRegion(),assigned=assignmentsFor(p),regionalHere=Boolean(here&&assigned.some(a=>a.region_id===here.id));
+  if(base==='HEAD_ADMIN')return{label:'Hauptadmin',theme:'admin',star:'/role-star-red.svg'};
+  if(base==='ADMIN')return{label:'Community Admin',theme:'admin',star:'/role-star-red.svg'};
+  if(regionalHere)return{label:`Regional Admin · ${here.name}`,theme:'admin',star:'/role-star-red.svg'};
   if(base==='SUPPORTER')return{label:'Supporter',theme:'supporter',star:'/supporter-star.svg'};
   if(p?.account_badge==='BUSINESS')return{label:'Unternehmenskonto',theme:'business',star:'/role-star-blue.svg'};
-  return{label:'Mitglied',theme:'member',star:'/role-star-member.svg'};
+  return{label:'Mitglied',theme:'member',star:''};
 }
 
 function visible(p,field){if(!p)return false;if(cache.viewer?.id===p.id||isHead())return true;const setting=String(p?.privacy_settings?.[field]||'PUBLIC').toUpperCase();return setting==='PUBLIC'||(setting==='FRIENDS'&&cache.friends.has(p.id))}
@@ -69,12 +68,9 @@ function buildProfile(root,member){
   const rows=[row('Nickname',member.nickname)];
   if(canSee('name'))rows.push(row('Vorname',member.first_name),row('Nachname',member.last_name));
   if(canSee('birth_date'))rows.push(row('Geburtsdatum',fmtDate(member.birth_date)),row('Alter',fmtAge(member.birth_date)));
-  
   rows.push(row('Heimatregion',regionName(member.home_region_id)));
-  
-  
-  shell.innerHTML='<div class="ec-clean-profile-left"><div class="ec-clean-profile-photo"></div><div class="ec-clean-profile-role role-'+role.theme+'"><span>FUNKTION</span><strong><img src="'+role.star+'" alt="">'+esc(role.label)+'</strong><small>Heimatregion: '+esc(regionName(member.home_region_id))+'</small></div></div><div class="ec-clean-profile-main"><header><span>'+ (preview?'PROFILVORSCHAU':'MITGLIEDSPROFIL')+'</span><h1>'+esc(member.nickname||'Mitglied')+'</h1></header><div class="ec-clean-profile-data">'+rows.join('')+'</div>'+'</div><div class="ec-clean-profile-actions" aria-label="Profilaktionen"></div>';
-  // React keeps ownership of its nodes and event handlers. Proxies forward to the originals.
+  const starMarkup=role.star?`<img src="${role.star}" alt="">`:'';
+  shell.innerHTML='<div class="ec-clean-profile-left"><div class="ec-clean-profile-photo"></div><div class="ec-clean-profile-role role-'+role.theme+'"><span>FUNKTION</span><strong>'+starMarkup+esc(role.label)+'</strong><small>Heimatregion: '+esc(regionName(member.home_region_id))+'</small></div></div><div class="ec-clean-profile-main"><header><span>'+ (preview?'PROFILVORSCHAU':'MITGLIEDSPROFIL')+'</span><h1>'+esc(member.nickname||'Mitglied')+'</h1></header><div class="ec-clean-profile-data">'+rows.join('')+'</div>'+'</div><div class="ec-clean-profile-actions" aria-label="Profilaktionen"></div>';
   if(avatar)shell.querySelector('.ec-clean-profile-photo').appendChild(avatar.cloneNode(true));
   if(member.is_verified){const badge=document.createElement('span');badge.className='ec-profile-verified';badge.textContent='✓ Verifiziert';shell.querySelector('.ec-clean-profile-main header').appendChild(badge)}
   const actions=shell.querySelector('.ec-clean-profile-actions');
