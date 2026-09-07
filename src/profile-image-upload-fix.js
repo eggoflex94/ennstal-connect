@@ -9,10 +9,17 @@ const ALLOWED=new Map([
 ]);
 let busy=false;
 
+const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+const withTimeout=(promise,ms,message)=>new Promise((resolve,reject)=>{
+  const timer=setTimeout(()=>reject(new Error(message)),ms);
+  Promise.resolve(promise).then(value=>{clearTimeout(timer);resolve(value)},error=>{clearTimeout(timer);reject(error)});
+});
+const isNetworkError=error=>/failed to fetch|networkerror|network request failed|load failed|zeitüberschreitung|timeout/i.test(String(error?.message||error||''));
+
 function messageFor(error,stage){
   const raw=String(error?.message||error||'').trim();
-  if(/failed to fetch|networkerror|network request failed/i.test(raw))return 'Profilbild konnte nicht hochgeladen werden: Verbindung zum Bildspeicher fehlgeschlagen. Bitte Internetverbindung prüfen und erneut versuchen.';
-  if(/row-level security|policy|permission|not authorized|unauthorized/i.test(raw))return 'Profilbild konnte nicht hochgeladen werden: Keine Speicherberechtigung. Bitte neu anmelden und erneut versuchen.';
+  if(isNetworkError(error))return 'Profilbild konnte nicht hochgeladen werden: Die Verbindung zum Bildspeicher wurde unterbrochen. Ennstal Connect versucht es automatisch erneut; falls es weiter fehlschlägt, bitte kurz später nochmals probieren.';
+  if(/row-level security|policy|permission|not authorized|unauthorized/i.test(raw))return 'Profilbild konnte nicht hochgeladen werden: Keine Speicherberechtigung. Bitte einmal ab- und wieder anmelden.';
   if(/payload too large|too large|maximum|size/i.test(raw))return 'Profilbild konnte nicht hochgeladen werden: Die Datei ist zu groß. Maximal 5 MB.';
   if(/mime|content.?type|unsupported|invalid.*image/i.test(raw))return 'Profilbild konnte nicht hochgeladen werden: Erlaubt sind PNG, JPG/JPEG, WebP und GIF.';
   return `Profilbild konnte nicht ${stage==='profile'?'im Profil gespeichert':'hochgeladen'} werden${raw?`: ${raw}`:'.'}`;
@@ -27,7 +34,7 @@ function toast(text,ok=false){
   node.textContent=text;
   document.body.appendChild(node);
   clearTimeout(window.__ecProfileUploadToast);
-  window.__ecProfileUploadToast=setTimeout(()=>node.remove(),ok?3200:7000);
+  window.__ecProfileUploadToast=setTimeout(()=>node.remove(),ok?3200:8000);
 }
 
 function isProfileAvatarInput(input){
@@ -35,6 +42,68 @@ function isProfileAvatarInput(input){
   const label=input.closest('label');
   const text=String(label?.textContent||'').replace(/\s+/g,' ').trim().toLowerCase();
   return label?.classList.contains('profile-upload-field')&&text.startsWith('profilbild');
+}
+
+async function getUser(){
+  let result;
+  for(let attempt=0;attempt<2;attempt+=1){
+    try{
+      result=await withTimeout(supabase.auth.getUser(),8000,'Zeitüberschreitung beim Prüfen der Anmeldung.');
+      if(!result.error)break;
+      if(!isNetworkError(result.error))throw result.error;
+    }catch(error){
+      if(!isNetworkError(error)||attempt===1)throw error;
+    }
+    await sleep(500);
+  }
+  if(result?.error)throw result.error;
+  if(!result?.data?.user?.id)throw new Error('Keine aktive Anmeldung gefunden.');
+  return result.data.user;
+}
+
+async function uploadObject(path,file,mime){
+  let lastError=null;
+  for(let attempt=1;attempt<=3;attempt+=1){
+    try{
+      const result=await withTimeout(
+        supabase.storage.from('profile-avatars').upload(path,file,{upsert:false,contentType:mime,cacheControl:'3600'}),
+        18000,
+        'Zeitüberschreitung beim Bild-Upload.'
+      );
+      if(!result.error)return;
+      lastError=result.error;
+      if(!isNetworkError(lastError))throw lastError;
+    }catch(error){
+      lastError=error;
+      if(!isNetworkError(error))throw error;
+    }
+    if(attempt<3){
+      toast(`Verbindung zum Bildspeicher wird erneut aufgebaut … Versuch ${attempt+1}/3`,true);
+      await sleep(700*attempt);
+    }
+  }
+  throw lastError||new Error('Bildspeicher nicht erreichbar.');
+}
+
+async function saveAvatar(userId,publicUrl){
+  let lastError=null;
+  for(let attempt=1;attempt<=2;attempt+=1){
+    try{
+      const result=await withTimeout(
+        supabase.from('profiles').update({avatar_url:publicUrl}).eq('id',userId).select('id,avatar_url').maybeSingle(),
+        12000,
+        'Zeitüberschreitung beim Speichern des Profilbilds.'
+      );
+      if(!result.error&&result.data?.avatar_url)return result.data;
+      lastError=result.error||new Error('Das Profil hat das neue Bild nicht bestätigt.');
+      if(!isNetworkError(lastError))throw lastError;
+    }catch(error){
+      lastError=error;
+      if(!isNetworkError(error)||attempt===2)throw Object.assign(error,{__stage:'profile'});
+    }
+    await sleep(650);
+  }
+  throw Object.assign(lastError||new Error('Profil konnte nicht aktualisiert werden.'),{__stage:'profile'});
 }
 
 async function upload(file,input){
@@ -47,23 +116,18 @@ async function upload(file,input){
   busy=true;input.disabled=true;toast('Profilbild wird hochgeladen …',true);
   let path='';
   try{
-    const {data:{user},error:userError}=await supabase.auth.getUser();
-    if(userError)throw userError;
-    if(!user?.id)throw new Error('Keine aktive Anmeldung gefunden.');
-
+    const user=await getUser();
     const ext=ALLOWED.get(mime);
     path=`${user.id}/${crypto.randomUUID()}.${ext}`;
-    const {error:uploadError}=await supabase.storage.from('profile-avatars').upload(path,file,{upsert:false,contentType:mime,cacheControl:'3600'});
-    if(uploadError)throw uploadError;
+    await uploadObject(path,file,mime);
 
     const {data:urlData}=supabase.storage.from('profile-avatars').getPublicUrl(path);
     const publicUrl=urlData?.publicUrl;
     if(!publicUrl)throw new Error('Öffentliche Bildadresse konnte nicht erzeugt werden.');
 
-    const {error:updateError}=await supabase.from('profiles').update({avatar_url:publicUrl}).eq('id',user.id);
-    if(updateError){
+    try{await saveAvatar(user.id,publicUrl)}catch(error){
       try{await supabase.storage.from('profile-avatars').remove([path])}catch{}
-      throw Object.assign(updateError,{__stage:'profile'});
+      throw error;
     }
 
     const cacheBusted=`${publicUrl}${publicUrl.includes('?')?'&':'?'}v=${Date.now()}`;
@@ -84,6 +148,7 @@ function onChange(event){
   if(!isProfileAvatarInput(input))return;
   const file=input.files?.[0];
   if(!file)return;
+  event.preventDefault();
   event.stopPropagation();
   event.stopImmediatePropagation?.();
   void upload(file,input);
