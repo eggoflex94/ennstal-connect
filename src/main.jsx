@@ -104,6 +104,10 @@ import "./community-stability-final.css";
 /* Absolute last CSS authority for phone/tablet layout across community, admin, profiles and messages. */
 import "./mobile-authority.css";
 
+/* Person links: online friends stay text-only; responsibilities show small role star + avatar + linked nickname. */
+import "./people-links-polish.css";
+import "./people-links-polish.js";
+
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
   static getDerivedStateFromError() { return { failed: true }; }
