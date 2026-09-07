@@ -1,0 +1,104 @@
+/* Final mobile authority. Loaded last so every community view remains usable on phones. */
+@media(max-width:900px){
+  html,body,#root,.app,.ec-regional-ui,.dashboard-layout,.modern-main,.content-root{width:100%!important;max-width:100%!important;min-width:0!important;overflow-x:hidden!important}
+  .ec-regional-ui .modern-main{padding-left:0!important;padding-right:0!important}
+  .content-root{padding-left:10px!important;padding-right:10px!important}
+  .page-heading,.panel-title-row,.ec-admin-modern-top,.ec-admin-card-title{min-width:0!important}
+  .page-heading>*{min-width:0!important}
+  h1,h2,h3,h4,p,strong,span,small,label{overflow-wrap:anywhere}
+  .site-footer{width:100%!important;max-width:100%!important;margin-left:0!important;margin-right:0!important;display:flex!important;flex-wrap:wrap!important;gap:10px!important;align-items:center!important;justify-content:space-between!important}
+  .site-footer>div{display:flex!important;flex-wrap:wrap!important;gap:7px!important}
+  .site-footer button{min-height:38px!important}
+
+  .admin-page,.news-page,.home-page,.member-profile-page,.profile-page,.groups-page,.forum-page,.community-page{width:100%!important;max-width:100%!important;min-width:0!important}
+  .admin-member-cards,.admin-member-card,.ec-admin-modern,.ec-admin-bottom,.ec-admin-middle,.ec-admin-stat-grid,.permissions-grid,.profile-admin-edit-grid{min-width:0!important;max-width:100%!important}
+  .admin-member-person-button{min-width:0!important;width:100%!important}
+  .admin-member-person-button>span{min-width:0!important}
+  .admin-member-card-info{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .admin-member-card-actions{display:flex!important;flex-wrap:wrap!important;gap:7px!important}
+  .admin-member-card-actions button{flex:1 1 150px!important;min-width:0!important}
+  .permissions-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .ec-admin-tabs{display:flex!important;overflow-x:auto!important;scrollbar-width:none!important;overscroll-behavior-x:contain!important}
+  .ec-admin-tabs::-webkit-scrollbar{display:none!important}
+  .ec-admin-tabs button{flex:0 0 auto!important;white-space:nowrap!important}
+  .ec-admin-stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .ec-admin-middle,.ec-admin-bottom{grid-template-columns:1fr!important}
+
+  .member-profile-page .ec-clean-profile,.member-profile-page .ec-clean-profile-main,.member-profile-page .ec-clean-profile-grid{width:100%!important;max-width:100%!important;min-width:0!important}
+  .member-profile-page .ec-clean-profile-grid{grid-template-columns:1fr!important}
+  .member-profile-page .ec-clean-profile-actions,.profile-actions{display:flex!important;flex-wrap:wrap!important;gap:7px!important}
+  .member-profile-page .ec-clean-profile-actions>*{flex:1 1 145px!important;min-width:0!important}
+  .profile-community-modules,.profile-community-module-grid{grid-template-columns:1fr!important}
+
+  .news-grid,.group-grid,.groups-grid,.member-grid,.members-grid,.engagement-grid,.homepage-builder-grid,.homepage-sections{grid-template-columns:1fr!important;min-width:0!important}
+  .news-card,.group-card,.homepage-frame,.community-card{min-width:0!important;max-width:100%!important}
+  .content-card-image,.homepage-frame>img,.group-cover,.profile-photo-grid img,.public-photo-folder img{width:100%!important;max-width:100%!important;height:auto!important;max-height:55vh!important;object-fit:cover!important}
+  .homepage-form,.news-composer,.community-request-board form{min-width:0!important}
+  input,select,textarea{width:100%!important;min-width:0!important;font-size:16px!important}
+  textarea{max-height:45vh!important}
+
+  .messages-page,.messages-layout,.message-layout,.chat-layout,.message-thread,.chat-thread{width:100%!important;max-width:100%!important;min-width:0!important}
+  .messages-layout,.message-layout,.chat-layout{grid-template-columns:1fr!important}
+  .message-list,.conversation-list,.chat-list{max-height:34vh!important;overflow-y:auto!important}
+  .message-bubble,.chat-message,.message-content,.message-body{max-width:92%!important;min-width:0!important;overflow-wrap:anywhere!important}
+  .message-bubble img,.chat-message img,.message-content img,.message-body img{width:auto!important;max-width:100%!important;height:auto!important;max-height:42vh!important;object-fit:contain!important}
+  .message-composer,.chat-composer{position:sticky!important;bottom:0!important;background:#fff!important;padding-bottom:max(8px,env(safe-area-inset-bottom))!important}
+
+  .ec-right-dock{max-width:min(92vw,360px)!important}
+  .ec-right-dock .ec-compact-menu-grid{grid-template-columns:repeat(5,minmax(0,1fr))!important}
+  .ec-right-dock .ec-online-friends-panel,.ec-right-dock .ec-dock-admin-slot,.ec-right-dock .ec-dock-detail{width:100%!important;max-width:100%!important;min-width:0!important}
+  .ec-online-friend{grid-template-columns:10px 22px minmax(0,1fr)!important;min-width:0!important}
+  .ec-online-friend-name{overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+}
+
+@media(max-width:700px){
+  :root{--ec-mobile-header:112px}
+  .ec-brand-masthead{padding-left:8px!important;padding-right:8px!important}
+  .ec-brand-wordmark{min-width:0!important}.ec-brand-wordmark b,.ec-brand-wordmark strong{font-size:18px!important}
+  .ec-top-nav{display:grid!important;grid-template-columns:repeat(7,minmax(42px,1fr))!important;gap:2px!important;overflow:visible!important;padding:4px 100px 4px 4px!important}
+  .ec-top-nav button{min-width:0!important;width:100%!important;padding:4px 2px!important;overflow:hidden!important}
+  .ec-top-nav button span{font-size:8px!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;max-width:100%!important}
+  .ec-region-picker{z-index:9002!important}
+  .ec-dock-toggle{z-index:9003!important}
+  .ec-right-dock{width:min(94vw,350px)!important;padding-left:12px!important;padding-right:12px!important;padding-bottom:max(16px,env(safe-area-inset-bottom))!important}
+  .ec-right-dock .ec-compact-menu-grid{grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:6px!important}
+  .ec-right-dock .ec-compact-menu-grid button{min-width:0!important;height:46px!important;padding:0!important}
+
+  .content-root{padding-left:7px!important;padding-right:7px!important}
+  .panel,.community-card,.news-card,.group-card,.homepage-frame{border-radius:14px!important}
+  .page-heading h1{font-size:clamp(1.75rem,9vw,2.5rem)!important;line-height:1.05!important}
+  .page-heading p{font-size:.92rem!important;line-height:1.4!important}
+
+  .admin-member-card-info,.permissions-grid,.ec-admin-stat-grid{grid-template-columns:1fr!important}
+  .admin-member-card-actions button{flex:1 1 100%!important}
+  .ec-admin-role-overview{margin-left:0!important;margin-right:0!important}
+  .ec-role-manager{margin-left:0!important;margin-right:0!important}
+  .ec-moderation-permissions{grid-template-columns:1fr 1fr!important}
+
+  .member-card{width:100%!important;max-width:100%!important}
+  .member-card .member-avatar{max-width:min(36vw,132px)!important;height:auto!important;aspect-ratio:1!important}
+  .member-name,.member-nickname,.member-status{max-width:100%!important}
+
+  .content-editor-overlay{padding:6px!important;align-items:flex-end!important}
+  .content-editor-dialog{width:100%!important;max-width:100%!important;max-height:92dvh!important;overflow-y:auto!important;border-radius:18px 18px 0 0!important;padding:14px!important}
+  .content-editor-actions{position:sticky!important;bottom:-14px!important;margin:12px -14px -14px!important;padding:10px 14px max(10px,env(safe-area-inset-bottom))!important;background:#fff!important;display:grid!important;grid-template-columns:1fr 1fr!important}
+
+  .site-footer{padding:13px!important}.site-footer strong{width:100%!important}.site-footer>div{width:100%!important;display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important}.site-footer button{width:100%!important;padding:7px 5px!important;font-size:.75rem!important}
+}
+
+@media(max-width:480px){
+  .ec-top-nav{grid-template-columns:repeat(7,minmax(36px,1fr))!important;padding-right:96px!important}
+  .ec-top-nav button span{font-size:7px!important}
+  .ec-right-dock .ec-compact-menu-grid{grid-template-columns:repeat(5,minmax(0,1fr))!important}
+  .ec-moderation-permissions{grid-template-columns:1fr!important}
+  .site-footer>div{grid-template-columns:1fr!important}
+  .content-editor-actions{grid-template-columns:1fr!important}
+  .message-bubble,.chat-message,.message-content,.message-body{max-width:96%!important}
+}
+
+@supports(padding:max(0px)){
+  @media(max-width:700px){
+    .ec-brand-masthead{padding-top:max(7px,env(safe-area-inset-top))!important}
+    .ec-right-dock{padding-bottom:max(16px,env(safe-area-inset-bottom))!important}
+  }
+}
