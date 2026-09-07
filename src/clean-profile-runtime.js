@@ -8,7 +8,10 @@ const activeRegion=()=>{const slug=document.querySelector('.ec-region-picker sel
 const isHead=()=>String(cache.viewer?.role||'').toUpperCase()==='HEAD_ADMIN';
 const fmtDate=v=>{if(!v)return'';const d=new Date(v);return Number.isNaN(d.getTime())?'':d.toLocaleDateString('de-AT')};
 const fmtAge=v=>{if(!v)return'';const b=new Date(v),n=new Date();if(Number.isNaN(b.getTime()))return'';let a=n.getFullYear()-b.getFullYear();if(n.getMonth()<b.getMonth()||(n.getMonth()===b.getMonth()&&n.getDate()<b.getDate()))a--;return `${a} Jahre`};
+const fmtLastActive=v=>{if(!v)return'Unbekannt';const d=new Date(v);if(Number.isNaN(d.getTime()))return'Unbekannt';return d.toLocaleString('de-AT',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}).replace(',',' ·');};
 const assignmentsFor=p=>cache.assignments.filter(a=>a.user_id===p?.id&&a.active);
+const presenceTime=p=>{const raw=p?.last_active_at||p?.last_seen_at;if(!raw)return 0;const time=new Date(raw).getTime();return Number.isFinite(time)?time:0};
+const isActuallyOnline=p=>!p?.hide_online_status&&presenceTime(p)>0&&Date.now()-presenceTime(p)<=5*60*1000;
 
 async function load(force=false){
   if(!supabase)return;
@@ -60,7 +63,7 @@ function openMemberAdmin(member){
 function buildProfile(root,member){
   const preview=root.classList.contains('public-profile-preview'),role=roleInfo(member),actionsSource=extractActions(root);
   const canSee=field=>preview?String(member.privacy_settings?.[field]||'PUBLIC').toUpperCase()==='PUBLIC':visible(member,field);
-  const signature=JSON.stringify([member,role,preview,actionsSource?.textContent,cache.friends.has(member.id)]);
+  const signature=JSON.stringify([member,role,preview,actionsSource?.textContent,cache.friends.has(member.id),isActuallyOnline(member)]);
   if(root.dataset.ecCleanProfile===signature)return;
   root.dataset.ecCleanProfile=signature;
   root.querySelector(':scope > .ec-clean-profile')?.remove();
@@ -71,7 +74,10 @@ function buildProfile(root,member){
   rows.push(row('Heimatregion',regionName(member.home_region_id)));
   const starMarkup=role.star?`<img src="${role.star}" alt="" aria-hidden="true">`:'';
   const identityMarkup=`${starMarkup}<span>${esc(role.label)}</span>`;
-  shell.innerHTML='<div class="ec-clean-profile-left"><div class="ec-clean-profile-photo"></div><div class="ec-clean-profile-role role-'+role.theme+'"><span>FUNKTION</span><strong>'+identityMarkup+'</strong><small>Heimatregion: '+esc(regionName(member.home_region_id))+'</small></div></div><div class="ec-clean-profile-main"><header><span>'+ (preview?'PROFILVORSCHAU':'MITGLIEDSPROFIL')+'</span><h1>'+esc(member.nickname||'Mitglied')+'</h1></header><div class="ec-clean-profile-data">'+rows.join('')+'</div>'+'</div><div class="ec-clean-profile-actions" aria-label="Profilaktionen"></div>';
+  const online=isActuallyOnline(member);
+  const lastActive=fmtLastActive(member.last_active_at||member.last_seen_at);
+  const presenceMarkup=`<div class="ec-profile-presence"><span class="ec-profile-presence-status ${online?'is-online':'is-offline'}"><i aria-hidden="true"></i>${online?'Online':'Offline'}</span><span class="ec-profile-last-active">Zuletzt aktiv: ${esc(lastActive)}</span></div>`;
+  shell.innerHTML='<div class="ec-clean-profile-left"><div class="ec-clean-profile-photo"></div><div class="ec-clean-profile-role role-'+role.theme+'"><span>FUNKTION</span><strong>'+identityMarkup+'</strong><small>Heimatregion: '+esc(regionName(member.home_region_id))+'</small>'+presenceMarkup+'</div></div><div class="ec-clean-profile-main"><header><span>'+ (preview?'PROFILVORSCHAU':'MITGLIEDSPROFIL')+'</span><h1>'+esc(member.nickname||'Mitglied')+'</h1></header><div class="ec-clean-profile-data">'+rows.join('')+'</div>'+'</div><div class="ec-clean-profile-actions" aria-label="Profilaktionen"></div>';
   if(avatar)shell.querySelector('.ec-clean-profile-photo').appendChild(avatar.cloneNode(true));
   if(member.is_verified){const badge=document.createElement('span');badge.className='ec-profile-verified';badge.textContent='✓ Verifiziert';shell.querySelector('.ec-clean-profile-main header').appendChild(badge)}
   const actions=shell.querySelector('.ec-clean-profile-actions');
