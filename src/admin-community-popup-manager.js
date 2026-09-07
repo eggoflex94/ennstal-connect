@@ -14,37 +14,51 @@ const regionForId=id=>state.regions.find(r=>r.id===id)||null;
 function sectionText(item){return (item?.sections||[]).map(s=>`${s.label}\n${(s.items||[]).map(i=>`- ${i}`).join('\n')}`).join('\n\n')}
 function parseSections(raw){return String(raw||'').split(/\n\s*\n/).map(block=>{const lines=block.split('\n').map(x=>x.trim()).filter(Boolean);return{label:lines.shift()||'BEREICH',items:lines.map(x=>x.replace(/^[-•✓]\s*/,''))}}).filter(x=>x.items.length)}
 
-async function load(){
-  if(loading||!supabase)return;
-  loading=true;
-  try{
-    const {data:{user}}=await supabase.auth.getUser();if(!user)return;
-    const [{data:viewer},{data:regions},{data:assignments},{data:moderation}]=await Promise.all([
-      supabase.from('profiles').select('id,role').eq('id',user.id).maybeSingle(),
-      supabase.from('regions').select('id,slug,name').eq('is_active',true).order('sort_order'),
-      supabase.from('regional_admin_assignments').select('user_id,region_id,active').eq('user_id',user.id).eq('active',true),
-      supabase.from('regional_moderation_assignments').select('user_id,region_id,permissions,active').eq('user_id',user.id).eq('active',true)
-    ]);
-    state.viewer=viewer||null;state.regions=regions||[];state.assignments=assignments||[];state.moderation=moderation||[];
-    if(!canManage()){document.querySelector('.ec-popup-admin-manager')?.remove();return}
-    const {data:items,error}=await supabase.rpc('ec_list_manageable_community_announcements',{p_region_slug:activeSlug()||null});
-    if(error)throw error;state.items=items||[];render();
-  }catch(error){console.warn('Community-Popup-Verwaltung konnte nicht geladen werden:',error)}finally{loading=false}
+async function hydrate(){
+  if(!supabase)return false;
+  const {data:{user}}=await supabase.auth.getUser();if(!user)return false;
+  const [{data:viewer},{data:regions},{data:assignments},{data:moderation}]=await Promise.all([
+    supabase.from('profiles').select('id,role').eq('id',user.id).maybeSingle(),
+    supabase.from('regions').select('id,slug,name').eq('is_active',true).order('sort_order'),
+    supabase.from('regional_admin_assignments').select('user_id,region_id,active').eq('user_id',user.id).eq('active',true),
+    supabase.from('regional_moderation_assignments').select('user_id,region_id,permissions,active').eq('user_id',user.id).eq('active',true)
+  ]);
+  state.viewer=viewer||null;state.regions=regions||[];state.assignments=assignments||[];state.moderation=moderation||[];
+  return canManage();
 }
 
-function render(){
-  const root=document.querySelector('.admin-page');if(!root||!canManage())return;
-  let panel=root.querySelector('.ec-popup-admin-manager');
-  if(!panel){panel=document.createElement('section');panel.className='ec-popup-admin-manager panel';const anchor=root.querySelector('.ec-hours-statistics,.ec-admin-role-overview,.admin-member-cards');if(anchor)anchor.before(panel);else root.appendChild(panel)}
+async function loadItems(){
+  const allowed=await hydrate();if(!allowed){state.items=[];return false}
+  const {data:items,error}=await supabase.rpc('ec_list_manageable_community_announcements',{p_region_slug:activeSlug()||null});
+  if(error)throw error;state.items=items||[];return true;
+}
+
+function panelMarkup(){
   const items=state.items.map(item=>`<article class="ec-popup-admin-item" data-id="${esc(item.id)}"><div><span class="ec-popup-scope ${item.region_id?'regional':'global'}">${item.region_id?`REGION · ${esc(item.region_name||'Region')}`:'GLOBAL'}</span><strong>${esc(item.title)}</strong><small>${item.active?'Aktiv':'Inaktiv'} · Version ${Number(item.version||1)}</small></div><div><button type="button" data-action="preview">Ansehen</button><button type="button" data-action="edit">Bearbeiten</button><button type="button" data-action="delete" class="danger">Löschen</button></div></article>`).join('');
-  panel.innerHTML=`<header class="ec-popup-admin-head"><div><span class="eyebrow">COMMUNITY-POPUPS</span><h2>Ankündigungen verwalten</h2><p>${isGlobalAdmin()?'Globale oder regionale Popups erstellen und freigeben.':'Du kannst Popups nur für deine freigegebene Region verwalten.'}</p></div><button type="button" class="ec-popup-new">+ Neues Popup</button></header><div class="ec-popup-admin-list">${items||'<p class="ec-popup-admin-empty">Noch keine verwaltbaren Popups vorhanden.</p>'}</div>`;
-  panel.querySelector('.ec-popup-new').onclick=()=>openEditor(null);
+  return `<header class="ec-popup-admin-head"><div><span class="eyebrow">COMMUNITY-POPUPS</span><h2>Ankündigungen verwalten</h2><p>${isGlobalAdmin()?'Globale oder regionale Popups erstellen und freigeben.':'Du kannst Popups nur für deine freigegebene Region verwalten.'}</p></div><button type="button" class="ec-popup-new">+ Neues Popup</button></header><div class="ec-popup-admin-list">${items||'<p class="ec-popup-admin-empty">Noch keine verwaltbaren Popups vorhanden.</p>'}</div>`;
+}
+
+function wirePanel(panel){
+  panel.querySelector('.ec-popup-new')?.addEventListener('click',()=>openEditor(null));
   panel.querySelectorAll('.ec-popup-admin-item').forEach(row=>{
     const item=state.items.find(x=>x.id===row.dataset.id);if(!item)return;
     row.querySelector('[data-action="preview"]').onclick=()=>window.dispatchEvent(new CustomEvent('ec:open-community-announcement',{detail:{id:item.id}}));
     row.querySelector('[data-action="edit"]').onclick=()=>openEditor(item);
     row.querySelector('[data-action="delete"]').onclick=()=>removeItem(item);
   });
+}
+
+async function load(){
+  if(loading||!supabase)return;
+  loading=true;
+  try{
+    const allowed=await loadItems();
+    const root=document.querySelector('.admin-page');
+    if(!root||!allowed){root?.querySelector('.ec-popup-admin-manager')?.remove();return}
+    let panel=root.querySelector('.ec-popup-admin-manager');
+    if(!panel){panel=document.createElement('section');panel.className='ec-popup-admin-manager panel';const anchor=root.querySelector('.ec-hours-statistics,.ec-admin-role-overview,.admin-member-cards');if(anchor)anchor.before(panel);else root.appendChild(panel)}
+    panel.innerHTML=panelMarkup();wirePanel(panel);
+  }catch(error){console.warn('Community-Popup-Verwaltung konnte nicht geladen werden:',error)}finally{loading=false}
 }
 
 function scopeOptions(item){
@@ -62,13 +76,23 @@ function openEditor(item){
   const form=overlay.querySelector('form');if(defaultRegion&&!form.scope.value)form.scope.value=defaultRegion;
   const close=()=>{overlay.remove();document.body.classList.remove('ec-popup-admin-editing')};overlay.querySelectorAll('[data-close]').forEach(b=>b.onclick=close);overlay.onclick=e=>{if(e.target===overlay)close()};
   form.onsubmit=async e=>{e.preventDefault();const status=form.querySelector('.ec-popup-admin-status');const submit=form.querySelector('[type="submit"]');submit.disabled=true;status.textContent='Wird gespeichert …';
-    try{const {error}=await supabase.rpc('ec_save_community_announcement',{p_id:item?.id||null,p_title:form.title.value,p_subtitle:form.subtitle.value,p_sections:parseSections(form.sections.value),p_image_url:form.image.value,p_region_slug:form.scope.value||null,p_active:form.active.checked});if(error)throw error;status.textContent='Gespeichert.';window.dispatchEvent(new CustomEvent('ec:community-announcements-refresh'));close();await load()}catch(error){status.textContent=error.message||'Speichern fehlgeschlagen.'}finally{submit.disabled=false}};
+    try{const {error}=await supabase.rpc('ec_save_community_announcement',{p_id:item?.id||null,p_title:form.title.value,p_subtitle:form.subtitle.value,p_sections:parseSections(form.sections.value),p_image_url:form.image.value,p_region_slug:form.scope.value||null,p_active:form.active.checked});if(error)throw error;status.textContent='Gespeichert.';window.dispatchEvent(new CustomEvent('ec:community-announcements-refresh'));close();await load();document.querySelector('.ec-admin-direct-overlay[data-tool="popups"]')?.remove();window.dispatchEvent(new CustomEvent('ec:open-community-popup-manager'))}catch(error){status.textContent=error.message||'Speichern fehlgeschlagen.'}finally{submit.disabled=false}};
 }
 
 async function removeItem(item){
   if(!confirm(`Popup „${item.title}“ wirklich löschen?`))return;
-  const {error}=await supabase.rpc('ec_delete_community_announcement',{p_id:item.id});if(error){alert(error.message);return}window.dispatchEvent(new CustomEvent('ec:community-announcements-refresh'));await load();
+  const {error}=await supabase.rpc('ec_delete_community_announcement',{p_id:item.id});if(error){alert(error.message);return}window.dispatchEvent(new CustomEvent('ec:community-announcements-refresh'));await load();document.querySelector('.ec-admin-direct-overlay[data-tool="popups"]')?.remove();window.dispatchEvent(new CustomEvent('ec:open-community-popup-manager'));
 }
 
-function boot(){void load();const observer=new MutationObserver(()=>{if(document.querySelector('.admin-page')&&!document.querySelector('.ec-popup-admin-manager')){clearTimeout(window.__ecPopupAdmin);window.__ecPopupAdmin=setTimeout(()=>void load(),140)}});observer.observe(document.documentElement,{childList:true,subtree:true});window.addEventListener('ec:region-change',()=>setTimeout(()=>void load(),120));window.addEventListener('ec:community-announcements-refresh',()=>setTimeout(()=>void load(),80))}
+async function openManagerOverlay(){
+  document.querySelector('.ec-admin-direct-overlay[data-tool="popups"]')?.remove();
+  const overlay=document.createElement('div');overlay.className='ec-admin-direct-overlay';overlay.dataset.tool='popups';
+  overlay.innerHTML='<section class="ec-admin-direct-modal" role="dialog" aria-modal="true"><header class="ec-admin-direct-head"><div><span>ADMIN TOOLS</span><h2>News-Popups</h2></div><button type="button" class="ec-admin-direct-close" aria-label="Schließen">×</button></header><div class="ec-admin-direct-content"><p class="ec-admin-tool-loading">Popup-Verwaltung wird geladen …</p></div></section>';
+  document.body.appendChild(overlay);document.body.classList.add('ec-admin-direct-open');
+  const close=()=>{overlay.remove();document.body.classList.remove('ec-admin-direct-open')};overlay.querySelector('.ec-admin-direct-close').onclick=close;overlay.onclick=e=>{if(e.target===overlay)close()};
+  const content=overlay.querySelector('.ec-admin-direct-content');
+  try{const allowed=await loadItems();if(!allowed){content.innerHTML='<p class="ec-admin-tool-error">Keine Berechtigung für Community-Popups.</p>';return}const panel=document.createElement('section');panel.className='ec-popup-admin-manager panel';panel.innerHTML=panelMarkup();content.innerHTML='';content.appendChild(panel);wirePanel(panel)}catch(error){content.innerHTML=`<p class="ec-admin-tool-error">Popup-Verwaltung konnte nicht geladen werden: ${esc(error.message||error)}</p>`}
+}
+
+function boot(){void load();const observer=new MutationObserver(()=>{if(document.querySelector('.admin-page')&&!document.querySelector('.ec-popup-admin-manager')){clearTimeout(window.__ecPopupAdmin);window.__ecPopupAdmin=setTimeout(()=>void load(),140)}});observer.observe(document.documentElement,{childList:true,subtree:true});window.addEventListener('ec:region-change',()=>setTimeout(()=>void load(),120));window.addEventListener('ec:community-announcements-refresh',()=>setTimeout(()=>void load(),80));window.addEventListener('ec:open-community-popup-manager',()=>void openManagerOverlay());window.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelector('.ec-admin-direct-overlay[data-tool="popups"] .ec-admin-direct-close')?.click()})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
