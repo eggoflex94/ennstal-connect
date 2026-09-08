@@ -1,0 +1,67 @@
+/* Absolute final visual authority for Ennstal Connect.
+   Keeps links/touch targets usable, constrains content, and prevents overlays from colliding. */
+html,body,#root{width:100%;max-width:100%;overflow-x:hidden}
+body{min-width:0}
+.modern-main,.content-root,.panel,.community-card,.admin-page,.profile-page,.member-profile-page,
+.messages-page,.groups-page,.forum-page,.news-page,.friends-page,.member-grid,.admin-grid,
+.ec-right-dock,.ec-regional-shell,.ec-top-nav{min-width:0;max-width:100%}
+img,video,canvas,iframe{max-width:100%}
+button,a,[role="button"]{touch-action:manipulation}
+button,a{overflow-wrap:anywhere}
+
+/* Navigation stays clickable above normal page content but below real dialogs. */
+.ec-brand-masthead,.ec-top-nav,.ec-region-picker,.ec-dock-toggle{position:relative;z-index:300}
+.ec-regional-shell{isolation:isolate}
+.modern-main,.content-root{position:relative;z-index:1}
+
+/* All true modal/overlay surfaces use one predictable stacking level. */
+.content-editor-overlay,.ec-help-modal,.ec-notification-panel,.ec-dashboard-info-overlay,
+.ec-popup-admin-editor,.ec-popup-manager,.ec-admin-workspace,.ec-clean-admin-modal,
+.ec-mobile-zoom-overlay,.profile-modal,.group-details-overlay,.modal-overlay{
+  position:fixed!important;inset:0!important;z-index:20000!important;
+}
+.content-editor-overlay,.ec-help-modal,.ec-notification-panel,.ec-dashboard-info-overlay,
+.ec-popup-admin-editor,.ec-popup-manager,.ec-admin-workspace,.ec-clean-admin-modal,
+.ec-mobile-zoom-overlay,.profile-modal,.group-details-overlay,.modal-overlay{
+  max-width:100vw!important;max-height:100dvh!important;overflow:auto!important;
+}
+
+/* Dialog cards never escape the viewport. */
+.content-editor-dialog,.ec-help-box,.ec-notification-card,.ec-dashboard-info-card,
+.ec-popup-admin-editor-card,.ec-popup-manager-card,.ec-admin-workspace-box,
+.ec-clean-admin-box,.profile-modal-card,.group-details,.modal-card{
+  width:min(780px,calc(100vw - 24px))!important;
+  max-width:calc(100vw - 24px)!important;
+  max-height:calc(100dvh - 24px)!important;
+  overflow:auto!important;
+  margin:auto!important;
+}
+
+/* Forms and grids are allowed to shrink instead of forcing horizontal overflow. */
+form,fieldset,label,input,select,textarea{min-width:0;max-width:100%}
+.profile-editor-grid,.profile-typography-grid,.form-grid,.admin-grid,.dashboard-action-grid,
+.ec-home-action-grid,.member-grid,.news-grid,.cards{min-width:0;max-width:100%}
+
+/* Long names, URLs and generated content cannot push cards outside their columns. */
+.panel p,.panel strong,.panel span,.member-card,.community-card,.news-card,.group-card,
+.member-profile-page,.profile-page,.admin-page{overflow-wrap:anywhere;word-break:normal}
+
+/* Closed mobile dock is never an invisible click shield. */
+@media(max-width:900px){
+  body:not(.ec-dock-open) .ec-right-dock{pointer-events:none!important;visibility:hidden!important}
+  body:not(.ec-dock-open) .ec-right-dock *{pointer-events:none!important}
+  body.ec-dock-open .ec-right-dock{pointer-events:auto!important;visibility:visible!important;z-index:19000!important}
+  .ec-top-nav{overflow-x:auto!important;overflow-y:hidden!important;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .ec-top-nav::-webkit-scrollbar{display:none}
+  .ec-top-nav>button,.ec-top-nav>a{flex:0 0 auto;min-height:44px}
+  .modern-main,.content-root{width:100%!important;max-width:100%!important}
+}
+
+@media(max-width:560px){
+  .content-editor-dialog,.ec-help-box,.ec-notification-card,.ec-dashboard-info-card,
+  .ec-popup-admin-editor-card,.ec-popup-manager-card,.ec-admin-workspace-box,
+  .ec-clean-admin-box,.profile-modal-card,.group-details,.modal-card{
+    width:calc(100vw - 16px)!important;max-width:calc(100vw - 16px)!important;
+    max-height:calc(100dvh - 16px)!important;
+  }
+}
