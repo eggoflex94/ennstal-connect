@@ -191,7 +191,7 @@ async function removeLegacyAppShell() {
     }
     if ("caches" in window) {
       const keys = await caches.keys();
-      await Promise.all(keys.map(key => caches.delete(key));
+      await Promise.all(keys.map(key => caches.delete(key)));
     }
   } catch (error) {
     console.warn("Alter App-Cache konnte nicht vollständig entfernt werden:", error);
