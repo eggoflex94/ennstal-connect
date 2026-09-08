@@ -1,0 +1,113 @@
+/* Final layout authority for the event list inside Community.
+   Keeps event metadata and all actions readable instead of stacking letters vertically. */
+.community-hub .community-hub-grid > article.panel:first-child {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.community-hub .community-hub-grid > article.panel:first-child .hub-row {
+  display: grid !important;
+  grid-template-columns: 58px minmax(0, 1fr) !important;
+  align-items: start !important;
+  gap: 14px !important;
+  padding: 14px 0 !important;
+  min-width: 0 !important;
+}
+
+.community-hub .community-hub-grid > article.panel:first-child .hub-row > img {
+  width: 58px !important;
+  height: 58px !important;
+  min-width: 58px !important;
+  max-width: 58px !important;
+  max-height: 58px !important;
+  object-fit: cover !important;
+  border-radius: 14px !important;
+}
+
+.community-hub .community-hub-grid > article.panel:first-child .hub-row > div {
+  min-width: 0 !important;
+}
+
+.community-hub .community-hub-grid > article.panel:first-child .hub-row strong,
+.community-hub .community-hub-grid > article.panel:first-child .hub-row span {
+  display: block !important;
+  min-width: 0 !important;
+  width: auto !important;
+  writing-mode: horizontal-tb !important;
+  text-orientation: mixed !important;
+  white-space: normal !important;
+  word-break: normal !important;
+  overflow-wrap: anywhere !important;
+}
+
+.community-hub .community-hub-grid > article.panel:first-child .hub-row strong {
+  margin-bottom: 3px !important;
+  line-height: 1.25 !important;
+}
+
+/* Event controls added by community runtimes/components. */
+.community-hub .community-hub-grid > article.panel:first-child button,
+.community-hub .community-hub-grid > article.panel:first-child a[role="button"] {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: auto !important;
+  min-width: 108px !important;
+  max-width: 100% !important;
+  min-height: 42px !important;
+  padding: 9px 14px !important;
+  margin: 7px 8px 0 0 !important;
+  border-radius: 12px !important;
+  writing-mode: horizontal-tb !important;
+  text-orientation: mixed !important;
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+  overflow-wrap: normal !important;
+  line-height: 1.15 !important;
+  vertical-align: middle !important;
+}
+
+.community-hub .community-hub-grid > article.panel:first-child button:empty {
+  display: none !important;
+}
+
+/* Creator block: compact avatar + name on a single horizontal line. */
+.community-hub .community-hub-grid > article.panel:first-child [class*="creator"],
+.community-hub .community-hub-grid > article.panel:first-child [class*="author"] {
+  min-width: 0 !important;
+  writing-mode: horizontal-tb !important;
+  word-break: normal !important;
+}
+
+.community-hub .community-hub-grid > article.panel:first-child [class*="creator"] img,
+.community-hub .community-hub-grid > article.panel:first-child [class*="author"] img {
+  width: 34px !important;
+  height: 34px !important;
+  min-width: 34px !important;
+  max-width: 34px !important;
+  object-fit: cover !important;
+}
+
+/* If an action area exists, make it a clean wrapping row. */
+.community-hub .community-hub-grid > article.panel:first-child [class*="action"],
+.community-hub .community-hub-grid > article.panel:first-child [class*="rsvp"] {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 8px !important;
+  min-width: 0 !important;
+}
+
+.community-hub .community-hub-grid > article.panel:first-child [class*="action"] button,
+.community-hub .community-hub-grid > article.panel:first-child [class*="rsvp"] button {
+  margin: 0 !important;
+}
+
+/* Keep narrow desktop panes usable without turning labels vertical. */
+@media (max-width: 1000px) {
+  .community-hub .community-hub-grid > article.panel:first-child button,
+  .community-hub .community-hub-grid > article.panel:first-child a[role="button"] {
+    min-width: 0 !important;
+    flex: 0 1 auto !important;
+  }
+}
