@@ -113,6 +113,9 @@ import "./mobile-forum-news-admin-final.css";
 import "./mobile-visibility-final.css";
 import "./mobile-nav-runtime.js";
 
+/* Last visual authority for event rows so controls never collapse into vertical text. */
+import "./community-event-card-polish.css";
+
 import "./desktop-on-phone.css";
 
 class AppErrorBoundary extends React.Component {
