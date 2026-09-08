@@ -1,0 +1,338 @@
+/* Absolute final mobile visibility layer.
+   Keeps navigation, member search and all action surfaces readable and tappable on phones. */
+
+@media (max-width: 760px) {
+  html, body, #root {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow-x: hidden !important;
+  }
+
+  body {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  .ec-brand-masthead {
+    min-height: 58px !important;
+    padding: 8px 12px !important;
+    gap: 10px !important;
+    align-items: center !important;
+  }
+
+  .ec-brand-wordmark,
+  .ec-brand-wordmark > * {
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .ec-brand-wordmark b,
+  .ec-brand-wordmark strong {
+    font-size: clamp(16px, 5.1vw, 20px) !important;
+    line-height: 1.05 !important;
+    white-space: nowrap !important;
+  }
+
+  /* Navigation must never be squeezed into seven unreadable columns. */
+  .ec-top-nav {
+    display: flex !important;
+    align-items: stretch !important;
+    gap: 6px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 7px 8px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scroll-snap-type: x proximity;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    background: #fff !important;
+  }
+
+  .ec-top-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .ec-top-nav button,
+  .ec-top-nav a {
+    flex: 0 0 auto !important;
+    width: auto !important;
+    min-width: 84px !important;
+    min-height: 44px !important;
+    padding: 9px 10px !important;
+    border-radius: 12px !important;
+    scroll-snap-align: start;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    white-space: nowrap !important;
+    overflow: visible !important;
+    touch-action: manipulation;
+  }
+
+  .ec-top-nav button span,
+  .ec-top-nav a span {
+    font-size: 12px !important;
+    line-height: 1.1 !important;
+    white-space: nowrap !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    max-width: none !important;
+  }
+
+  .ec-region-picker {
+    position: relative !important;
+    inset: auto !important;
+    width: calc(100% - 16px) !important;
+    max-width: none !important;
+    margin: 4px 8px 8px !important;
+    min-height: 44px !important;
+    z-index: 20 !important;
+  }
+
+  .ec-region-picker button,
+  .ec-region-picker select {
+    min-height: 44px !important;
+    font-size: 16px !important;
+  }
+
+  .ec-dock-toggle {
+    position: fixed !important;
+    right: 10px !important;
+    bottom: calc(12px + env(safe-area-inset-bottom)) !important;
+    width: 48px !important;
+    height: 48px !important;
+    min-width: 48px !important;
+    min-height: 48px !important;
+    z-index: 9100 !important;
+    border-radius: 50% !important;
+    box-shadow: 0 8px 28px rgba(15,23,42,.22) !important;
+  }
+
+  .content-root,
+  .modern-main,
+  .home-page,
+  .community-page,
+  .members-page,
+  .forum-page,
+  .groups-page,
+  .news-page,
+  .admin-page {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow: visible !important;
+  }
+
+  .content-root {
+    padding: 10px !important;
+  }
+
+  .page-heading {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+    margin-bottom: 14px !important;
+  }
+
+  .page-heading h1 {
+    max-width: 100% !important;
+    font-size: clamp(1.8rem, 9vw, 2.55rem) !important;
+    line-height: 1.05 !important;
+    overflow-wrap: normal !important;
+    word-break: normal !important;
+  }
+
+  .page-heading p {
+    max-width: 100% !important;
+    font-size: 15px !important;
+    line-height: 1.45 !important;
+  }
+
+  .panel,
+  .community-card,
+  .homepage-frame,
+  .news-card,
+  .group-card,
+  .member-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    border-radius: 16px !important;
+  }
+
+  /* Members: search first, then one clear region switch. */
+  .page-heading .search-input,
+  .members-page .search-input,
+  .member-search input,
+  input.search-input {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 48px !important;
+    padding: 0 14px !important;
+    font-size: 16px !important;
+    border-radius: 14px !important;
+  }
+
+  .ec-members-scope-bar {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+    width: 100% !important;
+    margin: 0 0 14px !important;
+    padding: 14px !important;
+    border-radius: 16px !important;
+  }
+
+  .ec-members-scope-copy {
+    min-width: 0 !important;
+  }
+
+  .ec-members-scope-copy strong {
+    font-size: 16px !important;
+    line-height: 1.25 !important;
+  }
+
+  .ec-members-scope-copy small {
+    font-size: 13px !important;
+    line-height: 1.4 !important;
+  }
+
+  .ec-members-scope-tabs {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  .ec-members-scope-tabs button {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 44px !important;
+    padding: 9px 8px !important;
+    font-size: 13px !important;
+    white-space: normal !important;
+    line-height: 1.2 !important;
+  }
+
+  .member-grid,
+  .members-grid,
+  .ec-all-regions-member-grid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+    width: 100% !important;
+  }
+
+  .member-card {
+    padding: 14px !important;
+  }
+
+  .member-card .member-avatar {
+    width: 78px !important;
+    height: 78px !important;
+    min-width: 78px !important;
+    object-fit: cover !important;
+  }
+
+  .member-card button,
+  .member-message,
+  .ec-generated-profile-open {
+    min-height: 44px !important;
+  }
+
+  /* Forms and editors: never clip controls below the viewport. */
+  input,
+  select,
+  textarea,
+  button {
+    max-width: 100% !important;
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+
+  .homepage-form,
+  .ec-homepage-editor,
+  .content-editor-dialog,
+  .modal-dialog,
+  dialog {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .content-editor-overlay,
+  .modal-overlay {
+    padding: 8px !important;
+    align-items: flex-end !important;
+  }
+
+  .content-editor-dialog,
+  .modal-dialog {
+    max-height: calc(100dvh - 16px) !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    border-radius: 18px 18px 0 0 !important;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .content-editor-actions,
+  .modal-actions,
+  .form-actions {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+
+  .content-editor-actions button,
+  .modal-actions button,
+  .form-actions button {
+    width: 100% !important;
+    min-height: 46px !important;
+  }
+
+  .ec-right-dock {
+    top: max(8px, env(safe-area-inset-top)) !important;
+    right: 8px !important;
+    bottom: max(8px, env(safe-area-inset-bottom)) !important;
+    width: min(92vw, 360px) !important;
+    max-height: calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    z-index: 9090 !important;
+  }
+
+  .site-footer {
+    padding-bottom: calc(16px + env(safe-area-inset-bottom)) !important;
+  }
+}
+
+@media (max-width: 390px) {
+  .ec-top-nav button,
+  .ec-top-nav a {
+    min-width: 78px !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+
+  .ec-top-nav button span,
+  .ec-top-nav a span {
+    font-size: 11px !important;
+  }
+
+  .ec-members-scope-tabs {
+    grid-template-columns: 1fr !important;
+  }
+
+  .content-root {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+}
