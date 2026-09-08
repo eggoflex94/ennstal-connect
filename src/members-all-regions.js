@@ -48,7 +48,7 @@ function buildCard(p,regionById,userId){
 
 function ensureScopeBar(data){
   const section=document.querySelector('.content-root .page-heading')?.parentElement;
-  const nativeGrid=section?.querySelector('.member-grid');
+  const nativeGrid=section?.querySelector('.member-grid:not(.ec-all-regions-member-grid)');
   if(!section||!nativeGrid)return null;
   let bar=section.querySelector('.ec-members-scope-bar');
   if(!bar){bar=document.createElement('div');bar.className='ec-members-scope-bar';nativeGrid.before(bar)}
@@ -67,15 +67,22 @@ async function render(){
   let generated=scope.section.querySelector('.ec-all-regions-member-grid');
   if(!generated){generated=document.createElement('div');generated.className='member-grid ec-all-regions-member-grid';scope.nativeGrid.insertAdjacentElement('afterend',generated)}
   const heading=scope.section.querySelector('.page-heading h1');const subtitle=scope.section.querySelector('.page-heading p');
-  if(searching){document.documentElement.classList.remove('ec-members-all-mode');generated.hidden=true;if(subtitle)subtitle.textContent='Die Suche findet Mitglieder aus allen Regionen.';return}
+  if(searching){
+    document.documentElement.classList.remove('ec-members-all-mode');
+    scope.nativeGrid.hidden=false;generated.hidden=true;
+    if(subtitle)subtitle.textContent='Die Suche findet Mitglieder aus allen Regionen.';
+    return;
+  }
   if(mode==='region'){
-    document.documentElement.classList.remove('ec-members-all-mode');generated.hidden=true;
+    document.documentElement.classList.remove('ec-members-all-mode');
+    scope.nativeGrid.hidden=false;generated.hidden=true;
     if(heading)heading.textContent=`Mitglieder · ${scope.active?.name||'Region'}`;
     if(subtitle)subtitle.textContent='Angezeigt werden Mitglieder mit dieser Heimatregion.';
     scope.section.querySelector('.ec-region-context')?.removeAttribute('hidden');
     return;
   }
-  document.documentElement.classList.add('ec-members-all-mode');generated.hidden=false;scope.nativeGrid.hidden=true;
+  document.documentElement.classList.add('ec-members-all-mode');
+  scope.nativeGrid.hidden=true;generated.hidden=false;
   scope.section.querySelector('.ec-region-context')?.setAttribute('hidden','');
   if(heading)heading.textContent='Mitglieder · Alle Regionen';
   if(subtitle)subtitle.textContent=`${data.profiles.length} aktive Mitglieder aus allen Regionen der Community.`;
@@ -89,6 +96,6 @@ function barButtons(section){section.querySelectorAll('.ec-members-scope-tabs bu
 
 let timer;function schedule(){clearTimeout(timer);timer=setTimeout(()=>void render(),90)}
 new MutationObserver(schedule).observe(document.documentElement,{childList:true,subtree:true});
-window.addEventListener('ec:region-change',()=>{cache=null;if(mode==='region')schedule();else schedule()});
+window.addEventListener('ec:region-change',()=>{cache=null;schedule()});
 document.addEventListener('input',e=>{if(e.target?.classList?.contains('search-input'))schedule()},true);
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',schedule,{once:true});else schedule();
