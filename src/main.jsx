@@ -31,6 +31,7 @@ import "./admin-compact-enhancements.js";
 import "./sidebar-news-popup.js";
 
 import "./regional-shell.js";
+import "./overregional-region-alias.js";
 import "./navigation-stability.js";
 import "./clean-profile-runtime.js";
 import "./clean-layout.css";
