@@ -179,6 +179,7 @@ import "./mobile-forum-news-admin-final.css";
 
 /* Absolute last responsive authority: readable horizontal mobile navigation and tappable controls. */
 import "./mobile-visibility-final.css";
+import "./mobile-nav-runtime.js";
 
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
