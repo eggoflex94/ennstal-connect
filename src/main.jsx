@@ -167,6 +167,9 @@ import "./mobile-single-tap-fix.js";
 /* Final visual safety net: no clipped content, no click shields, predictable dialog stacking. */
 import "./layout-integrity-final.css";
 
+/* Final Community/mobile audit authority: readable Community hub, safe mobile nav, no panel collisions. */
+import "./community-mobile-final.css";
+
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
   static getDerivedStateFromError() { return { failed: true }; }
