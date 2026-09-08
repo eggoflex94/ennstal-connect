@@ -1,0 +1,106 @@
+import { supabase } from './supabaseClient';
+
+let state = { regions: [], profiles: [], userId: null, query: '', region: 'all', online: false };
+let timer = null;
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const activeSlug = () => document.documentElement.dataset.ecRegion || localStorage.getItem('ec-active-region') || '';
+const isMembers = () => /^Mitglieder\b/i.test(document.querySelector('.content-root .page-heading h1')?.textContent || '');
+const displayName = (p) => p.nickname || [p.first_name,p.last_name].filter(Boolean).join(' ') || 'Mitglied';
+const isOnline = (p) => Boolean(p.is_online && p.last_active_at && Date.now() - new Date(p.last_active_at).getTime() < 5 * 60 * 1000);
+
+async function load() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return false;
+  const [{ data: regions, error: re }, { data: profiles, error: pe }] = await Promise.all([
+    supabase.from('regions').select('id,slug,name,short_name,sort_order').eq('is_active', true).order('sort_order'),
+    supabase.from('profiles').select('id,nickname,first_name,last_name,avatar_url,role,account_badge,home_region_id,is_online,last_active_at,hide_online_status,account_status,is_test_account').eq('account_status','ACTIVE')
+  ]);
+  if (re || pe) throw re || pe;
+  state.regions = regions || [];
+  state.profiles = (profiles || []).filter(p => !p.is_test_account);
+  state.userId = user.id;
+  return true;
+}
+
+function theme(p) {
+  const r = String(p.role || 'MEMBER').toUpperCase();
+  if (r === 'HEAD_ADMIN' || r === 'ADMIN') return 'admin';
+  if (r === 'SUPPORTER') return 'supporter';
+  if (p.account_badge === 'BUSINESS') return 'business';
+  return 'member';
+}
+
+function card(p, regionMap) {
+  const article = document.createElement('article');
+  article.className = `member-card ec-member-final-card role-theme-${theme(p)}`;
+  article.dataset.memberId = p.id;
+  const name = displayName(p);
+  const region = regionMap.get(p.home_region_id)?.name || 'Keine Region';
+  const online = !p.hide_online_status && isOnline(p);
+  article.innerHTML = `<div class="ec-member-final-head"><img src="${esc(p.avatar_url || '/community-default-avatar.png')}" alt="Profilbild von ${esc(name)}"><div><strong>${esc(name)}</strong><span class="ec-member-region-chip">⌖ ${esc(region)}</span><small class="${online ? 'is-online' : ''}">${p.hide_online_status ? 'Status verborgen' : online ? '● Online' : '○ Offline'}</small></div></div><button type="button" class="ec-member-open">Profil öffnen</button>`;
+  article.querySelector('.ec-member-open').onclick = () => window.dispatchEvent(new CustomEvent('ec:open-profile',{detail:{profileId:p.id,nickname:p.nickname || ''}}));
+  return article;
+}
+
+function ensureShell() {
+  const heading = document.querySelector('.content-root .page-heading');
+  const section = heading?.parentElement;
+  const nativeGrid = section?.querySelector('.member-grid:not(.ec-member-final-grid)');
+  if (!heading || !section || !nativeGrid) return null;
+
+  heading.querySelector('.search-input')?.setAttribute('hidden','');
+  heading.querySelector('h1').textContent = 'Mitglieder';
+  const p = heading.querySelector('p');
+  if (p) p.textContent = 'Finde Mitglieder aus allen Regionen oder filtere gezielt nach deiner gewünschten Region.';
+
+  document.querySelectorAll('.ec-member-directory-shell').forEach(el => el.remove());
+  let shell = section.querySelector('.ec-member-final-search');
+  if (!shell) {
+    shell = document.createElement('section');
+    shell.className = 'ec-member-final-search panel';
+    heading.insertAdjacentElement('afterend', shell);
+    shell.innerHTML = `<div class="ec-member-final-search-head"><div><span class="eyebrow">MITGLIEDER FINDEN</span><h2>Community durchsuchen</h2><p>Suche nach Name oder Nickname und wähle bei Bedarf eine Region.</p></div><span class="ec-member-total"></span></div><div class="ec-member-final-controls"><label class="ec-member-final-query"><span>⌕</span><input type="search" placeholder="Mitglied suchen …" autocomplete="off"></label><select class="ec-member-final-region"><option value="all">Alle Regionen</option></select><label class="ec-member-final-online"><input type="checkbox"> Nur online</label></div><div class="ec-member-final-quick"><button type="button" data-quick="all">Alle Mitglieder</button><button type="button" data-quick="active">Aktuelle Region</button></div><div class="ec-member-final-meta" aria-live="polite"></div>`;
+    const q = shell.querySelector('input[type=search]'); q.addEventListener('input', () => { state.query = q.value; render(); });
+    const r = shell.querySelector('.ec-member-final-region'); r.addEventListener('change', () => { state.region = r.value; render(); });
+    const o = shell.querySelector('.ec-member-final-online input'); o.addEventListener('change', () => { state.online = o.checked; render(); });
+    shell.querySelector('[data-quick="all"]').onclick = () => { state.region='all'; r.value='all'; render(); };
+    shell.querySelector('[data-quick="active"]').onclick = () => { const active=state.regions.find(x=>x.slug===activeSlug()); state.region=active?.id || 'all'; r.value=state.region; render(); };
+  }
+  const select = shell.querySelector('.ec-member-final-region');
+  const sig = state.regions.map(r => r.id).join('|');
+  if (select.dataset.sig !== sig) {
+    select.dataset.sig = sig;
+    select.innerHTML = `<option value="all">Alle Regionen</option>${state.regions.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('')}`;
+    select.value = state.region;
+  }
+  nativeGrid.hidden = true;
+  let grid = section.querySelector('.ec-member-final-grid');
+  if (!grid) { grid = document.createElement('div'); grid.className='member-grid ec-member-final-grid'; nativeGrid.insertAdjacentElement('afterend',grid); }
+  return { shell, grid };
+}
+
+function render() {
+  if (!isMembers()) return;
+  const ui = ensureShell(); if (!ui) return;
+  const regionMap = new Map(state.regions.map(r => [r.id,r]));
+  const q = state.query.trim().toLowerCase();
+  let rows = state.profiles.filter(p => {
+    const hay = [p.nickname,p.first_name,p.last_name,regionMap.get(p.home_region_id)?.name].filter(Boolean).join(' ').toLowerCase();
+    return (state.region === 'all' || p.home_region_id === state.region) && (!state.online || isOnline(p)) && (!q || hay.includes(q));
+  });
+  rows.sort((a,b)=>displayName(a).localeCompare(displayName(b),'de'));
+  ui.shell.querySelector('.ec-member-total').textContent = `${state.profiles.length} Mitglieder gesamt`;
+  const selectedName = state.region === 'all' ? 'alle Regionen' : (regionMap.get(state.region)?.name || 'Region');
+  ui.shell.querySelector('.ec-member-final-meta').textContent = `${rows.length} ${rows.length===1?'Mitglied':'Mitglieder'} gefunden · ${selectedName}${state.online?' · nur online':''}`;
+  ui.grid.replaceChildren(...rows.map(p => card(p,regionMap)));
+  if (!rows.length) { const empty=document.createElement('div'); empty.className='ec-member-empty'; empty.innerHTML='<strong>Keine Mitglieder gefunden</strong><span>Ändere Suche oder Filter.</span>'; ui.grid.appendChild(empty); }
+}
+
+async function boot() {
+  if (!supabase) return;
+  try { await load(); render(); } catch (e) { console.warn('Mitgliedersuche konnte nicht geladen werden:',e); }
+}
+function schedule() { clearTimeout(timer); timer=setTimeout(()=>{ if(isMembers()) render(); },100); }
+new MutationObserver(schedule).observe(document.documentElement,{childList:true,subtree:true});
+window.addEventListener('ec:region-change', schedule);
+if (document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot,{once:true}); else void boot();
