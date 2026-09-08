@@ -1,0 +1,57 @@
+/* Mobile interaction audit: chat, groups and profile editor. */
+.messages-page,.message-overview,.chat-box,.chat-header,.chat-messages,.message-form,
+.groups-page,.group-grid,.group-card,.group-card-body,.group-details,.group-details-members,
+.my-area-layout,.profile-form,.profile-editor,.profile-editor-section,.profile-editor-grid{min-width:0;max-width:100%}
+
+/* Chat: keep header/composer usable and content from widening the page. */
+.chat-box{display:flex!important;flex-direction:column!important;width:100%!important;min-height:min(68dvh,760px)!important;overflow:hidden!important;border-radius:16px!important}
+.chat-header{display:flex!important;align-items:center!important;gap:10px!important;flex-wrap:wrap!important;position:sticky!important;top:0!important;z-index:4!important;background:#fff!important;padding:10px!important;border-bottom:1px solid #e1e8ed!important}
+.chat-header .back-button{flex:0 0 auto!important}.chat-header>*{min-width:0!important}
+.chat-messages{display:flex!important;flex-direction:column!important;gap:8px!important;flex:1 1 auto!important;min-height:220px!important;max-height:58dvh!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain!important;padding:12px!important;scrollbar-gutter:stable!important}
+.chat-message{position:relative!important;width:max-content!important;max-width:min(82%,720px)!important;min-width:0!important;padding-right:34px!important;overflow-wrap:anywhere!important;word-break:break-word!important}
+.chat-message.mine{align-self:flex-end!important}.chat-message:not(.mine){align-self:flex-start!important}
+.chat-message p{margin:0!important;white-space:pre-wrap!important;overflow-wrap:anywhere!important}.chat-message small{display:block!important;margin-top:5px!important}
+.message-delete-button{position:absolute!important;top:4px!important;right:5px!important;width:28px!important;height:28px!important;min-width:28px!important;min-height:28px!important;padding:0!important;border-radius:50%!important}
+.message-form{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;gap:9px!important;position:sticky!important;bottom:0!important;z-index:5!important;width:100%!important;padding:10px!important;background:#fff!important;border-top:1px solid #e1e8ed!important}
+.message-form textarea{min-height:48px!important;max-height:150px!important;resize:vertical!important}.message-form .primary-button{align-self:end!important;min-height:48px!important}
+.message-preview{display:grid!important;grid-template-columns:48px minmax(0,1fr)!important;gap:10px!important;align-items:center!important;width:100%!important;min-width:0!important;text-align:left!important}.message-preview img{width:48px!important;height:48px!important;border-radius:50%!important;object-fit:cover!important}.message-preview span{min-width:0!important}.message-preview strong,.message-preview small{display:block!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+
+/* Groups: long descriptions/member lists and detail dialogs stay within viewport. */
+.group-card{overflow:hidden!important}.group-card-body{display:grid!important;gap:10px!important}.group-card h2,.group-card p,.group-ownership,.group-member-list{min-width:0!important;overflow-wrap:anywhere!important}
+.group-member-list{display:flex!important;flex-wrap:wrap!important;gap:6px!important}.group-member-list>span{max-width:100%!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+.content-card-actions,.group-details-actions{display:flex!important;flex-wrap:wrap!important;gap:8px!important}.content-card-actions>button,.group-details-actions>button{flex:1 1 150px!important;min-width:0!important;min-height:42px!important}
+.group-details-overlay{padding:12px!important;display:grid!important;place-items:center!important;overflow:auto!important}
+.group-details{position:relative!important;width:min(760px,100%)!important;max-height:calc(100dvh - 24px)!important;overflow-y:auto!important;overflow-x:hidden!important;padding:18px!important}
+.group-details>img{display:block!important;width:100%!important;max-height:38dvh!important;border-radius:14px!important;object-fit:cover!important}
+.group-details-close{position:sticky!important;top:0!important;float:right!important;z-index:6!important;width:42px!important;height:42px!important;min-width:42px!important;border-radius:50%!important}
+.group-details-members{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}.group-details-members>div{display:grid!important;grid-template-columns:40px minmax(0,1fr)!important;gap:8px!important;align-items:center!important;min-width:0!important}.group-details-members img{width:40px!important;height:40px!important;border-radius:50%!important;object-fit:cover!important}.group-details-members span{min-width:0!important}.group-details-members strong,.group-details-members small{display:block!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+.group-transfer-queue>div{display:grid!important;grid-template-columns:minmax(0,1fr) auto auto!important;gap:8px!important;align-items:center!important}.group-transfer-queue>div>span{min-width:0!important;overflow-wrap:anywhere!important}
+
+/* Profile editor: no cramped controls, clear sections, sticky save on phones. */
+.profile-editor{overflow:visible!important}.profile-editor-section{min-width:0!important;margin:0!important;padding:16px!important;border:1px solid #dbe4ea!important;border-radius:14px!important}.profile-editor-section+ .profile-editor-section{margin-top:12px!important}
+.profile-editor-section legend{max-width:100%!important;padding:0 7px!important;font-weight:900!important;overflow-wrap:anywhere!important}
+.profile-editor-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important}.profile-editor-field,.profile-upload-field{display:grid!important;gap:6px!important;min-width:0!important}.profile-editor-field-wide{grid-column:1/-1!important}
+.profile-editor input,.profile-editor select,.profile-editor textarea{width:100%!important;min-width:0!important}.profile-editor input[type="color"]{width:100%!important;min-height:48px!important;padding:5px!important}.profile-upload-field input[type="file"]{white-space:normal!important;overflow:hidden!important}
+.profile-form>.primary-button,.profile-editor>.primary-button{min-height:48px!important}
+.my-profile-card .my-avatar{width:min(180px,55vw)!important;height:auto!important;aspect-ratio:1!important;object-fit:cover!important}
+
+@media(max-width:700px){
+  .chat-box{min-height:calc(100dvh - 176px)!important;border-radius:14px!important}
+  .chat-messages{max-height:none!important;min-height:260px!important;padding:9px!important}
+  .chat-message{max-width:90%!important}
+  .message-form{grid-template-columns:1fr!important;padding-bottom:max(10px,env(safe-area-inset-bottom))!important}.message-form .primary-button{width:100%!important}
+  .message-preview{grid-template-columns:44px minmax(0,1fr)!important}.message-preview img{width:44px!important;height:44px!important}
+
+  .group-details-overlay{padding:0!important;align-items:end!important}.group-details{width:100%!important;max-width:100%!important;max-height:92dvh!important;margin-top:auto!important;border-radius:18px 18px 0 0!important;padding:14px!important;padding-bottom:max(16px,env(safe-area-inset-bottom))!important}
+  .group-details-members{grid-template-columns:1fr!important}.group-details-actions{position:sticky!important;bottom:-14px!important;z-index:5!important;margin:12px -14px -14px!important;padding:10px 14px max(10px,env(safe-area-inset-bottom))!important;background:#fff!important;border-top:1px solid #e1e8ed!important}.group-details-actions>button{flex:1 1 100%!important}
+  .group-transfer-queue>div{grid-template-columns:1fr!important}.group-transfer-queue>div button{width:100%!important}
+
+  .profile-editor-grid{grid-template-columns:1fr!important}.profile-editor-field-wide{grid-column:auto!important}.profile-editor-section{padding:12px!important}.profile-editor-header h2{font-size:1.5rem!important}.profile-editor-header p{font-size:.9rem!important;line-height:1.45!important}
+  .profile-upload-field input[type="file"]{min-height:46px!important}
+}
+
+@media(max-width:480px){
+  .chat-message{max-width:94%!important;padding:10px 32px 10px 11px!important}.chat-header{padding:8px!important}.message-form{padding:8px!important}
+  .content-card-actions,.group-details-actions{display:grid!important;grid-template-columns:1fr!important}.content-card-actions>button,.group-details-actions>button{width:100%!important}
+  .profile-editor-section{padding:10px!important;border-radius:12px!important}
+}
