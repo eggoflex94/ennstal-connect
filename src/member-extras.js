@@ -5,6 +5,7 @@ const FAVORITES_KEY = "ec:favorites";
 let currentUserId = null;
 let lastVisit = null;
 let refreshBusy = false;
+let refreshQueued = false;
 
 function storageKey() { return currentUserId ? `${FAVORITES_KEY}:${currentUserId}` : FAVORITES_KEY; }
 function readFavorites() { try { return JSON.parse(localStorage.getItem(storageKey()) || "[]"); } catch { return []; } }
@@ -18,6 +19,12 @@ function navTo(label) {
 
 function homeRoot() { return document.querySelector(".home-page"); }
 
+function removeDuplicatePanels(home, selector) {
+  const panels = [...home.querySelectorAll(selector)];
+  panels.slice(1).forEach((panel) => panel.remove());
+  return panels[0] || null;
+}
+
 function makeStat(label, value, actionLabel) {
   const button = document.createElement("button");
   button.type = "button";
@@ -30,14 +37,16 @@ function makeStat(label, value, actionLabel) {
 function renderQuickOverview(data) {
   const home = homeRoot();
   if (!home) return;
-  let panel = home.querySelector(".ec-member-overview");
+  let panel = removeDuplicatePanels(home, ".ec-member-overview");
   if (!panel) {
     panel = document.createElement("section");
     panel.className = "ec-member-overview panel";
+    panel.dataset.ecDashboardExtras = "overview";
     const anchor = home.querySelector(".engagement-grid") || home.querySelector(".page-heading")?.nextElementSibling;
     if (anchor) home.insertBefore(panel, anchor);
     else home.prepend(panel);
   }
+  panel.dataset.ecDashboardExtras = "overview";
   panel.replaceChildren();
   const heading = document.createElement("div");
   heading.className = "ec-member-overview-head";
@@ -64,14 +73,16 @@ function renderQuickOverview(data) {
 function renderNewSinceLast(data) {
   const home = homeRoot();
   if (!home) return;
-  let panel = home.querySelector(".ec-new-since");
+  let panel = removeDuplicatePanels(home, ".ec-new-since");
   if (!panel) {
     panel = document.createElement("section");
     panel.className = "ec-new-since panel";
+    panel.dataset.ecDashboardExtras = "new-since";
     const overview = home.querySelector(".ec-member-overview");
     overview?.insertAdjacentElement("afterend", panel);
   }
   if (!panel) return;
+  panel.dataset.ecDashboardExtras = "new-since";
   panel.replaceChildren();
   const title = document.createElement("div");
   title.className = "ec-new-since-head";
@@ -131,14 +142,16 @@ function decorateFavorites() {
 function renderFavoritesPanel() {
   const home = homeRoot();
   if (!home) return;
-  let panel = home.querySelector(".ec-favorites-panel");
+  let panel = removeDuplicatePanels(home, ".ec-favorites-panel");
   if (!panel) {
     panel = document.createElement("section");
     panel.className = "ec-favorites-panel panel";
+    panel.dataset.ecDashboardExtras = "favorites";
     const newPanel = home.querySelector(".ec-new-since");
     newPanel?.insertAdjacentElement("afterend", panel);
   }
   if (!panel) return;
+  panel.dataset.ecDashboardExtras = "favorites";
   const items = readFavorites();
   panel.replaceChildren();
   const head = document.createElement("div");
@@ -203,6 +216,37 @@ async function refreshAll() {
   }
 }
 
+function scheduleRefresh() {
+  if (refreshQueued) return;
+  refreshQueued = true;
+  window.requestAnimationFrame(async () => {
+    refreshQueued = false;
+    if (homeRoot()) await refreshAll();
+    else decorateFavorites();
+  });
+}
+
+function mutationIsInternal(mutation) {
+  const target = mutation.target instanceof Element ? mutation.target : mutation.target?.parentElement;
+  if (target?.closest?.("[data-ec-dashboard-extras], .ec-member-overview, .ec-new-since, .ec-favorites-panel")) return true;
+  const changed = [...mutation.addedNodes, ...mutation.removedNodes].filter((node) => node instanceof Element);
+  return changed.length > 0 && changed.every((node) =>
+    node.matches?.("[data-ec-dashboard-extras], .ec-member-overview, .ec-new-since, .ec-favorites-panel") ||
+    node.closest?.("[data-ec-dashboard-extras], .ec-member-overview, .ec-new-since, .ec-favorites-panel")
+  );
+}
+
+function mutationNeedsRefresh(mutation) {
+  if (mutationIsInternal(mutation)) return false;
+  const target = mutation.target instanceof Element ? mutation.target : mutation.target?.parentElement;
+  if (target?.closest?.(".home-page, .groups-page, .forum-page, .community-hub")) return true;
+  return [...mutation.addedNodes, ...mutation.removedNodes].some((node) => {
+    if (!(node instanceof Element)) return false;
+    return node.matches?.(".home-page, .group-card, .forum-post, .community-hub, .hub-row") ||
+      Boolean(node.querySelector?.(".home-page, .group-card, .forum-post, .community-hub, .hub-row"));
+  });
+}
+
 async function boot() {
   if (!supabase) return;
   const { data: { user } } = await supabase.auth.getUser();
@@ -216,10 +260,12 @@ async function boot() {
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot, { once: true });
 else boot();
 
-const observer = new MutationObserver(() => {
-  if (homeRoot()) window.requestAnimationFrame(refreshAll);
-  else window.requestAnimationFrame(decorateFavorites);
+const observer = new MutationObserver((mutations) => {
+  if (mutations.some(mutationNeedsRefresh)) scheduleRefresh();
 });
 observer.observe(document.documentElement, { childList: true, subtree: true });
-window.addEventListener("focus", refreshAll);
-document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshAll(); });
+window.addEventListener("focus", scheduleRefresh);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) scheduleRefresh(); });
+window.addEventListener("ec:navigate", (event) => {
+  if (String(event.detail?.page || "") === "home") window.setTimeout(scheduleRefresh, 0);
+});
