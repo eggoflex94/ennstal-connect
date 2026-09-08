@@ -1,0 +1,48 @@
+/* Final mobile audit for Forum, News and Admin-Zentrale. */
+.forum-page,.forum-composer,.forum-post-list,.forum-post,.forum-post-head,.forum-contacts,
+.news-page,.news-composer,.news-grid,.news-card,
+.admin-page,.admin-member-cards,.admin-member-card,.admin-member-card-info,.admin-member-card-actions,
+.permissions-panel,.permissions-grid,.admin-email-directory,.admin-log-panel,.admin-log-list,.admin-log-row,
+.profile-admin-edit-form,.profile-admin-edit-grid,.account-review-page,.report-list,.report-card{min-width:0;max-width:100%}
+
+/* Forum */
+.forum-composer{display:grid!important;gap:12px!important}.forum-composer .form-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}.forum-composer label{min-width:0!important}.forum-composer input,.forum-composer textarea,.forum-composer select{width:100%!important;min-width:0!important}
+.forum-post-list{display:grid!important;gap:14px!important}.forum-post{overflow:hidden!important}.forum-post-head{display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:10px!important;flex-wrap:wrap!important}.forum-post-head>div{min-width:0!important;flex:1 1 260px!important}.forum-post-head h2,.forum-post-head p,.forum-content,.forum-edited{overflow-wrap:anywhere!important;word-break:break-word!important}.forum-post-head>button{flex:0 0 auto!important;min-height:40px!important}.forum-content{white-space:pre-wrap!important;max-width:100%!important}.forum-contacts>div{display:flex!important;flex-wrap:wrap!important;gap:7px!important}.forum-contact{max-width:100%!important;overflow-wrap:anywhere!important}
+
+/* News */
+.news-composer{display:grid!important;gap:11px!important}.news-composer input,.news-composer textarea,.news-composer input[type="file"]{min-width:0!important;max-width:100%!important}.news-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:16px!important}.news-card{overflow:hidden!important}.news-card .content-card-image{display:block!important;width:100%!important;max-height:360px!important;height:auto!important;object-fit:cover!important}.news-card h2,.news-card p{overflow-wrap:anywhere!important}.news-card .content-card-actions{display:flex!important;flex-wrap:wrap!important;gap:8px!important}.news-card .content-card-actions>button{flex:1 1 140px!important;min-width:0!important;min-height:42px!important}
+
+/* Admin-Zentrale */
+.admin-page>.page-heading{align-items:flex-start!important}.admin-review-button{flex:0 0 auto!important;min-height:44px!important}
+.admin-member-cards{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:14px!important}.admin-member-card{overflow:hidden!important}.admin-member-person-button{display:grid!important;grid-template-columns:54px minmax(0,1fr)!important;gap:10px!important;align-items:center!important;width:100%!important;min-width:0!important;text-align:left!important}.admin-member-person-button img{width:54px!important;height:54px!important;border-radius:50%!important;object-fit:cover!important}.admin-member-person-button span{min-width:0!important}.admin-member-person-button strong,.admin-member-person-button small{display:block!important;overflow-wrap:anywhere!important}
+.admin-member-card-info{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important}.admin-member-card-info>div{min-width:0!important}.admin-member-card-info span,.admin-member-card-info strong{display:block!important;overflow-wrap:anywhere!important}
+.admin-member-card-actions{display:flex!important;flex-wrap:wrap!important;gap:7px!important}.admin-member-card-actions>button{flex:1 1 150px!important;min-width:0!important;min-height:42px!important;white-space:normal!important}
+.profile-admin-edit-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}.profile-admin-edit-grid label{min-width:0!important}.profile-admin-edit-grid .edit-actions{grid-column:1/-1!important}.profile-admin-edit-grid input,.profile-admin-edit-grid select{width:100%!important;min-width:0!important}
+.permissions-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}.permission-row{display:grid!important;grid-template-columns:auto minmax(0,1fr)!important;align-items:center!important;gap:8px!important;min-width:0!important;padding:10px!important}.permission-row input{width:auto!important;min-width:18px!important;min-height:18px!important}.permission-row span{min-width:0!important;overflow-wrap:anywhere!important}
+.admin-email-directory>div p{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(180px,auto)!important;gap:12px!important;align-items:center!important;min-width:0!important}.admin-email-directory strong,.admin-email-directory span{min-width:0!important;overflow-wrap:anywhere!important}
+.admin-log-list{display:grid!important;gap:9px!important}.admin-log-row{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;gap:12px!important;align-items:start!important}.admin-log-row>div{min-width:0!important}.admin-log-row strong,.admin-log-row span,.admin-log-row small{display:block!important;overflow-wrap:anywhere!important}.admin-log-row time{white-space:nowrap!important}
+.report-card{overflow:hidden!important}.report-card .content-manage-actions{display:flex!important;flex-wrap:wrap!important;gap:8px!important}.report-card .content-manage-actions>button{flex:1 1 150px!important;min-width:0!important;min-height:42px!important}
+
+@media(max-width:900px){
+  .news-grid,.admin-member-cards{grid-template-columns:1fr!important}
+  .admin-member-card-info{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .permissions-grid{grid-template-columns:1fr 1fr!important}
+}
+
+@media(max-width:700px){
+  .forum-composer .form-grid{grid-template-columns:1fr!important}.forum-post-head{display:grid!important;grid-template-columns:1fr!important}.forum-post-head>button{width:100%!important}
+  .forum-page .page-heading,.news-page .page-heading,.admin-page>.page-heading,.account-review-page>.page-heading{display:grid!important;grid-template-columns:1fr!important;gap:10px!important}.admin-review-button,.account-review-page>.page-heading>button{width:100%!important}
+  .news-card .content-card-actions{display:grid!important;grid-template-columns:1fr!important}.news-card .content-card-actions>button{width:100%!important}
+  .admin-member-card-info{grid-template-columns:1fr!important}.admin-member-card-actions{display:grid!important;grid-template-columns:1fr!important}.admin-member-card-actions>button{width:100%!important}
+  .profile-admin-edit-grid{grid-template-columns:1fr!important}.profile-admin-edit-grid .edit-actions{grid-column:auto!important}.profile-admin-edit-grid .edit-actions button{width:100%!important}
+  .permissions-grid{grid-template-columns:1fr!important}.permissions-panel>.primary-button{width:100%!important;min-height:46px!important}
+  .admin-email-directory>div p{grid-template-columns:1fr!important;gap:3px!important;padding:9px 0!important;border-bottom:1px solid #e4eaee!important}.admin-email-directory>div p:last-child{border-bottom:0!important}
+  .admin-log-row{grid-template-columns:1fr!important}.admin-log-row time{white-space:normal!important;color:#6b7c89!important}
+  .report-card .content-manage-actions{display:grid!important;grid-template-columns:1fr!important}.report-card .content-manage-actions>button{width:100%!important}
+}
+
+@media(max-width:480px){
+  .forum-composer,.news-composer,.permissions-panel,.profile-admin-edit-form,.admin-email-directory,.admin-log-panel{padding:13px!important}
+  .admin-member-person-button{grid-template-columns:46px minmax(0,1fr)!important}.admin-member-person-button img{width:46px!important;height:46px!important}
+  .permission-row{padding:9px!important}
+}
