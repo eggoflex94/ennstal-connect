@@ -183,6 +183,9 @@ import "./mobile-forum-news-admin-final.css";
 import "./mobile-visibility-final.css";
 import "./mobile-nav-runtime.js";
 
+/* Phones intentionally use the complete desktop community and browser pinch-zoom. */
+import "./desktop-on-phone.css";
+
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
   static getDerivedStateFromError() { return { failed: true }; }
