@@ -170,6 +170,9 @@ import "./layout-integrity-final.css";
 /* Final Community/mobile audit authority: readable Community hub, safe mobile nav, no panel collisions. */
 import "./community-mobile-final.css";
 
+/* Final mobile audit for Forum, News and Admin-Zentrale. */
+import "./mobile-forum-news-admin-final.css";
+
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
   static getDerivedStateFromError() { return { failed: true }; }
@@ -188,7 +191,7 @@ async function removeLegacyAppShell() {
     }
     if ("caches" in window) {
       const keys = await caches.keys();
-      await Promise.all(keys.map(key => caches.delete(key)));
+      await Promise.all(keys.map(key => caches.delete(key));
     }
   } catch (error) {
     console.warn("Alter App-Cache konnte nicht vollständig entfernt werden:", error);
