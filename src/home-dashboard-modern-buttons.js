@@ -29,24 +29,47 @@ function decorateButton(button){
   button.dataset.ecModernHomeAction='1';
   button.dataset.count=count||'0';
   button.classList.add('ec-home-action-button');
+  button.removeAttribute('style');
   button.innerHTML=`<span class="ec-home-action-icon">${icon}</span><span class="ec-home-action-copy"><strong class="ec-home-action-count">${count||'0'}</strong><span class="ec-home-action-label">${label}</span></span>`;
+}
+
+function nearestDirectChild(section,node){
+  let current=node;
+  while(current&&current.parentElement!==section) current=current.parentElement;
+  return current&&current.parentElement===section?current:null;
 }
 
 function enhanceSection(section){
   if(!relevantHeading(section))return;
-  const buttons=[...section.querySelectorAll('button')].filter(button=>!button.closest('.ec-home-action-grid'));
-  const already=[...section.querySelectorAll(':scope > .ec-home-action-grid button, :scope .ec-home-action-grid button')];
-  const targets=[...already,...buttons].filter((button,index,array)=>array.indexOf(button)===index);
+  const targets=[...section.querySelectorAll('button')].filter(button=>{
+    if(button.closest('.ec-home-action-grid')) return true;
+    const text=normalize(button.textContent);
+    return /^(\d+\s*)?(Neue Nachrichten|Freundschaftsanfragen|Neue Inhalte|Merkliste|Neuigkeiten|Forum|Veranstaltungen|Gruppen)$/i.test(text);
+  });
   if(!targets.length)return;
   section.classList.add('ec-home-action-panel');
-  let grid=section.querySelector(':scope > .ec-home-action-grid');
+
+  let grid=section.querySelector('.ec-home-action-grid');
   if(!grid){
-    grid=document.createElement('div');
-    grid.className='ec-home-action-grid';
-    const first=targets[0];
-    first.parentElement?.insertBefore(grid,first);
+    const parents=[...new Set(targets.map(button=>button.parentElement).filter(Boolean))];
+    if(parents.length===1&&parents[0]!==section){
+      grid=parents[0];
+      grid.classList.add('ec-home-action-grid');
+      grid.removeAttribute('style');
+    }else{
+      grid=document.createElement('div');
+      grid.className='ec-home-action-grid';
+      const anchor=nearestDirectChild(section,targets[0]);
+      section.insertBefore(grid,anchor||null);
+      targets.forEach(button=>grid.appendChild(button));
+    }
   }
-  targets.forEach(button=>{decorateButton(button);if(button.parentElement!==grid)grid.appendChild(button)});
+
+  grid.removeAttribute('style');
+  targets.forEach(button=>{
+    decorateButton(button);
+    if(button.parentElement!==grid) grid.appendChild(button);
+  });
 }
 
 function apply(){
