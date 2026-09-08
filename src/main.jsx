@@ -126,6 +126,10 @@ import "./profile-action-final-authority.css";
 
 /* Harden profile image uploads and surface useful storage/network errors. */
 import "./profile-image-upload-fix.js";
+import "./profile-photo-upload-fix.js";
+
+/* Make event publishing explicitly regional and add direct image upload to the event form. */
+import "./community-event-region-fix.js";
 
 /* Community-wide runtime guardrails: recover network/UI failures, image fallbacks and stale overlays without redesign. */
 import "./community-runtime-stability.css";
