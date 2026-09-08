@@ -121,6 +121,7 @@ import "./personal-dashboard-final-fix.js";
 /* Modern home dashboard action cards for overview and recent activity. */
 import "./home-dashboard-modern-buttons.css";
 import "./home-dashboard-modern-buttons.js";
+import "./home-next-event-region.js";
 
 /* Global + regional homepage publishing with typography controls and live preview. */
 import "./homepage-publishing-modern.css";
