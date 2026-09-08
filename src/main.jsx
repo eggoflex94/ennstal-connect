@@ -84,9 +84,9 @@ import "./personal-dashboard-final-fix.js";
 import "./home-dashboard-modern-buttons.css";
 import "./home-dashboard-modern-buttons.js";
 
-/* One authoritative implementation for homepage editing, member search and next regional event. */
-import "./community-core-authority.css";
-import "./community-core-authority.js";
+/* Direct authoritative implementation for homepage editing, member search and next regional event. */
+import "./community-direct-fix.css";
+import "./community-direct-fix.js";
 
 import "./profile-action-final-authority.css";
 import "./profile-image-upload-fix.js";
