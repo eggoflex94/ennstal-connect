@@ -53,8 +53,12 @@ function ensureScopeBar(data){
   let bar=section.querySelector('.ec-members-scope-bar');
   if(!bar){bar=document.createElement('div');bar.className='ec-members-scope-bar';nativeGrid.before(bar)}
   const active=data.regions.find(r=>r.slug===activeSlug());
-  bar.innerHTML=`<div class="ec-members-scope-copy"><strong>Mitglieder aus allen Regionen</strong><small>Zeige die gesamte Community oder beschränke die Ansicht auf ${esc(active?.name||'die aktuelle Region')}.</small></div><div class="ec-members-scope-tabs"><button type="button" data-scope="all">Alle Regionen</button><button type="button" data-scope="region">${esc(active?.name||'Aktuelle Region')}</button></div>`;
-  bar.querySelectorAll('button').forEach(btn=>{btn.classList.toggle('is-active',btn.dataset.scope===mode);btn.onclick=()=>{mode=btn.dataset.scope;render()}});
+  const signature=`${active?.id||''}:${mode}`;
+  if(bar.dataset.signature!==signature){
+    bar.dataset.signature=signature;
+    bar.innerHTML=`<div class="ec-members-scope-copy"><strong>Mitglieder aus allen Regionen</strong><small>Zeige die gesamte Community oder beschränke die Ansicht auf ${esc(active?.name||'die aktuelle Region')}.</small></div><div class="ec-members-scope-tabs"><button type="button" data-scope="all">Alle Regionen</button><button type="button" data-scope="region">${esc(active?.name||'Aktuelle Region')}</button></div>`;
+    bar.querySelectorAll('button').forEach(btn=>{btn.classList.toggle('is-active',btn.dataset.scope===mode);btn.onclick=()=>{mode=btn.dataset.scope;void render()}});
+  }
   return {section,nativeGrid,active};
 }
 
@@ -70,29 +74,30 @@ async function render(){
   if(searching){
     document.documentElement.classList.remove('ec-members-all-mode');
     scope.nativeGrid.hidden=false;generated.hidden=true;
-    if(subtitle)subtitle.textContent='Die Suche findet Mitglieder aus allen Regionen.';
+    if(subtitle?.textContent!=='Die Suche findet Mitglieder aus allen Regionen.')subtitle.textContent='Die Suche findet Mitglieder aus allen Regionen.';
     return;
   }
   if(mode==='region'){
     document.documentElement.classList.remove('ec-members-all-mode');
     scope.nativeGrid.hidden=false;generated.hidden=true;
-    if(heading)heading.textContent=`Mitglieder · ${scope.active?.name||'Region'}`;
-    if(subtitle)subtitle.textContent='Angezeigt werden Mitglieder mit dieser Heimatregion.';
+    const title=`Mitglieder · ${scope.active?.name||'Region'}`;
+    if(heading?.textContent!==title)heading.textContent=title;
+    if(subtitle?.textContent!=='Angezeigt werden Mitglieder mit dieser Heimatregion.')subtitle.textContent='Angezeigt werden Mitglieder mit dieser Heimatregion.';
     scope.section.querySelector('.ec-region-context')?.removeAttribute('hidden');
     return;
   }
   document.documentElement.classList.add('ec-members-all-mode');
   scope.nativeGrid.hidden=true;generated.hidden=false;
   scope.section.querySelector('.ec-region-context')?.setAttribute('hidden','');
-  if(heading)heading.textContent='Mitglieder · Alle Regionen';
-  if(subtitle)subtitle.textContent=`${data.profiles.length} aktive Mitglieder aus allen Regionen der Community.`;
+  if(heading?.textContent!=='Mitglieder · Alle Regionen')heading.textContent='Mitglieder · Alle Regionen';
+  const subtitleText=`${data.profiles.length} aktive Mitglieder aus allen Regionen der Community.`;
+  if(subtitle?.textContent!==subtitleText)subtitle.textContent=subtitleText;
   const regionById=new Map(data.regions.map(r=>[r.id,r]));
   const rank=p=>String(p.role||'MEMBER').toUpperCase()==='HEAD_ADMIN'?1:String(p.role||'').toUpperCase()==='ADMIN'?2:String(p.role||'').toUpperCase()==='SUPPORTER'?3:4;
   const profiles=[...data.profiles].sort((a,b)=>rank(a)-rank(b)||name(a).localeCompare(name(b),'de'));
-  generated.replaceChildren(...profiles.map(p=>buildCard(p,regionById,data.userId)));
-  barButtons(scope.section);
+  const signature=profiles.map(p=>`${p.id}:${p.avatar_url||''}:${p.role||''}:${p.home_region_id||''}:${p.is_online?'1':'0'}:${p.last_active_at||''}`).join('|');
+  if(generated.dataset.signature!==signature){generated.dataset.signature=signature;generated.replaceChildren(...profiles.map(p=>buildCard(p,regionById,data.userId)))}
 }
-function barButtons(section){section.querySelectorAll('.ec-members-scope-tabs button').forEach(btn=>btn.classList.toggle('is-active',btn.dataset.scope===mode))}
 
 let timer;function schedule(){clearTimeout(timer);timer=setTimeout(()=>void render(),90)}
 new MutationObserver(schedule).observe(document.documentElement,{childList:true,subtree:true});
