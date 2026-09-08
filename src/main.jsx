@@ -122,6 +122,10 @@ import "./personal-dashboard-final-fix.js";
 import "./home-dashboard-modern-buttons.css";
 import "./home-dashboard-modern-buttons.js";
 
+/* Member directory can show the whole community or only the active region. */
+import "./members-all-regions.css";
+import "./members-all-regions.js";
+
 /* Final member directory card authority: compact cards and one stable identity row. */
 import "./member-directory-card-final.css";
 
