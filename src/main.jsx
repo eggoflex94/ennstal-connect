@@ -122,6 +122,10 @@ import "./personal-dashboard-final-fix.js";
 import "./home-dashboard-modern-buttons.css";
 import "./home-dashboard-modern-buttons.js";
 
+/* Global + regional homepage publishing with typography controls and live preview. */
+import "./homepage-publishing-modern.css";
+import "./homepage-publishing-modern.js";
+
 /* Member directory can show the whole community or only the active region. */
 import "./members-all-regions.css";
 import "./members-all-regions.js";
