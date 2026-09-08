@@ -8,6 +8,7 @@ const ALLOWED = new Map([
   ['image/gif', 'gif']
 ]);
 let submitting = false;
+let ensuringRegionSelect = false;
 let regionCache = [];
 
 function toast(text, ok = false) {
@@ -56,42 +57,51 @@ function preferredRegion(regions) {
 
 async function ensureRegionSelect() {
   const form = eventForm();
-  if (!form || form.querySelector('[data-ec-event-region]')) return;
-  regionCache = await loadManageableRegions();
-  if (!regionCache.length) return;
+  if (!form || form.querySelector('[data-ec-event-region]') || ensuringRegionSelect || form.dataset.ecEventRegionPending === '1') return;
+  ensuringRegionSelect = true;
+  form.dataset.ecEventRegionPending = '1';
+  try {
+    const manageable = await loadManageableRegions();
+    if (!form.isConnected || form !== eventForm() || form.querySelector('[data-ec-event-region]')) return;
+    regionCache = manageable;
+    if (!regionCache.length) return;
 
-  const label = document.createElement('label');
-  label.className = 'content-image-upload ec-event-region-field';
-  label.dataset.ecEventRegion = '1';
-  label.append('Region für diese Veranstaltung');
-  const select = document.createElement('select');
-  select.name = 'ec_event_region';
-  select.required = true;
-  select.setAttribute('aria-label', 'Region für diese Veranstaltung');
-  regionCache.forEach((region) => {
-    const option = document.createElement('option');
-    option.value = region.id;
-    option.textContent = region.name || region.short_name || region.slug;
-    select.appendChild(option);
-  });
-  const preferred = preferredRegion(regionCache);
-  if (preferred) select.value = preferred.id;
-  label.appendChild(select);
+    const label = document.createElement('label');
+    label.className = 'content-image-upload ec-event-region-field';
+    label.dataset.ecEventRegion = '1';
+    label.append('Region für diese Veranstaltung');
+    const select = document.createElement('select');
+    select.name = 'ec_event_region';
+    select.required = true;
+    select.setAttribute('aria-label', 'Region für diese Veranstaltung');
+    regionCache.forEach((region) => {
+      const option = document.createElement('option');
+      option.value = region.id;
+      option.textContent = region.name || region.short_name || region.slug;
+      select.appendChild(option);
+    });
+    const preferred = preferredRegion(regionCache);
+    if (preferred) select.value = preferred.id;
+    label.appendChild(select);
 
-  const title = form.querySelector('input[name="title"]');
-  form.insertBefore(label, title || form.firstChild);
+    const title = form.querySelector('input[name="title"]');
+    form.insertBefore(label, title || form.firstChild);
 
-  if (!form.querySelector('input[name="image"]')) {
-    const imageLabel = document.createElement('label');
-    imageLabel.className = 'content-image-upload';
-    imageLabel.append('Veranstaltungsbild hochladen (optional)');
-    const imageInput = document.createElement('input');
-    imageInput.name = 'image';
-    imageInput.type = 'file';
-    imageInput.accept = 'image/png,image/jpeg,image/webp,image/gif';
-    imageLabel.appendChild(imageInput);
-    const imageUrl = form.querySelector('input[name="image_url"]');
-    imageUrl?.insertAdjacentElement('afterend', imageLabel);
+    if (!form.querySelector('input[name="image"]')) {
+      const imageLabel = document.createElement('label');
+      imageLabel.className = 'content-image-upload';
+      imageLabel.append('Veranstaltungsbild hochladen (optional)');
+      const imageInput = document.createElement('input');
+      imageInput.name = 'image';
+      imageInput.type = 'file';
+      imageInput.accept = 'image/png,image/jpeg,image/webp,image/gif';
+      imageLabel.appendChild(imageInput);
+      const imageUrl = form.querySelector('input[name="image_url"]');
+      imageUrl?.insertAdjacentElement('afterend', imageLabel);
+    }
+  } finally {
+    delete form.dataset.ecEventRegionPending;
+    ensuringRegionSelect = false;
   }
 }
 
@@ -183,6 +193,14 @@ function onSubmit(event) {
 }
 
 document.addEventListener('submit', onSubmit, true);
-const observer = new MutationObserver(() => { void ensureRegionSelect(); });
+let observerQueued = false;
+const observer = new MutationObserver(() => {
+  if (observerQueued) return;
+  observerQueued = true;
+  requestAnimationFrame(() => {
+    observerQueued = false;
+    void ensureRegionSelect();
+  });
+});
 observer.observe(document.documentElement, { childList: true, subtree: true });
 void ensureRegionSelect();
