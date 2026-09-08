@@ -85,7 +85,10 @@ function hardProfileNavigation(event){
   event.preventDefault();
   event.stopImmediatePropagation();
   document.body.classList.remove('ec-dock-open');
-  window.location.assign(profileHref(id));
+  const navigation = new CustomEvent('ec:open-profile', { detail: { profileId: id }, cancelable: true });
+  // A mounted member directory acknowledges navigation by cancelling the event.
+  // Keep the native URL fallback for signed-out visitors or unavailable profiles.
+  if (window.dispatchEvent(navigation)) window.location.assign(profileHref(id));
 }
 
 function polish(){normalizeOnlineFriends();linkResponsibilityPeople();linkDashboardActivity()}

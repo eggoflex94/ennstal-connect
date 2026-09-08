@@ -33,10 +33,9 @@ async function tick(){
     if(error){console.warn('Onlinezeit konnte nicht gespeichert werden:',error.message);return}
     const rewards=Number(data?.rewards||0);
     if(rewards>0){showRewardToast(rewards);window.dispatchEvent(new CustomEvent('ec:online-reward',{detail:data||{}}))}
-  }finally{ticking=false}
+  }catch(error){console.warn('Onlinezeit konnte nicht gespeichert werden:',error?.message||error)}finally{ticking=false}
 }
 
 window.addEventListener('focus',()=>{noteActivity();lastTick=Date.now()});
 document.addEventListener('visibilitychange',()=>{lastTick=Date.now();if(document.visibilityState==='visible')noteActivity()});
 window.setInterval(()=>void tick(),TICK_MS);
-setTimeout(()=>void tick(),TICK_MS);
