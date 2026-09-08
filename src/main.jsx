@@ -84,13 +84,9 @@ import "./personal-dashboard-final-fix.js";
 import "./home-dashboard-modern-buttons.css";
 import "./home-dashboard-modern-buttons.js";
 
-/* Authoritative homepage, member directory and regional next-event runtimes. */
-import "./home-next-event-region-final.css";
-import "./home-next-event-region-final.js";
-import "./homepage-editor-final.css";
-import "./homepage-editor-final.js";
-import "./members-directory-final.css";
-import "./members-directory-final.js";
+/* One authoritative implementation for homepage editing, member search and next regional event. */
+import "./community-core-authority.css";
+import "./community-core-authority.js";
 
 import "./profile-action-final-authority.css";
 import "./profile-image-upload-fix.js";
