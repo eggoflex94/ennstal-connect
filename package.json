@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/patch-community-ui-v2.mjs && node scripts/patch-homepage-actions.mjs && node scripts/patch-regional-shell.mjs && node scripts/patch-member-profile-recovery.mjs && node scripts/patch-navigation-state.mjs && node scripts/patch-navigation-recovery.mjs && vite build",
+    "build": "vite build",
     "preview": "vite preview",
     "test": "node --test test/*.test.mjs",
     "test:ci": "npm test && npm run build"
