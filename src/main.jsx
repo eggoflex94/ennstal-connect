@@ -84,12 +84,10 @@ import "./personal-dashboard-final-fix.js";
 import "./home-dashboard-modern-buttons.css";
 import "./home-dashboard-modern-buttons.js";
 
-/* Native React homepage/member UI is patched during the Cloudflare build. */
 import "./community-native-final.css";
 
-/* One focused runtime remains for the region-dependent dashboard event bar. */
+/* The next regional event will be rendered natively in React. Do not mutate React-owned DOM here. */
 import "./home-next-event-region-final.css";
-import "./home-next-event-region-final.js";
 
 import "./profile-action-final-authority.css";
 import "./profile-image-upload-fix.js";
@@ -113,21 +111,20 @@ import "./mobile-forum-news-admin-final.css";
 import "./mobile-visibility-final.css";
 import "./mobile-nav-runtime.js";
 
-/* Phones intentionally use the complete desktop community with browser pinch zoom. */
 import "./desktop-on-phone.css";
 
 class AppErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { failed: false };
+    this.state = { failed: false, detail: "" };
   }
 
-  static getDerivedStateFromError() {
-    return { failed: true };
+  static getDerivedStateFromError(error) {
+    return { failed: true, detail: String(error?.message || error || "Unbekannter Fehler") };
   }
 
-  componentDidCatch(error) {
-    console.error("Ennstal Connect konnte eine Ansicht nicht laden:", error);
+  componentDidCatch(error, info) {
+    console.error("Ennstal Connect konnte eine Ansicht nicht laden:", error, info);
   }
 
   render() {
@@ -137,6 +134,7 @@ class AppErrorBoundary extends React.Component {
           <span>ENNSTAL CONNECT</span>
           <h1>Diese Ansicht konnte nicht geladen werden.</h1>
           <p>Bitte lade die Seite neu. Deine Anmeldung und Daten bleiben erhalten.</p>
+          {this.state.detail && <p><small>Technischer Hinweis: {this.state.detail}</small></p>}
           <button onClick={() => window.location.reload()}>Seite neu laden</button>
         </main>
       );
