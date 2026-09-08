@@ -126,13 +126,14 @@ import "./home-next-event-region.js";
 /* Global + regional homepage publishing with typography controls and live preview. */
 import "./homepage-publishing-modern.css";
 import "./homepage-publishing-modern.js";
+import "./homepage-regional-admin-mount.js";
 
-/* Member directory can show the whole community or only the active region. */
+/* Legacy member directory enhancer plus final authoritative cross-region search. */
 import "./members-all-regions.css";
 import "./members-all-regions.js";
-
-/* Final member directory card authority: compact cards and one stable identity row. */
 import "./member-directory-card-final.css";
+import "./members-directory-final.css";
+import "./members-directory-final.js";
 
 /* Absolute final profile authority: keep only the clean action bar and normalize presence lines. */
 import "./profile-action-final-authority.css";
