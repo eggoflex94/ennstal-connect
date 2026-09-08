@@ -84,9 +84,12 @@ import "./personal-dashboard-final-fix.js";
 import "./home-dashboard-modern-buttons.css";
 import "./home-dashboard-modern-buttons.js";
 
-/* Direct authoritative implementation for homepage editing, member search and next regional event. */
-import "./community-direct-fix.css";
-import "./community-direct-fix.js";
+/* Native React homepage/member UI is patched during the Cloudflare build. */
+import "./community-native-final.css";
+
+/* One focused runtime remains for the region-dependent dashboard event bar. */
+import "./home-next-event-region-final.css";
+import "./home-next-event-region-final.js";
 
 import "./profile-action-final-authority.css";
 import "./profile-image-upload-fix.js";
