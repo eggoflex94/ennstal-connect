@@ -17,9 +17,9 @@ async function loadRegions(){
 async function syncRegistrationRegions(){
   const select=document.querySelector('select[name="home_region_slug"]');
   if(!select)return;
-  const regions=await loadRegions();
+  const regions=(await loadRegions()).filter(region=>region.slug!=='salzkammergut');
   if(!regions.length)return;
-  const current=select.value||'ennstal';
+  const current=select.value==='salzkammergut'?'ueberregional':(select.value||'ennstal');
   const signature=regions.map(region=>`${region.slug}:${region.name}`).join('|');
   if(select.dataset.ecRegions===signature)return;
   select.replaceChildren(...regions.map(region=>{
@@ -40,7 +40,7 @@ async function syncRegistrationRegions(){
       note.className='ec-overregional-note';
       label.appendChild(note);
     }
-    note.textContent='Wohnst du außerhalb der angeführten Regionen? Dann wähle „Überregional“.';
+    note.textContent='Wohnst du außerhalb von Ennstal oder Leoben – Bruck – Mürzzuschlag, auch im Salzkammergut? Dann wähle „Überregional“.';
   }else note?.remove();
 }
 
@@ -53,7 +53,7 @@ function mount(){
   if(!welcome.querySelector('.ec-auth-community-intro')){
     const section=document.createElement('section');
     section.className='ec-auth-community-intro';
-    section.innerHTML=`<span class="ec-auth-intro-kicker">ENNSTAL CONNECT COMMUNITY</span><h2>Regional vernetzt. Einfach gemeinsam.</h2><p class="ec-auth-intro-copy">Deine regionale Community für Kontakte, Austausch und gemeinsame Aktivitäten. Für Mitglieder außerhalb der bestehenden Kernregionen gibt es die Heimatregion „Überregional“.</p><div class="ec-auth-intro-grid">${items.map(([title,text])=>`<article><strong>${title}</strong><span>${text}</span></article>`).join('')}</div>`;
+    section.innerHTML=`<span class="ec-auth-intro-kicker">ENNSTAL CONNECT COMMUNITY</span><h2>Regional vernetzt. Einfach gemeinsam.</h2><p class="ec-auth-intro-copy">Ennstal Connect führt die Kernregionen Ennstal sowie Leoben – Bruck – Mürzzuschlag. Mitglieder aus dem Salzkammergut und allen anderen Orten werden unter „Überregional“ geführt.</p><div class="ec-auth-intro-grid">${items.map(([title,text])=>`<article><strong>${title}</strong><span>${text}</span></article>`).join('')}</div>`;
     const updates=intro.querySelector('.public-auth-updates');
     if(updates)intro.insertBefore(section,updates);else intro.appendChild(section);
   }
