@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { createNetworkFetch } from "./networkFetch.js";
 
 // Supabase configuration is supplied by the Vite/Cloudflare build variables.
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -14,7 +15,9 @@ export const supabaseUnavailableMessage =
 export let preparePrivilegedAction = async () => ({ error: new Error(supabaseUnavailableMessage) });
 
 export const supabase = isSupabaseConfigured
-  ? createClient(supabaseUrl, supabaseAnonKey)
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+      global: { fetch: createNetworkFetch(globalThis.fetch.bind(globalThis)) }
+    })
   : null;
 
 if (!supabase) {

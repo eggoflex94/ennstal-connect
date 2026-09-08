@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { createRefreshScheduler } from "./refreshScheduler.js";
 import QRCode from "qrcode";
 import { preparePrivilegedAction, supabase, supabaseUnavailableMessage } from "./supabaseClient";
 import ProfileSections from "./ProfileSections.jsx";
@@ -151,6 +152,27 @@ export default function App() {
   const [regions, setRegions] = useState([]);
   const [regionalAssignments, setRegionalAssignments] = useState([]);
   const [activeRegion, setActiveRegion] = useState(null);
+  const loadVersion = useRef(0);
+  const initializedProfileUser = useRef(null);
+  const loadAllRef = useRef(null);
+  const membersRef = useRef(members);
+  membersRef.current = members;
+  const resetSession = () => {
+    initializedProfileUser.current = null;
+    setUser(null); setProfile(null); setMembers([]); setFriendships([]);
+    setMessages([]); setAdminMembers([]); setAdminLog([]); setMemberEmails({});
+    setReports([]); setBlockedUsers([]); setFeatureLocks([]); setProfileVisits([]);
+    setProfileActivities([]); setRulesAccepted(null); setViewingMember(null);
+    setViewingFriends([]); setChatMember(null); setSelectedMember(null);
+    setEditingMember(null); setAccountReviewQueue([]); setGroupOwnerChanges([]);
+    setPermissionDraft({}); setAdminTarget(""); setIncomingMessage(null);
+    setMessageText(""); setActiveRegion(null); setRegionalAssignments([]);
+    setHomepageSections([]); setNews([]); setEvents([]); setGroups([]);
+    setForumPosts([]); setForumReplies([]); setWeeklyPoll(null); setFeaturedGroup(null);
+    setCommunityRequests([]); setCommunityEvents([]); setCommunityAds([]);
+    setMemberPhotos([]); setPhotoLikes([]); setPhotoComments([]); setEventRsvps([]);
+    setWelcomeBadges([]); setSelectedGroup(null); setPage("home");
+  };
 
   // A profile remains open while the Head Admin changes its rights.  Keep that
   // view in sync with the refreshed directory instead of leaving stale data
@@ -174,7 +196,9 @@ export default function App() {
     };
     const sharedProfileId = new URLSearchParams(window.location.search).get("profile");
     if (sharedProfileId) openProfileById(sharedProfileId);
-    const handleSidebarProfile = (event) => openProfileById(String(event.detail?.profileId || ""), String(event.detail?.nickname || ""));
+    const handleSidebarProfile = (event) => {
+      if (openProfileById(String(event.detail?.profileId || ""), String(event.detail?.nickname || ""))) event.preventDefault();
+    };
     window.addEventListener("ec:open-profile", handleSidebarProfile);
     return () => window.removeEventListener("ec:open-profile", handleSidebarProfile);
   }, [user?.id, members]);
@@ -272,8 +296,10 @@ export default function App() {
   });
 
   const loadAll = async () => {
+    const version = ++loadVersion.current;
+    const isCurrent = () => version === loadVersion.current;
     if (!supabase) {
-      setUser(null); setProfile(null); setMembers([]); setFriendships([]);
+      resetSession();
       return;
     }
     try {
@@ -282,17 +308,24 @@ export default function App() {
         supabaseUnavailableMessage
       );
       const currentUser = session?.user || null;
+      if (!isCurrent()) return;
       setUser(currentUser);
       if (!currentUser) {
-        setProfile(null); setMembers([]); setFriendships([]); return;
+        resetSession(); return;
       }
-      await supabase.rpc("ensure_current_profile");
+      if (initializedProfileUser.current !== currentUser.id) {
+        const { error } = await supabase.rpc("ensure_current_profile");
+        if (error) throw error;
+        if (isCurrent()) initializedProfileUser.current = currentUser.id;
+      }
+      if (!isCurrent()) return;
       // A suspended account must never reach the member area, even when a
       // previously issued browser session still exists.
       const { data: accessProfile } = await supabase.from("profiles")
         .select("account_status,suspension_reason")
         .eq("id", currentUser.id)
         .maybeSingle();
+      if (!isCurrent()) return;
       if (accessProfile?.account_status === "SUSPENDED") {
         await supabase.auth.signOut();
         setUser(null); setProfile(null); setMembers([]); setFriendships([]);
@@ -300,8 +333,6 @@ export default function App() {
         showNotice(`Dein Konto ist gesperrt. Grund: ${reason}`);
         return;
       }
-      void supabase.from("profiles").update({ is_online: true, last_active_at: new Date().toISOString() }).eq("id", currentUser.id);
-      await supabase.rpc("claim_initial_head_admin");
       const safe = async (query, fallback = []) => {
         const { data, error } = await query;
         if (error) { console.warn(error.message); return fallback; }
@@ -316,7 +347,11 @@ export default function App() {
         return (data || []).map((row) => typeof row === "string" ? JSON.parse(row) : row);
       };
       const [p, ms, fs, msgs, hs, rs, bs, ns, es, gs, visits, posts, replies, locks, activities, poll, badges, featured, requests] = await Promise.all([
-        safe(supabase.from("profiles").select("*").eq("id", currentUser.id).maybeSingle(), null),
+        supabase.from("profiles").select("*").eq("id", currentUser.id).maybeSingle().then(({ data, error }) => {
+          if (error) throw error;
+          if (!data) throw new Error("Dein Profil konnte nicht geladen werden. Bitte versuche es erneut.");
+          return data;
+        }),
         safeMemberDirectory(),
         safe(supabase.from("friendships").select("*").or(`requester_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`)),
         safe(supabase.from("messages").select("*").or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`).order("created_at", { ascending: false })),
@@ -336,9 +371,11 @@ export default function App() {
         safe(activeRegionId ? supabase.rpc("ec_region_featured_community_group", { p_region: activeRegionId }) : supabase.rpc("featured_community_group"), null),
         safe(activeRegionId ? supabase.from("community_requests").select("*").eq("status", "ACTIVE").eq("region_id", activeRegionId).order("created_at", { ascending: false }).limit(8) : supabase.from("community_requests").select("*").eq("status", "ACTIVE").order("created_at", { ascending: false }).limit(8))
       ]);
+      if (!isCurrent()) return;
       const groupData = (gs || []).map((entry) => typeof entry === "string" ? JSON.parse(entry) : entry);
       const { data: ruleAcceptance, error: ruleAcceptanceError } = await supabase.from("community_rule_acceptances").select("rules_version,accepted_at").eq("user_id", currentUser.id).eq("rules_version", COMMUNITY_RULES_VERSION).maybeSingle();
       if (ruleAcceptanceError) console.warn(ruleAcceptanceError.message);
+      if (!isCurrent()) return;
       setRulesAccepted(Boolean(ruleAcceptance));
       setProfile(p); setMembers(ms); setFriendships(fs); setMessages(msgs); setHomepageSections(hs); setReports(rs); setBlockedUsers(bs); setNews(ns); setEvents(es); setGroups(groupData); setProfileVisits(visits); setForumPosts(posts); setForumReplies(replies); setFeatureLocks(locks); setProfileActivities(activities); setWeeklyPoll(Array.isArray(poll) ? poll[0] || null : poll); setWelcomeBadges(Array.isArray(badges) && badges.length ? badges : instantWelcomeBadges(p, groupData, posts, currentUser.id)); setFeaturedGroup(Array.isArray(featured) ? featured[0] || null : featured); setCommunityRequests(requests || []);
       if (isAdmin(p?.role)) {
@@ -347,14 +384,23 @@ export default function App() {
           supabase.rpc("admin_full_member_directory"),
           isHeadAdmin(p?.role) ? supabase.rpc("get_admin_log", { p_limit: 500 }) : Promise.resolve({ data: [], error: null })
         ]);
+        if (!isCurrent()) return;
         if (!emailResult.error) setMemberEmails(Object.fromEntries((emailResult.data || []).map((entry) => [entry.id, entry.email])));
         if (!memberResult.error) setAdminMembers((memberResult.data || []).map((summary) => ({ ...(ms.find((member) => member.id === summary.id) || {}), ...summary })));
         else { console.warn(memberResult.error.message); setAdminMembers(ms); }
         if (!logResult.error) setAdminLog(logResult.data || []);
         else { console.warn(logResult.error.message); setAdminLog([]); }
       } else { setMemberEmails({}); setAdminMembers([]); setAdminLog([]); }
-    } catch (e) { console.error(e); showNotice(e?.message || "Fehler beim Laden"); }
+    } catch (e) { if (isCurrent()) { console.error(e); showNotice(e?.message || "Fehler beim Laden"); } }
   };
+  loadAllRef.current = loadAll;
+
+  useEffect(() => {
+    loadVersion.current++;
+    if (!activeRegionId) return undefined;
+    const timer = setTimeout(() => void loadAllRef.current(), 150);
+    return () => clearTimeout(timer);
+  }, [activeRegionId]);
 
   async function openAccountReview() {
     if (!isAdmin(profile?.role)) return;
@@ -372,25 +418,43 @@ export default function App() {
 
   useEffect(() => {
     if (!supabase) return undefined;
-    loadAll();
+    const refresh = createRefreshScheduler(() => loadAllRef.current());
+    let sessionUserId;
+    refresh();
     if (location.hash.includes("type=recovery")) setPasswordRecovery(true);
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => { if (event === "PASSWORD_RECOVERY") setPasswordRecovery(true); loadAll(); });
-    return () => subscription.unsubscribe();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      const nextId = session?.user?.id || null;
+      if (event === "PASSWORD_RECOVERY") setPasswordRecovery(true);
+      if (event === "TOKEN_REFRESHED" && sessionUserId === nextId) return;
+      if (event === "SIGNED_IN" && sessionUserId === nextId) return;
+      loadVersion.current++;
+      if (sessionUserId !== nextId || event === "SIGNED_OUT") resetSession();
+      sessionUserId = nextId;
+      refresh();
+    });
+    window.addEventListener("ec:network-restored", refresh);
+    return () => {
+      loadVersion.current++;
+      refresh.dispose();
+      subscription.unsubscribe();
+      window.removeEventListener("ec:network-restored", refresh);
+    };
   }, []);
 
   useEffect(() => {
     if (!supabase || !user?.id) return;
+    const refresh = createRefreshScheduler(() => loadAllRef.current());
     const handleIncomingMessage = (payload) => {
       if (payload.eventType === "INSERT" && payload.new?.sender_id && payload.new.sender_id !== user.id) {
-        const sender = members.find((member) => member.id === payload.new.sender_id);
+        const sender = membersRef.current.find((member) => member.id === payload.new.sender_id);
         setIncomingMessage({ senderId: payload.new.sender_id, senderName: getName(sender) || "Ein Mitglied", content: String(payload.new.content || "") });
       }
-      loadAll();
+      refresh();
     };
     const messageChannel = supabase.channel(`ec-messages-${user.id}`).on("postgres_changes", { event: "*", schema: "public", table: "messages", filter: `receiver_id=eq.${user.id}` }, handleIncomingMessage).subscribe();
-    const friendChannel = supabase.channel(`ec-friends-${user.id}`).on("postgres_changes", { event: "*", schema: "public", table: "friendships", filter: `receiver_id=eq.${user.id}` }, loadAll).subscribe();
-    return () => { supabase.removeChannel(messageChannel); supabase.removeChannel(friendChannel); };
-  }, [user?.id, members]);
+    const friendChannel = supabase.channel(`ec-friends-${user.id}`).on("postgres_changes", { event: "*", schema: "public", table: "friendships", filter: `receiver_id=eq.${user.id}` }, refresh).subscribe();
+    return () => { refresh.dispose(); supabase.removeChannel(messageChannel); supabase.removeChannel(friendChannel); };
+  }, [user?.id]);
 
   useEffect(() => {
     if (!supabase || page !== "community") return;
@@ -579,6 +643,7 @@ export default function App() {
 
   useEffect(() => {
     if (!supabase || !user?.id) return undefined;
+    let cancelled = false;
     const loadCommunityExtras = async () => {
       const [eventResult, adResult, photoResult, likeResult, commentResult, rsvpResult] = await Promise.all([
         activeRegionId ? supabase.from("community_events").select("*").eq("region_id", activeRegionId).order("event_at", { ascending: true }) : supabase.from("community_events").select("*").order("event_at", { ascending: true }),
@@ -588,6 +653,7 @@ export default function App() {
         supabase.from("member_photo_comments").select("*").order("created_at", { ascending: true }),
         supabase.from("community_event_rsvps").select("*")
       ]);
+      if (cancelled) return;
       if (!eventResult.error) setCommunityEvents(eventResult.data || []);
       if (!adResult.error) setCommunityAds(adResult.data || []);
       if (!photoResult.error) setMemberPhotos(photoResult.data || []);
@@ -595,8 +661,8 @@ export default function App() {
       if (!commentResult.error) setPhotoComments(commentResult.data || []);
       if (!rsvpResult.error) setEventRsvps(rsvpResult.data || []);
     };
-    void loadCommunityExtras();
-    return undefined;
+    void loadCommunityExtras().catch(error => { if (!cancelled) console.warn(error); });
+    return () => { cancelled = true; };
   }, [user?.id, activeRegionId]);
 
   useEffect(() => {
@@ -626,7 +692,7 @@ export default function App() {
       if (!pollResult.error) setWeeklyPoll(Array.isArray(pollResult.data) ? pollResult.data[0] || null : pollResult.data);
       if (!featuredResult.error) setFeaturedGroup(Array.isArray(featuredResult.data) ? featuredResult.data[0] || null : featuredResult.data);
     };
-    void loadRegionalContent();
+    void loadRegionalContent().catch(error => { if (!cancelled) console.warn(error); });
     return () => { cancelled = true; };
   }, [user?.id, activeRegionId]);
 
