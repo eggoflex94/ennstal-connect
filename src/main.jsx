@@ -160,6 +160,9 @@ import "./role-responsibility-final.css";
 /* Absolute last mobile runtime: if a browser swallows the native tap, synthesize exactly one click. */
 import "./mobile-single-tap-fix.js";
 
+/* Final visual safety net: no clipped content, no click shields, predictable dialog stacking. */
+import "./layout-integrity-final.css";
+
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
   static getDerivedStateFromError() { return { failed: true }; }
