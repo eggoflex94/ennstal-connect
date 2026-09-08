@@ -1,3 +1,5 @@
+@import "./mobile-interactions-final.css";
+
 /* Final Community + mobile audit authority.
    Keeps the Community hub readable, prevents control overlap, and makes the mobile nav usable. */
 .community-hub,.community-hub-layout,.community-hub-content,.community-hub-grid,.community-contact-sidebar,.community-ads,.community-ad-list{min-width:0;max-width:100%}
@@ -22,8 +24,6 @@
   .community-contact-sidebar{grid-template-columns:1fr 1fr!important}
   .community-ad-list{grid-template-columns:1fr!important}
   .admin-community-tools .community-tool-grid{grid-template-columns:1fr!important}
-
-  /* Mobile navigation: horizontal, readable, and no tiny 7-column labels. */
   .ec-top-nav{display:flex!important;align-items:center!important;gap:6px!important;overflow-x:auto!important;overflow-y:hidden!important;padding:5px 104px 5px 6px!important;scrollbar-width:none!important;-webkit-overflow-scrolling:touch!important;overscroll-behavior-x:contain!important}
   .ec-top-nav::-webkit-scrollbar{display:none!important}
   .ec-top-nav>button:not(.ec-dock-toggle){flex:0 0 auto!important;width:auto!important;min-width:76px!important;height:44px!important;padding:0 9px!important;gap:6px!important;overflow:visible!important}
