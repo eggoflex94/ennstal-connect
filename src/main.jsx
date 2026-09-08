@@ -118,6 +118,10 @@ import "./admin-community-popup-manager.js";
 import "./personal-dashboard-final-fix.css";
 import "./personal-dashboard-final-fix.js";
 
+/* Modern home dashboard action cards for overview and recent activity. */
+import "./home-dashboard-modern-buttons.css";
+import "./home-dashboard-modern-buttons.js";
+
 /* Final member directory card authority: compact cards and one stable identity row. */
 import "./member-directory-card-final.css";
 
