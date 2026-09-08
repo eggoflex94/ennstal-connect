@@ -122,11 +122,15 @@ import "./personal-dashboard-final-fix.js";
 import "./home-dashboard-modern-buttons.css";
 import "./home-dashboard-modern-buttons.js";
 import "./home-next-event-region.js";
+import "./home-next-event-region-final.css";
+import "./home-next-event-region-final.js";
 
 /* Global + regional homepage publishing with typography controls and live preview. */
 import "./homepage-publishing-modern.css";
 import "./homepage-publishing-modern.js";
 import "./homepage-regional-admin-mount.js";
+import "./homepage-editor-final.css";
+import "./homepage-editor-final.js";
 
 /* Legacy member directory enhancer plus final authoritative cross-region search. */
 import "./members-all-regions.css";
