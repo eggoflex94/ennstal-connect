@@ -1,0 +1,160 @@
+/* Phone strategy: keep the complete desktop community instead of reflowing it.
+   The viewport is 1280px wide on phones, so Safari/Chrome shows the whole desktop
+   UI initially and users can pinch-zoom naturally into any area. */
+
+@media (pointer: coarse) {
+  html {
+    min-width: 1180px !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-text-size-adjust: 100% !important;
+    text-size-adjust: 100% !important;
+  }
+
+  body,
+  #root,
+  .app,
+  .ec-regional-ui,
+  .dashboard-layout,
+  .modern-main,
+  .content-root {
+    min-width: 0 !important;
+    max-width: none !important;
+    overflow: visible !important;
+  }
+
+  body {
+    min-width: 1180px !important;
+    overflow-x: auto !important;
+    touch-action: pan-x pan-y pinch-zoom !important;
+  }
+
+  /* Restore normal desktop header/navigation geometry. */
+  .ec-brand-masthead {
+    min-height: unset !important;
+    padding: 14px 28px !important;
+  }
+
+  .ec-top-nav {
+    display: flex !important;
+    width: 100% !important;
+    min-width: 1180px !important;
+    padding: 7px 22px !important;
+    gap: 8px !important;
+    overflow: visible !important;
+    flex-wrap: nowrap !important;
+  }
+
+  .ec-top-nav > button,
+  .ec-top-nav > a,
+  .ec-mobile-nav-rail > button,
+  .ec-mobile-nav-rail > a {
+    width: auto !important;
+    min-width: 0 !important;
+    min-height: 42px !important;
+    padding: 8px 14px !important;
+    flex: 0 0 auto !important;
+    white-space: nowrap !important;
+  }
+
+  .ec-top-nav button span,
+  .ec-top-nav a span {
+    font-size: inherit !important;
+    white-space: nowrap !important;
+  }
+
+  .ec-mobile-nav-rail {
+    display: contents !important;
+  }
+
+  .ec-region-picker {
+    position: static !important;
+    width: auto !important;
+    max-width: none !important;
+    min-height: 42px !important;
+    margin: 0 0 0 auto !important;
+    flex: 0 0 auto !important;
+  }
+
+  .ec-dock-toggle {
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    min-width: 42px !important;
+    min-height: 42px !important;
+    margin: 0 !important;
+    border-radius: 12px !important;
+    box-shadow: none !important;
+  }
+
+  /* Desktop panels/cards stay multi-column where desktop CSS defines them. */
+  .content-root {
+    padding-left: 28px !important;
+    padding-right: 28px !important;
+  }
+
+  .page-heading {
+    display: flex !important;
+    align-items: flex-start !important;
+    justify-content: space-between !important;
+    gap: 24px !important;
+  }
+
+  .page-heading h1 {
+    font-size: inherit !important;
+    line-height: inherit !important;
+  }
+
+  .member-grid,
+  .members-grid,
+  .news-grid,
+  .group-grid,
+  .groups-grid,
+  .engagement-grid,
+  .homepage-builder-grid,
+  .homepage-sections {
+    width: auto !important;
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: inherit !important;
+  }
+
+  /* Personal dock remains the normal desktop side panel, not a full-screen phone sheet. */
+  .ec-right-dock {
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: auto !important;
+    max-width: none !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  /* Editors should use their desktop dimensions; browser pinch zoom handles readability. */
+  .content-editor-overlay,
+  .modal-overlay {
+    padding: 24px !important;
+    align-items: center !important;
+  }
+
+  .content-editor-dialog,
+  .modal-dialog,
+  .ec-home-edit-dialog {
+    width: min(900px, 90vw) !important;
+    max-width: 900px !important;
+    max-height: 88vh !important;
+    overflow-y: auto !important;
+    border-radius: 20px !important;
+  }
+
+  .content-editor-actions,
+  .modal-actions,
+  .form-actions {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+  }
+}
