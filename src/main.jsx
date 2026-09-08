@@ -177,6 +177,9 @@ import "./community-mobile-final.css";
 /* Final mobile audit for Forum, News and Admin-Zentrale. */
 import "./mobile-forum-news-admin-final.css";
 
+/* Absolute last responsive authority: readable horizontal mobile navigation and tappable controls. */
+import "./mobile-visibility-final.css";
+
 class AppErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { failed: false }; }
   static getDerivedStateFromError() { return { failed: true }; }
