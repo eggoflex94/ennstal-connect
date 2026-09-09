@@ -1,26 +1,34 @@
-/* Final mobile interaction authority.
-   Keep the proven desktop-style phone navigation intact; only fix hit-testing.
-   No grid/reflow overrides here. */
+@import "./desktop-on-phone.css";
 
+/* Phones intentionally render the complete desktop interface.
+   This layer only protects native hit-testing; it does not reflow navigation. */
 @media (pointer: coarse) {
   html,body{
+    min-width:1180px!important;
+    overflow-x:auto!important;
     touch-action:pan-x pan-y pinch-zoom!important;
   }
 
-  /* The shell itself must never become an invisible click shield. */
   .ec-regional-shell{
     pointer-events:none!important;
   }
-  .ec-regional-shell>.ec-brand-masthead,
-  .ec-regional-shell>.ec-top-nav,
-  .ec-regional-shell>.ec-right-dock{
+  .ec-brand-masthead,
+  .ec-top-nav,
+  .ec-right-dock{
     pointer-events:auto!important;
   }
 
-  /* Native controls remain native and directly tappable. */
-  button,a,input,textarea,select,label,summary,[role="button"],[tabindex]{
+  .ec-top-nav,
+  .ec-top-nav *,
+  .ec-region-picker,
+  .ec-region-picker *,
+  .ec-dock-toggle,
+  .ec-right-dock,
+  .ec-right-dock *,
+  button,a,input,textarea,select,label,summary,[role="button"]{
     pointer-events:auto!important;
   }
+
   button,a,[role="button"]{
     touch-action:manipulation!important;
   }
@@ -28,64 +36,61 @@
     touch-action:auto!important;
   }
 
-  .ec-top-nav,
-  .ec-top-nav *,
-  .ec-region-picker,
-  .ec-region-picker *,
-  .ec-dock-toggle{
-    pointer-events:auto!important;
+  /* Desktop nav stays one row on phones. */
+  .ec-top-nav{
+    display:flex!important;
+    flex-wrap:nowrap!important;
+    width:100%!important;
+    min-width:1180px!important;
+    overflow:visible!important;
+    gap:8px!important;
   }
-
+  .ec-mobile-nav-rail{
+    display:contents!important;
+  }
+  .ec-top-nav button,
+  .ec-top-nav a{
+    flex:0 0 auto!important;
+    width:auto!important;
+    min-width:0!important;
+    white-space:nowrap!important;
+  }
+  .ec-region-picker{
+    position:static!important;
+    display:flex!important;
+    margin-left:auto!important;
+    width:auto!important;
+    flex:0 0 auto!important;
+  }
   .ec-region-picker select{
+    position:static!important;
     opacity:1!important;
     visibility:visible!important;
     pointer-events:auto!important;
-    touch-action:auto!important;
+    appearance:auto!important;
+    -webkit-appearance:menulist!important;
   }
 
-  /* Closed personal dashboard cannot cover anything underneath. */
+  /* Personal dashboard behaves like a desktop side panel and never blocks
+     the page while closed. */
   body:not(.ec-dock-open) .ec-right-dock{
-    visibility:hidden!important;
-    opacity:0!important;
     pointer-events:none!important;
-    transform:translate3d(105%,0,0)!important;
   }
   body:not(.ec-dock-open) .ec-right-dock *{
     pointer-events:none!important;
   }
-
-  body.ec-dock-open .ec-right-dock{
-    position:fixed!important;
-    top:0!important;
-    right:0!important;
-    bottom:0!important;
-    left:auto!important;
-    width:min(94vw,380px)!important;
-    height:100dvh!important;
-    max-height:100dvh!important;
-    overflow-y:auto!important;
-    visibility:visible!important;
-    opacity:1!important;
-    transform:none!important;
-    pointer-events:auto!important;
-    z-index:20000!important;
-    overscroll-behavior:contain!important;
-  }
+  body.ec-dock-open .ec-right-dock,
   body.ec-dock-open .ec-right-dock *{
     pointer-events:auto!important;
   }
 
-  .ec-right-dock>button,
-  .ec-right-dock [data-ec-page],
-  .ec-right-dock [data-ec-detail],
-  .ec-right-dock [data-ec-home-region],
   .member-profile-page button,
   .profile-page-layout button,
   .profile-page-layout input,
   .profile-page-layout textarea,
   .profile-page-layout select{
+    pointer-events:auto!important;
     position:relative!important;
     z-index:2!important;
-    pointer-events:auto!important;
   }
 }
