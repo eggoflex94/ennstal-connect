@@ -12,6 +12,8 @@ import "./last-name-privacy.js";
 import "./last-active-privacy.js";
 import "./online-status-sync.js";
 import "./online-reward-tracker.js";
+import "./sidebar-reward-progress.css";
+import "./sidebar-reward-progress.js";
 import "./featured-group-admin.js";
 import "./mobile-zoom.js";
 import "./ad-form-fix.js";
