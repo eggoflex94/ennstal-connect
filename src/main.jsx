@@ -33,10 +33,13 @@ import "./admin-compact-enhancements.js";
 import "./sidebar-news-popup.js";
 
 import "./regional-shell.js";
+import "./top-nav-events-cleanup.js";
 import "./profile-visits-realtime.js";
 import "./navigation-stability.js";
 import "./admin-forum-cross-region.js";
 import "./community-engagement-upgrade.js";
+import "./home-social-events.js";
+import "./event-editor-enhancement.js";
 import "./clean-profile-runtime.js";
 import "./clean-layout.css";
 import "./clean-components.css";
@@ -142,6 +145,10 @@ import "./dashboard-header-unified.css";
 
 /* Final community hierarchy and quick-entry polish. */
 import "./community-engagement-upgrade.css";
+
+/* Friend activities, reminders and event administration on the home page. */
+import "./home-social-events.css";
+import "./event-editor-enhancement.css";
 
 class AppErrorBoundary extends React.Component {
   constructor(props) {
