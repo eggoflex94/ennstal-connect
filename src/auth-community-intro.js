@@ -67,6 +67,15 @@ async function syncRegistrationRegions(){
   note.textContent='„Überregional“ gilt für alle Bundesländer und Regionen. Wähle diese Option, wenn du regionsübergreifend sichtbar sein möchtest oder außerhalb der beiden Kernregionen wohnst.';
 }
 
+function mountRewardNews(intro){
+  if(!intro||intro.querySelector('.ec-auth-reward-news'))return;
+  const news=document.createElement('section');
+  news.className='ec-auth-reward-news';
+  news.innerHTML=`<span>NEU IN DER COMMUNITY</span><h3>Aktivität wird jetzt belohnt</h3><p>Im rechten persönlichen Dashboard siehst du jetzt deinen Community-Level-Fortschritt und deine aktive Onlinezeit direkt als Balken. Je mehr du aktiv dabei bist, desto weiter wächst dein Fortschritt und desto mehr Community-Belohnungen werden freigeschaltet.</p><small>Onlinezeit zählt nur bei aktiver Nutzung. Zusätzlich bringen Beiträge, Antworten, Freundschaften, Gruppen und Events Punkte.</small>`;
+  const updates=intro.querySelector('.public-auth-updates');
+  if(updates)intro.insertBefore(news,updates);else intro.appendChild(news);
+}
+
 function mount(){
   const page=document.querySelector('.auth-page');
   const welcome=page?.querySelector('.ec-auth-welcome');
@@ -81,6 +90,7 @@ function mount(){
     const updates=intro.querySelector('.public-auth-updates');
     if(updates)intro.insertBefore(section,updates);else intro.appendChild(section);
   }
+  mountRewardNews(intro);
   void syncRegistrationRegions();
 }
 
