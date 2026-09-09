@@ -1,0 +1,33 @@
+/* Same Ennstal Connect structure for all themes. Only color, depth and branding change. */
+:root{
+  --ec-theme-red:#ff4357;
+  --ec-theme-red-strong:#e72b42;
+  --ec-theme-red-soft:#fff0f2;
+  --ec-theme-blue:#1677ff;
+  --ec-theme-blue-strong:#075fd4;
+  --ec-theme-blue-soft:#edf6ff;
+}
+.app.layout-theme-red{--ec-theme-primary:var(--ec-theme-red);--ec-theme-primary-strong:var(--ec-theme-red-strong);--ec-theme-soft:var(--ec-theme-red-soft)}
+.app.layout-theme-blue{--ec-theme-primary:var(--ec-theme-blue);--ec-theme-primary-strong:var(--ec-theme-blue-strong);--ec-theme-soft:var(--ec-theme-blue-soft)}
+.app.layout-theme-red,.app.layout-theme-blue{background:linear-gradient(180deg,#f8fbfd 0%,#eef5f8 100%)!important;color:#24364d!important}
+.app.layout-theme-red .modern-main,.app.layout-theme-blue .modern-main,.app.layout-theme-red .content-root,.app.layout-theme-blue .content-root{background:transparent!important}
+.app.layout-theme-red .panel,.app.layout-theme-blue .panel{border-color:color-mix(in srgb,var(--ec-theme-primary) 15%,#d8e1e8)!important;box-shadow:0 10px 28px rgba(21,40,61,.08)!important}
+.app.layout-theme-red .eyebrow,.app.layout-theme-blue .eyebrow{color:var(--ec-theme-primary-strong)!important}
+.app.layout-theme-red .primary-button,.app.layout-theme-red button.primary-button,.app.layout-theme-blue .primary-button,.app.layout-theme-blue button.primary-button{background:linear-gradient(135deg,var(--ec-theme-primary),var(--ec-theme-primary-strong))!important;border-color:var(--ec-theme-primary-strong)!important;color:#fff!important;box-shadow:0 7px 18px color-mix(in srgb,var(--ec-theme-primary) 25%,transparent)!important}
+.app.layout-theme-red .secondary-button:hover,.app.layout-theme-blue .secondary-button:hover{border-color:var(--ec-theme-primary)!important;color:var(--ec-theme-primary-strong)!important;background:var(--ec-theme-soft)!important}
+html[data-ec-theme="red"] .ec-top-nav button[data-ec-page].active,html[data-ec-theme="red"] .ec-top-nav button[data-ec-page][aria-current="page"]{background:#ff5a66!important;border-color:#ff4357!important;color:#fff!important}
+html[data-ec-theme="blue"] .ec-top-nav button[data-ec-page].active,html[data-ec-theme="blue"] .ec-top-nav button[data-ec-page][aria-current="page"]{background:#2485ff!important;border-color:#1677ff!important;color:#fff!important}
+html[data-ec-theme="red"] .ec-region-picker,html[data-ec-theme="red"] .ec-dock-toggle{border-color:#ff9aa4!important}
+html[data-ec-theme="blue"] .ec-region-picker,html[data-ec-theme="blue"] .ec-dock-toggle{border-color:#83b9ff!important}
+html[data-ec-theme="red"] .ec-brand-masthead{border-bottom-color:#ffb2ba!important}
+html[data-ec-theme="blue"] .ec-brand-masthead{border-bottom-color:#acd2ff!important}
+html[data-ec-theme="red"] .ec-region-status strong{color:#e72b42!important}
+html[data-ec-theme="blue"] .ec-region-status strong{color:#075fd4!important}
+.app.layout-theme-red .native-member-card--admin,.app.layout-theme-blue .native-member-card--admin,.app.layout-theme-red [data-role-theme="admin"],.app.layout-theme-blue [data-role-theme="admin"]{background:linear-gradient(145deg,#f03c50 0%,#a30f27 48%,#160307 100%)!important}
+.app.layout-theme-red .native-member-card--supporter,.app.layout-theme-blue .native-member-card--supporter,.app.layout-theme-red [data-role-theme="supporter"],.app.layout-theme-blue [data-role-theme="supporter"]{background:linear-gradient(145deg,#e0b609 0%,#957100 54%,#211900 100%)!important}
+.app.layout-theme-red .native-member-card--business,.app.layout-theme-blue .native-member-card--business,.app.layout-theme-red [data-role-theme="business"],.app.layout-theme-blue [data-role-theme="business"]{background:linear-gradient(145deg,#258cff 0%,#0860be 50%,#031a31 100%)!important}
+.app.layout-theme-red .native-member-card--member,.app.layout-theme-blue .native-member-card--member,.app.layout-theme-red [data-role-theme="member"],.app.layout-theme-blue [data-role-theme="member"]{background:linear-gradient(145deg,#f8fafc 0%,#e9eef3 100%)!important}
+.native-member-friend-badge,.modern-main article.member-card .ec-card-badge-friend{width:26px!important;height:26px!important;min-width:26px!important;min-height:26px!important;padding:2px!important;border-radius:999px!important;background:#111827!important;border:2px solid #fff!important;box-shadow:0 0 0 1px rgba(15,23,42,.28),0 3px 9px rgba(0,0,0,.3)!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;overflow:hidden!important}
+.native-member-friend-badge img,.modern-main article.member-card .ec-card-badge-friend img,.modern-main article.member-card .ec-card-badge-friend .ec-card-badge-friend-img{width:20px!important;height:20px!important;min-width:20px!important;min-height:20px!important;max-width:20px!important;max-height:20px!important;object-fit:contain!important;display:block!important;opacity:1!important;visibility:visible!important;filter:none!important}
+.member-profile-actions .ec-profile-friendship-accepted::before,.profile-actions .ec-profile-friendship-accepted::before{background-color:#111827!important;background-image:url('/badge-friendship.png')!important;background-repeat:no-repeat!important;background-position:center!important;background-size:20px 20px!important;border:2px solid #fff!important;border-radius:999px!important;box-shadow:0 0 0 1px rgba(15,23,42,.28),0 3px 9px rgba(0,0,0,.3)!important}
+@media(max-width:900px){.native-member-friend-badge,.modern-main article.member-card .ec-card-badge-friend{width:24px!important;height:24px!important;min-width:24px!important;min-height:24px!important}.native-member-friend-badge img,.modern-main article.member-card .ec-card-badge-friend img{width:18px!important;height:18px!important;min-width:18px!important;min-height:18px!important;max-width:18px!important;max-height:18px!important}}
