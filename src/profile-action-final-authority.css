@@ -30,6 +30,33 @@
   border-radius:10px!important;
   white-space:normal!important;
   line-height:1.2!important;
+  pointer-events:auto!important;
+  touch-action:manipulation!important;
+}
+
+/* Never remove the real React action bar unless the clean profile actually
+   contains working cloned actions. This is the safety path for member pages
+   where the clean-profile runtime has not rendered yet or was skipped. */
+.member-profile-page:not(:has(.ec-clean-profile-actions)) > .member-profile-actions,
+.member-profile-page:not(:has(.ec-clean-profile-actions)) .member-profile-actions{
+  display:flex!important;
+  flex-wrap:wrap!important;
+  align-items:center!important;
+  gap:9px!important;
+  width:100%!important;
+  margin:14px 0 18px!important;
+  position:relative!important;
+  z-index:30!important;
+  pointer-events:auto!important;
+}
+.member-profile-page:not(:has(.ec-clean-profile-actions)) .member-profile-actions > button,
+.member-profile-page:not(:has(.ec-clean-profile-actions)) .member-profile-actions > a{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  min-height:44px!important;
+  pointer-events:auto!important;
+  touch-action:manipulation!important;
 }
 
 .member-profile-page .ec-clean-profile-role .ec-profile-presence{
@@ -66,4 +93,21 @@
   .member-profile-page .ec-clean-profile-actions{gap:7px!important}
   .member-profile-page .ec-clean-profile-actions .ec-clean-profile-action,
   .member-profile-page .ec-clean-profile-actions .ec-clean-profile-admin{flex:1 1 150px!important}
+}
+
+@media(pointer:coarse){
+  .member-profile-page .ec-clean-profile-actions,
+  .member-profile-page:not(:has(.ec-clean-profile-actions)) .member-profile-actions{
+    position:relative!important;
+    z-index:120!important;
+    pointer-events:auto!important;
+  }
+  .member-profile-page .ec-clean-profile-actions button,
+  .member-profile-page .ec-clean-profile-actions a,
+  .member-profile-page:not(:has(.ec-clean-profile-actions)) .member-profile-actions button,
+  .member-profile-page:not(:has(.ec-clean-profile-actions)) .member-profile-actions a{
+    min-height:46px!important;
+    pointer-events:auto!important;
+    touch-action:manipulation!important;
+  }
 }
