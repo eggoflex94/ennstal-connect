@@ -13,7 +13,10 @@ function ensureCard() {
   const dock = document.querySelector('.ec-right-dock');
   if (!dock) return null;
   let card = dock.querySelector('.ec-friends-newsfeed');
-  if (card) return card;
+  if (card) {
+    card.querySelector('.ec-friends-newsfeed-more')?.remove();
+    return card;
+  }
   card = document.createElement('section');
   card.className = 'ec-friends-newsfeed';
   card.innerHTML = `<div class="ec-friends-newsfeed-head"><div><span>FREUNDE</span><strong>Newsfeed</strong></div><button type="button" class="ec-friends-newsfeed-refresh" aria-label="Newsfeed aktualisieren" title="Aktualisieren">↻</button></div><div class="ec-friends-newsfeed-list"><div class="ec-friends-newsfeed-empty">Newsfeed wird geladen …</div></div>`;
@@ -45,11 +48,7 @@ function resolveProfileTarget(cleanProfile) {
 async function canSeeProfileFeed(profileId) {
   if (!profileId) return false;
   if (profileId === currentUserId) return true;
-  const { data } = await supabase.from('friendships')
-    .select('id')
-    .eq('status','ACCEPTED')
-    .or(`and(requester_id.eq.${currentUserId},receiver_id.eq.${profileId}),and(requester_id.eq.${profileId},receiver_id.eq.${currentUserId})`)
-    .limit(1);
+  const { data } = await supabase.from('friendships').select('id').eq('status','ACCEPTED').or(`and(requester_id.eq.${currentUserId},receiver_id.eq.${profileId}),and(requester_id.eq.${profileId},receiver_id.eq.${currentUserId})`).limit(1);
   return Boolean(data?.length);
 }
 
@@ -58,12 +57,8 @@ async function mountProfileFeed() {
   for (const cleanProfile of cleanProfiles) {
     const { host, profileId } = resolveProfileTarget(cleanProfile);
     if (!host || !profileId) continue;
-
     const existing = host.querySelector(':scope > .ec-profile-friends-newsfeed');
-    if (!(await canSeeProfileFeed(profileId))) {
-      existing?.remove();
-      continue;
-    }
+    if (!(await canSeeProfileFeed(profileId))) { existing?.remove(); continue; }
 
     let section = existing;
     if (!section) {
@@ -72,14 +67,12 @@ async function mountProfileFeed() {
       cleanProfile.insertAdjacentElement('afterend', section);
     }
 
-    const rows = cachedFeed
-      .filter((row) => row.author_id === profileId && row.visibility === 'FRIENDS')
-      .slice(0, 6);
-    const nickname = profileIndex.find((profile) => profile.id === profileId)?.nickname
-      || cleanProfile.querySelector('.ec-clean-profile-main h1')?.textContent?.trim()
-      || 'Dieses Mitglied';
-
-    section.innerHTML = `<div class="ec-profile-newsfeed-head"><span>FREUNDE</span><h2>Newsfeed</h2><p>Aktivitäten, die ${esc(nickname)} mit Freunden teilt.</p></div><div class="ec-profile-newsfeed-list">${rows.length ? rows.map(profileRowMarkup).join('') : '<div class="ec-friends-newsfeed-empty">Noch keine geteilten Aktivitäten.</div>'}</div>`;
+    const ownRows = cachedFeed.filter((row) => row.author_id === profileId && (row.visibility === 'FRIENDS' || row.is_mine)).slice(0, 6);
+    const nickname = profileIndex.find((profile) => profile.id === profileId)?.nickname || cleanProfile.querySelector('.ec-clean-profile-main h1')?.textContent?.trim() || 'Dieses Mitglied';
+    const intro = profileId === currentUserId
+      ? 'Deine Aktivitäten, die du mit Freunden teilst.'
+      : `Aktivitäten, die ${esc(nickname)} mit Freunden teilt.`;
+    section.innerHTML = `<div class="ec-profile-newsfeed-head"><span>FREUNDE</span><h2>Newsfeed</h2><p>${intro}</p></div><div class="ec-profile-newsfeed-list">${ownRows.length ? ownRows.map(profileRowMarkup).join('') : '<div class="ec-friends-newsfeed-empty">Noch keine geteilten Aktivitäten.</div>'}</div>`;
   }
 }
 
@@ -87,7 +80,6 @@ async function refresh() {
   if (!currentUserId) return;
   const card = ensureCard();
   if (!card) return;
-
   const picker = document.querySelector('.ec-region-picker select');
   const slug = picker?.value || localStorage.getItem('ec-active-region');
   const [{ data: regions }, { data: profiles }] = await Promise.all([
@@ -98,28 +90,17 @@ async function refresh() {
   const regionId = (regions || []).find((region) => region.slug === slug)?.id || null;
   const { data, error } = await supabase.rpc('ec_activity_feed', { p_region: regionId });
   const list = card.querySelector('.ec-friends-newsfeed-list');
-  if (error) {
-    list.innerHTML = '<div class="ec-friends-newsfeed-empty">Newsfeed konnte nicht geladen werden.</div>';
-    return;
-  }
-
+  if (error) { list.innerHTML = '<div class="ec-friends-newsfeed-empty">Newsfeed konnte nicht geladen werden.</div>'; return; }
   cachedFeed = data || [];
   const rows = cachedFeed.filter((row) => row.visibility === 'FRIENDS' && !row.is_mine).slice(0, 5);
   list.innerHTML = rows.length ? rows.map(rowMarkup).join('') : '<div class="ec-friends-newsfeed-empty">Noch keine neuen Aktivitäten deiner Freunde.</div>';
   list.querySelectorAll('.ec-friends-newsfeed-row').forEach((button) => {
-    button.onclick = () => {
-      const profileId = button.dataset.profileId;
-      if (profileId) window.dispatchEvent(new CustomEvent('ec:open-profile', { detail:{ profileId } }));
-    };
+    button.onclick = () => { const profileId = button.dataset.profileId; if (profileId) window.dispatchEvent(new CustomEvent('ec:open-profile', { detail:{ profileId } })); };
   });
-
   await mountProfileFeed();
 }
 
-function queueRefresh(delay = 120) {
-  clearTimeout(refreshTimer);
-  refreshTimer = setTimeout(() => void refresh(), delay);
-}
+function queueRefresh(delay = 120) { clearTimeout(refreshTimer); refreshTimer = setTimeout(() => void refresh(), delay); }
 
 async function start() {
   const { data: { user } } = await supabase.auth.getUser();
@@ -139,7 +120,7 @@ window.addEventListener('ec:open-profile', () => queueRefresh(180));
 window.addEventListener('focus', () => queueRefresh(80), { passive:true });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) queueRefresh(80); });
 new MutationObserver(() => {
-  if (document.querySelector('.ec-right-dock') && !document.querySelector('.ec-friends-newsfeed')) ensureCard();
+  if (document.querySelector('.ec-right-dock')) ensureCard();
   if (document.querySelector('.ec-clean-profile')) queueRefresh(100);
 }).observe(document.documentElement, { childList:true, subtree:true });
 
