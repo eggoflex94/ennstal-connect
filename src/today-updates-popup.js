@@ -7,13 +7,12 @@ const UPDATES = [
   ['Handy wie am PC', 'Die vollständige Desktop-Oberfläche bleibt am Smartphone erhalten und ist für Touch, Navigation, Regionen, Mein Bereich und Profilgestaltung abgesichert.'],
   ['Profilbesuche synchronisiert', 'Neue Profilbesuche werden in „Mein Bereich“ automatisch aktualisiert.'],
   ['Mein Bereich überarbeitet', 'Der persönliche Bereich und sein Kopf passen jetzt optisch mit runden Karten zum restlichen Dashboard.'],
-  ['Admin-Forum überregional', 'Das interne Admin-Forum ist nicht mehr an eine einzelne Region gebunden.'],
   ['Community-Schnellstart', 'Mitglieder, Forum, Gruppen und Community-Aktivitäten sind schneller erreichbar.'],
   ['Was ist gerade los?', 'Die Community zeigt aktuelle Events, Profil-Aktivität, Geburtstage und weitere Signale kompakt auf einen Blick.'],
   ['Aktivitäten mit Freunden', 'Du kannst freiwillig teilen, was du gerade machst – standardmäßig nur mit Freunden, auf Wunsch regional oder privat.'],
   ['Events teilen & Erinnerungen', 'Events können als Aktivität geteilt werden. Zusagen und Interesse erscheinen als kommende Erinnerungen.'],
   ['Events auf der Startseite', 'Aktuelle regionale Events stehen jetzt direkt auf der Startseite; der eigene Events-Punkt wurde aus der oberen Leiste entfernt.'],
-  ['Eventverwaltung erweitert', 'Berechtigte Personen können Events weiterhin erstellen, bearbeiten und löschen – inklusive Bild, Schriftart, Schriftgröße, Schriftfarbe und Betonung.']
+  ['Events erweitert', 'Veranstaltungen lassen sich jetzt noch übersichtlicher gestalten – inklusive Bild, Schriftart, Schriftgröße, Schriftfarbe und Betonung.']
 ];
 
 function storageKey(userId) {
