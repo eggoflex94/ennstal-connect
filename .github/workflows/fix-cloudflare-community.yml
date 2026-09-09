@@ -9,6 +9,8 @@ on:
       - "src/community-native-final.css"
       - "src/profile-design-preview-role.css"
       - "src/profile-customization.js"
+      - "src/dashboard-mobile-profile-final.css"
+      - "src/mobile-profile-editor-fix.js"
       - "src/main.jsx"
       - "src/sidebar-reward-progress.js"
       - "src/sidebar-reward-progress.css"
