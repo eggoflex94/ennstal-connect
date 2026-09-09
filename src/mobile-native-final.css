@@ -1,12 +1,26 @@
-@import "./desktop-on-phone.css";
+/* Absolute final mobile interaction layer.
+   Phones use the native viewport and the responsive layout defined by the mobile styles. */
+@media (max-width:900px), (pointer:coarse) {
+  html,body,#root{
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    overflow-x:hidden!important;
+    touch-action:pan-y pinch-zoom!important;
+  }
 
-/* Phones intentionally render the complete desktop interface.
-   This layer only protects native hit-testing; it does not reflow navigation. */
-@media (pointer: coarse) {
-  html,body{
-    min-width:1180px!important;
-    overflow-x:auto!important;
-    touch-action:pan-x pan-y pinch-zoom!important;
+  body{
+    min-width:0!important;
+  }
+
+  .app,
+  .ec-regional-ui,
+  .dashboard-layout,
+  .modern-main,
+  .content-root{
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
   }
 
   .ec-regional-shell{
@@ -36,49 +50,38 @@
     touch-action:auto!important;
   }
 
-  /* Desktop nav stays one row on phones. */
+  /* Mobile navigation must stay inside the viewport and remain horizontally scrollable. */
   .ec-top-nav{
-    display:flex!important;
-    flex-wrap:nowrap!important;
     width:100%!important;
-    min-width:1180px!important;
-    overflow:visible!important;
-    gap:8px!important;
-  }
-  .ec-mobile-nav-rail{
-    display:contents!important;
-  }
-  .ec-top-nav button,
-  .ec-top-nav a{
-    flex:0 0 auto!important;
-    width:auto!important;
+    max-width:100%!important;
     min-width:0!important;
-    white-space:nowrap!important;
+    overflow:visible!important;
   }
+
+  .ec-mobile-nav-rail{
+    min-width:0!important;
+    max-width:100%!important;
+  }
+
   .ec-region-picker{
-    position:static!important;
-    display:flex!important;
-    margin-left:auto!important;
-    width:auto!important;
-    flex:0 0 auto!important;
     pointer-events:auto!important;
   }
+
   .ec-region-picker select{
-    position:static!important;
     opacity:1!important;
     visibility:visible!important;
     pointer-events:auto!important;
     touch-action:auto!important;
     appearance:auto!important;
     -webkit-appearance:menulist!important;
-    min-height:42px!important;
+    min-height:44px!important;
   }
 
-  /* Personal dashboard behaves like a desktop side panel and never blocks
-     the page while closed. */
+  /* Closed personal dashboard may never block controls beneath it. */
   body:not(.ec-dock-open) .ec-right-dock{
     pointer-events:none!important;
     visibility:hidden!important;
+    opacity:0!important;
   }
   body:not(.ec-dock-open) .ec-right-dock *{
     pointer-events:none!important;
@@ -86,6 +89,7 @@
   body.ec-dock-open .ec-right-dock{
     pointer-events:auto!important;
     visibility:visible!important;
+    opacity:1!important;
     overflow-y:auto!important;
     overscroll-behavior:contain!important;
   }
@@ -93,7 +97,7 @@
     pointer-events:auto!important;
   }
 
-  /* Member actions must remain real touch targets. */
+  /* Member actions stay large enough for touch. */
   .member-profile-page button,
   .member-profile-page a,
   .ec-clean-profile-actions button,
@@ -105,8 +109,7 @@
     min-height:44px!important;
   }
 
-  /* Profile editor: the phone still shows the desktop layout, but every
-     native form control gets its own hit area above decorative layers. */
+  /* Profile editor controls must always sit above decorative preview layers. */
   .profile-page-layout,
   .profile-page-layout form,
   .profile-page-layout .profile-form,
@@ -117,6 +120,8 @@
   .my-area-layout form{
     position:relative!important;
     pointer-events:auto!important;
+    min-width:0!important;
+    max-width:100%!important;
   }
 
   .profile-page-layout form,
@@ -141,6 +146,7 @@
     position:relative!important;
     z-index:22!important;
     pointer-events:auto!important;
+    max-width:100%!important;
   }
 
   .profile-page-layout input,
@@ -187,7 +193,6 @@
     pointer-events:auto!important;
   }
 
-  /* Decorative previews may not sit on top of the editor controls. */
   .profile-page-layout::before,
   .profile-page-layout::after,
   .my-area-layout::before,
