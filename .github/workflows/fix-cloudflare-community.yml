@@ -29,6 +29,42 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
+      - name: Apply final member card authority
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          jsx = Path('src/NativeMembersDirectory.jsx').read_text()
+          if '/badge-friendship.svg' not in jsx:
+              raise SystemExit('Friendship badge asset missing from NativeMembersDirectory')
+          css_path = Path('src/community-native-final.css')
+          css = css_path.read_text()
+          marker = '/* FINAL MEMBER CARD AUTHORITY 2026-09-09 */'
+          if marker not in css:
+              css += r'''
+
+/* FINAL MEMBER CARD AUTHORITY 2026-09-09 */
+.native-member-grid{align-items:stretch!important;grid-auto-rows:1fr!important}
+.native-member-card.panel{height:210px!important;min-height:210px!important;max-height:210px!important;margin:0!important;padding:16px!important;border-radius:22px!important;border-width:1px!important;border-style:solid!important;box-shadow:0 10px 26px rgba(15,23,42,.12)!important;overflow:hidden!important;display:flex!important;flex-direction:column!important;justify-content:space-between!important;gap:12px!important}
+.native-member-card.panel.native-member-card--admin{background:linear-gradient(145deg,#8f1025 0%,#5e0716 55%,#150307 100%)!important;color:#fff!important;border-color:#b43a4e!important}
+.native-member-card.panel.native-member-card--supporter{background:linear-gradient(145deg,#d5aa09 0%,#927000 55%,#211900 100%)!important;color:#fff!important;border-color:#e2bd35!important}
+.native-member-card.panel.native-member-card--business{background:linear-gradient(145deg,#176fba 0%,#074d8a 54%,#031a31 100%)!important;color:#fff!important;border-color:#2e8cd2!important}
+.native-member-card.panel.native-member-card--member{background:linear-gradient(145deg,#f7f9fb 0%,#e9eef3 100%)!important;color:#26364c!important;border-color:#d3dde6!important}
+.native-member-card .native-member-main{flex:1!important;align-items:flex-start!important;gap:14px!important}
+.native-member-card .native-member-copy{gap:6px!important;padding-top:2px!important}
+.native-member-card .native-member-copy>strong{font-size:1.08rem!important;font-weight:850!important;text-decoration:none!important}
+.native-member-card .native-member-role-badge{background:transparent!important;border:0!important;padding:0!important;min-height:24px!important;color:inherit!important}
+.native-member-card .native-member-role-badge img{width:24px!important;height:24px!important;filter:none!important}
+.native-member-card .native-member-member-badge{background:rgba(255,255,255,.68)!important;border:1px solid rgba(148,163,184,.25)!important;color:#405168!important;padding:4px 9px!important}
+.native-member-card .native-member-friend-badge{width:30px!important;height:30px!important;min-width:30px!important;min-height:30px!important;padding:3px!important;border-radius:10px!important;background:rgba(255,255,255,.9)!important;border:1px solid rgba(255,255,255,.72)!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;color:transparent!important;font-size:0!important;overflow:hidden!important}
+.native-member-card .native-member-friend-badge img{display:block!important;width:22px!important;height:22px!important;object-fit:contain!important}
+.native-member-card--member .native-member-friend-badge{background:#fff!important;border-color:#d5dee7!important}
+.native-member-card .native-member-footer{margin-top:auto!important;min-height:38px!important;display:flex!important;align-items:flex-end!important}
+.native-member-card .native-member-presence{padding:7px 10px!important;border-radius:12px!important;background:rgba(255,255,255,.92)!important;box-shadow:none!important}
+.native-member-card .native-member-presence b{font-size:.79rem!important}.native-member-card .native-member-presence small{font-size:.67rem!important}
+@media(max-width:620px){.native-member-card.panel{height:190px!important;min-height:190px!important;max-height:190px!important}}
+'''
+              css_path.write_text(css)
+          PY
       - name: Verify native member directory wiring
         run: |
           python3 - <<'PY'
@@ -41,14 +77,14 @@ jobs:
           PY
       - name: Verify source and production build
         run: npm run test:ci
-      - name: Commit verified Cloudflare dist
+      - name: Commit verified source and Cloudflare dist
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add dist
+          git add src/community-native-final.css dist
           if git diff --cached --quiet; then
-            echo "Cloudflare dist is already current"
+            echo "Cloudflare source and dist are already current"
             exit 0
           fi
-          git commit -m "Refresh Cloudflare dist for member directory polish"
+          git commit -m "Polish member cards and enforce role colors"
           git push origin HEAD:main
