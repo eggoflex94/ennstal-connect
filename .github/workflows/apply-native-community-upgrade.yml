@@ -1,0 +1,45 @@
+name: Apply Native Community Upgrade
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/apply-native-community-upgrade.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: native-community-upgrade
+  cancel-in-progress: false
+
+jobs:
+  apply-upgrade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Apply native React community upgrade
+        run: python3 scripts/native_community_upgrade_finish.py
+      - name: Verify upgraded source
+        run: npm run test:ci
+      - name: Commit verified community improvements
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/App.jsx src/main.jsx src/regional-shell.js src/community-native-editor.css test/community-core-audit.test.mjs
+          if git diff --cached --quiet; then
+            echo "Native community upgrade is already applied"
+            exit 0
+          fi
+          git commit -m "Improve native community experience"
+          git pull --rebase origin main
+          git push origin HEAD:main
