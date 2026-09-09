@@ -1,14 +1,20 @@
 const LEGACY_SLUG='salzkammergut';
+const NEW_SLUG='ueberregional';
 const NEW_LABEL='Überregional';
 
 function normalizePicker(){
   document.querySelectorAll('.ec-region-picker select').forEach(select=>{
-    [...select.options].forEach(option=>{
-      if(option.value===LEGACY_SLUG){
-        option.textContent=NEW_LABEL;
-        option.dataset.ecOverregionalAlias='1';
-      }
-    });
+    const legacy=[...select.options].find(option=>option.value===LEGACY_SLUG);
+    const overregional=[...select.options].find(option=>option.value===NEW_SLUG);
+    if(legacy&&overregional){
+      if(select.value===LEGACY_SLUG)select.value=NEW_SLUG;
+      legacy.remove();
+      return;
+    }
+    if(legacy){
+      legacy.textContent=NEW_LABEL;
+      legacy.dataset.ecOverregionalAlias='1';
+    }
   });
 }
 
