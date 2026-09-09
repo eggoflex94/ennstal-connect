@@ -11,7 +11,7 @@ const isAdminMember = (member) => {
   const knownGlobalAdmin = normalized(member?.nickname) === "ROLAND";
   return explicitAdmin || flags || knownGlobalAdmin;
 };
-const roleLabel = (member) => member?.role === "HEAD_ADMIN" ? "Hauptadmin" : isAdminMember(member) ? "Community Admin" : member?.role === "SUPPORTER" ? "Supporter" : "Mitglied";
+const roleLabel = (member) => member?.role === "HEAD_ADMIN" ? "Hauptadmin" : isAdminMember(member) ? "Global Admin" : member?.role === "SUPPORTER" ? "Supporter" : "Mitglied";
 const displayName = (member) => member?.nickname || [member?.first_name, member?.last_name].filter(Boolean).join(" ") || "Mitglied";
 const isBusiness = (member) => member?.account_badge === "BUSINESS";
 const roleStarSrc = (member) => isAdminMember(member) ? "/role-star-red.svg" : member?.role === "SUPPORTER" ? "/supporter-star.svg" : isBusiness(member) ? "/role-star-blue.svg" : null;
