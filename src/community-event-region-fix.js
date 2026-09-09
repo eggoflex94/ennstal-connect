@@ -163,14 +163,15 @@ async function createRegionalEvent(form) {
     uploadedPath = null;
 
     const selectedRegion = regionCache.find((region) => region.id === created?.region_id) || regionCache.find((region) => region.id === regionId);
-    if (selectedRegion) {
-      localStorage.setItem('ec-active-region', selectedRegion.slug);
-      window.dispatchEvent(new CustomEvent('ec:region-change', { detail: selectedRegion }));
-    }
+    const selectedId = selectedRegion?.id || regionId;
     form.reset();
-    if (selectedRegion) form.querySelector('[name="ec_event_region"]')?.setAttribute('value', selectedRegion.id);
+    const regionSelect = form.querySelector('[name="ec_event_region"]');
+    if (regionSelect) regionSelect.value = selectedId;
     toast(`Veranstaltung wurde für ${selectedRegion?.name || 'die gewählte Region'} veröffentlicht.`, true);
-    setTimeout(() => window.location.reload(), 650);
+
+    // Creating an event for another region must never change the member's active region.
+    // The regional event authority refreshes the visible region independently.
+    window.dispatchEvent(new CustomEvent('ec:regional-events-refresh', { detail: { regionId: selectedId } }));
   } catch (error) {
     if (uploadedPath) {
       try { await supabase.storage.from('profile-avatars').remove([uploadedPath]); } catch {}
