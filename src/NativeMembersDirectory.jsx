@@ -86,7 +86,7 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
               <span className="native-member-badges">
                 {star && <span className="native-member-role-badge"><img src={star} alt="" aria-hidden="true"/>{isBusiness(member) && !isAdminMember(member) && member.role !== "SUPPORTER" ? "Unternehmer" : roleLabel(member)}</span>}
                 {!star && <span className="native-member-member-badge">Mitglied</span>}
-                {isFriend && <span className="native-member-friend-badge" title="Freund" aria-label="Freund"><img src="/badge-friendship.svg" alt="" aria-hidden="true" /></span>}
+                {isFriend && <span className="native-member-friend-badge" title="Freund" aria-label="Freund"><img src="/badge-friendship.png" alt="" aria-hidden="true" /></span>}
               </span>
               <em>{region?.name || "Region nicht angegeben"}</em>
             </span>
