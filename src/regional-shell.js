@@ -2,7 +2,7 @@ import { supabase } from './supabaseClient';
 
 const TOP_LINKS=[['⌂','Startseite','home'],['♟','Mitglieder','members'],['▤','Forum','forum'],['●','Gruppen','groups'],['▣','Events','events'],['▦','Neuigkeiten','news'],['▥','Community','community']];
 const DOCK_LINKS=[['●','Mein Profil','profile'],['✉','Nachrichten','messages'],['♥','Freunde','friends'],['◇','Anfragen','requests'],['⊘','Blockiert','blocked'],['⚙','Einstellungen','profile'],['?','Hilfe','help']];
-const FALLBACK_REGIONS=[{slug:'ennstal',name:'Ennstal'},{slug:'leoben-bruck-muerzzuschlag',name:'Leoben – Bruck – Mürzzuschlag'},{slug:'salzkammergut',name:'Salzkammergut'},{slug:'ueberregional',name:'Überregional'}];
+const FALLBACK_REGIONS=[{slug:'ennstal',name:'Ennstal'},{slug:'leoben-bruck-muerzzuschlag',name:'Leoben – Bruck – Mürzzuschlag'},{slug:'ueberregional',name:'Überregional'}];
 let regions=FALLBACK_REGIONS,activeRegion=null,regionalAssignments=[],currentProfile=null,profiles=[],showAllMembers=false;
 
 const pageNames={home:['Startseite'],members:['Mitglieder'],forum:['Forum'],groups:['Gruppen'],events:['Events','Veranstaltungen'],news:['Neuigkeiten'],community:['Community'],ads:['Community'],profile:['Mein Profil','Profil gestalten'],messages:['Nachrichten'],friends:['Freunde'],requests:['Anfragen'],blocked:['Blockiert'],help:['Hilfe'],admin:['Admin-Zentrale','Admin Zentrale'],adminTools:['Admin Tools'],legal:['Rechtliche Beweissicherung']};
