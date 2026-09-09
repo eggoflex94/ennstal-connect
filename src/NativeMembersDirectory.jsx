@@ -46,12 +46,16 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
       {visible.map((member) => {
         const region = regionById[member.home_region_id];
         const isFriend = acceptedFriendIds.has(member.id);
-        return <article className="native-member-card panel" key={member.id}>
+        const isSelf = member.id === profile?.id;
+        return <article className={`native-member-card panel${isSelf ? " is-self" : ""}`} key={member.id}>
           <button type="button" className="native-member-main" onClick={() => onOpen?.(member)}>
             <span className="native-member-avatar-wrap"><img src={member.avatar_url || DEFAULT_AVATAR} alt="" /><i className={member.is_online ? "online" : "offline"} /></span>
             <span className="native-member-copy"><strong>{displayName(member)}</strong><small>{roleLabel(member.role)}{isFriend ? " · Freund" : ""}</small><em>{region?.name || "Region nicht angegeben"}</em></span>
           </button>
-          {member.id !== profile?.id && <div className="native-member-actions"><button type="button" className="secondary-button" onClick={() => onOpen?.(member)}>Profil</button><button type="button" className="primary-button" onClick={() => onMessage?.(member)}>Nachricht</button></div>}
+          <div className={`native-member-actions${isSelf ? " native-member-actions-self" : ""}`}>
+            <button type="button" className="secondary-button" onClick={() => onOpen?.(member)}>{isSelf ? "Mein Profil" : "Profil"}</button>
+            {!isSelf && <button type="button" className="primary-button" onClick={() => onMessage?.(member)}>Nachricht</button>}
+          </div>
         </article>;
       })}
       {!visible.length && <div className="empty-card">Keine Mitglieder für diese Auswahl gefunden.</div>}
