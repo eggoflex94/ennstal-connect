@@ -36,6 +36,7 @@ import "./regional-shell.js";
 import "./profile-visits-realtime.js";
 import "./navigation-stability.js";
 import "./admin-forum-cross-region.js";
+import "./community-engagement-upgrade.js";
 import "./clean-profile-runtime.js";
 import "./clean-layout.css";
 import "./clean-components.css";
@@ -138,6 +139,9 @@ import "./mobile-native-final.css";
 
 /* Absolute final visual authority for the rounded personal dashboard header. */
 import "./dashboard-header-unified.css";
+
+/* Final community hierarchy and quick-entry polish. */
+import "./community-engagement-upgrade.css";
 
 class AppErrorBoundary extends React.Component {
   constructor(props) {
