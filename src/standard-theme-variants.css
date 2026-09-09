@@ -31,6 +31,29 @@ html[data-ec-theme="blue"] .ec-region-status strong{color:#075fd4!important}
 .native-member-friend-badge img,.modern-main article.member-card .ec-card-badge-friend img,.modern-main article.member-card .ec-card-badge-friend .ec-card-badge-friend-img{width:20px!important;height:20px!important;min-width:20px!important;min-height:20px!important;max-width:20px!important;max-height:20px!important;object-fit:contain!important;display:block!important;opacity:1!important;visibility:visible!important;filter:none!important}
 .member-profile-actions .ec-profile-friendship-accepted::before,.profile-actions .ec-profile-friendship-accepted::before{background-color:#111827!important;background-image:url('/badge-friendship.png')!important;background-repeat:no-repeat!important;background-position:center!important;background-size:20px 20px!important;border:2px solid #fff!important;border-radius:999px!important;box-shadow:0 0 0 1px rgba(15,23,42,.28),0 3px 9px rgba(0,0,0,.3)!important}
 
+/* COMMUNITY LEVEL: visible motivation and layout rewards. */
+.layout-rewards{display:grid!important;gap:12px!important}
+.ec-activity-progress{display:grid!important;gap:10px!important;padding:14px!important;border:1px solid #d9e2ea!important;border-radius:18px!important;background:linear-gradient(145deg,#fbfdff 0%,#f2f6f9 100%)!important;box-shadow:0 7px 18px rgba(31,50,72,.07)!important}
+.ec-activity-progress-head{display:flex!important;align-items:center!important;gap:10px!important;flex-wrap:wrap!important}
+.ec-activity-progress-head>span{font-size:.72rem!important;font-weight:900!important;letter-spacing:.1em!important;color:#f05a1a!important}
+.ec-activity-progress-head>strong{font-size:1.04rem!important;color:#26384f!important}
+.ec-activity-progress-head>b{margin-left:auto!important;font-size:.82rem!important;color:#60748b!important}
+.ec-activity-progress-bar{height:10px!important;border-radius:999px!important;background:#dfe7ee!important;overflow:hidden!important}
+.ec-activity-progress-bar>i{display:block!important;height:100%!important;border-radius:inherit!important;background:linear-gradient(90deg,#ff6b25,#ff4357)!important;transition:width .25s ease!important}
+.layout-theme-blue .ec-activity-progress-bar>i{background:linear-gradient(90deg,#2b95ff,#075fd4)!important}
+.ec-activity-progress>p{margin:0!important;color:#53677d!important;font-size:.9rem!important;line-height:1.4!important}
+.ec-activity-reward-chips{display:flex!important;gap:8px!important;flex-wrap:wrap!important}
+.ec-activity-reward-chips span{display:inline-flex!important;align-items:center!important;gap:5px!important;padding:6px 9px!important;border-radius:999px!important;font-size:.78rem!important;font-weight:800!important}
+.ec-activity-reward-chips .is-unlocked{background:#eaf8ef!important;color:#187447!important;border:1px solid #bfe7cd!important}
+.ec-activity-reward-chips .is-locked{background:#eef2f6!important;color:#68798c!important;border:1px solid #d8e0e7!important}
+.ec-activity-breakdown{border-top:1px solid #dfe6ec!important;padding-top:8px!important}
+.ec-activity-breakdown summary{cursor:pointer!important;font-size:.84rem!important;font-weight:800!important;color:#31475f!important}
+.ec-activity-breakdown p{margin:8px 0!important;font-size:.82rem!important;line-height:1.4!important;color:#687b91!important}
+.ec-activity-breakdown>div{display:flex!important;gap:6px!important;flex-wrap:wrap!important}
+.ec-activity-breakdown>div>span{display:inline-flex!important;align-items:center!important;gap:4px!important;padding:5px 7px!important;border-radius:10px!important;background:#fff!important;border:1px solid #dce4eb!important;font-size:.75rem!important;color:#52667d!important}
+.ec-activity-breakdown b{color:#26384f!important}
+.layout-rewards select[name="profile_layout"] option:disabled{color:#8b98a7!important;background:#f1f4f7!important}
+
 /* EVENTS: use the same compact framed-card language as the member directory. */
 .community-hub .community-hub-grid{grid-template-columns:minmax(0,1fr)!important;gap:18px!important}
 .community-hub .ec-regional-events-panel{grid-column:1/-1!important;width:100%!important;min-width:0!important;padding:18px!important;border-radius:22px!important;overflow:visible!important}
@@ -83,6 +106,7 @@ html[data-ec-theme="blue"] .ec-region-status strong{color:#075fd4!important}
   .ec-regional-event-row.has-image{grid-template-columns:72px minmax(0,1fr)!important}
   .ec-regional-event-row>img{width:72px!important;height:72px!important;max-width:72px!important;max-height:72px!important}
   .ec-regional-events-context>small{margin-left:0!important;width:100%!important}
+  .ec-activity-progress-head>b{width:100%!important;margin-left:0!important}
 }
 
 @media(max-width:900px){.native-member-friend-badge,.modern-main article.member-card .ec-card-badge-friend{width:24px!important;height:24px!important;min-width:24px!important;min-height:24px!important}.native-member-friend-badge img,.modern-main article.member-card .ec-card-badge-friend img{width:18px!important;height:18px!important;min-width:18px!important;min-height:18px!important;max-width:18px!important;max-height:18px!important}}
