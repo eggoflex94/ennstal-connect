@@ -25,14 +25,14 @@
   .ec-dock-toggle,
   .ec-right-dock,
   .ec-right-dock *,
-  button,a,input,textarea,select,label,summary,[role="button"]{
+  button,a,input,textarea,select,label,summary,[role="button"],[contenteditable="true"]{
     pointer-events:auto!important;
   }
 
   button,a,[role="button"]{
     touch-action:manipulation!important;
   }
-  input,textarea,select,label{
+  input,textarea,select,label,[contenteditable="true"]{
     touch-action:auto!important;
   }
 
@@ -61,36 +61,137 @@
     margin-left:auto!important;
     width:auto!important;
     flex:0 0 auto!important;
+    pointer-events:auto!important;
   }
   .ec-region-picker select{
     position:static!important;
     opacity:1!important;
     visibility:visible!important;
     pointer-events:auto!important;
+    touch-action:auto!important;
     appearance:auto!important;
     -webkit-appearance:menulist!important;
+    min-height:42px!important;
   }
 
   /* Personal dashboard behaves like a desktop side panel and never blocks
      the page while closed. */
   body:not(.ec-dock-open) .ec-right-dock{
     pointer-events:none!important;
+    visibility:hidden!important;
   }
   body:not(.ec-dock-open) .ec-right-dock *{
     pointer-events:none!important;
   }
-  body.ec-dock-open .ec-right-dock,
+  body.ec-dock-open .ec-right-dock{
+    pointer-events:auto!important;
+    visibility:visible!important;
+    overflow-y:auto!important;
+    overscroll-behavior:contain!important;
+  }
   body.ec-dock-open .ec-right-dock *{
     pointer-events:auto!important;
   }
 
+  /* Member actions must remain real touch targets. */
   .member-profile-page button,
-  .profile-page-layout button,
+  .member-profile-page a,
+  .ec-clean-profile-actions button,
+  .ec-clean-profile-actions a{
+    pointer-events:auto!important;
+    touch-action:manipulation!important;
+    position:relative!important;
+    z-index:4!important;
+    min-height:44px!important;
+  }
+
+  /* Profile editor: the phone still shows the desktop layout, but every
+     native form control gets its own hit area above decorative layers. */
+  .profile-page-layout,
+  .profile-page-layout form,
+  .profile-page-layout .profile-form,
+  .profile-page-layout fieldset,
+  .profile-page-layout section,
+  .profile-page-layout .panel,
+  .my-area-layout,
+  .my-area-layout form{
+    position:relative!important;
+    pointer-events:auto!important;
+  }
+
+  .profile-page-layout form,
+  .profile-page-layout .profile-form,
+  .my-area-layout form{
+    z-index:20!important;
+    overflow:visible!important;
+  }
+
+  .profile-page-layout label,
   .profile-page-layout input,
   .profile-page-layout textarea,
-  .profile-page-layout select{
-    pointer-events:auto!important;
+  .profile-page-layout select,
+  .profile-page-layout button,
+  .profile-page-layout [role="button"],
+  .profile-page-layout [contenteditable="true"],
+  .my-area-layout form label,
+  .my-area-layout form input,
+  .my-area-layout form textarea,
+  .my-area-layout form select,
+  .my-area-layout form button{
     position:relative!important;
-    z-index:2!important;
+    z-index:22!important;
+    pointer-events:auto!important;
+  }
+
+  .profile-page-layout input,
+  .profile-page-layout select,
+  .profile-page-layout button,
+  .my-area-layout form input,
+  .my-area-layout form select,
+  .my-area-layout form button{
+    min-height:44px!important;
+  }
+
+  .profile-page-layout textarea,
+  .my-area-layout form textarea{
+    min-height:110px!important;
+    resize:vertical!important;
+  }
+
+  .profile-page-layout input[type="file"],
+  .my-area-layout form input[type="file"]{
+    min-height:48px!important;
+    opacity:1!important;
+    visibility:visible!important;
+    touch-action:auto!important;
+  }
+
+  .profile-page-layout input[type="color"],
+  .my-area-layout form input[type="color"]{
+    min-width:52px!important;
+    min-height:44px!important;
+    padding:3px!important;
+  }
+
+  .profile-page-layout select,
+  .my-area-layout form select{
+    appearance:auto!important;
+    -webkit-appearance:menulist!important;
+    touch-action:auto!important;
+  }
+
+  .profile-customization-actions,
+  .profile-media-delete-actions{
+    position:relative!important;
+    z-index:24!important;
+    pointer-events:auto!important;
+  }
+
+  /* Decorative previews may not sit on top of the editor controls. */
+  .profile-page-layout::before,
+  .profile-page-layout::after,
+  .my-area-layout::before,
+  .my-area-layout::after{
+    pointer-events:none!important;
   }
 }
