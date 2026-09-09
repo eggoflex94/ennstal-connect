@@ -5,7 +5,6 @@ let regions = [];
 let viewer = null;
 let requestVersion = 0;
 let scheduled = null;
-let observerQueued = false;
 
 const norm = (value) => String(value || '').replace(/\s+/g, ' ').trim().toLowerCase();
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
@@ -109,7 +108,7 @@ async function deleteEvent(event) {
 function buildEventRow(event, rsvpStatus) {
   const state = eventState(event);
   const article = document.createElement('article');
-  article.className = `ec-regional-event-row is-${state.key}`;
+  article.className = `ec-regional-event-row is-${state.key}${event.image_url ? ' has-image' : ''}`;
   article.dataset.eventId = event.id;
 
   if (event.image_url) {
@@ -249,26 +248,22 @@ function schedule(delay = 40) {
   scheduled = setTimeout(() => void refresh(), delay);
 }
 
+function scheduleAfterNavigation() {
+  schedule(40);
+  setTimeout(() => schedule(0), 180);
+}
+
 window.addEventListener('ec:region-change', (event) => {
   activeRegionHint = event.detail || null;
   if (activeRegionHint?.slug) {
     document.documentElement.dataset.ecRegion = activeRegionHint.slug;
     renderCached(activeRegionHint);
   }
-  schedule(0);
+  scheduleAfterNavigation();
 });
+window.addEventListener('ec:navigate', scheduleAfterNavigation);
 window.addEventListener('ec:regional-events-refresh', () => schedule(0));
 window.addEventListener('focus', () => schedule(80));
 
-const observer = new MutationObserver(() => {
-  if (observerQueued) return;
-  observerQueued = true;
-  requestAnimationFrame(() => {
-    observerQueued = false;
-    if (eventPanel() || overviewPanel()) schedule(80);
-  });
-});
-observer.observe(document.documentElement, { childList: true, subtree: true });
-
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => schedule(0), { once: true });
-else schedule(0);
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', scheduleAfterNavigation, { once: true });
+else scheduleAfterNavigation();
