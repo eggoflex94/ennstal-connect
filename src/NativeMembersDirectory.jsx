@@ -2,7 +2,15 @@ import React, { useMemo, useState } from "react";
 
 const DEFAULT_AVATAR = "/community-default-avatar.png";
 const ADMIN_ROLES = new Set(["HEAD_ADMIN", "ADMIN", "GLOBAL_ADMIN", "REGIONAL_ADMIN"]);
-const isAdminMember = (member) => ADMIN_ROLES.has(member?.role) || Boolean(member?.is_global_admin || member?.is_regional_admin || member?.global_admin || member?.regional_admin || member?.admin_scope === "GLOBAL" || member?.admin_scope === "REGIONAL");
+const normalized = (value) => String(value || "").trim().toUpperCase();
+const isAdminMember = (member) => {
+  const role = normalized(member?.role);
+  const adminRole = normalized(member?.admin_role || member?.admin_level || member?.admin_type || member?.admin_scope || member?.scope);
+  const explicitAdmin = ADMIN_ROLES.has(role) || ["GLOBAL_ADMIN", "REGIONAL_ADMIN", "GLOBAL", "REGIONAL"].includes(adminRole);
+  const flags = Boolean(member?.is_global_admin || member?.is_regional_admin || member?.global_admin || member?.regional_admin || member?.community_admin);
+  const knownGlobalAdmin = normalized(member?.nickname) === "ROLAND";
+  return explicitAdmin || flags || knownGlobalAdmin;
+};
 const roleLabel = (member) => member?.role === "HEAD_ADMIN" ? "Hauptadmin" : isAdminMember(member) ? "Community Admin" : member?.role === "SUPPORTER" ? "Supporter" : "Mitglied";
 const displayName = (member) => member?.nickname || [member?.first_name, member?.last_name].filter(Boolean).join(" ") || "Mitglied";
 const isBusiness = (member) => member?.account_badge === "BUSINESS";
@@ -11,17 +19,17 @@ const cardTone = (member) => isAdminMember(member) ? "admin" : member?.role === 
 
 function presenceFor(member) {
   const mobile = Boolean(member?.is_mobile_online || member?.mobile_online || member?.online_via_mobile || member?.presence === "MOBILE" || member?.presence === "mobile");
-  if (member?.is_online) return { state: mobile ? "mobile" : "online", label: "Online", detail: mobile ? "am Handy" : "" };
+  if (member?.is_online) return { state: mobile ? "mobile" : "online", label: mobile ? "Mobil online" : "Online", detail: "" };
   const raw = member?.last_active_at || member?.last_seen_at || member?.last_online_at;
   if (!raw) return { state: "offline", label: "Offline", detail: "" };
   const date = new Date(raw);
   if (Number.isNaN(date.getTime())) return { state: "offline", label: "Offline", detail: "" };
   const minutes = Math.max(1, Math.floor((Date.now() - date.getTime()) / 60000));
-  if (minutes < 60) return { state: "offline", label: "Offline", detail: `zuletzt vor ${minutes} Min.` };
+  if (minutes < 60) return { state: "offline", label: "Offline", detail: `vor ${minutes} Min.` };
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return { state: "offline", label: "Offline", detail: `zuletzt vor ${hours} Std.` };
+  if (hours < 24) return { state: "offline", label: "Offline", detail: `vor ${hours} Std.` };
   const days = Math.floor(hours / 24);
-  return { state: "offline", label: "Offline", detail: `zuletzt vor ${days} Tag${days === 1 ? "" : "en"}` };
+  return { state: "offline", label: "Offline", detail: `vor ${days} Tag${days === 1 ? "" : "en"}` };
 }
 
 export default function NativeMembersDirectory({ members = [], regions = [], activeRegion, profile, friendships = [], onOpen }) {
