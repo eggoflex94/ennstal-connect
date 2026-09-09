@@ -93,6 +93,7 @@ import "./home-next-event-region-final.css";
 import "./profile-action-final-authority.css";
 import "./friendship-badge-profile.css";
 import "./friendship-badge-profile.js";
+import "./friendship-badge-visibility.css";
 import "./profile-image-upload-fix.js";
 import "./profile-photo-upload-fix.js";
 import "./community-event-region-fix.js";
@@ -113,6 +114,9 @@ import "./community-mobile-final.css";
 import "./mobile-forum-news-admin-final.css";
 import "./mobile-visibility-final.css";
 import "./mobile-nav-runtime.js";
+
+import "./home-responsibilities-fixed.css";
+import "./home-responsibilities-fixed.js";
 
 /* Last visual authority for event rows so controls never collapse into vertical text. */
 import "./community-event-card-polish.css";
