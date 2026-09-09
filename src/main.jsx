@@ -40,6 +40,7 @@ import "./admin-forum-cross-region.js";
 import "./community-engagement-upgrade.js";
 import "./home-social-events.js";
 import "./event-editor-enhancement.js";
+import "./today-updates-popup.js";
 import "./clean-profile-runtime.js";
 import "./clean-layout.css";
 import "./clean-components.css";
@@ -149,6 +150,9 @@ import "./community-engagement-upgrade.css";
 /* Friend activities, reminders and event administration on the home page. */
 import "./home-social-events.css";
 import "./event-editor-enhancement.css";
+
+/* One-time overview shown after the next explicit login. */
+import "./today-updates-popup.css";
 
 class AppErrorBoundary extends React.Component {
   constructor(props) {
