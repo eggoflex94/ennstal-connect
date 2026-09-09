@@ -7,6 +7,7 @@ const THEMES = {
 const DEFAULT_LOGO = '/ennstal-connect-wordmark.svg';
 const LEGACY_LAYOUTS = new Set(['alpine','aurora','ocean','slate','ember','redwood','lavender','midnight','sunrise','neon']);
 const LEVEL_FLOORS = { Neu: 0, Aktiv: 10, Verbunden: 30, Engagiert: 75, 'Community-Profi': 150, Stammmitglied: 300 };
+const PRESTIGE_FLOORS = { Bronze: 300, Silber: 450, Gold: 650, Platin: 900 };
 const COMPONENT_LABELS = {
   online: 'Aktive Onlinezeit',
   forum_posts: 'Forum-Beiträge',
@@ -55,11 +56,12 @@ function normalizeLayoutSelect(select) {
 
 function rewardText(state) {
   if (!state) return 'Aktivitätsfortschritt wird geladen …';
-  if (state.privileged) return 'Deine Rolle schaltet Connect Rot und Connect Blau sofort frei. Dein Community-Level steigt trotzdem weiter.';
   const score = Number(state.score || 0);
   if (!state.red_unlocked) return `Noch ${Math.max(0, 30 - score)} Punkte bis Connect Rot.`;
   if (!state.blue_unlocked) return `Connect Rot ist frei. Noch ${Math.max(0, 150 - score)} Punkte bis Connect Blau.`;
-  return 'Connect Rot und Connect Blau sind freigeschaltet.';
+  if (score < 300) return `Rot und Blau sind frei. Noch ${300 - score} Punkte bis Prestige Bronze.`;
+  if (state.prestige_next_score == null) return 'Prestige Platin erreicht. Deine Aktivität bleibt weiterhin sichtbar.';
+  return `Prestige ${state.prestige}. Noch ${Math.max(0, Number(state.prestige_next_score) - score)} Punkte bis zur nächsten Prestige-Stufe.`;
 }
 
 function progressPercent(state) {
@@ -68,6 +70,15 @@ function progressPercent(state) {
   const next = state.next_score == null ? null : Number(state.next_score);
   if (!next) return 100;
   const floor = Number(LEVEL_FLOORS[state.level] ?? 0);
+  return Math.max(0, Math.min(100, Math.round(((score - floor) / Math.max(1, next - floor)) * 100)));
+}
+
+function prestigePercent(state) {
+  if (!state) return 0;
+  const score = Number(state.score || 0);
+  const next = state.prestige_next_score == null ? null : Number(state.prestige_next_score);
+  if (!next) return 100;
+  const floor = Number(state.prestige ? PRESTIGE_FLOORS[state.prestige] : 300);
   return Math.max(0, Math.min(100, Math.round(((score - floor) / Math.max(1, next - floor)) * 100)));
 }
 
@@ -88,21 +99,26 @@ function renderProgress(section) {
   const score = Number(progress.score || 0);
   const next = progress.next_score == null ? null : Number(progress.next_score);
   const components = Object.entries(progress.components || {}).filter(([,points]) => Number(points || 0) > 0);
+  const prestigeLabel = progress.prestige ? `Prestige ${progress.prestige}` : 'Prestige ab 300 Punkten';
+  const prestigeNext = progress.prestige_next_score == null ? 'höchste Prestige-Stufe' : `nächste Stufe bei ${Number(progress.prestige_next_score)}`;
   card.innerHTML = `
     <div class="ec-activity-progress-head">
       <span>COMMUNITY-LEVEL</span>
       <strong>${String(progress.level || 'Neu')}</strong>
-      <b>${score} Punkte${next ? ` · nächstes Level bei ${next}` : ' · höchste Stufe'}</b>
+      <b>${score} Punkte${next ? ` · nächstes Level bei ${next}` : ' · Level abgeschlossen'}</b>
     </div>
     <div class="ec-activity-progress-bar" aria-label="Fortschritt zum nächsten Community-Level"><i style="width:${progressPercent(progress)}%"></i></div>
+    <div class="ec-activity-prestige-head"><span>${prestigeLabel}</span><b>${prestigeNext}</b></div>
+    <div class="ec-activity-progress-bar ec-activity-prestige-bar" aria-label="Prestige-Fortschritt"><i style="width:${prestigePercent(progress)}%"></i></div>
     <p>${rewardText(progress)}</p>
     <div class="ec-activity-reward-chips">
       <span class="${progress.red_unlocked ? 'is-unlocked' : 'is-locked'}">${progress.red_unlocked ? '✓' : '🔒'} Connect Rot</span>
       <span class="${progress.blue_unlocked ? 'is-unlocked' : 'is-locked'}">${progress.blue_unlocked ? '✓' : '🔒'} Connect Blau</span>
+      ${progress.prestige ? `<span class="is-prestige">★ ${progress.prestige}</span>` : ''}
     </div>
     <details class="ec-activity-breakdown">
       <summary>Wie entstehen meine Punkte?</summary>
-      <p>Aktive Onlinezeit zählt bewusst langsam. Beiträge, Antworten, Freundschaften, Gruppen, Events und regionale Community-Aktivität zählen stärker.</p>
+      <p>Aktive Onlinezeit zählt langsam weiter. Beiträge, Antworten, Freundschaften, Gruppen, Events und regionale Community-Aktivität zählen stärker. Ab 300 Punkten beginnen die Prestige-Stufen Bronze, Silber, Gold und Platin.</p>
       <div>${components.map(([key,points]) => `<span><b>+${Number(points)}</b> ${COMPONENT_LABELS[key] || key}</span>`).join('')}</div>
     </details>`;
 }
@@ -113,7 +129,7 @@ function normalizeLayoutControls() {
     const heading = section.querySelector('h3');
     const copy = section.querySelector('p');
     if (heading) heading.textContent = 'Dein Layout';
-    if (copy && !copy.closest('.ec-activity-progress')) copy.textContent = 'Der Aufbau bleibt immer gleich. Neue Farbdesigns schaltest du durch echte Community-Aktivität frei.';
+    if (copy && !copy.closest('.ec-activity-progress')) copy.textContent = 'Der Aufbau bleibt immer gleich. Neue Farbdesigns und Prestige-Stufen schaltest du durch echte Community-Aktivität frei.';
     renderProgress(section);
   });
 }
