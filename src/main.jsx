@@ -87,7 +87,6 @@ import "./home-dashboard-modern-buttons.js";
 
 import "./community-native-final.css";
 
-/* The next regional event will be rendered natively in React. Do not mutate React-owned DOM here. */
 import "./home-next-event-region-final.css";
 
 import "./profile-action-final-authority.css";
@@ -97,6 +96,8 @@ import "./friendship-badge-visibility.css";
 import "./profile-image-upload-fix.js";
 import "./profile-photo-upload-fix.js";
 import "./community-event-region-fix.js";
+import "./regional-events-authority.css";
+import "./regional-events-authority.js";
 
 import "./community-runtime-stability.css";
 import "./community-runtime-stability.js";
