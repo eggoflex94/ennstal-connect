@@ -6,11 +6,6 @@ on:
       - main
     paths:
       - ".github/workflows/standard-three-themes.yml"
-      - "scripts/apply-standard-themes.py"
-      - "src/standard-theme-runtime.js"
-      - "src/standard-theme-variants.css"
-      - "public/ennstal-connect-wordmark-red.svg"
-      - "public/ennstal-connect-wordmark-blue.svg"
 
 permissions:
   contents: write
