@@ -1,49 +1,151 @@
-/* Role-aware profile design preview. Mirrors the member directory colour language. */
+/* Role-aware profile design preview. Mirrors the live member directory card language. */
 .my-area-layout .my-profile-card{
   position:relative!important;
   overflow:hidden!important;
-  border-radius:18px!important;
-  border:1px solid rgba(255,255,255,.18)!important;
+  width:100%!important;
+  min-height:200px!important;
+  max-height:200px!important;
+  padding:16px!important;
+  border-radius:22px!important;
+  border:1px solid transparent!important;
+  box-shadow:0 10px 26px rgba(15,23,42,.12)!important;
+  display:grid!important;
+  grid-template-columns:70px minmax(0,1fr)!important;
+  grid-template-rows:auto auto 1fr auto!important;
+  column-gap:14px!important;
+  row-gap:6px!important;
+  align-items:start!important;
   color:#fff!important;
-  box-shadow:0 16px 34px rgba(24,43,58,.14)!important;
 }
 .my-area-layout .my-profile-card.head-admin,
 .my-area-layout .my-profile-card.admin{
-  background:linear-gradient(150deg,#b11834 0%,#8b1027 44%,#650a1c 100%)!important;
-  border-color:#d83650!important;
-  box-shadow:0 16px 36px rgba(145,15,40,.24)!important;
+  background:linear-gradient(145deg,#8f1025 0%,#5e0716 55%,#150307 100%)!important;
+  border-color:#b43a4e!important;
 }
 .my-area-layout .my-profile-card.supporter{
-  background:linear-gradient(145deg,#ffe537 0%,#d6aa00 28%,#806000 58%,#241b00 82%,#050505 100%)!important;
-  border-color:#ffd400!important;
-  color:#111!important;
+  background:linear-gradient(145deg,#d5aa09 0%,#927000 55%,#211900 100%)!important;
+  border-color:#e2bd35!important;
+  color:#fff!important;
 }
 .my-area-layout .my-profile-card.business{
-  background:linear-gradient(150deg,#177db1 0%,#0d5d8a 48%,#0a456b 100%)!important;
-  border-color:#2c96cf!important;
-  box-shadow:0 16px 36px rgba(14,91,134,.22)!important;
+  background:linear-gradient(145deg,#176fba 0%,#074d8a 54%,#031a31 100%)!important;
+  border-color:#2e8cd2!important;
 }
 .my-area-layout .my-profile-card.member{
-  background:linear-gradient(150deg,#42586b 0%,#2c4051 48%,#1d2f3d 100%)!important;
-  border-color:#6d7b88!important;
+  background:linear-gradient(145deg,#f7f9fb 0%,#e9eef3 100%)!important;
+  border-color:#d3dde6!important;
+  color:#26364c!important;
 }
-.my-area-layout .my-profile-card .profile-role-star{width:28px!important;height:28px!important;min-width:28px!important;max-width:28px!important;object-fit:contain!important}
-.my-area-layout .my-profile-card.head-admin .profile-role-star,
-.my-area-layout .my-profile-card.admin .profile-role-star{filter:drop-shadow(0 0 4px rgba(255,52,77,.95)) drop-shadow(0 0 11px rgba(255,31,58,.58))!important}
-.my-area-layout .my-profile-card.supporter .profile-role-star{filter:drop-shadow(0 0 6px rgba(255,214,0,.5))!important}
-.my-area-layout .my-profile-card.business .profile-role-star{filter:drop-shadow(0 0 6px rgba(45,151,219,.5))!important}
-.my-area-layout .my-profile-card.member .profile-role-star{display:none!important}
-.my-area-layout .my-profile-card .profile-role-label{background:rgba(255,255,255,.10)!important;border:1px solid rgba(255,255,255,.16)!important;color:inherit!important}
-.my-area-layout .my-profile-card.supporter .profile-role-label{background:rgba(0,0,0,.12)!important;border-color:rgba(0,0,0,.18)!important;color:#111!important}
-.my-area-layout .my-profile-card .my-avatar{border:3px solid rgba(255,255,255,.82)!important;box-shadow:0 8px 22px rgba(0,0,0,.22)!important}
-.my-area-layout .my-profile-card.head-admin .my-avatar,.my-area-layout .my-profile-card.admin .my-avatar{border-color:#ff4a63!important}
-.my-area-layout .my-profile-card.supporter .my-avatar{border-color:#ffd400!important}
-.my-area-layout .my-profile-card.business .my-avatar{border-color:#36a8e5!important}
-.my-area-layout .my-profile-card.member .my-avatar{border-color:#91a3b2!important}
-.my-area-layout .my-profile-card h1,.my-area-layout .my-profile-card h2,.my-area-layout .my-profile-card .profile-bio{color:inherit!important;-webkit-text-fill-color:currentColor!important}
-.my-area-layout .my-profile-card.supporter h1,.my-area-layout .my-profile-card.supporter h2,.my-area-layout .my-profile-card.supporter .profile-bio{color:#111!important;-webkit-text-fill-color:#111!important}
 
-.public-profile-preview .member-profile-hero.ec-preview-admin{background:linear-gradient(150deg,#b11834 0%,#8b1027 44%,#650a1c 100%)!important;border-color:#d83650!important}
-.public-profile-preview .member-profile-hero.ec-preview-supporter{background:linear-gradient(145deg,#ffe537 0%,#d6aa00 32%,#6b5100 68%,#211900 100%)!important;border-color:#ffd400!important;color:#111!important}
-.public-profile-preview .member-profile-hero.ec-preview-business{background:linear-gradient(150deg,#177db1 0%,#0d5d8a 48%,#0a456b 100%)!important;border-color:#2c96cf!important}
-.public-profile-preview .member-profile-hero.ec-preview-member{background:linear-gradient(150deg,#42586b 0%,#2c4051 48%,#1d2f3d 100%)!important;border-color:#6d7b88!important}
+.my-area-layout .my-profile-card .my-avatar{
+  grid-column:1!important;
+  grid-row:1 / span 3!important;
+  width:62px!important;
+  height:62px!important;
+  min-width:62px!important;
+  max-width:62px!important;
+  min-height:62px!important;
+  max-height:62px!important;
+  margin:0!important;
+  border-radius:50%!important;
+  object-fit:cover!important;
+  border:2px solid rgba(255,255,255,.88)!important;
+  box-shadow:none!important;
+}
+.my-area-layout .my-profile-card.member .my-avatar{border-color:#fff!important;box-shadow:0 0 0 1px #d7e0e8!important}
+
+.my-area-layout .my-profile-card .profile-role-star{
+  grid-column:2!important;
+  grid-row:2!important;
+  width:24px!important;
+  height:24px!important;
+  min-width:24px!important;
+  max-width:24px!important;
+  margin:0!important;
+  object-fit:contain!important;
+  filter:none!important;
+  z-index:2!important;
+}
+.my-area-layout .my-profile-card.member .profile-role-star{display:none!important}
+
+.my-area-layout .my-profile-card h1{
+  grid-column:2!important;
+  grid-row:1!important;
+  margin:0!important;
+  min-width:0!important;
+  font-size:1.16rem!important;
+  line-height:1.15!important;
+  font-weight:850!important;
+  color:inherit!important;
+  -webkit-text-fill-color:currentColor!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+}
+.my-area-layout .my-profile-card .profile-role-label{
+  grid-column:2!important;
+  grid-row:2!important;
+  justify-self:start!important;
+  margin:0 0 0 30px!important;
+  min-height:24px!important;
+  padding:3px 8px!important;
+  border-radius:999px!important;
+  background:rgba(255,255,255,.12)!important;
+  border:1px solid rgba(255,255,255,.18)!important;
+  color:inherit!important;
+  font-size:.78rem!important;
+  font-weight:850!important;
+  line-height:1.05!important;
+  white-space:nowrap!important;
+}
+.my-area-layout .my-profile-card.member .profile-role-label{
+  background:rgba(255,255,255,.68)!important;
+  border-color:rgba(148,163,184,.25)!important;
+  color:#405168!important;
+}
+
+.my-area-layout .my-profile-card h2{
+  grid-column:2!important;
+  grid-row:3!important;
+  margin:2px 0 0!important;
+  font-size:.92rem!important;
+  line-height:1.2!important;
+  font-weight:500!important;
+  color:inherit!important;
+  -webkit-text-fill-color:currentColor!important;
+  opacity:.9!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+}
+.my-area-layout .my-profile-card .profile-bio,
+.my-area-layout .my-profile-card .profile-bio-image{display:none!important}
+
+.my-area-layout .my-profile-card::after{
+  content:"Vorschau Mitgliederkarte"!important;
+  grid-column:1 / -1!important;
+  grid-row:4!important;
+  justify-self:start!important;
+  align-self:end!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  min-height:32px!important;
+  padding:6px 10px!important;
+  border-radius:999px!important;
+  background:rgba(0,0,0,.28)!important;
+  border:1px solid rgba(255,255,255,.14)!important;
+  color:#fff!important;
+  font-size:.72rem!important;
+  font-weight:800!important;
+  letter-spacing:.01em!important;
+}
+.my-area-layout .my-profile-card.member::after{
+  background:#e9eef3!important;
+  border-color:#d1dbe4!important;
+  color:#334155!important;
+}
+
+.public-profile-preview .member-profile-hero.ec-preview-admin{background:linear-gradient(145deg,#8f1025 0%,#5e0716 55%,#150307 100%)!important;border-color:#b43a4e!important}
+.public-profile-preview .member-profile-hero.ec-preview-supporter{background:linear-gradient(145deg,#d5aa09 0%,#927000 55%,#211900 100%)!important;border-color:#e2bd35!important;color:#fff!important}
+.public-profile-preview .member-profile-hero.ec-preview-business{background:linear-gradient(145deg,#176fba 0%,#074d8a 54%,#031a31 100%)!important;border-color:#2e8cd2!important}
+.public-profile-preview .member-profile-hero.ec-preview-member{background:linear-gradient(145deg,#f7f9fb 0%,#e9eef3 100%)!important;border-color:#d3dde6!important;color:#26364c!important}
