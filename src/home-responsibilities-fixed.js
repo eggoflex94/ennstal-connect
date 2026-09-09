@@ -5,6 +5,7 @@ let cache = { profiles: [], regions: [], assignments: [] };
 let loading = false;
 let realtimeStarted = false;
 let activeRegionHint = null;
+let retryTimer = null;
 
 const norm = (value) => String(value || '').trim().toUpperCase();
 const nameOf = (member) => member?.nickname || [member?.first_name, member?.last_name].filter(Boolean).join(' ') || 'Community-Team';
@@ -123,11 +124,12 @@ function render() {
   header.innerHTML = `<span class="eyebrow">ZUSTÄNDIGKEITEN</span><h2>Ansprechpartner für ${region.name}</h2><p>Automatisch mit Admin-Rollen, regionalen Zuweisungen und Moderationsrechten gekoppelt.</p>`;
   section.appendChild(header);
 
-  const visible = cache.profiles.filter((member) => member.account_status !== 'SUSPENDED' && !member.is_test_account && isVisible(member, region.id));
+  const visible = cache.profiles.filter((member) => norm(member.account_status || 'ACTIVE') !== 'SUSPENDED' && !member.is_test_account && isVisible(member, region.id));
   visible.sort((a, b) => {
     const rank = (m) => norm(m.role) === 'HEAD_ADMIN' ? 1 : norm(m.role) === 'ADMIN' && assignmentsFor(m).length === 0 ? 2 : norm(m.role) === 'ADMIN' ? 3 : 4;
     return rank(a) - rank(b) || nameOf(a).localeCompare(nameOf(b), 'de');
   });
+
   const grid = document.createElement('div');
   grid.className = 'ec-home-fixed-grid';
   visible.forEach((member) => grid.appendChild(personCard(member, region.id)));
@@ -146,19 +148,44 @@ function render() {
   else home.prepend(section);
 }
 
+function mergeProfiles(contacts, extras) {
+  const extraById = new Map((extras || []).map((item) => [item.id || item.user_id, item]));
+  return (contacts || []).map((contact) => {
+    const id = contact.user_id || contact.id;
+    return { ...contact, ...(extraById.get(id) || {}), id, user_id: id };
+  });
+}
+
 async function load() {
   if (!supabase || loading) return;
   loading = true;
   try {
-    const [profilesResult, regionsResult, assignmentsResult] = await Promise.all([
-      supabase.from('profiles').select('id,nickname,first_name,last_name,avatar_url,role,account_status,is_test_account,home_region_id,admin_responsibilities,head_admin_responsibilities,forum_moderator,group_moderator,account_badge'),
+    const [contactsSettled, regionsSettled, assignmentsSettled, extrasSettled] = await Promise.allSettled([
+      supabase.rpc('community_moderation_contacts'),
       supabase.from('regions').select('id,slug,name,short_name').eq('is_active', true),
-      supabase.from('regional_admin_assignments').select('user_id,region_id,active').eq('active', true)
+      supabase.from('regional_admin_assignments').select('user_id,region_id,active').eq('active', true),
+      supabase.from('profiles').select('id,home_region_id,admin_responsibilities,head_admin_responsibilities,account_status,is_test_account,account_badge')
     ]);
-    cache = { profiles: profilesResult.data || [], regions: regionsResult.data || [], assignments: assignmentsResult.data || [] };
+
+    const contactsResult = contactsSettled.status === 'fulfilled' ? contactsSettled.value : null;
+    const regionsResult = regionsSettled.status === 'fulfilled' ? regionsSettled.value : null;
+    const assignmentsResult = assignmentsSettled.status === 'fulfilled' ? assignmentsSettled.value : null;
+    const extrasResult = extrasSettled.status === 'fulfilled' ? extrasSettled.value : null;
+
+    if (contactsResult?.error) throw contactsResult.error;
+    if (regionsResult?.error) throw regionsResult.error;
+
+    const contacts = contactsResult?.data || [];
+    const extras = extrasResult?.error ? [] : (extrasResult?.data || []);
+    cache = {
+      profiles: mergeProfiles(contacts, extras),
+      regions: regionsResult?.data || [],
+      assignments: assignmentsResult?.error ? [] : (assignmentsResult?.data || [])
+    };
     render();
   } catch (error) {
     console.error('Zuständigkeiten konnten nicht geladen werden:', error);
+    if (!retryTimer) retryTimer = setTimeout(() => { retryTimer = null; void load(); }, 3000);
   } finally {
     loading = false;
   }
@@ -168,21 +195,25 @@ function boot() {
   void load();
   if (!realtimeStarted && supabase) {
     realtimeStarted = true;
-    const refresh = () => void load();
-    supabase.channel('ec-home-fixed-responsibilities-v1')
+    const refresh = () => { cache.profiles = []; void load(); };
+    supabase.channel('ec-home-fixed-responsibilities-v2')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, refresh)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'regional_admin_assignments' }, refresh)
       .subscribe();
   }
   const observer = new MutationObserver(() => {
-    if (document.querySelector('.home-page') && !document.querySelector('.ec-home-fixed-responsibilities')) render();
+    if (!document.querySelector('.home-page')) return;
+    if (!document.querySelector('.ec-home-fixed-responsibilities')) {
+      if (cache.profiles.length && cache.regions.length) render();
+      else void load();
+    }
   });
   observer.observe(document.documentElement, { childList: true, subtree: true });
 }
 
 window.addEventListener('ec:region-change', (event) => {
   activeRegionHint = event.detail || null;
-  setTimeout(render, 50);
+  setTimeout(() => { render(); void load(); }, 50);
 });
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
