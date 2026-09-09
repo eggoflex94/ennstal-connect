@@ -32,7 +32,8 @@ test("profile design controls remain native and tappable in desktop phone mode",
   const css = await source("src/mobile-native-final.css");
   const app = await source("src/App.jsx");
   assert.match(app, /className="panel profile-form profile-editor"/);
-  assert.match(app, /input type="file"[^>]*uploadProfileImage/);
+  assert.match(app, /type="file"[\s\S]{0,260}uploadProfileImage\(e\.target\.files\[0\]\)/);
+  assert.match(app, /type="file"[\s\S]{0,260}uploadProfileBioImage\(e\.target\.files\[0\]\)/);
   assert.match(app, /onSubmit=\{saveProfile\}/);
   assert.match(css, /\.profile-form input[\s\S]*pointer-events: auto !important/);
   assert.match(css, /input\[type="file"\][\s\S]*visibility: visible !important/);
