@@ -8,6 +8,7 @@ on:
       - "src/NativeMembersDirectory.jsx"
       - "src/community-native-final.css"
       - "src/profile-design-preview-role.css"
+      - "src/profile-customization.js"
       - "src/main.jsx"
       - "src/sidebar-reward-progress.js"
       - "src/sidebar-reward-progress.css"
@@ -60,5 +61,6 @@ jobs:
             echo "Cloudflare dist is already current"
             exit 0
           fi
-          git commit -m "Refresh Cloudflare dist for rich red blue themes"
+          git commit -m "Refresh Cloudflare dist for profile layout cleanup"
+          git pull --rebase origin main
           git push origin HEAD:main
