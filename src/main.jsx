@@ -111,7 +111,6 @@ import "./admin-central-final.css";
 import "./business-account-admin-fix.js";
 import "./layout-runtime-sync.js";
 import "./role-responsibility-final.css";
-import "./mobile-single-tap-fix.js";
 import "./layout-integrity-final.css";
 import "./community-mobile-final.css";
 import "./mobile-forum-news-admin-final.css";
@@ -124,16 +123,16 @@ import "./home-responsibilities-fixed.js";
 /* Last visual authority for event rows so controls never collapse into vertical text. */
 import "./community-event-card-polish.css";
 
-import "./desktop-on-phone.css";
-
-/* Final dashboard canvas + mobile profile editor authority. */
+/* Final dashboard canvas + responsive profile editor. */
 import "./dashboard-mobile-profile-final.css";
-import "./mobile-profile-editor-fix.js";
 
 /* Final theme layer: same structure, only Standard / Rot / Blau. */
 import "./standard-theme-variants.css";
 import "./standard-theme-rich.css";
 import "./standard-theme-runtime.js";
+
+/* Absolute final mobile layer: native taps and a visible region selector. */
+import "./mobile-native-final.css";
 
 class AppErrorBoundary extends React.Component {
   constructor(props) {
