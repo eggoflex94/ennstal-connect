@@ -1,0 +1,136 @@
+/* Final dashboard surface + mobile profile editor authority. */
+
+/* Light neutral dashboard canvas with a very subtle alpine line structure. */
+.modern-main,
+.app .modern-main{
+  background-color:#eef1f4!important;
+  background-image:
+    linear-gradient(135deg,transparent 0 72%,rgba(91,108,123,.055) 72% 72.6%,transparent 72.6%),
+    linear-gradient(45deg,transparent 0 79%,rgba(91,108,123,.04) 79% 79.6%,transparent 79.6%),
+    linear-gradient(155deg,transparent 0 83%,rgba(91,108,123,.035) 83% 83.5%,transparent 83.5%)!important;
+  background-size:520px 260px,640px 320px,760px 380px!important;
+  background-position:left bottom,right 12% bottom 8%,center bottom 18%!important;
+  background-repeat:repeat-x!important;
+}
+
+/* Keep panels/cards crisp against the soft dashboard canvas. */
+.modern-main .panel,
+.modern-main .dashboard-card,
+.modern-main .home-card{
+  backdrop-filter:none;
+}
+
+@media(max-width:900px){
+  /* The profile editor must become a true single-column mobile flow. */
+  .profile-page-layout,
+  .my-area-layout{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr)!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    gap:16px!important;
+    align-items:start!important;
+  }
+
+  .profile-page-layout>*,
+  .my-area-layout>*{
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+  }
+
+  .my-area-layout .my-profile-card{
+    grid-column:1!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    margin:0!important;
+  }
+
+  .profile-form,
+  .profile-page-layout form,
+  .my-area-layout form{
+    grid-column:1!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    margin:0!important;
+  }
+
+  .profile-form .panel,
+  .profile-form fieldset,
+  .profile-form section,
+  .profile-form label{
+    min-width:0!important;
+    max-width:100%!important;
+  }
+
+  .profile-form input,
+  .profile-form select,
+  .profile-form textarea,
+  .profile-form button{
+    max-width:100%!important;
+  }
+
+  .profile-typography-grid{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+    gap:10px!important;
+  }
+
+  .profile-media-delete-actions,
+  .profile-customization-actions,
+  .head-admin-media-tools>div{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+    width:100%!important;
+    gap:9px!important;
+  }
+
+  .profile-media-delete-actions button,
+  .profile-customization-actions button,
+  .head-admin-media-tools button,
+  .profile-form .primary-button{
+    width:100%!important;
+  }
+}
+
+@media(max-width:560px){
+  .modern-main,
+  .app .modern-main{
+    background-size:360px 180px,440px 220px,520px 260px!important;
+  }
+
+  .my-area-layout{
+    gap:14px!important;
+  }
+
+  .my-area-layout .my-profile-card{
+    min-height:190px!important;
+    max-height:190px!important;
+    grid-template-columns:62px minmax(0,1fr)!important;
+    column-gap:11px!important;
+    padding:14px!important;
+    border-radius:18px!important;
+  }
+
+  .my-area-layout .my-profile-card .my-avatar{
+    width:56px!important;
+    height:56px!important;
+    min-width:56px!important;
+    max-width:56px!important;
+    min-height:56px!important;
+    max-height:56px!important;
+  }
+
+  .my-area-layout .my-profile-card h1{
+    font-size:1.05rem!important;
+  }
+
+  .my-area-layout .my-profile-card .profile-role-label{
+    max-width:calc(100% - 30px)!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+  }
+}
