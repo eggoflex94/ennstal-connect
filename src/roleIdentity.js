@@ -19,14 +19,19 @@ export const isHeadAdminRole=role=>String(role||"").toUpperCase()==="HEAD_ADMIN"
 export function verifiedState(profile={}){
   return profile.is_verified===true || profile.verified===true || String(profile.account_status||"").toUpperCase()==="VERIFIED" || String(profile.verification_status||"").toUpperCase()==="VERIFIED";
 }
+function eagerImage(src,alt,title,className){
+  const img=document.createElement("img");
+  img.src=src;img.alt=alt;img.title=title||alt;img.className=className;img.loading="eager";img.decoding="async";img.fetchPriority="high";
+  return img;
+}
 export function makeRoleIcon(profile,size="normal"){
   const ident=roleIdentity(profile); if(!ident.icon)return null;
-  const img=document.createElement("img"); img.src=ident.icon; img.alt=ident.label; img.className=`ec-role-star ec-role-star-${size}`; img.title=ident.label; return img;
+  return eagerImage(ident.icon,ident.label,ident.label,`ec-role-star ec-role-star-${size}`);
 }
 export function makeVerifiedBadge(profile,size="small"){
   if(!verifiedState(profile))return null;
-  const img=document.createElement("img"); img.src="/badge-verified.svg"; img.alt="Verifiziert"; img.title="Verifiziert"; img.className=`ec-status-badge ec-status-badge-${size}`; return img;
+  return eagerImage("/badge-verified.svg","Verifiziert","Verifiziert",`ec-status-badge ec-status-badge-${size}`);
 }
 export function makeFriendBadge(size="normal"){
-  const img=document.createElement("img"); img.src="/badge-friend.svg"; img.alt="Befreundet"; img.title="Befreundet"; img.className=`ec-status-badge ec-status-badge-${size}`; return img;
+  return eagerImage("/badge-friendship.png","Befreundet","Befreundet",`ec-status-badge ec-status-badge-${size}`);
 }
