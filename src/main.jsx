@@ -128,6 +128,7 @@ import "./desktop-on-phone.css";
 
 /* Final theme layer: same structure, only Standard / Rot / Blau. */
 import "./standard-theme-variants.css";
+import "./standard-theme-rich.css";
 import "./standard-theme-runtime.js";
 
 class AppErrorBoundary extends React.Component {
