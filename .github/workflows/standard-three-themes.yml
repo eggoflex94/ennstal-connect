@@ -1,17 +1,19 @@
-name: Standard + Red + Blue Themes
+name: Standard Red Blue Themes
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
     paths:
       - ".github/workflows/standard-three-themes.yml"
+      - "scripts/apply-standard-themes.py"
+      - "src/standard-theme-runtime.js"
+      - "src/standard-theme-variants.css"
+      - "public/ennstal-connect-wordmark-red.svg"
+      - "public/ennstal-connect-wordmark-blue.svg"
 
 permissions:
   contents: write
-
-concurrency:
-  group: standard-three-themes
-  cancel-in-progress: false
 
 jobs:
   migrate-and-build:
@@ -25,219 +27,13 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - name: Keep only standard, red and blue themes
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-
-          app = Path('src/App.jsx')
-          text = app.read_text()
-
-          old = '''    const layout = document.createElement("section"); layout.className = "layout-rewards";
-    const freeLayouts = isAdmin(profile?.role) || profile?.role === "SUPPORTER" || profile?.account_badge === "BUSINESS";
-    const hours = Math.floor(Number(profile.total_online_seconds || 0) / 3600);
-    layout.innerHTML = `<span class="eyebrow">LAYOUT & BELOHNUNGEN</span><h3>Dein Community-Design</h3><p>${freeLayouts ? "Deine Rolle erlaubt die freie Layoutwahl." : `Onlinezeit: ${hours} Stunden · Weitere Designs werden durch aktive Community-Zeit freigeschaltet.`}</p>`;
-    const layoutSelect = document.createElement("select"); layoutSelect.name = "profile_layout";
-    [["standard", "Standard – Ennstal", 0], ["alpine", "Alpen – Berggrün", 5], ["aurora", "Aurora – Violett", 20], ["ocean", "Ozean – Tiefblau", 35], ["slate", "Schiefer – Anthrazit", 50], ["ember", "Ember – Warmes Orange", 70], ["redwood", "Bergrot – Alpinrot", 90], ["lavender", "Lavendel – Sanftes Violett", 110], ["midnight", "Mitternacht – Nachtblau", 130], ["sunrise", "Sonnenaufgang – Goldrosa", 150], ["neon", "Neon Connect – Leuchtfarben", 180]].forEach(([value, label, requiredHours]) => { const option = document.createElement("option"); option.value = value; option.textContent = `${label}${freeLayouts || hours >= requiredHours ? "" : ` · ab ${requiredHours} Stunden`}`; option.disabled = !freeLayouts && hours < requiredHours; layoutSelect.appendChild(option); });
-    layoutSelect.value = profile.profile_layout || "standard"; layout.appendChild(layoutSelect); form.querySelector(".primary-button")?.before(layout);'''
-          new = '''    const layout = document.createElement("section"); layout.className = "layout-rewards";
-    layout.innerHTML = `<span class="eyebrow">COMMUNITY-DESIGN</span><h3>Dein Layout</h3><p>Der Aufbau bleibt immer gleich. Du wählst nur zwischen dem Standarddesign und zwei einheitlichen Farbvarianten.</p>`;
-    const layoutSelect = document.createElement("select"); layoutSelect.name = "profile_layout";
-    [["standard", "Standard – Ennstal Connect"], ["theme-red", "Connect Rot – Hellrot"], ["theme-blue", "Connect Blau – Kräftig"]].forEach(([value, label]) => { const option = document.createElement("option"); option.value = value; option.textContent = label; layoutSelect.appendChild(option); });
-    layoutSelect.value = ["standard", "theme-red", "theme-blue"].includes(profile.profile_layout) ? profile.profile_layout : "standard"; layout.appendChild(layoutSelect); form.querySelector(".primary-button")?.before(layout);'''
-          if old not in text:
-              raise SystemExit('Layout selector source block not found')
-          text = text.replace(old, new, 1)
-
-          old_hours = '    const layoutHours = { standard: 0, alpine: 5, aurora: 20, ocean: 35, slate: 50, ember: 70, redwood: 90, lavender: 110, midnight: 130, sunrise: 150, neon: 180 };'
-          new_hours = '    const layoutHours = { standard: 0, "theme-red": 0, "theme-blue": 0 };'
-          if old_hours not in text:
-              raise SystemExit('Layout unlock map not found')
-          text = text.replace(old_hours, new_hours, 1)
-
-          old_root = '  return <div className={`app layout-${profile?.profile_layout || "standard"}`}> '
-          if old_root in text:
-              text = text.replace(old_root, '  return <div className={`app layout-${["theme-red", "theme-blue"].includes(profile?.profile_layout) ? profile.profile_layout : "standard"}`}> ', 1)
-          else:
-              old_root = '  return <div className={`app layout-${profile?.profile_layout || "standard"}`}>\n'
-              if old_root not in text:
-                  raise SystemExit('App layout root not found')
-              text = text.replace(old_root, '  return <div className={`app layout-${["theme-red", "theme-blue"].includes(profile?.profile_layout) ? profile.profile_layout : "standard"}`}>\n', 1)
-
-          app.write_text(text)
-
-          main = Path('src/main.jsx')
-          m = main.read_text()
-          anchor = 'import "./desktop-on-phone.css";'
-          replacement = 'import "./desktop-on-phone.css";\n\n/* Final theme layer: same structure, only Standard / Rot / Blau. */\nimport "./standard-theme-variants.css";\nimport "./standard-theme-runtime.js";'
-          if 'standard-theme-variants.css' not in m:
-              if anchor not in m:
-                  raise SystemExit('main.jsx theme import anchor missing')
-              m = m.replace(anchor, replacement, 1)
-          main.write_text(m)
-          PY
-
-          cat > src/standard-theme-runtime.js <<'EOF'
-          const THEMES = {
-            'layout-theme-red': { key: 'red', logo: '/ennstal-connect-wordmark-red.svg' },
-            'layout-theme-blue': { key: 'blue', logo: '/ennstal-connect-wordmark-blue.svg' },
-          };
-          const DEFAULT_LOGO = '/ennstal-connect-wordmark.svg';
-          let lastKey = '';
-
-          function syncTheme() {
-            const app = document.querySelector('.app');
-            const match = app ? Object.entries(THEMES).find(([className]) => app.classList.contains(className)) : null;
-            const next = match ? match[1] : { key: 'standard', logo: DEFAULT_LOGO };
-            if (next.key !== lastKey) {
-              document.documentElement.dataset.ecTheme = next.key;
-              lastKey = next.key;
-            }
-            document.querySelectorAll('.ec-brand-image').forEach((img) => {
-              if (img.getAttribute('src') !== next.logo) img.setAttribute('src', next.logo);
-            });
-          }
-
-          const observer = new MutationObserver(() => requestAnimationFrame(syncTheme));
-          observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
-          if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', syncTheme, { once: true });
-          else syncTheme();
-          window.addEventListener('ec:navigate', syncTheme);
-          window.addEventListener('ec:region-change', syncTheme);
-          EOF
-
-          cat > src/standard-theme-variants.css <<'EOF'
-          /* Same Ennstal Connect structure for all themes. Only color, depth and branding change. */
-          :root{
-            --ec-theme-red:#ff4357;
-            --ec-theme-red-strong:#e72b42;
-            --ec-theme-red-soft:#fff0f2;
-            --ec-theme-blue:#1677ff;
-            --ec-theme-blue-strong:#075fd4;
-            --ec-theme-blue-soft:#edf6ff;
-          }
-
-          .app.layout-theme-red{--ec-theme-primary:var(--ec-theme-red);--ec-theme-primary-strong:var(--ec-theme-red-strong);--ec-theme-soft:var(--ec-theme-red-soft)}
-          .app.layout-theme-blue{--ec-theme-primary:var(--ec-theme-blue);--ec-theme-primary-strong:var(--ec-theme-blue-strong);--ec-theme-soft:var(--ec-theme-blue-soft)}
-
-          .app.layout-theme-red,
-          .app.layout-theme-blue{
-            background:linear-gradient(180deg,#f8fbfd 0%,#eef5f8 100%)!important;
-            color:#24364d!important;
-          }
-          .app.layout-theme-red .modern-main,
-          .app.layout-theme-blue .modern-main,
-          .app.layout-theme-red .content-root,
-          .app.layout-theme-blue .content-root{background:transparent!important}
-
-          .app.layout-theme-red .panel,
-          .app.layout-theme-blue .panel{
-            border-color:color-mix(in srgb,var(--ec-theme-primary) 15%,#d8e1e8)!important;
-            box-shadow:0 10px 28px rgba(21,40,61,.08)!important;
-          }
-          .app.layout-theme-red .eyebrow,
-          .app.layout-theme-blue .eyebrow{color:var(--ec-theme-primary-strong)!important}
-
-          .app.layout-theme-red .primary-button,
-          .app.layout-theme-red button.primary-button,
-          .app.layout-theme-blue .primary-button,
-          .app.layout-theme-blue button.primary-button{
-            background:linear-gradient(135deg,var(--ec-theme-primary),var(--ec-theme-primary-strong))!important;
-            border-color:var(--ec-theme-primary-strong)!important;
-            color:#fff!important;
-            box-shadow:0 7px 18px color-mix(in srgb,var(--ec-theme-primary) 25%,transparent)!important;
-          }
-          .app.layout-theme-red .secondary-button:hover,
-          .app.layout-theme-blue .secondary-button:hover{
-            border-color:var(--ec-theme-primary)!important;
-            color:var(--ec-theme-primary-strong)!important;
-            background:var(--ec-theme-soft)!important;
-          }
-
-          html[data-ec-theme="red"] .ec-top-nav button[data-ec-page].active,
-          html[data-ec-theme="red"] .ec-top-nav button[data-ec-page][aria-current="page"]{
-            background:#ff5a66!important;border-color:#ff4357!important;color:#fff!important;
-          }
-          html[data-ec-theme="blue"] .ec-top-nav button[data-ec-page].active,
-          html[data-ec-theme="blue"] .ec-top-nav button[data-ec-page][aria-current="page"]{
-            background:#2485ff!important;border-color:#1677ff!important;color:#fff!important;
-          }
-          html[data-ec-theme="red"] .ec-region-picker,
-          html[data-ec-theme="red"] .ec-dock-toggle{border-color:#ff9aa4!important}
-          html[data-ec-theme="blue"] .ec-region-picker,
-          html[data-ec-theme="blue"] .ec-dock-toggle{border-color:#83b9ff!important}
-
-          html[data-ec-theme="red"] .ec-brand-masthead{border-bottom-color:#ffb2ba!important}
-          html[data-ec-theme="blue"] .ec-brand-masthead{border-bottom-color:#acd2ff!important}
-          html[data-ec-theme="red"] .ec-region-status strong{color:#e72b42!important}
-          html[data-ec-theme="blue"] .ec-region-status strong{color:#075fd4!important}
-
-          /* Preserve the role system exactly across both color themes. */
-          .app.layout-theme-red .native-member-card--admin,
-          .app.layout-theme-blue .native-member-card--admin,
-          .app.layout-theme-red [data-role-theme="admin"],
-          .app.layout-theme-blue [data-role-theme="admin"]{
-            background:linear-gradient(145deg,#f03c50 0%,#a30f27 48%,#160307 100%)!important;
-          }
-          .app.layout-theme-red .native-member-card--supporter,
-          .app.layout-theme-blue .native-member-card--supporter,
-          .app.layout-theme-red [data-role-theme="supporter"],
-          .app.layout-theme-blue [data-role-theme="supporter"]{
-            background:linear-gradient(145deg,#e0b609 0%,#957100 54%,#211900 100%)!important;
-          }
-          .app.layout-theme-red .native-member-card--business,
-          .app.layout-theme-blue .native-member-card--business,
-          .app.layout-theme-red [data-role-theme="business"],
-          .app.layout-theme-blue [data-role-theme="business"]{
-            background:linear-gradient(145deg,#258cff 0%,#0860be 50%,#031a31 100%)!important;
-          }
-          .app.layout-theme-red .native-member-card--member,
-          .app.layout-theme-blue .native-member-card--member,
-          .app.layout-theme-red [data-role-theme="member"],
-          .app.layout-theme-blue [data-role-theme="member"]{
-            background:linear-gradient(145deg,#f8fafc 0%,#e9eef3 100%)!important;
-          }
-
-          /* Friendship badge: always visible, same footprint as the current badge. */
-          .native-member-friend-badge,
-          .modern-main article.member-card .ec-card-badge-friend{
-            width:26px!important;height:26px!important;min-width:26px!important;min-height:26px!important;
-            padding:2px!important;border-radius:999px!important;background:#111827!important;
-            border:2px solid #fff!important;box-shadow:0 0 0 1px rgba(15,23,42,.28),0 3px 9px rgba(0,0,0,.3)!important;
-            display:inline-flex!important;align-items:center!important;justify-content:center!important;overflow:hidden!important;
-          }
-          .native-member-friend-badge img,
-          .modern-main article.member-card .ec-card-badge-friend img,
-          .modern-main article.member-card .ec-card-badge-friend .ec-card-badge-friend-img{
-            width:20px!important;height:20px!important;min-width:20px!important;min-height:20px!important;max-width:20px!important;max-height:20px!important;
-            object-fit:contain!important;display:block!important;opacity:1!important;visibility:visible!important;filter:none!important;
-          }
-          .member-profile-actions .ec-profile-friendship-accepted::before,
-          .profile-actions .ec-profile-friendship-accepted::before{
-            background-color:#111827!important;background-image:url('/badge-friendship.png')!important;background-repeat:no-repeat!important;
-            background-position:center!important;background-size:20px 20px!important;border:2px solid #fff!important;border-radius:999px!important;
-            box-shadow:0 0 0 1px rgba(15,23,42,.28),0 3px 9px rgba(0,0,0,.3)!important;
-          }
-
-          @media(max-width:900px){
-            .native-member-friend-badge,.modern-main article.member-card .ec-card-badge-friend{width:24px!important;height:24px!important;min-width:24px!important;min-height:24px!important}
-            .native-member-friend-badge img,.modern-main article.member-card .ec-card-badge-friend img{width:18px!important;height:18px!important;min-width:18px!important;min-height:18px!important;max-width:18px!important;max-height:18px!important}
-          }
-          EOF
-
-          cat > public/ennstal-connect-wordmark-red.svg <<'EOF'
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 370 70" role="img" aria-labelledby="title"><title id="title">Ennstal Connect – Rot</title><defs><linearGradient id="metal" x2="0.8" y2="1"><stop stop-color="#66727d"/><stop offset="1" stop-color="#11171c"/></linearGradient></defs><rect x="3" y="4" width="58" height="58" rx="13" fill="url(#metal)" stroke="#ff4357" stroke-width="4"/><rect x="8" y="9" width="48" height="48" rx="9" fill="none" stroke="#ffd7dc" stroke-width="2"/><path d="m32 17 4 12h13l-10 8 4 12-11-8-11 8 4-12-10-8h13z" fill="#fff"/><text x="75" y="39" font-family="Arial,Helvetica,sans-serif" font-size="36" font-weight="700" letter-spacing="-1.5" fill="#ff4357">ennstalconnect</text><text x="77" y="58" fill="#8e2433" font-family="Arial,Helvetica,sans-serif" font-size="9" font-weight="900" letter-spacing="1">REGIONAL. ECHT. GEMEINSAM.</text></svg>
-          EOF
-
-          cat > public/ennstal-connect-wordmark-blue.svg <<'EOF'
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 370 70" role="img" aria-labelledby="title"><title id="title">Ennstal Connect – Blau</title><defs><linearGradient id="metal" x2="0.8" y2="1"><stop stop-color="#334e70"/><stop offset="1" stop-color="#091423"/></linearGradient></defs><rect x="3" y="4" width="58" height="58" rx="13" fill="url(#metal)" stroke="#1677ff" stroke-width="4"/><rect x="8" y="9" width="48" height="48" rx="9" fill="none" stroke="#d5e9ff" stroke-width="2"/><path d="m32 17 4 12h13l-10 8 4 12-11-8-11 8 4-12-10-8h13z" fill="#fff"/><text x="75" y="39" font-family="Arial,Helvetica,sans-serif" font-size="36" font-weight="700" letter-spacing="-1.5" fill="#1677ff">ennstalconnect</text><text x="77" y="58" fill="#174b91" font-family="Arial,Helvetica,sans-serif" font-size="9" font-weight="900" letter-spacing="1">REGIONAL. ECHT. GEMEINSAM.</text></svg>
-          EOF
-
+      - name: Apply three-theme source migration
+        run: python3 scripts/apply-standard-themes.py
       - name: Install dependencies
         run: npm ci
       - name: Verify source and production build
         run: npm run test:ci
-      - name: Commit three-theme system
+      - name: Publish verified theme build
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
