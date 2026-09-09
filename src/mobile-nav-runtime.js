@@ -1,8 +1,9 @@
 /* Navigation runtime.
-   Narrow phone/tablet viewports use the compact horizontal navigation rail,
-   including touch devices. Desktop widths keep the normal navigation DOM. */
+   Touch devices intentionally keep the complete desktop navigation DOM.
+   Only genuinely narrow non-touch windows use the compact mobile rail. */
 
 const MOBILE_QUERY = '(max-width: 760px)';
+const TOUCH_QUERY = '(pointer: coarse)';
 let queued = false;
 
 function directPageButtons(nav) {
@@ -35,6 +36,10 @@ function sync() {
   queued = false;
   const nav = document.querySelector('.ec-top-nav');
   if (!nav) return;
+  if (window.matchMedia(TOUCH_QUERY).matches) {
+    disableMobileNav(nav);
+    return;
+  }
   if (window.matchMedia(MOBILE_QUERY).matches) enableMobileNav(nav);
   else disableMobileNav(nav);
 }
