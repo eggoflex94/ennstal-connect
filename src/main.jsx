@@ -135,6 +135,9 @@ import "./standard-theme-runtime.js";
 /* Absolute final mobile layer: native taps and a visible region selector. */
 import "./mobile-native-final.css";
 
+/* Absolute final visual authority for the rounded personal dashboard header. */
+import "./dashboard-header-unified.css";
+
 class AppErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
