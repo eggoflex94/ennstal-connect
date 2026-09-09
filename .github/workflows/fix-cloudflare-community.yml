@@ -12,6 +12,11 @@ on:
       - "src/sidebar-reward-progress.js"
       - "src/sidebar-reward-progress.css"
       - "src/auth-community-intro.js"
+      - "src/standard-theme-variants.css"
+      - "src/standard-theme-rich.css"
+      - "src/standard-theme-runtime.js"
+      - "public/ennstal-connect-wordmark-red.svg"
+      - "public/ennstal-connect-wordmark-blue.svg"
 
 permissions:
   contents: write
@@ -49,11 +54,11 @@ jobs:
       - name: Commit verified Cloudflare dist
         run: |
           git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.email "4189828+github-actions[bot]@users.noreply.github.com"
           git add dist
           if git diff --cached --quiet; then
             echo "Cloudflare dist is already current"
             exit 0
           fi
-          git commit -m "Refresh Cloudflare dist for community rewards"
+          git commit -m "Refresh Cloudflare dist for rich red blue themes"
           git push origin HEAD:main
