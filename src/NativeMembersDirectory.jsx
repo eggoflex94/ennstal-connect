@@ -3,6 +3,24 @@ import React, { useMemo, useState } from "react";
 const DEFAULT_AVATAR = "/community-default-avatar.png";
 const roleLabel = (role) => role === "HEAD_ADMIN" ? "Hauptadmin" : role === "ADMIN" ? "Community Admin" : role === "SUPPORTER" ? "Supporter" : "Mitglied";
 const displayName = (member) => member?.nickname || [member?.first_name, member?.last_name].filter(Boolean).join(" ") || "Mitglied";
+const isBusiness = (member) => member?.account_badge === "BUSINESS";
+const roleStarSrc = (member) => member?.role === "HEAD_ADMIN" || member?.role === "ADMIN" ? "/role-star-red.svg" : member?.role === "SUPPORTER" ? "/supporter-star.svg" : isBusiness(member) ? "/role-star-blue.svg" : null;
+const cardTone = (member) => member?.role === "HEAD_ADMIN" || member?.role === "ADMIN" ? "admin" : member?.role === "SUPPORTER" ? "supporter" : isBusiness(member) ? "business" : "member";
+
+function presenceFor(member) {
+  const mobile = Boolean(member?.is_mobile_online || member?.mobile_online || member?.online_via_mobile || member?.presence === "MOBILE" || member?.presence === "mobile");
+  if (member?.is_online) return { state: mobile ? "mobile" : "online", label: "Online", detail: mobile ? "am Handy" : "" };
+  const raw = member?.last_active_at || member?.last_seen_at || member?.last_online_at;
+  if (!raw) return { state: "offline", label: "Offline", detail: "" };
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return { state: "offline", label: "Offline", detail: "" };
+  const minutes = Math.max(1, Math.floor((Date.now() - date.getTime()) / 60000));
+  if (minutes < 60) return { state: "offline", label: "Offline", detail: `zuletzt vor ${minutes} Min.` };
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return { state: "offline", label: "Offline", detail: `zuletzt vor ${hours} Std.` };
+  const days = Math.floor(hours / 24);
+  return { state: "offline", label: "Offline", detail: `zuletzt vor ${days} Tag${days === 1 ? "" : "en"}` };
+}
 
 export default function NativeMembersDirectory({ members = [], regions = [], activeRegion, profile, friendships = [], onOpen, onMessage }) {
   const [query, setQuery] = useState("");
@@ -14,12 +32,12 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const rank = (member) => member.role === "HEAD_ADMIN" ? 1 : member.role === "ADMIN" ? 2 : member.role === "SUPPORTER" ? 3 : 4;
+    const rank = (member) => member.role === "HEAD_ADMIN" ? 1 : member.role === "ADMIN" ? 2 : member.role === "SUPPORTER" ? 3 : isBusiness(member) ? 4 : 5;
     return members
       .filter((member) => member && member.account_status !== "SUSPENDED" && !member.is_test_account)
       .filter((member) => regionId === "ALL" || member.home_region_id === regionId)
       .filter((member) => !onlineOnly || member.is_online)
-      .filter((member) => !q || [member.nickname, member.first_name, member.last_name, regionById[member.home_region_id]?.name, roleLabel(member.role)].filter(Boolean).join(" ").toLowerCase().includes(q))
+      .filter((member) => !q || [member.nickname, member.first_name, member.last_name, regionById[member.home_region_id]?.name, roleLabel(member.role), isBusiness(member) ? "Unternehmer" : ""].filter(Boolean).join(" ").toLowerCase().includes(q))
       .sort((a, b) => rank(a) - rank(b) || displayName(a).localeCompare(displayName(b), "de"));
   }, [members, regionId, onlineOnly, query, regionById]);
 
@@ -47,14 +65,28 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
         const region = regionById[member.home_region_id];
         const isFriend = acceptedFriendIds.has(member.id);
         const isSelf = member.id === profile?.id;
-        return <article className={`native-member-card panel${isSelf ? " is-self" : ""}`} key={member.id}>
+        const presence = presenceFor(member);
+        const star = roleStarSrc(member);
+        const tone = cardTone(member);
+        return <article className={`native-member-card native-member-card--${tone} panel${isSelf ? " is-self" : ""}`} key={member.id}>
           <button type="button" className="native-member-main" onClick={() => onOpen?.(member)}>
             <span className="native-member-avatar-wrap"><img src={member.avatar_url || DEFAULT_AVATAR} alt="" /><i className={member.is_online ? "online" : "offline"} /></span>
-            <span className="native-member-copy"><strong>{displayName(member)}</strong><small>{roleLabel(member.role)}{isFriend ? " · Freund" : ""}</small><em>{region?.name || "Region nicht angegeben"}</em></span>
+            <span className="native-member-copy">
+              <strong>{displayName(member)}</strong>
+              <span className="native-member-badges">
+                {star && <span className="native-member-role-badge"><img src={star} alt="" aria-hidden="true"/>{isBusiness(member) && !["HEAD_ADMIN","ADMIN","SUPPORTER"].includes(member.role) ? "Unternehmer" : roleLabel(member.role)}</span>}
+                {!star && <span className="native-member-member-badge">Mitglied</span>}
+                {isFriend && <span className="native-member-friend-badge">Freund</span>}
+              </span>
+              <em>{region?.name || "Region nicht angegeben"}</em>
+            </span>
           </button>
-          <div className={`native-member-actions${isSelf ? " native-member-actions-self" : ""}`}>
-            <button type="button" className="secondary-button" onClick={() => onOpen?.(member)}>{isSelf ? "Mein Profil" : "Profil"}</button>
-            {!isSelf && <button type="button" className="primary-button" onClick={() => onMessage?.(member)}>Nachricht</button>}
+          <div className="native-member-footer">
+            <span className={`native-member-presence native-member-presence--${presence.state}`}><i/><span><b>{presence.label}</b>{presence.detail && <small>{presence.detail}</small>}</span></span>
+            <div className={`native-member-actions${isSelf ? " native-member-actions-self" : ""}`}>
+              <button type="button" className="secondary-button" onClick={() => onOpen?.(member)}>{isSelf ? "Mein Profil" : "Profil"}</button>
+              {!isSelf && <button type="button" className="primary-button" onClick={() => onMessage?.(member)}>Nachricht</button>}
+            </div>
           </div>
         </article>;
       })}
