@@ -68,12 +68,15 @@ async function syncRegistrationRegions(){
 }
 
 function mountRewardNews(intro){
-  if(!intro||intro.querySelector('.ec-auth-reward-news'))return;
-  const news=document.createElement('section');
-  news.className='ec-auth-reward-news';
-  news.innerHTML=`<span>NEU IN DER COMMUNITY</span><h3>Aktivität wird jetzt belohnt</h3><p>Im rechten persönlichen Dashboard siehst du jetzt deinen Community-Level-Fortschritt und deine aktive Onlinezeit direkt als Balken. Je mehr du aktiv dabei bist, desto weiter wächst dein Fortschritt und desto mehr Community-Belohnungen werden freigeschaltet.</p><small>Onlinezeit zählt nur bei aktiver Nutzung. Zusätzlich bringen Beiträge, Antworten, Freundschaften, Gruppen und Events Punkte.</small>`;
-  const updates=intro.querySelector('.public-auth-updates');
-  if(updates)intro.insertBefore(news,updates);else intro.appendChild(news);
+  if(!intro)return;
+  let news=intro.querySelector('.ec-auth-reward-news');
+  if(!news){
+    news=document.createElement('section');
+    news.className='ec-auth-reward-news';
+    const updates=intro.querySelector('.public-auth-updates');
+    if(updates)intro.insertBefore(news,updates);else intro.appendChild(news);
+  }
+  news.innerHTML=`<span>NEU IN DER COMMUNITY</span><h3>Aktivität wird jetzt dauerhaft belohnt</h3><p>Im persönlichen Dashboard siehst du deinen Community-Level, deine aktive Onlinezeit und jetzt auch deinen Prestige-Fortschritt. Ab 300 Punkten geht es mit Bronze, Silber, Gold und Platin weiter – dein Fortschritt endet also nicht mehr beim Stammmitglied.</p><small>Onlinezeit zählt nur bei aktiver Nutzung. Beiträge, Antworten, Freundschaften, Gruppen, Events und regionale Community-Aktivität bringen zusätzliche Punkte. Connect Rot und Connect Blau bleiben Teil des Belohnungssystems.</small>`;
 }
 
 function mount(){
