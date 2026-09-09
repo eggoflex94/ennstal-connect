@@ -604,12 +604,10 @@ export default function App() {
     });
     if (mediaDeleteActions.childElementCount) form.querySelector(".primary-button")?.before(mediaDeleteActions);
     const layout = document.createElement("section"); layout.className = "layout-rewards";
-    const freeLayouts = isAdmin(profile?.role) || profile?.role === "SUPPORTER" || profile?.account_badge === "BUSINESS";
-    const hours = Math.floor(Number(profile.total_online_seconds || 0) / 3600);
-    layout.innerHTML = `<span class="eyebrow">LAYOUT & BELOHNUNGEN</span><h3>Dein Community-Design</h3><p>${freeLayouts ? "Deine Rolle erlaubt die freie Layoutwahl." : `Onlinezeit: ${hours} Stunden · Weitere Designs werden durch aktive Community-Zeit freigeschaltet.`}</p>`;
+    layout.innerHTML = `<span class="eyebrow">COMMUNITY-DESIGN</span><h3>Dein Layout</h3><p>Der Aufbau bleibt immer gleich. Du wählst nur zwischen dem Standarddesign und zwei einheitlichen Farbvarianten.</p>`;
     const layoutSelect = document.createElement("select"); layoutSelect.name = "profile_layout";
-    [["standard", "Standard – Ennstal", 0], ["alpine", "Alpen – Berggrün", 5], ["aurora", "Aurora – Violett", 20], ["ocean", "Ozean – Tiefblau", 35], ["slate", "Schiefer – Anthrazit", 50], ["ember", "Ember – Warmes Orange", 70], ["redwood", "Bergrot – Alpinrot", 90], ["lavender", "Lavendel – Sanftes Violett", 110], ["midnight", "Mitternacht – Nachtblau", 130], ["sunrise", "Sonnenaufgang – Goldrosa", 150], ["neon", "Neon Connect – Leuchtfarben", 180]].forEach(([value, label, requiredHours]) => { const option = document.createElement("option"); option.value = value; option.textContent = `${label}${freeLayouts || hours >= requiredHours ? "" : ` · ab ${requiredHours} Stunden`}`; option.disabled = !freeLayouts && hours < requiredHours; layoutSelect.appendChild(option); });
-    layoutSelect.value = profile.profile_layout || "standard"; layout.appendChild(layoutSelect); form.querySelector(".primary-button")?.before(layout);
+    [["standard", "Standard – Ennstal Connect"], ["theme-red", "Connect Rot – Hellrot"], ["theme-blue", "Connect Blau – Kräftig"]].forEach(([value, label]) => { const option = document.createElement("option"); option.value = value; option.textContent = label; layoutSelect.appendChild(option); });
+    layoutSelect.value = ["standard", "theme-red", "theme-blue"].includes(profile.profile_layout) ? profile.profile_layout : "standard"; layout.appendChild(layoutSelect); form.querySelector(".primary-button")?.before(layout);
     document.querySelectorAll(".profile-gallery figure").forEach((figure, index) => {
       const photo = memberPhotos.filter((item) => item.owner_id === user?.id)[index]; if (!photo || figure.querySelector(".photo-visibility")) return;
       const select = document.createElement("select"); select.className = "photo-visibility"; select.value = photo.visibility === "FRIENDS" ? "FRIENDS" : "PUBLIC";
@@ -919,7 +917,7 @@ export default function App() {
     const payload = { nickname: String(f.get("nickname") || "").trim(), gender: f.get("gender") || null, bio: String(f.get("bio") || "").trim(), location: String(f.get("location") || "").trim(), interests: String(f.get("interests") || "").split(",").map((interest) => interest.trim()).filter(Boolean), website: String(f.get("website") || "").trim(), instagram_username: String(f.get("instagram_username") || "").trim().replace(/^@/, ""), snapchat_username: String(f.get("snapchat_username") || "").trim().replace(/^@/, ""), profile_accent: f.get("profile_accent") || "#ff6b25", profile_background: f.get("profile_background_image") || f.get("profile_background_color") || "#f6f9fc", profile_layout: f.get("profile_layout") || "standard", bio_font: f.get("bio_font") || "modern", bio_size: f.get("bio_size") || "normal", bio_color: f.get("bio_color") || "#f1f5f9", privacy_settings: { name: f.get("privacy_name") || "PUBLIC", birth_date: f.get("privacy_birth_date") || "PUBLIC", bio: f.get("privacy_bio") || "PUBLIC", location: f.get("privacy_location") || "PUBLIC", interests: f.get("privacy_interests") || "PUBLIC", website: f.get("privacy_website") || "PUBLIC", photos: f.get("privacy_photos") || "PUBLIC", activity: f.get("privacy_activity") || "PUBLIC" } };
     if (payload.privacy_settings.name === "FRIENDS" && !profile?.avatar_url) return showNotice("Bitte lade zuerst ein eigenes Profilbild hoch, damit Freunde dich trotz privatem Namen erkennen können.");
     if (isHeadAdmin(profile?.role)) payload.head_admin_responsibilities = String(f.get("head_admin_responsibilities") || "").trim();
-    const layoutHours = { standard: 0, alpine: 5, aurora: 20, ocean: 35, slate: 50, ember: 70, redwood: 90, lavender: 110, midnight: 130, sunrise: 150, neon: 180 };
+    const layoutHours = { standard: 0, "theme-red": 0, "theme-blue": 0 };
     const layoutUnlocked = isAdmin(profile?.role) || profile?.role === "SUPPORTER" || profile?.account_badge === "BUSINESS" || Number(profile?.total_online_seconds || 0) >= (layoutHours[payload.profile_layout] || 0) * 3600;
     if (!layoutUnlocked) return showNotice("Dieses Layout wird mit Onlinezeit freigeschaltet.");
     if (isAdmin(profile?.role)) payload.hide_online_status = f.get("hide_online_status") === "on";
@@ -1102,7 +1100,7 @@ export default function App() {
 
   const unread = messages.filter((m) => m.receiver_id === user.id && !m.is_read).length;
   const myRole = roleLabel(profile?.role);
-  return <div className={`app layout-${profile?.profile_layout || "standard"}`}>
+  return <div className={`app layout-${["theme-red", "theme-blue"].includes(profile?.profile_layout) ? profile.profile_layout : "standard"}`}>
     <div className="dashboard-layout">
       <aside className="modern-sidebar">
         <div className="sidebar-profile" onClick={() => setPage("profile")}><img src={profile?.avatar_url || DEFAULT_AVATAR} alt=""/><div><strong>{getName(profile)}</strong><span className={`role-badge ${profile?.account_badge === "BUSINESS" ? "business" : roleClass(profile?.role)}`}>{profile?.role === "HEAD_ADMIN" ? "♛" : profile?.role === "ADMIN" ? "★ Community Admin" : profile?.role === "SUPPORTER" ? "★ Supporter" : profile?.account_badge === "BUSINESS" ? "★ Unternehmenskonto" : "Mitglied"}</span></div></div>
