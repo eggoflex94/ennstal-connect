@@ -7,6 +7,7 @@ on:
       - ".github/workflows/fix-cloudflare-community.yml"
       - "src/NativeMembersDirectory.jsx"
       - "src/community-native-final.css"
+      - "src/profile-design-preview-role.css"
 
 permissions:
   contents: write
