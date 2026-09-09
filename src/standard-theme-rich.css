@@ -1,0 +1,165 @@
+/* Final visual authority for the two reward layouts. The page structure stays identical. */
+html[data-ec-theme="red"]{
+  --ec-rich:#ff3f55;--ec-rich-2:#e21f3d;--ec-rich-3:#9d1028;--ec-rich-soft:#fff0f3;--ec-rich-soft-2:#ffdce3;--ec-rich-ink:#54101d;
+}
+html[data-ec-theme="blue"]{
+  --ec-rich:#1684ff;--ec-rich-2:#0564dc;--ec-rich-3:#053a88;--ec-rich-soft:#edf7ff;--ec-rich-soft-2:#d7ebff;--ec-rich-ink:#073d7a;
+}
+
+html[data-ec-theme="red"] body,
+html[data-ec-theme="blue"] body,
+html[data-ec-theme="red"] #root,
+html[data-ec-theme="blue"] #root,
+html[data-ec-theme="red"] .app,
+html[data-ec-theme="blue"] .app{
+  background:
+    radial-gradient(circle at 10% 5%,color-mix(in srgb,var(--ec-rich) 28%,transparent) 0 14%,transparent 35%),
+    radial-gradient(circle at 92% 28%,color-mix(in srgb,var(--ec-rich-2) 24%,transparent) 0 13%,transparent 34%),
+    linear-gradient(145deg,var(--ec-rich-soft) 0%,#fff 42%,var(--ec-rich-soft-2) 100%)!important;
+}
+
+html[data-ec-theme="red"] .ec-brand-masthead,
+html[data-ec-theme="blue"] .ec-brand-masthead{
+  background:linear-gradient(110deg,#fff 0%,var(--ec-rich-soft) 48%,color-mix(in srgb,var(--ec-rich) 16%,#fff) 100%)!important;
+  border-bottom:2px solid color-mix(in srgb,var(--ec-rich) 55%,#fff)!important;
+  box-shadow:0 7px 24px color-mix(in srgb,var(--ec-rich-3) 13%,transparent)!important;
+}
+html[data-ec-theme="red"] .ec-brand-claim,
+html[data-ec-theme="blue"] .ec-brand-claim{border-left-color:color-mix(in srgb,var(--ec-rich) 32%,#d8dcdf)!important;color:var(--ec-rich-ink)!important}
+html[data-ec-theme="red"] .ec-brand-claim b,
+html[data-ec-theme="blue"] .ec-brand-claim b{color:var(--ec-rich-3)!important}
+
+html[data-ec-theme="red"] .ec-region-status,
+html[data-ec-theme="blue"] .ec-region-status{
+  background:linear-gradient(135deg,#fff,var(--ec-rich-soft-2))!important;
+  border-color:color-mix(in srgb,var(--ec-rich) 55%,#fff)!important;
+  color:var(--ec-rich-ink)!important;
+  box-shadow:0 6px 16px color-mix(in srgb,var(--ec-rich-3) 11%,transparent)!important;
+}
+html[data-ec-theme="red"] .ec-region-status span,
+html[data-ec-theme="blue"] .ec-region-status span,
+html[data-ec-theme="red"] .ec-region-status strong,
+html[data-ec-theme="blue"] .ec-region-status strong{color:var(--ec-rich-2)!important}
+
+html[data-ec-theme="red"] .ec-top-nav,
+html[data-ec-theme="blue"] .ec-top-nav{
+  background:linear-gradient(90deg,#fff 0%,var(--ec-rich-soft) 62%,color-mix(in srgb,var(--ec-rich) 12%,#fff) 100%)!important;
+  border-bottom-color:color-mix(in srgb,var(--ec-rich) 42%,#d9dde0)!important;
+  box-shadow:0 7px 22px color-mix(in srgb,var(--ec-rich-3) 12%,transparent)!important;
+}
+html[data-ec-theme="red"] .ec-top-nav button,
+html[data-ec-theme="blue"] .ec-top-nav button{background:transparent!important;color:color-mix(in srgb,var(--ec-rich-ink) 78%,#111)!important}
+html[data-ec-theme="red"] .ec-top-nav button:first-child,
+html[data-ec-theme="blue"] .ec-top-nav button:first-child,
+html[data-ec-theme="red"] .ec-top-nav button.active,
+html[data-ec-theme="blue"] .ec-top-nav button.active,
+html[data-ec-theme="red"] .ec-top-nav button[aria-current="page"],
+html[data-ec-theme="blue"] .ec-top-nav button[aria-current="page"]{
+  background:linear-gradient(135deg,var(--ec-rich),var(--ec-rich-2))!important;color:#fff!important;
+  box-shadow:0 7px 17px color-mix(in srgb,var(--ec-rich-3) 22%,transparent)!important;
+}
+html[data-ec-theme="red"] .ec-top-nav button:hover,
+html[data-ec-theme="blue"] .ec-top-nav button:hover{background:color-mix(in srgb,var(--ec-rich) 13%,#fff)!important;outline-color:var(--ec-rich)!important}
+html[data-ec-theme="red"] .ec-region-picker,
+html[data-ec-theme="blue"] .ec-region-picker{background:#fff!important;border:2px solid color-mix(in srgb,var(--ec-rich) 58%,#fff)!important;box-shadow:0 4px 13px color-mix(in srgb,var(--ec-rich-3) 10%,transparent)!important}
+html[data-ec-theme="red"] .ec-region-picker b,
+html[data-ec-theme="blue"] .ec-region-picker b{color:var(--ec-rich)!important}
+
+html[data-ec-theme="red"] .ec-right-dock,
+html[data-ec-theme="blue"] .ec-right-dock{
+  background:linear-gradient(155deg,#fff 0%,var(--ec-rich-soft) 58%,color-mix(in srgb,var(--ec-rich) 14%,#fff) 100%)!important;
+  border:1px solid color-mix(in srgb,var(--ec-rich) 34%,#d9dde0)!important;
+  box-shadow:0 16px 40px color-mix(in srgb,var(--ec-rich-3) 16%,transparent)!important;
+}
+html[data-ec-theme="red"] .ec-dock-head span,
+html[data-ec-theme="blue"] .ec-dock-head span,
+html[data-ec-theme="red"] .ec-dock-section-label,
+html[data-ec-theme="blue"] .ec-dock-section-label{color:var(--ec-rich-2)!important}
+html[data-ec-theme="red"] .ec-right-dock>button:hover,
+html[data-ec-theme="blue"] .ec-right-dock>button:hover,
+html[data-ec-theme="red"] .ec-right-dock>button:focus-visible,
+html[data-ec-theme="blue"] .ec-right-dock>button:focus-visible{background:linear-gradient(135deg,var(--ec-rich),var(--ec-rich-2))!important;color:#fff!important}
+html[data-ec-theme="red"] .ec-dock-notification-badge,
+html[data-ec-theme="blue"] .ec-dock-notification-badge{background:var(--ec-rich)!important}
+html[data-ec-theme="red"] .ec-right-dock .ec-dock-reward-card,
+html[data-ec-theme="blue"] .ec-right-dock .ec-dock-reward-card{background:linear-gradient(145deg,#fff,var(--ec-rich-soft-2))!important;border-color:color-mix(in srgb,var(--ec-rich) 35%,#e2e6e9)!important}
+html[data-ec-theme="red"] .ec-dock-reward-head span,
+html[data-ec-theme="blue"] .ec-dock-reward-head span{color:var(--ec-rich-2)!important}
+html[data-ec-theme="red"] .ec-dock-reward-bar-level i,
+html[data-ec-theme="blue"] .ec-dock-reward-bar-level i{background:linear-gradient(90deg,var(--ec-rich),var(--ec-rich-2))!important}
+
+html[data-ec-theme="red"] .modern-main,
+html[data-ec-theme="blue"] .modern-main{
+  background:
+    linear-gradient(30deg,transparent 0 38%,color-mix(in srgb,var(--ec-rich) 7%,transparent) 38% 58%,transparent 58%),
+    linear-gradient(145deg,color-mix(in srgb,var(--ec-rich-soft) 76%,#fff),#fff 48%,color-mix(in srgb,var(--ec-rich-soft-2) 78%,#fff))!important;
+}
+
+html[data-ec-theme="red"] .panel:not(.native-member-card),
+html[data-ec-theme="blue"] .panel:not(.native-member-card),
+html[data-ec-theme="red"] .community-card,
+html[data-ec-theme="blue"] .community-card,
+html[data-ec-theme="red"] .content-card,
+html[data-ec-theme="blue"] .content-card{
+  background:linear-gradient(145deg,#fff 0%,color-mix(in srgb,var(--ec-rich-soft) 75%,#fff) 100%)!important;
+  border-color:color-mix(in srgb,var(--ec-rich) 26%,#d4d9dd)!important;
+  box-shadow:0 10px 28px color-mix(in srgb,var(--ec-rich-3) 10%,transparent)!important;
+}
+html[data-ec-theme="red"] .panel:not(.native-member-card)::before,
+html[data-ec-theme="blue"] .panel:not(.native-member-card)::before{border-color:var(--ec-rich)!important}
+
+html[data-ec-theme="red"] .eyebrow,
+html[data-ec-theme="blue"] .eyebrow,
+html[data-ec-theme="red"] .ec-region-context span,
+html[data-ec-theme="blue"] .ec-region-context span,
+html[data-ec-theme="red"] .ec-regional-events-context>span,
+html[data-ec-theme="blue"] .ec-regional-events-context>span{color:var(--ec-rich-2)!important}
+
+html[data-ec-theme="red"] .primary-button,
+html[data-ec-theme="blue"] .primary-button,
+html[data-ec-theme="red"] button.primary-button,
+html[data-ec-theme="blue"] button.primary-button{
+  background:linear-gradient(135deg,var(--ec-rich),var(--ec-rich-2),var(--ec-rich-3))!important;
+  border-color:var(--ec-rich-2)!important;color:#fff!important;
+  box-shadow:0 8px 20px color-mix(in srgb,var(--ec-rich-3) 24%,transparent)!important;
+}
+html[data-ec-theme="red"] input:focus,
+html[data-ec-theme="blue"] input:focus,
+html[data-ec-theme="red"] select:focus,
+html[data-ec-theme="blue"] select:focus,
+html[data-ec-theme="red"] textarea:focus,
+html[data-ec-theme="blue"] textarea:focus{border-color:var(--ec-rich)!important;box-shadow:0 0 0 3px color-mix(in srgb,var(--ec-rich) 18%,transparent)!important;outline:0!important}
+
+html[data-ec-theme="red"] .ec-region-context,
+html[data-ec-theme="blue"] .ec-region-context,
+html[data-ec-theme="red"] .ec-regional-events-context,
+html[data-ec-theme="blue"] .ec-regional-events-context{
+  background:linear-gradient(110deg,#fff,var(--ec-rich-soft-2))!important;
+  border-color:color-mix(in srgb,var(--ec-rich) 35%,#d7e1e9)!important;
+}
+html[data-ec-theme="red"] .ec-regional-event-row,
+html[data-ec-theme="blue"] .ec-regional-event-row,
+html[data-ec-theme="red"] .groups-page .group-card.panel,
+html[data-ec-theme="blue"] .groups-page .group-card.panel{
+  background:linear-gradient(145deg,#fff 0%,var(--ec-rich-soft) 100%)!important;
+  border-color:color-mix(in srgb,var(--ec-rich) 30%,#d7e1e9)!important;
+  box-shadow:0 9px 24px color-mix(in srgb,var(--ec-rich-3) 12%,transparent)!important;
+}
+html[data-ec-theme="red"] .ec-regional-event-state,
+html[data-ec-theme="blue"] .ec-regional-event-state{background:color-mix(in srgb,var(--ec-rich) 13%,#fff)!important;color:var(--ec-rich-ink)!important}
+
+/* Preserve the member role colors; only their outer glow follows the selected theme. */
+html[data-ec-theme="red"] .native-member-card,
+html[data-ec-theme="blue"] .native-member-card{box-shadow:0 11px 28px color-mix(in srgb,var(--ec-rich-3) 15%,transparent)!important}
+
+html[data-ec-theme="red"] footer,
+html[data-ec-theme="blue"] footer,
+html[data-ec-theme="red"] .site-footer,
+html[data-ec-theme="blue"] .site-footer{
+  background:linear-gradient(100deg,#fff,var(--ec-rich-soft-2))!important;
+  border-top-color:color-mix(in srgb,var(--ec-rich) 38%,#d8e1e8)!important;
+}
+
+@media(max-width:1050px){
+  html[data-ec-theme="red"] .ec-dock-toggle,html[data-ec-theme="blue"] .ec-dock-toggle{background:linear-gradient(135deg,var(--ec-rich),var(--ec-rich-2))!important;color:#fff!important}
+}
