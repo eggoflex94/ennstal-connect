@@ -128,6 +128,7 @@ import "./desktop-on-phone.css";
 
 /* Final dashboard canvas + mobile profile editor authority. */
 import "./dashboard-mobile-profile-final.css";
+import "./mobile-profile-editor-fix.js";
 
 /* Final theme layer: same structure, only Standard / Rot / Blau. */
 import "./standard-theme-variants.css";
