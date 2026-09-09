@@ -1,20 +1,38 @@
-// Abort stalled requests, including writes. Never replay a write after a timeout:
-// the server may already have committed it even if its response was lost.
-export function createNetworkFetch(fetchImpl, timeoutMs = 20_000) {
+// Abort stalled requests. Safe read requests get a short bounded retry window;
+// writes are never replayed because the server may already have committed them.
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const isTransientNetworkError = (error) => /failed to fetch|networkerror|network request failed|load failed|fetch failed|timeout|aborted/i.test(String(error?.message || error || ''));
+
+export function createNetworkFetch(fetchImpl, timeoutMs = 12_000) {
   return async (input, init = {}) => {
-    const controller = new AbortController();
-    const callerSignal = init.signal || input?.signal;
-    const abort = () => controller.abort(callerSignal.reason);
-    if (callerSignal?.aborted) abort();
-    else callerSignal?.addEventListener("abort", abort, { once: true });
-    const timer = setTimeout(() => controller.abort(new DOMException(
-      "Die Verbindung antwortet nicht. Bitte prüfe vor einem erneuten Speichern, ob die Änderung bereits übernommen wurde.",
-      "TimeoutError"
-    )), timeoutMs);
-    try { return await fetchImpl(input, { ...init, signal: controller.signal }); }
-    finally {
-      clearTimeout(timer);
-      callerSignal?.removeEventListener("abort", abort);
+    const method = String(init.method || input?.method || 'GET').toUpperCase();
+    const canRetry = method === 'GET' || method === 'HEAD';
+    const attempts = canRetry ? 3 : 1;
+    let lastError = null;
+
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+      const controller = new AbortController();
+      const callerSignal = init.signal || input?.signal;
+      const abort = () => controller.abort(callerSignal?.reason);
+      if (callerSignal?.aborted) abort();
+      else callerSignal?.addEventListener('abort', abort, { once: true });
+      const timer = setTimeout(() => controller.abort(new DOMException(
+        'Die Verbindung antwortet nicht.',
+        'TimeoutError'
+      )), timeoutMs);
+
+      try {
+        return await fetchImpl(input, { ...init, signal: controller.signal });
+      } catch (error) {
+        lastError = error;
+        if (!canRetry || callerSignal?.aborted || !isTransientNetworkError(error) || attempt === attempts - 1) throw error;
+        await wait(attempt === 0 ? 350 : 900);
+      } finally {
+        clearTimeout(timer);
+        callerSignal?.removeEventListener('abort', abort);
+      }
     }
+
+    throw lastError || new Error('Netzwerkanfrage fehlgeschlagen.');
   };
 }
