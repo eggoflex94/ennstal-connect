@@ -29,132 +29,79 @@
     touch-action: pan-x pan-y pinch-zoom !important;
   }
 
-  /* Restore normal desktop header/navigation geometry. */
-  .ec-brand-masthead {
-    min-height: unset !important;
-    padding: 14px 28px !important;
-  }
+  .ec-brand-masthead { min-height: unset !important; padding: 14px 28px !important; }
+  .ec-top-nav { display: flex !important; width: 100% !important; min-width: 1180px !important; padding: 7px 22px !important; gap: 8px !important; overflow: visible !important; flex-wrap: nowrap !important; }
+  .ec-top-nav > button,.ec-top-nav > a,.ec-mobile-nav-rail > button,.ec-mobile-nav-rail > a { width: auto !important; min-width: 0 !important; min-height: 42px !important; padding: 8px 14px !important; flex: 0 0 auto !important; white-space: nowrap !important; }
+  .ec-top-nav button span,.ec-top-nav a span { font-size: inherit !important; white-space: nowrap !important; }
+  .ec-mobile-nav-rail { display: contents !important; }
+  .ec-region-picker { position: static !important; width: auto !important; max-width: none !important; min-height: 42px !important; margin: 0 0 0 auto !important; flex: 0 0 auto !important; }
+  .ec-dock-toggle { position: static !important; width: auto !important; height: auto !important; min-width: 42px !important; min-height: 42px !important; margin: 0 !important; border-radius: 12px !important; box-shadow: none !important; }
+  .content-root { padding-left: 28px !important; padding-right: 28px !important; }
+  .page-heading { display: flex !important; align-items: flex-start !important; justify-content: space-between !important; gap: 24px !important; }
+  .page-heading h1 { font-size: inherit !important; line-height: inherit !important; }
+  .member-grid,.members-grid,.news-grid,.group-grid,.groups-grid,.engagement-grid,.homepage-builder-grid,.homepage-sections { width: auto !important; }
+  input,select,textarea { font-size: inherit !important; }
+  .ec-right-dock { top: auto !important; right: auto !important; bottom: auto !important; width: auto !important; max-width: none !important; max-height: none !important; overflow: visible !important; }
+  .content-editor-overlay,.modal-overlay { padding: 24px !important; align-items: center !important; }
+  .content-editor-dialog,.modal-dialog,.ec-home-edit-dialog { width: min(900px, 90vw) !important; max-width: 900px !important; max-height: 88vh !important; overflow-y: auto !important; border-radius: 20px !important; }
+  .content-editor-actions,.modal-actions,.form-actions { display: flex !important; flex-wrap: wrap !important; gap: 10px !important; }
+}
 
-  .ec-top-nav {
-    display: flex !important;
-    width: 100% !important;
-    min-width: 1180px !important;
-    padding: 7px 22px !important;
-    gap: 8px !important;
-    overflow: visible !important;
-    flex-wrap: nowrap !important;
-  }
-
-  .ec-top-nav > button,
-  .ec-top-nav > a,
-  .ec-mobile-nav-rail > button,
-  .ec-mobile-nav-rail > a {
-    width: auto !important;
-    min-width: 0 !important;
-    min-height: 42px !important;
-    padding: 8px 14px !important;
-    flex: 0 0 auto !important;
-    white-space: nowrap !important;
-  }
-
-  .ec-top-nav button span,
-  .ec-top-nav a span {
-    font-size: inherit !important;
-    white-space: nowrap !important;
-  }
-
-  .ec-mobile-nav-rail {
-    display: contents !important;
-  }
-
-  .ec-region-picker {
-    position: static !important;
-    width: auto !important;
-    max-width: none !important;
-    min-height: 42px !important;
-    margin: 0 0 0 auto !important;
-    flex: 0 0 auto !important;
-  }
-
-  .ec-dock-toggle {
-    position: static !important;
-    width: auto !important;
-    height: auto !important;
-    min-width: 42px !important;
-    min-height: 42px !important;
-    margin: 0 !important;
-    border-radius: 12px !important;
-    box-shadow: none !important;
-  }
-
-  /* Desktop panels/cards stay multi-column where desktop CSS defines them. */
-  .content-root {
-    padding-left: 28px !important;
-    padding-right: 28px !important;
-  }
-
-  .page-heading {
-    display: flex !important;
-    align-items: flex-start !important;
-    justify-content: space-between !important;
-    gap: 24px !important;
-  }
-
-  .page-heading h1 {
-    font-size: inherit !important;
-    line-height: inherit !important;
-  }
-
-  .member-grid,
-  .members-grid,
-  .news-grid,
-  .group-grid,
-  .groups-grid,
-  .engagement-grid,
-  .homepage-builder-grid,
-  .homepage-sections {
-    width: auto !important;
-  }
-
-  input,
-  select,
-  textarea {
-    font-size: inherit !important;
-  }
-
-  /* Personal dock remains the normal desktop side panel, not a full-screen phone sheet. */
-  .ec-right-dock {
-    top: auto !important;
-    right: auto !important;
-    bottom: auto !important;
-    width: auto !important;
-    max-width: none !important;
-    max-height: none !important;
-    overflow: visible !important;
-  }
-
-  /* Editors should use their desktop dimensions; browser pinch zoom handles readability. */
-  .content-editor-overlay,
-  .modal-overlay {
-    padding: 24px !important;
-    align-items: center !important;
-  }
-
-  .content-editor-dialog,
-  .modal-dialog,
-  .ec-home-edit-dialog {
-    width: min(900px, 90vw) !important;
-    max-width: 900px !important;
-    max-height: 88vh !important;
-    overflow-y: auto !important;
-    border-radius: 20px !important;
-  }
-
-  .content-editor-actions,
-  .modal-actions,
-  .form-actions {
-    display: flex !important;
-    flex-wrap: wrap !important;
-    gap: 10px !important;
-  }
+/* ABSOLUTE LAST BADGE AUTHORITY: keep the uploaded friendship motif visible on every role color. */
+.native-member-friend-badge,
+.modern-main article.member-card .ec-card-badge-friend{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:28px!important;
+  height:28px!important;
+  min-width:28px!important;
+  min-height:28px!important;
+  padding:3px!important;
+  border-radius:999px!important;
+  background:#0b1220!important;
+  border:2px solid #fff!important;
+  box-shadow:0 0 0 2px rgba(15,23,42,.34),0 4px 12px rgba(0,0,0,.38)!important;
+  overflow:hidden!important;
+  opacity:1!important;
+  visibility:visible!important;
+}
+.native-member-friend-badge img,
+.modern-main article.member-card .ec-card-badge-friend img,
+.modern-main article.member-card .ec-card-badge-friend .ec-card-badge-friend-img{
+  display:block!important;
+  width:20px!important;
+  height:20px!important;
+  min-width:20px!important;
+  min-height:20px!important;
+  max-width:20px!important;
+  max-height:20px!important;
+  object-fit:contain!important;
+  filter:none!important;
+  opacity:1!important;
+  visibility:visible!important;
+}
+.member-profile-actions .ec-profile-friendship-accepted,
+.profile-actions .ec-profile-friendship-accepted{
+  display:inline-flex!important;
+  align-items:center!important;
+  gap:9px!important;
+}
+.member-profile-actions .ec-profile-friendship-accepted::before,
+.profile-actions .ec-profile-friendship-accepted::before{
+  content:""!important;
+  display:inline-block!important;
+  width:28px!important;
+  height:28px!important;
+  min-width:28px!important;
+  min-height:28px!important;
+  flex:0 0 28px!important;
+  border-radius:999px!important;
+  background-color:#0b1220!important;
+  background-image:url('/badge-friendship.svg')!important;
+  background-repeat:no-repeat!important;
+  background-position:center!important;
+  background-size:20px 20px!important;
+  border:2px solid #fff!important;
+  box-shadow:0 0 0 2px rgba(15,23,42,.34),0 4px 12px rgba(0,0,0,.38)!important;
 }
