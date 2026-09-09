@@ -88,3 +88,4 @@ if '.member-directory-controls{' not in css:
     css_path.write_text(css.rstrip() + '\n' + extra.lstrip(), encoding='utf-8')
 
 print('native community upgrade finished')
+# retry marker 2026-09-09
