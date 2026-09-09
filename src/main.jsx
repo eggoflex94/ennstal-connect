@@ -39,6 +39,7 @@ import "./navigation-stability.js";
 import "./admin-forum-cross-region.js";
 import "./community-engagement-upgrade.js";
 import "./home-social-events.js";
+import "./home-social-force-visible.js";
 import "./event-editor-enhancement.js";
 import "./today-updates-popup.js";
 import "./clean-profile-runtime.js";
