@@ -1,13 +1,10 @@
 from pathlib import Path
 import subprocess
-import re
 import sys
 
 root = Path('.')
 
-# The original transformer already performs the large App.jsx replacement.
-# Its only known failure is the brittle legacy test anchor. Accept only that
-# exact failure, then finish the upgrade deterministically below.
+# Run the large native React transformer first.
 run = subprocess.run(
     [sys.executable, 'scripts/native_community_upgrade.py'],
     text=True,
@@ -15,30 +12,32 @@ run = subprocess.run(
 )
 combined = (run.stdout or '') + '\n' + (run.stderr or '')
 print(combined)
-if run.returncode != 0 and 'community core audit anchor missing' not in combined:
+known_legacy_test_failure = run.returncode != 0 and 'community core audit anchor missing' in combined
+if run.returncode != 0 and not known_legacy_test_failure:
     raise SystemExit(run.returncode)
 
-# Update the audit for the new homepage rule: regional tables stay strictly
-# region-filtered, while homepage_sections intentionally includes GLOBAL rows.
-test_path = root / 'test/community-core-audit.test.mjs'
-test = test_path.read_text(encoding='utf-8')
-old_tables = 'for (const table of ["homepage_sections", "news", "community_events", "community_ads", "forum_posts", "community_requests"]) {'
-new_tables = 'for (const table of ["news", "community_events", "community_ads", "forum_posts", "community_requests"]) {'
-if old_tables in test:
+# Only repair the legacy audit when the original transformer could not do it.
+# On current main the original transformer now updates this test successfully.
+if known_legacy_test_failure:
+    test_path = root / 'test/community-core-audit.test.mjs'
+    test = test_path.read_text(encoding='utf-8')
+    old_tables = 'for (const table of ["homepage_sections", "news", "community_events", "community_ads", "forum_posts", "community_requests"]) {'
+    new_tables = 'for (const table of ["news", "community_events", "community_ads", "forum_posts", "community_requests"]) {'
+    if old_tables not in test:
+        raise SystemExit('legacy regional content audit not found')
     test = test.replace(old_tables, new_tables, 1)
-homepage_assert = '  assert.match(app, /from\\("homepage_sections"\\)[\\s\\S]{0,300}publication_scope\\.eq\\.GLOBAL/);\n'
-marker = '}\n});\n\ntest("React-owned home DOM is not rewritten by the removed regional event runtime"'
-regional_test_start = test.find('test("regional content sources use the active region"')
-if regional_test_start < 0:
-    raise SystemExit('regional content audit not found')
-marker_pos = test.find(marker, regional_test_start)
-if marker_pos < 0:
-    raise SystemExit('regional content audit end not found')
-if 'publication_scope\\.eq\\.GLOBAL' not in test[regional_test_start:marker_pos]:
-    test = test[:marker_pos] + homepage_assert + test[marker_pos:]
-test_path.write_text(test, encoding='utf-8')
+    close_marker = '\n});\n\ntest("React-owned home DOM is not rewritten by the removed regional event runtime"'
+    start = test.find('test("regional content sources use the active region"')
+    end = test.find(close_marker, start)
+    if start < 0 or end < 0:
+        raise SystemExit('regional content audit boundaries not found')
+    assertion = '\n  assert.match(app, /from\\("homepage_sections"\\)[\\s\\S]{0,300}publication_scope\\.eq\\.GLOBAL/);'
+    if 'publication_scope\\.eq\\.GLOBAL' not in test[start:end]:
+        test = test[:end] + assertion + test[end:]
+    test_path.write_text(test, encoding='utf-8')
 
-# Remove old DOM-authority runtimes now that React owns these surfaces.
+# Remove obsolete DOM-authority runtimes. React now owns member filtering and
+# homepage editing directly.
 main_path = root / 'src/main.jsx'
 main = main_path.read_text(encoding='utf-8')
 for stale in [
@@ -57,8 +56,7 @@ if 'community-native-editor.css' not in main:
     main = main.replace(anchor, anchor + '\nimport "./community-native-editor.css";', 1)
 main_path.write_text(main, encoding='utf-8')
 
-# Regional shell may still decorate member cards, but it must no longer decide
-# which region is visible. React's new directory filters are authoritative.
+# Keep regional role decoration, but remove the old shell-level member hiding.
 shell_path = root / 'src/regional-shell.js'
 shell = shell_path.read_text(encoding='utf-8')
 old_hide = 'card.hidden=!searching&&p.home_region_id!==activeRegion.id;'
@@ -66,8 +64,12 @@ if old_hide in shell:
     shell = shell.replace(old_hide, 'card.hidden=false;', 1)
 shell_path.write_text(shell, encoding='utf-8')
 
+# Scoped styles for the native member directory and homepage editor.
 css_path = root / 'src/community-native-editor.css'
-css_path.write_text(r'''/* Native React member directory and homepage design editor. */
+if not css_path.exists():
+    css_path.write_text('''/* Native React member directory and homepage design editor. */\n''', encoding='utf-8')
+css = css_path.read_text(encoding='utf-8')
+extra = r'''
 .member-directory-native{min-width:0}.member-directory-heading{margin-bottom:18px}
 .member-directory-controls{display:grid;grid-template-columns:minmax(320px,1.6fr) minmax(240px,.8fr);gap:16px 20px;align-items:end;margin-bottom:22px;padding:20px}
 .member-directory-controls label{display:grid;gap:7px;font-weight:800;color:#183149}.member-directory-controls input,.member-directory-controls select{width:100%;min-height:48px;border:1px solid #cbd8e5;border-radius:13px;background:#fff;padding:0 14px;font:inherit}
@@ -81,6 +83,8 @@ css_path.write_text(r'''/* Native React member directory and homepage design edi
 .homepage-image-picker{padding:12px 14px;border:1px dashed #a9bccb;border-radius:13px;background:#f7fafc}.homepage-image-picker input{padding:8px 0 0;border:0;background:transparent}.homepage-live-preview{position:sticky;top:84px;display:grid;gap:10px}.homepage-live-preview .homepage-frame{margin:0;min-height:260px}
 .homepage-frame>div h2{line-height:1.16;overflow-wrap:anywhere}.homepage-frame>div p{line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}.content-editor-dialog select,.content-editor-dialog input[type=number],.content-editor-dialog input[type=color]{width:100%;min-height:46px}
 @media(max-width:1050px){.homepage-editor-layout,.member-directory-controls{grid-template-columns:1fr}.homepage-live-preview{position:static}.homepage-typography-grid{grid-template-columns:1fr 1fr}.member-directory-quick{grid-column:1}}
-''', encoding='utf-8')
+'''
+if '.member-directory-controls{' not in css:
+    css_path.write_text(css.rstrip() + '\n' + extra.lstrip(), encoding='utf-8')
 
 print('native community upgrade finished')
