@@ -1,0 +1,38 @@
+.member-profile-actions .ec-profile-friendship-accepted,
+.profile-actions .ec-profile-friendship-accepted{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:8px!important;
+}
+.member-profile-actions .ec-profile-friendship-accepted::before,
+.profile-actions .ec-profile-friendship-accepted::before{
+  content:"";
+  display:block;
+  flex:0 0 24px;
+  width:24px;
+  height:24px;
+  min-width:24px;
+  min-height:24px;
+  background:url('/badge-friendship.svg') center/contain no-repeat;
+}
+@media(max-width:900px){
+  .member-profile-actions .ec-profile-friendship-accepted::before,
+  .profile-actions .ec-profile-friendship-accepted::before{
+    flex-basis:22px;
+    width:22px;
+    height:22px;
+    min-width:22px;
+    min-height:22px;
+  }
+}
+@media(max-width:620px){
+  .member-profile-actions .ec-profile-friendship-accepted::before,
+  .profile-actions .ec-profile-friendship-accepted::before{
+    flex-basis:20px;
+    width:20px;
+    height:20px;
+    min-width:20px;
+    min-height:20px;
+  }
+}
