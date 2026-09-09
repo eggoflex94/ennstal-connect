@@ -4,6 +4,7 @@ import QRCode from "qrcode";
 import { preparePrivilegedAction, supabase, supabaseUnavailableMessage } from "./supabaseClient";
 import ProfileSections from "./ProfileSections.jsx";
 import MemberCardView from "./MemberCardView.jsx";
+import NativeMembersDirectory from "./NativeMembersDirectory.jsx";
 
 // A friendly community image is shown until a member uploads a personal photo.
 const DEFAULT_AVATAR = "/community-default-avatar.png";
@@ -1125,7 +1126,15 @@ export default function App() {
         {page === "home" && (
           <Home profile={profile} user={user} activeRegion={activeRegion} isHeadAdmin={isHeadAdmin} homepageSections={regionFilter(homepageSections)} canEdit={isHeadAdmin(profile?.role)} createHomepageSection={createHomepageSection} editHomepageSection={editHomepageSection} deleteHomepageSection={deleteHomepageSection} uploadHomepageImage={uploadHomepageImage} weeklyPoll={weeklyPoll?.region_id && weeklyPoll.region_id !== activeRegionId ? null : weeklyPoll} welcomeBadges={welcomeBadges} groups={regionFilter(groups)} featuredGroup={featuredGroup?.region_id && featuredGroup.region_id !== activeRegionId ? null : featuredGroup} communityRequests={regionFilter(communityRequests)} onVote={voteWeeklyPoll} onCreatePoll={createWeeklyPoll} onFeatureGroup={featureCommunityGroup} onCreateRequest={createCommunityRequest} onCloseRequest={closeCommunityRequest} onOpenGroup={(group) => { setSelectedGroup(group); setPage("groups"); }}/>
         )}
-        {page === "members" && <section><div className="page-heading"><div><span className="eyebrow">COMMUNITY</span><h1>Mitglieder · {activeRegion?.name || "Region"}</h1><p>{search.trim() ? "Die Suche findet Mitglieder aus allen drei Regionen." : "Angezeigt werden nur Mitglieder mit dieser Heimatregion."}</p></div><input className="search-input" placeholder="Alle Regionen durchsuchen …" value={search} onChange={(e) => setSearch(e.target.value)}/></div><MemberGrid members={displayedMembers} profile={profile} friendships={friendships} onOpen={openMember} onMessage={openChat}/></section>}
+        {page === "members" && <NativeMembersDirectory
+  members={members}
+  regions={regions}
+  activeRegion={activeRegion}
+  profile={profile}
+  friendships={friendships}
+  onOpen={openMember}
+  onMessage={openChat}
+/>}
         {page === "friends" && <section><div className="page-heading"><h1>Freunde</h1><p>Nur bestätigte Freundschaften werden hier angezeigt.</p></div><MemberGrid members={members.filter((m) => acceptedFriendIds.includes(m.id) && !m.is_test_account && m.account_status !== "SUSPENDED")} profile={profile} friendships={friendships} onOpen={openMember} onMessage={openChat}/></section>}
         {page === "friend-requests" && <FriendRequests incoming={incomingRequests} sent={sentRequests} memberById={memberById} respond={respondToFriendRequest} cancel={cancelFriendRequest}/>} 
         {page === "blocked" && <Blocked blockedUsers={blockedUsers} memberById={memberById} unblock={unblockUser}/>} 
