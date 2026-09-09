@@ -10,8 +10,9 @@ on:
       - "src/profile-design-preview-role.css"
       - "src/profile-customization.js"
       - "src/dashboard-mobile-profile-final.css"
-      - "src/mobile-profile-editor-fix.js"
+      - "src/mobile-native-final.css"
       - "src/main.jsx"
+      - "src/profile-action-final-authority.css"
       - "src/sidebar-reward-progress.js"
       - "src/sidebar-reward-progress.css"
       - "src/auth-community-intro.js"
@@ -63,6 +64,6 @@ jobs:
             echo "Cloudflare dist is already current"
             exit 0
           fi
-          git commit -m "Refresh Cloudflare dist for profile layout cleanup"
+          git commit -m "Refresh Cloudflare dist for native mobile interactions"
           git pull --rebase origin main
           git push origin HEAD:main
