@@ -1,195 +1,91 @@
-/* Final mobile authority: use the browser's native tap/click behavior.
-   No desktop-width emulation, invisible pickers or click-shield layers. */
+/* Final mobile interaction authority.
+   Keep the proven desktop-style phone navigation intact; only fix hit-testing.
+   No grid/reflow overrides here. */
 
-@media (pointer: coarse), (max-width: 900px) {
-  html,
-  body,
-  #root,
-  .app,
-  .ec-regional-ui,
-  .dashboard-layout,
-  .modern-main,
-  .content-root {
-    min-width: 0 !important;
-    width: 100% !important;
-    max-width: 100% !important;
+@media (pointer: coarse) {
+  html,body{
+    touch-action:pan-x pan-y pinch-zoom!important;
   }
 
-  html,
-  body {
-    overflow-x: hidden !important;
-    touch-action: pan-y pinch-zoom !important;
+  /* The shell itself must never become an invisible click shield. */
+  .ec-regional-shell{
+    pointer-events:none!important;
+  }
+  .ec-regional-shell>.ec-brand-masthead,
+  .ec-regional-shell>.ec-top-nav,
+  .ec-regional-shell>.ec-right-dock{
+    pointer-events:auto!important;
   }
 
-  .ec-regional-shell {
-    pointer-events: none !important;
+  /* Native controls remain native and directly tappable. */
+  button,a,input,textarea,select,label,summary,[role="button"],[tabindex]{
+    pointer-events:auto!important;
+  }
+  button,a,[role="button"]{
+    touch-action:manipulation!important;
+  }
+  input,textarea,select,label{
+    touch-action:auto!important;
   }
 
-  .ec-brand-masthead,
   .ec-top-nav,
-  .ec-right-dock,
   .ec-top-nav *,
-  .ec-right-dock * {
-    pointer-events: auto !important;
+  .ec-region-picker,
+  .ec-region-picker *,
+  .ec-dock-toggle{
+    pointer-events:auto!important;
   }
 
-  button,
-  a,
-  input,
-  textarea,
-  select,
-  label,
-  summary,
-  [role="button"] {
-    pointer-events: auto !important;
-    touch-action: manipulation !important;
+  .ec-region-picker select{
+    opacity:1!important;
+    visibility:visible!important;
+    pointer-events:auto!important;
+    touch-action:auto!important;
   }
 
-  .ec-top-nav {
-    display: grid !important;
-    grid-template-columns: minmax(0,1fr) auto auto !important;
-    gap: 8px !important;
-    width: 100% !important;
-    min-width: 0 !important;
-    padding: 7px 8px !important;
-    overflow: visible !important;
-    align-items: center !important;
+  /* Closed personal dashboard cannot cover anything underneath. */
+  body:not(.ec-dock-open) .ec-right-dock{
+    visibility:hidden!important;
+    opacity:0!important;
+    pointer-events:none!important;
+    transform:translate3d(105%,0,0)!important;
+  }
+  body:not(.ec-dock-open) .ec-right-dock *{
+    pointer-events:none!important;
   }
 
-  .ec-mobile-nav-rail {
-    display: flex !important;
-    gap: 6px !important;
-    min-width: 0 !important;
-    overflow-x: auto !important;
-    overflow-y: hidden !important;
-    -webkit-overflow-scrolling: touch !important;
-    scrollbar-width: none !important;
+  body.ec-dock-open .ec-right-dock{
+    position:fixed!important;
+    top:0!important;
+    right:0!important;
+    bottom:0!important;
+    left:auto!important;
+    width:min(94vw,380px)!important;
+    height:100dvh!important;
+    max-height:100dvh!important;
+    overflow-y:auto!important;
+    visibility:visible!important;
+    opacity:1!important;
+    transform:none!important;
+    pointer-events:auto!important;
+    z-index:20000!important;
+    overscroll-behavior:contain!important;
   }
-  .ec-mobile-nav-rail::-webkit-scrollbar { display: none !important; }
-
-  .ec-mobile-nav-rail > button,
-  .ec-top-nav > button[data-ec-page] {
-    flex: 0 0 auto !important;
-    min-width: max-content !important;
-    min-height: 44px !important;
-    padding: 8px 11px !important;
-  }
-
-  /* Region selection is now a normal visible native select on mobile. */
-  .ec-region-picker {
-    position: static !important;
-    display: flex !important;
-    align-items: center !important;
-    gap: 6px !important;
-    width: auto !important;
-    min-width: 0 !important;
-    height: 44px !important;
-    margin: 0 !important;
-    padding: 0 8px !important;
-    border-radius: 11px !important;
-    background: #fff !important;
-    z-index: auto !important;
+  body.ec-dock-open .ec-right-dock *{
+    pointer-events:auto!important;
   }
 
-  .ec-region-picker > b {
-    display: inline !important;
-    flex: 0 0 auto !important;
-  }
-
-  .ec-region-picker select {
-    position: static !important;
-    inset: auto !important;
-    display: block !important;
-    width: min(44vw, 240px) !important;
-    min-width: 120px !important;
-    height: 36px !important;
-    opacity: 1 !important;
-    visibility: visible !important;
-    appearance: auto !important;
-    -webkit-appearance: menulist !important;
-    cursor: pointer !important;
-    pointer-events: auto !important;
-    touch-action: manipulation !important;
-    font-size: 15px !important;
-  }
-
-  .ec-dock-toggle {
-    position: static !important;
-    width: 44px !important;
-    min-width: 44px !important;
-    height: 44px !important;
-    margin: 0 !important;
-    z-index: auto !important;
-  }
-
-  body:not(.ec-dock-open) .ec-right-dock {
-    visibility: hidden !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
-    transform: translate3d(105%,0,0) !important;
-  }
-
-  body.ec-dock-open .ec-right-dock {
-    position: fixed !important;
-    top: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-    left: auto !important;
-    width: min(94vw, 380px) !important;
-    height: 100dvh !important;
-    max-height: 100dvh !important;
-    overflow-y: auto !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    transform: none !important;
-    pointer-events: auto !important;
-    z-index: 20000 !important;
-    overscroll-behavior: contain !important;
-  }
-
-  body.ec-dock-open .ec-right-dock * {
-    pointer-events: auto !important;
-  }
-
-  .ec-right-dock > button,
+  .ec-right-dock>button,
   .ec-right-dock [data-ec-page],
   .ec-right-dock [data-ec-detail],
-  .ec-right-dock [data-ec-home-region] {
-    min-height: 48px !important;
-    cursor: pointer !important;
-    touch-action: manipulation !important;
-  }
-
-  .content-root {
-    padding-left: 14px !important;
-    padding-right: 14px !important;
-  }
-
-  .profile-page-layout,
-  .my-area-layout {
-    grid-template-columns: minmax(0,1fr) !important;
-    width: 100% !important;
-  }
-}
-
-@media (max-width: 620px) {
-  .ec-top-nav {
-    grid-template-columns: minmax(0,1fr) auto !important;
-  }
-
-  .ec-region-picker {
-    grid-column: 1 / -1 !important;
-    grid-row: 2 !important;
-    width: 100% !important;
-  }
-
-  .ec-region-picker select {
-    width: 100% !important;
-    min-width: 0 !important;
-  }
-
-  .ec-dock-toggle {
-    grid-column: 2 !important;
-    grid-row: 1 !important;
+  .ec-right-dock [data-ec-home-region],
+  .member-profile-page button,
+  .profile-page-layout button,
+  .profile-page-layout input,
+  .profile-page-layout textarea,
+  .profile-page-layout select{
+    position:relative!important;
+    z-index:2!important;
+    pointer-events:auto!important;
   }
 }
