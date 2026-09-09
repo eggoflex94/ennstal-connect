@@ -35,6 +35,7 @@ import "./sidebar-news-popup.js";
 import "./regional-shell.js";
 import "./profile-visits-realtime.js";
 import "./navigation-stability.js";
+import "./admin-forum-cross-region.js";
 import "./clean-profile-runtime.js";
 import "./clean-layout.css";
 import "./clean-components.css";
