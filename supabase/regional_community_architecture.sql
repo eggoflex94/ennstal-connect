@@ -19,8 +19,15 @@ insert into public.regions (slug,name,short_name,description,accent,sort_order)
 values
   ('ennstal','Ennstal','Ennstal','Region Ennstal und angrenzende Orte.','#ff8a00',10),
   ('leoben-bruck-muerzzuschlag','Leoben – Bruck – Mürzzuschlag','LBM','Region Leoben, Bruck an der Mur und Mürzzuschlag.','#f04a23',20),
-  ('salzkammergut','Salzkammergut','Salzkammergut','Region Salzkammergut.','#f5b700',30)
+  ('ueberregional','Überregional','Überregional','Salzkammergut und alle Orte außerhalb der beiden Kernregionen Ennstal und Leoben – Bruck – Mürzzuschlag.','#5b6b7a',30)
 on conflict (slug) do update set name=excluded.name,short_name=excluded.short_name,description=excluded.description,accent=excluded.accent,sort_order=excluded.sort_order,is_active=true;
+
+-- Salzkammergut bleibt nur als historische Referenz bestehen und darf durch ein erneutes
+-- Ausführen der Foundation niemals wieder als aktive, auswählbare Region erscheinen.
+update public.regions
+set is_active=false,
+    description='Historische Region; Mitglieder und Inhalte gehören zu Überregional.'
+where slug='salzkammergut';
 
 alter table public.profiles add column if not exists home_region_id uuid references public.regions(id);
 alter table public.profiles add column if not exists home_region_changed_at timestamptz;
