@@ -30,4 +30,59 @@ html[data-ec-theme="blue"] .ec-region-status strong{color:#075fd4!important}
 .native-member-friend-badge,.modern-main article.member-card .ec-card-badge-friend{width:26px!important;height:26px!important;min-width:26px!important;min-height:26px!important;padding:2px!important;border-radius:999px!important;background:#111827!important;border:2px solid #fff!important;box-shadow:0 0 0 1px rgba(15,23,42,.28),0 3px 9px rgba(0,0,0,.3)!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;overflow:hidden!important}
 .native-member-friend-badge img,.modern-main article.member-card .ec-card-badge-friend img,.modern-main article.member-card .ec-card-badge-friend .ec-card-badge-friend-img{width:20px!important;height:20px!important;min-width:20px!important;min-height:20px!important;max-width:20px!important;max-height:20px!important;object-fit:contain!important;display:block!important;opacity:1!important;visibility:visible!important;filter:none!important}
 .member-profile-actions .ec-profile-friendship-accepted::before,.profile-actions .ec-profile-friendship-accepted::before{background-color:#111827!important;background-image:url('/badge-friendship.png')!important;background-repeat:no-repeat!important;background-position:center!important;background-size:20px 20px!important;border:2px solid #fff!important;border-radius:999px!important;box-shadow:0 0 0 1px rgba(15,23,42,.28),0 3px 9px rgba(0,0,0,.3)!important}
+
+/* EVENTS: use the same compact framed-card language as the member directory. */
+.community-hub .community-hub-grid{grid-template-columns:minmax(0,1fr)!important;gap:18px!important}
+.community-hub .ec-regional-events-panel{grid-column:1/-1!important;width:100%!important;min-width:0!important;padding:18px!important;border-radius:22px!important;overflow:visible!important}
+.community-hub .ec-regional-events-panel:has(.ec-regional-events-authority)> .hub-row{display:none!important}
+.ec-regional-events-authority{display:block!important;width:100%!important;min-width:0!important;margin-top:12px!important}
+.ec-regional-events-context{display:flex!important;align-items:center!important;gap:12px!important;flex-wrap:wrap!important;padding:12px 14px!important;margin:0 0 14px!important;border:1px solid #d7e1e9!important;border-radius:16px!important;background:#f7fafc!important}
+.ec-regional-events-context>span{font-size:.76rem!important;font-weight:900!important;letter-spacing:.11em!important;color:#f05a1a!important}
+.ec-regional-events-context>strong{font-size:1rem!important;color:#26384f!important}
+.ec-regional-events-context>small{margin-left:auto!important;color:#6b7f96!important;font-size:.88rem!important}
+.ec-regional-events-list{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:16px!important;width:100%!important;min-width:0!important}
+.ec-regional-event-row{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:12px!important;min-width:0!important;padding:16px!important;border:1px solid #d7e1e9!important;border-radius:20px!important;background:linear-gradient(145deg,#fff 0%,#f6f9fb 100%)!important;box-shadow:0 8px 22px rgba(31,50,72,.08)!important;overflow:hidden!important}
+.ec-regional-event-row.has-image{grid-template-columns:92px minmax(0,1fr)!important}
+.ec-regional-event-row>img{width:92px!important;height:92px!important;max-width:92px!important;max-height:92px!important;object-fit:cover!important;border-radius:16px!important;grid-row:1/span2!important}
+.ec-regional-event-body{min-width:0!important;display:flex!important;flex-direction:column!important;gap:5px!important}
+.ec-regional-event-top{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:10px!important;flex-wrap:wrap!important}
+.ec-regional-event-state{display:inline-flex!important;width:auto!important;padding:5px 9px!important;border-radius:999px!important;background:#eaf0f5!important;color:#53677d!important;font-size:.75rem!important;font-weight:900!important;letter-spacing:.04em!important}
+.ec-regional-event-row.is-active .ec-regional-event-state{background:#e8f8ef!important;color:#187447!important}
+.ec-regional-event-row.is-cancelled .ec-regional-event-state{background:#fff0f2!important;color:#b42335!important}
+.ec-regional-event-body>strong{font-size:1.08rem!important;line-height:1.25!important;color:#25364e!important;overflow-wrap:anywhere!important}
+.ec-regional-event-body>p,.ec-regional-event-location,.ec-regional-event-body time,.ec-regional-event-body small{font-size:.9rem!important;line-height:1.42!important;color:#61758c!important;overflow-wrap:anywhere!important}
+.ec-regional-event-body>p{margin:2px 0 0!important;display:-webkit-box!important;-webkit-line-clamp:3!important;-webkit-box-orient:vertical!important;overflow:hidden!important}
+.ec-regional-event-actions{grid-column:1/-1!important;display:flex!important;flex-wrap:wrap!important;gap:8px!important;margin-top:2px!important}
+.ec-regional-event-actions button{width:auto!important;min-width:0!important;min-height:36px!important;padding:7px 11px!important;margin:0!important;border-radius:11px!important;white-space:nowrap!important;font-size:.86rem!important}
+.ec-regional-events-empty{padding:18px!important;border:1px dashed #cbd7e1!important;border-radius:16px!important;background:#f8fafc!important;color:#60748b!important}
+
+/* GROUPS: concise member-style frames instead of tall document cards. */
+.groups-page .group-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:16px!important;align-items:stretch!important}
+.groups-page .group-card.panel{display:grid!important;grid-template-columns:78px minmax(0,1fr)!important;grid-template-rows:auto!important;gap:14px!important;min-width:0!important;min-height:190px!important;height:auto!important;padding:16px!important;border:1px solid #d7e1e9!important;border-radius:22px!important;background:linear-gradient(145deg,#fff 0%,#f3f7fa 100%)!important;box-shadow:0 9px 24px rgba(31,50,72,.09)!important;overflow:hidden!important;cursor:pointer!important}
+.groups-page .group-cover{width:78px!important;height:78px!important;min-width:78px!important;max-width:78px!important;max-height:78px!important;border-radius:18px!important;object-fit:cover!important;border:2px solid #fff!important;box-shadow:0 0 0 1px #cbd6df,0 5px 14px rgba(15,23,42,.14)!important}
+.groups-page .group-cover-empty{display:flex!important;align-items:center!important;justify-content:center!important;background:linear-gradient(145deg,#e9f0f5,#dbe5ec)!important;color:#587086!important;font-size:1.5rem!important}
+.groups-page .group-card-body{min-width:0!important;display:flex!important;flex-direction:column!important;gap:6px!important}
+.groups-page .group-card-body .eyebrow{font-size:.72rem!important;letter-spacing:.08em!important;margin:0!important}
+.groups-page .group-card-body h2{font-size:1.08rem!important;line-height:1.2!important;margin:0!important;color:#26384f!important;overflow-wrap:anywhere!important}
+.groups-page .group-card-body>p{font-size:.88rem!important;line-height:1.4!important;margin:0!important;color:#61758c!important;display:-webkit-box!important;-webkit-line-clamp:3!important;-webkit-box-orient:vertical!important;overflow:hidden!important}
+.groups-page .group-ownership{display:grid!important;grid-template-columns:1fr!important;gap:2px!important;margin-top:2px!important;font-size:.78rem!important;color:#6c7f93!important}
+.groups-page .group-member-list{display:flex!important;flex-wrap:wrap!important;gap:5px!important;max-height:50px!important;overflow:hidden!important;margin-top:2px!important}
+.groups-page .group-member-list>span{display:inline-flex!important;align-items:center!important;max-width:100%!important;padding:4px 7px!important;border-radius:999px!important;background:#edf2f6!important;color:#42566d!important;font-size:.74rem!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+.groups-page .content-card-actions{grid-column:1/-1!important;display:flex!important;flex-wrap:wrap!important;gap:7px!important;margin-top:auto!important;padding-top:8px!important;border-top:1px solid #e2e8ee!important}
+.groups-page .content-card-actions button{width:auto!important;min-width:0!important;min-height:34px!important;padding:7px 10px!important;margin:0!important;border-radius:10px!important;font-size:.82rem!important;white-space:nowrap!important}
+.groups-page .group-create-form.panel,.groups-page .group-moderators.panel,.groups-page .group-transfer-queue.panel{border-radius:20px!important}
+
+@media(max-width:1180px){
+  .ec-regional-events-list{grid-template-columns:1fr!important}
+  .groups-page .group-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+@media(max-width:760px){
+  .groups-page .group-grid{grid-template-columns:1fr!important}
+  .groups-page .group-card.panel{grid-template-columns:66px minmax(0,1fr)!important;padding:14px!important}
+  .groups-page .group-cover{width:66px!important;height:66px!important;min-width:66px!important;max-width:66px!important;max-height:66px!important}
+  .ec-regional-event-row.has-image{grid-template-columns:72px minmax(0,1fr)!important}
+  .ec-regional-event-row>img{width:72px!important;height:72px!important;max-width:72px!important;max-height:72px!important}
+  .ec-regional-events-context>small{margin-left:0!important;width:100%!important}
+}
+
 @media(max-width:900px){.native-member-friend-badge,.modern-main article.member-card .ec-card-badge-friend{width:24px!important;height:24px!important;min-width:24px!important;min-height:24px!important}.native-member-friend-badge img,.modern-main article.member-card .ec-card-badge-friend img{width:18px!important;height:18px!important;min-width:18px!important;min-height:18px!important;max-width:18px!important;max-height:18px!important}}
