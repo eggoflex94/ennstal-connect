@@ -27,7 +27,7 @@ function normalizedRegions(rows){
 function syncStaticRegionCards(){
   const box=document.querySelector('.auth-page .ec-auth-regions');
   if(!box)return;
-  const html=`<article><strong>Ennstal</strong><span>Für Mitglieder und Themen aus dem Ennstal.</span></article><article><strong>Leoben – Bruck – Mürzzuschlag</strong><span>Regional verbunden in der Obersteiermark.</span></article><article><strong>Überregional</strong><span>Für das Salzkammergut und alle Orte außerhalb unserer beiden Kernregionen.</span></article>`;
+  const html=`<article><strong>Ennstal</strong><span>Für Mitglieder und Themen aus dem Ennstal.</span></article><article><strong>Leoben – Bruck – Mürzzuschlag</strong><span>Regional verbunden in der Obersteiermark.</span></article><article><strong>Überregional</strong><span>Für alle Bundesländer und Regionen – ideal, wenn du regionsübergreifend oder außerhalb der beiden Kernregionen unterwegs bist.</span></article>`;
   if(box.dataset.ecOverregional!=='1'){
     box.innerHTML=html;
     box.dataset.ecOverregional='1';
@@ -46,7 +46,7 @@ async function syncRegistrationRegions(){
     select.replaceChildren(...regions.map(region=>{
       const option=document.createElement('option');
       option.value=region.slug;
-      option.textContent=region.name;
+      option.textContent=region.slug==='ueberregional'||region.legacyAlias?'Überregional – für alle Bundesländer und Regionen':region.name;
       if(region.legacyAlias)option.dataset.ecLegacyOverregional='1';
       return option;
     }));
@@ -64,7 +64,7 @@ async function syncRegistrationRegions(){
     note.className='ec-overregional-note';
     label.appendChild(note);
   }
-  note.textContent='Wohnst du außerhalb von Ennstal oder Leoben – Bruck – Mürzzuschlag, auch im Salzkammergut? Dann wähle „Überregional“.';
+  note.textContent='„Überregional“ gilt für alle Bundesländer und Regionen. Wähle diese Option, wenn du regionsübergreifend sichtbar sein möchtest oder außerhalb der beiden Kernregionen wohnst.';
 }
 
 function mount(){
@@ -77,7 +77,7 @@ function mount(){
   if(!welcome.querySelector('.ec-auth-community-intro')){
     const section=document.createElement('section');
     section.className='ec-auth-community-intro';
-    section.innerHTML=`<span class="ec-auth-intro-kicker">ENNSTAL CONNECT COMMUNITY</span><h2>Regional vernetzt. Einfach gemeinsam.</h2><p class="ec-auth-intro-copy">Ennstal Connect führt die Kernregionen Ennstal sowie Leoben – Bruck – Mürzzuschlag. Das Salzkammergut und alle anderen Orte außerhalb dieser Kernregionen werden unter „Überregional“ zusammengefasst.</p><div class="ec-auth-intro-grid">${items.map(([title,text])=>`<article><strong>${title}</strong><span>${text}</span></article>`).join('')}</div>`;
+    section.innerHTML=`<span class="ec-auth-intro-kicker">ENNSTAL CONNECT COMMUNITY</span><h2>Regional vernetzt. Einfach gemeinsam.</h2><p class="ec-auth-intro-copy">Ennstal Connect führt die Kernregionen Ennstal sowie Leoben – Bruck – Mürzzuschlag. „Überregional“ ist für alle Bundesländer und Regionen gedacht und bündelt alle regionsübergreifenden Profile und Themen.</p><div class="ec-auth-intro-grid">${items.map(([title,text])=>`<article><strong>${title}</strong><span>${text}</span></article>`).join('')}</div>`;
     const updates=intro.querySelector('.public-auth-updates');
     if(updates)intro.insertBefore(section,updates);else intro.appendChild(section);
   }
