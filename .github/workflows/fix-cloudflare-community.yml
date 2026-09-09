@@ -11,6 +11,7 @@ on:
       - "src/profile-customization.js"
       - "src/dashboard-mobile-profile-final.css"
       - "src/mobile-native-final.css"
+      - "src/mobile-nav-runtime.js"
       - "src/main.jsx"
       - "src/profile-action-final-authority.css"
       - "src/sidebar-reward-progress.js"
@@ -58,12 +59,13 @@ jobs:
       - name: Commit verified Cloudflare dist
         run: |
           git config user.name "github-actions[bot]"
-          git config user.email "4189828+github-actions[bot]@users.noreply.github.com"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add dist
           if git diff --cached --quiet; then
             echo "Cloudflare dist is already current"
             exit 0
           fi
-          git commit -m "Refresh Cloudflare dist for native mobile interactions"
+          git commit -m "Refresh Cloudflare dist for desktop-on-phone navigation"
+          git reset --hard HEAD
           git pull --rebase origin main
           git push origin HEAD:main
