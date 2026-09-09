@@ -8,6 +8,10 @@ on:
       - "src/NativeMembersDirectory.jsx"
       - "src/community-native-final.css"
       - "src/profile-design-preview-role.css"
+      - "src/main.jsx"
+      - "src/sidebar-reward-progress.js"
+      - "src/sidebar-reward-progress.css"
+      - "src/auth-community-intro.js"
 
 permissions:
   contents: write
@@ -51,5 +55,5 @@ jobs:
             echo "Cloudflare dist is already current"
             exit 0
           fi
-          git commit -m "Refresh Cloudflare dist for member directory polish"
+          git commit -m "Refresh Cloudflare dist for community rewards"
           git push origin HEAD:main
