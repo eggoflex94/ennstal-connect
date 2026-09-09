@@ -91,6 +91,8 @@ import "./community-native-final.css";
 import "./home-next-event-region-final.css";
 
 import "./profile-action-final-authority.css";
+import "./friendship-badge-profile.css";
+import "./friendship-badge-profile.js";
 import "./profile-image-upload-fix.js";
 import "./profile-photo-upload-fix.js";
 import "./community-event-region-fix.js";
