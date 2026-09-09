@@ -56,4 +56,17 @@ jobs:
             exit 0
           fi
           git commit -m "chore: publish verified production dist [skip ci]"
+          git fetch origin main
+          git rebase origin/main || {
+            git rebase --abort || true
+            git fetch origin main
+            git reset --hard origin/main
+            npm run build
+            git add -f dist
+            if git diff --cached --quiet; then
+              echo "Another workflow already published the same verified dist"
+              exit 0
+            fi
+            git commit -m "chore: publish verified production dist [skip ci]"
+          }
           git push origin HEAD:main
