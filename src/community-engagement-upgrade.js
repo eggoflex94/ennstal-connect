@@ -1,3 +1,5 @@
+import './home-social-events.js';
+
 const ACTIONS = [
   ['♟', 'Mitglieder entdecken', 'Finde Menschen aus deiner Region.', 'members'],
   ['▤', 'Im Forum mitreden', 'Fragen stellen, helfen und diskutieren.', 'forum'],
