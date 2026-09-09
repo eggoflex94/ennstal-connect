@@ -1,202 +1,238 @@
-/* Absolute final mobile interaction layer.
-   Phones use the native viewport and the responsive layout defined by the mobile styles. */
-@media (max-width:900px), (pointer:coarse) {
-  html,body,#root{
-    width:100%!important;
-    max-width:100%!important;
-    min-width:0!important;
-    overflow-x:hidden!important;
-    touch-action:pan-y pinch-zoom!important;
+/* Absolute final phone authority.
+   Product requirement: phones render the same desktop interface as PCs.
+   Do not reflow the application on touch devices; only make desktop controls
+   reliably tappable and keep native form controls usable. */
+
+@media (pointer: coarse) {
+  html,
+  body {
+    min-width: 1180px !important;
+    width: 100% !important;
+    max-width: none !important;
+    overflow-x: auto !important;
+    overflow-y: auto !important;
+    touch-action: pan-x pan-y pinch-zoom !important;
+    -webkit-text-size-adjust: 100% !important;
+    text-size-adjust: 100% !important;
   }
 
-  body{
-    min-width:0!important;
-  }
-
+  #root,
   .app,
+  .modern-app,
   .ec-regional-ui,
   .dashboard-layout,
   .modern-main,
-  .content-root{
-    width:100%!important;
-    max-width:100%!important;
-    min-width:0!important;
+  .content-root {
+    max-width: none !important;
   }
 
-  .ec-regional-shell{
-    pointer-events:none!important;
+  /* The shell wrapper itself is never a hit-test shield. Its actual desktop
+     header, nav and dashboard remain interactive. */
+  .ec-regional-shell {
+    pointer-events: none !important;
   }
+
   .ec-brand-masthead,
   .ec-top-nav,
-  .ec-right-dock{
-    pointer-events:auto!important;
+  .ec-right-dock {
+    pointer-events: auto !important;
   }
 
-  .ec-top-nav,
-  .ec-top-nav *,
-  .ec-region-picker,
-  .ec-region-picker *,
-  .ec-dock-toggle,
+  button,
+  a,
+  input,
+  textarea,
+  select,
+  label,
+  summary,
+  [role="button"],
+  [tabindex],
+  [contenteditable="true"] {
+    pointer-events: auto !important;
+  }
+
+  button,
+  a,
+  [role="button"] {
+    touch-action: manipulation !important;
+  }
+
+  input,
+  textarea,
+  select,
+  label,
+  [contenteditable="true"] {
+    touch-action: auto !important;
+  }
+
+  /* Keep the exact desktop navigation structure. */
+  .ec-top-nav {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    width: 100% !important;
+    min-width: 1180px !important;
+    max-width: none !important;
+    overflow: visible !important;
+  }
+
+  .ec-mobile-nav-rail {
+    display: contents !important;
+  }
+
+  .ec-top-nav > button,
+  .ec-top-nav > a {
+    flex: 0 0 auto !important;
+    width: auto !important;
+    min-width: 0 !important;
+    white-space: nowrap !important;
+    pointer-events: auto !important;
+  }
+
+  .ec-region-picker {
+    position: static !important;
+    display: flex !important;
+    width: auto !important;
+    min-width: 270px !important;
+    max-width: none !important;
+    height: 44px !important;
+    margin-left: auto !important;
+    flex: 0 0 auto !important;
+    pointer-events: auto !important;
+  }
+
+  .ec-region-picker select {
+    position: static !important;
+    width: 100% !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+    touch-action: auto !important;
+    appearance: auto !important;
+    -webkit-appearance: menulist !important;
+  }
+
+  /* Desktop mode means the personal dashboard stays visible just like on PC.
+     This also removes the previous dead state where the dock was hidden while
+     its desktop menu button was hidden too. */
+  .ec-dock-toggle {
+    display: none !important;
+  }
+
   .ec-right-dock,
+  body:not(.ec-dock-open) .ec-right-dock,
+  body.ec-dock-open .ec-right-dock {
+    position: fixed !important;
+    top: 148px !important;
+    right: 18px !important;
+    bottom: 18px !important;
+    left: auto !important;
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    transform: none !important;
+    width: 254px !important;
+    max-width: 254px !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: hidden !important;
+    pointer-events: auto !important;
+    z-index: 2800 !important;
+  }
+
   .ec-right-dock *,
-  button,a,input,textarea,select,label,summary,[role="button"],[contenteditable="true"]{
-    pointer-events:auto!important;
+  body:not(.ec-dock-open) .ec-right-dock *,
+  body.ec-dock-open .ec-right-dock * {
+    pointer-events: auto !important;
   }
 
-  button,a,[role="button"]{
-    touch-action:manipulation!important;
-  }
-  input,textarea,select,label,[contenteditable="true"]{
-    touch-action:auto!important;
+  .ec-right-dock button {
+    touch-action: manipulation !important;
   }
 
-  /* Mobile navigation must stay inside the viewport and remain horizontally scrollable. */
-  .ec-top-nav{
-    width:100%!important;
-    max-width:100%!important;
-    min-width:0!important;
-    overflow:visible!important;
-  }
-
-  .ec-mobile-nav-rail{
-    min-width:0!important;
-    max-width:100%!important;
-  }
-
-  .ec-region-picker{
-    pointer-events:auto!important;
-  }
-
-  .ec-region-picker select{
-    opacity:1!important;
-    visibility:visible!important;
-    pointer-events:auto!important;
-    touch-action:auto!important;
-    appearance:auto!important;
-    -webkit-appearance:menulist!important;
-    min-height:44px!important;
-  }
-
-  /* Closed personal dashboard may never block controls beneath it. */
-  body:not(.ec-dock-open) .ec-right-dock{
-    pointer-events:none!important;
-    visibility:hidden!important;
-    opacity:0!important;
-  }
-  body:not(.ec-dock-open) .ec-right-dock *{
-    pointer-events:none!important;
-  }
-  body.ec-dock-open .ec-right-dock{
-    pointer-events:auto!important;
-    visibility:visible!important;
-    opacity:1!important;
-    overflow-y:auto!important;
-    overscroll-behavior:contain!important;
-  }
-  body.ec-dock-open .ec-right-dock *{
-    pointer-events:auto!important;
-  }
-
-  /* Member actions stay large enough for touch. */
+  /* Public member profiles: preserve desktop layout, only strengthen taps. */
   .member-profile-page button,
   .member-profile-page a,
+  .member-profile-actions button,
   .ec-clean-profile-actions button,
-  .ec-clean-profile-actions a{
-    pointer-events:auto!important;
-    touch-action:manipulation!important;
-    position:relative!important;
-    z-index:4!important;
-    min-height:44px!important;
+  .ec-clean-profile-actions a {
+    position: relative !important;
+    z-index: 4 !important;
+    pointer-events: auto !important;
+    touch-action: manipulation !important;
   }
 
-  /* Profile editor controls must always sit above decorative preview layers. */
-  .profile-page-layout,
-  .profile-page-layout form,
-  .profile-page-layout .profile-form,
-  .profile-page-layout fieldset,
-  .profile-page-layout section,
-  .profile-page-layout .panel,
+  /* Profile design remains the desktop editor. Native inputs/selects/files are
+     explicitly placed above preview/decorative layers so iOS/Android can focus
+     and open them normally. */
   .my-area-layout,
-  .my-area-layout form{
-    position:relative!important;
-    pointer-events:auto!important;
-    min-width:0!important;
-    max-width:100%!important;
+  .profile-page-layout,
+  .profile-form,
+  .profile-editor,
+  .my-area-layout form,
+  .profile-page-layout form {
+    position: relative !important;
+    pointer-events: auto !important;
   }
 
-  .profile-page-layout form,
-  .profile-page-layout .profile-form,
-  .my-area-layout form{
-    z-index:20!important;
-    overflow:visible!important;
+  .profile-form,
+  .profile-editor,
+  .my-area-layout form,
+  .profile-page-layout form {
+    z-index: 20 !important;
+    overflow: visible !important;
   }
 
-  .profile-page-layout label,
-  .profile-page-layout input,
-  .profile-page-layout textarea,
-  .profile-page-layout select,
-  .profile-page-layout button,
-  .profile-page-layout [role="button"],
-  .profile-page-layout [contenteditable="true"],
+  .profile-form label,
+  .profile-form input,
+  .profile-form textarea,
+  .profile-form select,
+  .profile-form button,
+  .profile-editor label,
+  .profile-editor input,
+  .profile-editor textarea,
+  .profile-editor select,
+  .profile-editor button,
   .my-area-layout form label,
   .my-area-layout form input,
   .my-area-layout form textarea,
   .my-area-layout form select,
-  .my-area-layout form button{
-    position:relative!important;
-    z-index:22!important;
-    pointer-events:auto!important;
-    max-width:100%!important;
+  .my-area-layout form button {
+    position: relative !important;
+    z-index: 22 !important;
+    pointer-events: auto !important;
   }
 
-  .profile-page-layout input,
-  .profile-page-layout select,
-  .profile-page-layout button,
-  .my-area-layout form input,
-  .my-area-layout form select,
-  .my-area-layout form button{
-    min-height:44px!important;
+  .profile-form input[type="file"],
+  .profile-editor input[type="file"],
+  .my-area-layout form input[type="file"] {
+    opacity: 1 !important;
+    visibility: visible !important;
+    touch-action: auto !important;
   }
 
-  .profile-page-layout textarea,
-  .my-area-layout form textarea{
-    min-height:110px!important;
-    resize:vertical!important;
-  }
-
-  .profile-page-layout input[type="file"],
-  .my-area-layout form input[type="file"]{
-    min-height:48px!important;
-    opacity:1!important;
-    visibility:visible!important;
-    touch-action:auto!important;
-  }
-
-  .profile-page-layout input[type="color"],
-  .my-area-layout form input[type="color"]{
-    min-width:52px!important;
-    min-height:44px!important;
-    padding:3px!important;
-  }
-
-  .profile-page-layout select,
-  .my-area-layout form select{
-    appearance:auto!important;
-    -webkit-appearance:menulist!important;
-    touch-action:auto!important;
+  .profile-form select,
+  .profile-editor select,
+  .my-area-layout form select {
+    appearance: auto !important;
+    -webkit-appearance: menulist !important;
+    touch-action: auto !important;
   }
 
   .profile-customization-actions,
-  .profile-media-delete-actions{
-    position:relative!important;
-    z-index:24!important;
-    pointer-events:auto!important;
+  .profile-media-delete-actions {
+    position: relative !important;
+    z-index: 24 !important;
+    pointer-events: auto !important;
   }
 
+  .my-area-layout::before,
+  .my-area-layout::after,
   .profile-page-layout::before,
   .profile-page-layout::after,
-  .my-area-layout::before,
-  .my-area-layout::after{
-    pointer-events:none!important;
+  .profile-form::before,
+  .profile-form::after {
+    pointer-events: none !important;
   }
 }
