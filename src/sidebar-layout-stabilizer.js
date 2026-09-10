@@ -12,28 +12,43 @@ function openTarget(target){
     window.dispatchEvent(new CustomEvent('ec:open-admin-tools'));
     return;
   }
-  if(target==='legal'){
-    window.dispatchEvent(new CustomEvent('ec:open-legal-evidence'));
-  }
+  if(target==='legal')window.dispatchEvent(new CustomEvent('ec:open-legal-evidence'));
 }
 
-function makeButton(target){
+function makeButton(target,compact=false){
   const button=document.createElement('button');
   button.type='button';
   button.dataset.ecPage=target;
-  button.className='ec-admin-icon-button';
+  button.className=compact?'ec-compact-menu-item ec-admin-tools-primary':'ec-admin-icon-button';
   button.title=LABELS[target];
   button.setAttribute('aria-label',LABELS[target]);
-  button.innerHTML=`<span class="ec-admin-icon">${ADMIN_ICONS[target]}</span><span class="ec-admin-icon-label">${LABELS[target]}</span>`;
+  if(compact){
+    button.dataset.ecCompactLabel=LABELS[target];
+    button.innerHTML=`<span class="ec-compact-menu-icon">${ADMIN_ICONS[target]}</span><span class="ec-compact-menu-label">${LABELS[target]}</span>`;
+  }else{
+    button.innerHTML=`<span class="ec-admin-icon">${ADMIN_ICONS[target]}</span><span class="ec-admin-icon-label">${LABELS[target]}</span>`;
+  }
   button.addEventListener('click',()=>openTarget(target));
   return button;
 }
 
-function expectedTargets(){return currentRole==='HEAD_ADMIN'?['adminTools','legal']:[];}
+function expectedSlotTargets(){return currentRole==='HEAD_ADMIN'?['legal']:[];}
 
 function adminSlotIsCorrect(slot,targets){
   const children=[...slot.children];
   return children.length===targets.length&&targets.every((target,index)=>children[index]?.classList?.contains('ec-admin-icon-button')&&children[index].dataset.ecPage===target);
+}
+
+function ensurePrimaryAdminTools(dock){
+  const grid=dock.querySelector('.ec-compact-menu-grid');
+  if(!grid)return;
+  const existing=grid.querySelector('[data-ec-page="adminTools"]');
+  if(currentRole!=='HEAD_ADMIN'){
+    existing?.remove();
+    return;
+  }
+  if(existing)return;
+  grid.appendChild(makeButton('adminTools',true));
 }
 
 function removeLegacyAdminEntries(dock){
@@ -52,14 +67,15 @@ function stabilizeLayout(){
   if(!dock)return false;
   dock.classList.add('ec-stable-personal-dock');
   removeLegacyAdminEntries(dock);
+  ensurePrimaryAdminTools(dock);
   const slot=dock.querySelector('.ec-dock-admin-slot');
   if(slot){
-    const targets=expectedTargets();
+    const targets=expectedSlotTargets();
     if(!targets.length){if(slot.childElementCount)slot.replaceChildren();slot.hidden=true;}
     else{
       slot.hidden=false;
-      slot.className='ec-dock-admin-slot ec-admin-icon-grid';
-      if(!adminSlotIsCorrect(slot,targets))slot.replaceChildren(...targets.map(makeButton));
+      slot.className='ec-dock-admin-slot ec-admin-icon-grid ec-admin-security-slot';
+      if(!adminSlotIsCorrect(slot,targets))slot.replaceChildren(...targets.map(target=>makeButton(target,false)));
     }
   }
   return true;
