@@ -184,20 +184,35 @@ async function openSupport() {
 }
 
 function findNav() {
-  return document.querySelector(".ec-regional-shell .regional-topbar, .ec-regional-shell header, .modern-nav, nav");
+  return document.querySelector(".ec-top-nav")
+    || document.querySelector(".ec-regional-shell .regional-topbar")
+    || document.querySelector(".ec-regional-shell header nav")
+    || document.querySelector(".modern-nav");
 }
 
 function ensureSupportNav() {
   const nav = findNav();
-  if (!nav || nav.querySelector(".ec-support-nav-button")) return;
+  if (!nav) return;
+
+  document.querySelectorAll(".ec-support-nav-button").forEach((existing) => {
+    if (existing.parentElement !== nav) existing.remove();
+  });
+  if (nav.querySelector(".ec-support-nav-button")) return;
+
   const button = createButton("Support", "ec-support-nav-button");
+  button.setAttribute("aria-label", "Support öffnen");
+  button.setAttribute("title", "Support");
+  button.innerHTML = '<b aria-hidden="true">?</b><span>Support</span>';
   button.onclick = (event) => {
     event.preventDefault();
     event.stopPropagation();
     void openSupport();
   };
-  const notification = nav.querySelector(".ec-notification-bell-wrap, .ec-notification-bell");
-  if (notification?.parentElement === nav) nav.insertBefore(button, notification);
+
+  const regionPicker = nav.querySelector(".ec-region-picker");
+  const dockToggle = nav.querySelector(".ec-dock-toggle");
+  if (regionPicker) nav.insertBefore(button, regionPicker);
+  else if (dockToggle) nav.insertBefore(button, dockToggle);
   else nav.append(button);
 }
 
@@ -251,6 +266,7 @@ function boot() {
   observer.observe(document.documentElement, { childList: true, subtree: true });
   window.addEventListener("ec:region-change", syncUi);
   window.addEventListener("ec:network-restored", () => void loadIdentity());
+  window.addEventListener("ec:open-support", () => void openSupport());
   document.addEventListener("keydown", (event) => { if (event.key === "Escape") closeSupport(); });
 }
 
