@@ -7,6 +7,7 @@ function resultBox(grid,text,ok=true){let r=grid.querySelector(".ec-admin-tool-r
 function actionCard(grid,ico,title,desc,handler){const c=el("button","ec-admin-tool-card");c.type="button";c.append(el("span","ec-admin-tool-icon",ico));const text=el("span");text.append(el("strong",null,title),el("small",null,desc));c.append(text,el("span","ec-admin-tool-arrow","›"));c.onclick=()=>handler(c);grid.append(c);return c;}
 async function openManaged(selector){const original=document.querySelector(selector);if(!original)return;if(original.matches("details")){original.classList.remove("ec-admin-tool-hidden");original.open=true;original.scrollIntoView({behavior:"smooth",block:"start"});return}original.click()}
 function openAdminArea(){close();window.dispatchEvent(new CustomEvent("ec:navigate",{detail:{page:"admin"}}));}
+function openBannerManager(){close();window.dispatchEvent(new CustomEvent("ec:open-banner-manager"));}
 async function open(){
   if(!allowed)return;
   close();
@@ -16,6 +17,7 @@ async function open(){
   h.firstChild.append(el("span","eyebrow","GESCHÜTZTER BEREICH"),el("h2",null,"Admin Tools"),el("p",null,"Administration und sensible Werkzeuge. Änderungen werden serverseitig geprüft und protokolliert."));
   const grid=el("div","ec-admin-workspace-grid");
   actionCard(grid,"⚙️","Admin-Bereich","Mitglieder, Rollen, Meldungen und Verwaltung öffnen.",openAdminArea);
+  actionCard(grid,"🖼️","Werbebanner","Mehrere Banner hochladen, verlinken, sortieren und aktivieren.",openBannerManager);
   managed.forEach(([selector,ico,title,desc])=>{if(!document.querySelector(selector))return;actionCard(grid,ico,title,desc,()=>{close();void openManaged(selector)})});
   if(isHead){
     actionCard(grid,"🩺","Systemdiagnose","Prüft zentrale Datenbankbereiche ohne Inhalte offenzulegen.",async c=>{c.disabled=true;const {data,error}=await supabase.rpc("head_admin_system_diagnostics");c.disabled=false;if(error)return resultBox(grid,`Diagnose fehlgeschlagen: ${error.message}`,false);resultBox(grid,`Diagnose erfolgreich · ${new Date(data.checked_at).toLocaleString("de-AT")} · ${data.open_reports} offene Meldungen · ${data.open_deletion_requests} Löschanträge.`)});
