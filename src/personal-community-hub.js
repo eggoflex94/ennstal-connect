@@ -16,7 +16,7 @@ function ensureStyles() {
   style.textContent = `
     .ec-personal-hub{display:grid;gap:12px;margin:14px 0 18px}.ec-personal-hub-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:15px 16px;border:1px solid rgba(27,64,99,.1);border-radius:17px;background:linear-gradient(135deg,#fff,#f5f9fc);box-shadow:0 8px 22px rgba(25,55,87,.05)}.ec-personal-hub-head span{display:block;color:#e85a21;font-size:.61rem;font-weight:900;letter-spacing:.13em}.ec-personal-hub-head h2{margin:4px 0 3px;color:#25435e;font-size:1.08rem}.ec-personal-hub-head p{margin:0;color:#718397;font-size:.71rem;line-height:1.4}.ec-personal-hub-badge{flex:0 0 auto;padding:5px 9px;border-radius:999px;background:#edf4f8;color:#536d83;font-size:.61rem;font-weight:900;white-space:nowrap}
     .ec-personal-hub-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}.ec-personal-card{min-width:0;padding:13px;border:1px solid rgba(28,65,101,.1);border-radius:15px;background:#fff;box-shadow:0 7px 18px rgba(23,55,86,.04)}.ec-personal-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px}.ec-personal-card-head span{color:#6e8194;font-size:.59rem;font-weight:900;letter-spacing:.1em}.ec-personal-card-head button{border:0;background:transparent;color:#0b69c7;font-size:.64rem;font-weight:900;cursor:pointer}.ec-personal-list{display:grid;gap:7px}.ec-personal-empty{margin:0;padding:10px;border-radius:10px;background:#f6f8fa;color:#8190a0;font-size:.66rem;line-height:1.4}
-    .ec-match{display:grid;grid-template-columns:34px minmax(0,1fr);gap:8px;align-items:center;padding:7px;border:1px solid rgba(28,65,101,.07);border-radius:11px;background:#fafcfd}.ec-match img{width:34px;height:34px;border-radius:10px;object-fit:cover}.ec-match strong,.ec-match small{display:block;min-width:0}.ec-match strong{color:#304b65;font-size:.71rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ec-match small{margin-top:2px;color:#7a8a9a;font-size:.59rem;line-height:1.25}.ec-match-tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}.ec-match-tags b{padding:3px 6px;border-radius:999px;background:#edf5fb;color:#3b678b;font-size:.55rem;font-weight:850}
+    .ec-match{display:grid;grid-template-columns:34px minmax(0,1fr);gap:8px;align-items:center;width:100%;padding:7px;border:1px solid rgba(28,65,101,.07);border-radius:11px;background:#fafcfd;color:inherit;text-align:left;cursor:pointer}.ec-match:hover,.ec-match:focus-visible{background:#f2f8fd;border-color:rgba(11,105,199,.18);outline:none}.ec-match img{width:34px;height:34px;border-radius:10px;object-fit:cover}.ec-match strong,.ec-match small{display:block;min-width:0}.ec-match strong{color:#304b65;font-size:.71rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ec-match small{margin-top:2px;color:#7a8a9a;font-size:.59rem;line-height:1.25}.ec-match-tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}.ec-match-tags b{padding:3px 6px;border-radius:999px;background:#edf5fb;color:#3b678b;font-size:.55rem;font-weight:850}
     .ec-for-you{display:grid;gap:7px}.ec-for-you button{display:grid;grid-template-columns:28px minmax(0,1fr);gap:8px;align-items:start;width:100%;padding:8px;border:1px solid rgba(28,65,101,.07);border-radius:11px;background:#fafcfd;color:#304b65;text-align:left;cursor:pointer}.ec-for-you button>i{display:grid;place-items:center;width:28px;height:28px;border-radius:8px;background:#edf3f7;font-style:normal}.ec-for-you strong,.ec-for-you small{display:block}.ec-for-you strong{font-size:.7rem;line-height:1.25}.ec-for-you small{margin-top:2px;color:#7a8a9a;font-size:.59rem;line-height:1.3}
     .ec-spontan-form{display:grid;gap:7px}.ec-spontan-form input,.ec-spontan-form textarea{width:100%;box-sizing:border-box;border:1px solid rgba(28,65,101,.14);border-radius:10px;background:#fbfcfd;color:#304b65;font:inherit;font-size:.66rem;padding:8px 9px;outline:none}.ec-spontan-form textarea{min-height:66px;resize:vertical}.ec-spontan-form input:focus,.ec-spontan-form textarea:focus{border-color:rgba(11,105,199,.45);box-shadow:0 0 0 3px rgba(11,105,199,.07)}.ec-spontan-form button{min-height:34px;border:0;border-radius:10px;background:#17324a;color:#fff;font-size:.66rem;font-weight:900;cursor:pointer}.ec-spontan-form button:disabled{opacity:.55;cursor:wait}.ec-spontan-feed{display:grid;gap:6px;margin-top:8px}.ec-spontan-entry{padding:8px;border-radius:10px;background:#f7f9fb;border:1px solid rgba(28,65,101,.07)}.ec-spontan-entry strong,.ec-spontan-entry small{display:block}.ec-spontan-entry strong{color:#314c65;font-size:.68rem}.ec-spontan-entry small{margin-top:2px;color:#7c8b9a;font-size:.58rem;line-height:1.3}.ec-spontan-notice{min-height:16px;color:#477089;font-size:.58rem;font-weight:750}
     @media(max-width:1000px){.ec-personal-hub-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ec-personal-card.ec-spontan-card{grid-column:1/-1}}
@@ -35,7 +35,9 @@ function nameOf(member) {
 }
 
 function parseRows(rows) {
-  return (rows || []).map((row) => typeof row === 'string' ? JSON.parse(row) : row).filter(Boolean);
+  return (rows || []).map((row) => {
+    try { return typeof row === 'string' ? JSON.parse(row) : row; } catch { return null; }
+  }).filter(Boolean);
 }
 
 function commonInterests(me, other) {
@@ -47,6 +49,12 @@ function nav(page) {
   window.dispatchEvent(new CustomEvent('ec:navigate', { detail: { page } }));
 }
 
+function openProfile(profileId) {
+  if (!profileId) return;
+  const event = new CustomEvent('ec:open-profile', { detail: { profileId }, cancelable: true });
+  if (window.dispatchEvent(event)) window.location.assign(`/?profile=${encodeURIComponent(profileId)}`);
+}
+
 async function loadData(userId) {
   const { data: me } = await supabase.from('profiles').select('id,nickname,interests,home_region_id').eq('id', userId).maybeSingle();
   if (!me) return null;
@@ -54,7 +62,7 @@ async function loadData(userId) {
   const [directoryRes, eventsRes, groupsRes, spontaneousRes] = await Promise.all([
     supabase.rpc('community_member_directory'),
     me.home_region_id ? supabase.from('community_events').select('id,title,description,event_at,location,region_id,status').eq('region_id', me.home_region_id).gte('event_at', new Date().toISOString()).order('event_at', { ascending: true }).limit(4) : Promise.resolve({ data: [], error: null }),
-    me.home_region_id ? supabase.from('community_groups').select('id,name,description,region_id,member_count').eq('region_id', me.home_region_id).order('created_at', { ascending: false }).limit(20) : Promise.resolve({ data: [], error: null }),
+    me.home_region_id ? supabase.from('community_groups').select('id,name,description,region_id,created_at').eq('region_id', me.home_region_id).order('created_at', { ascending: false }).limit(20) : Promise.resolve({ data: [], error: null }),
     me.home_region_id ? supabase.from('community_requests').select('id,author_id,title,content,created_at,region_id,status').eq('region_id', me.home_region_id).eq('category', 'SPONTAN').eq('status', 'ACTIVE').order('created_at', { ascending: false }).limit(5) : Promise.resolve({ data: [], error: null })
   ]);
 
@@ -77,8 +85,11 @@ async function loadData(userId) {
 }
 
 function makeMatch(entry) {
-  const row = document.createElement('div');
+  const row = document.createElement('button');
+  row.type = 'button';
   row.className = 'ec-match';
+  row.setAttribute('aria-label', `Profil von ${nameOf(entry.member)} öffnen`);
+  row.addEventListener('click', () => openProfile(entry.member.id));
   const img = document.createElement('img');
   img.src = entry.member.avatar_url || '/default-avatar.svg';
   img.alt = '';
@@ -140,7 +151,11 @@ function render(root, data) {
   if (event) forYou.appendChild(forYouButton('▣', event.title, `${new Date(event.event_at).toLocaleString('de-AT')}${event.location ? ` · ${event.location}` : ''}`, 'events'));
   const bestGroup = data.groups[0];
   if (bestGroup) forYou.appendChild(forYouButton('●', bestGroup.name, bestGroup.score ? 'Passt zu deinen Interessen.' : 'Neue Gruppe aus deiner Region.', 'groups'));
-  if (data.matches[0]) forYou.appendChild(forYouButton('♙', `Entdecke ${nameOf(data.matches[0].member)}`, `${data.matches[0].shared.slice(0, 2).join(' · ')} gemeinsam`, 'members'));
+  if (data.matches[0]) {
+    const personButton = forYouButton('♙', `Entdecke ${nameOf(data.matches[0].member)}`, `${data.matches[0].shared.slice(0, 2).join(' · ')} gemeinsam`, 'members');
+    personButton.onclick = () => openProfile(data.matches[0].member.id);
+    forYou.appendChild(personButton);
+  }
   if (!forYou.children.length) forYou.innerHTML = '<p class="ec-personal-empty">Sobald neue Gruppen, Events oder passende Mitglieder dazukommen, erscheinen sie hier.</p>';
 
   const spontanCard = document.createElement('article');
