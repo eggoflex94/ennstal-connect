@@ -8,17 +8,13 @@ let running=false;
 function openTarget(target){
   document.body.classList.remove('ec-dock-open');
   if(target==='adminTools'){
-    const entry=document.querySelector('.ec-admin-workspace-entry');
-    if(entry){entry.click();return;}
-    window.dispatchEvent(new CustomEvent('ec:navigate',{detail:{page:'admin'}}));
-    setTimeout(()=>document.querySelector('.ec-admin-workspace-entry')?.click(),160);
+    window.dispatchEvent(new CustomEvent('ec:open-admin-tools'));
     return;
   }
   if(target==='legal'){
-    const entry=document.querySelector('.ec-legal-entry');
-    if(entry){entry.click();return;}
+    window.dispatchEvent(new CustomEvent('ec:open-legal-evidence'));
+    return;
   }
-  window.dispatchEvent(new CustomEvent('ec:navigate',{detail:{page:'admin'}}));
 }
 
 function makeButton(target){
