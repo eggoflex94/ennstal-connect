@@ -5,5 +5,6 @@ import './community-reels.js';
 import './head-admin-operator-label.js';
 import './role-star-authority.css';
 import './profile-role-star-runtime.js';
+import './react-navigation-bridge.js';
 
 export {};
