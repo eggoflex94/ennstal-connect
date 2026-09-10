@@ -3,5 +3,6 @@
 import './profile-status-stories.js';
 import './community-reels.js';
 import './head-admin-operator-label.js';
+import './role-star-authority.css';
 
 export {};
