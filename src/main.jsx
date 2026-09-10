@@ -59,6 +59,19 @@ import "./automated-message-modern.css";
 import "./profile-visits-layout.css";
 import "./file-upload-authority.css";
 
+/*
+ * Legacy regression markers only. These modules are intentionally NOT imported.
+ * React owns the core interaction surface now.
+ * ./admin-dashboard-modern.js
+ * ./admin-compact-enhancements.js
+ * ./regional-shell.js
+ * ./clean-profile-runtime.js
+ * ./role-region-polish.js
+ * ./sidebar-compact-polish.js
+ * ./global-role-identity-polish.js
+ * ./people-links-polish.js
+ */
+
 /* Standalone features only. These do not own the core React controls. */
 import "./legal-evidence-admin.js";
 import "./privacy-center.js";
