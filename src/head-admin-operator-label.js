@@ -4,26 +4,42 @@ let timer=null;
 let observer=null;
 let profileData=null;
 
-const OPERATOR_LABEL='Betreiber - Hauptadmin';
+const OPERATOR_LABEL='Betreiber (Hauptadmin)';
+
+function ownProfileRoots(){
+  if(!profileData)return[];
+  const nickname=String(profileData.nickname||'').trim().toLowerCase();
+  return [...document.querySelectorAll('.integrated-profile-view,.member-profile-page,.profile-page-layout,.profile-view,.ec-clean-profile')].filter((root)=>
+    [...root.querySelectorAll('h1,h2,h3,strong,.profile-name,.integrated-profile-name')]
+      .some((node)=>String(node.textContent||'').trim().toLowerCase()===nickname)
+  );
+}
+
+function isLegacyHeadAdminLabel(text){
+  return [
+    'head admin','hauptadmin','global admin','betreiber','betreiber - hauptadmin',
+    'betreiber – hauptadmin','betreiber (hauptadmin)','global admin · betreiber',
+    'global admin - betreiber','hauptadmin · betreiber'
+  ].includes(String(text||'').trim().toLowerCase());
+}
 
 function relabel(root){
   if(!root||!profileData)return;
-  const ownName=[...root.querySelectorAll('h1,h2,h3,strong,.profile-name,.integrated-profile-name')].some((n)=>String(n.textContent||'').trim().toLowerCase()===String(profileData.nickname||'').trim().toLowerCase());
-  if(!ownName)return;
-  root.querySelectorAll('.profile-role-badge,.integrated-profile-title span,.profile-function-card strong,.profile-function-card span,.profile-role-label,.member-role-label,span,strong,b').forEach((node)=>{
-    const text=String(node.textContent||'').trim().toLowerCase();
-    if(text==='head admin'||text==='hauptadmin'||text==='global admin'||text==='betreiber'||text==='betreiber - hauptadmin'||text==='betreiber – hauptadmin'||text==='global admin · betreiber'||text==='global admin - betreiber'){
-      node.textContent=OPERATOR_LABEL;
-      node.setAttribute('data-ec-operator-label','1');
-    }
+  root.querySelectorAll('.ec-clean-profile-role strong,.profile-role-badge,.integrated-profile-title span,.profile-function-card strong,.profile-function-card span,.profile-role-label,.member-role-label,span,strong,b').forEach((node)=>{
+    if(!isLegacyHeadAdminLabel(node.textContent))return;
+    node.textContent=OPERATOR_LABEL;
+    node.setAttribute('data-ec-operator-label','1');
   });
 }
 
-function attachObserver(root){
+function relabelAll(){
+  ownProfileRoots().forEach(relabel);
+}
+
+function attachObserver(){
   observer?.disconnect();
-  if(!root)return;
-  observer=new MutationObserver(()=>relabel(root));
-  observer.observe(root,{childList:true,subtree:true,characterData:true});
+  observer=new MutationObserver(()=>relabelAll());
+  observer.observe(document.documentElement,{childList:true,subtree:true,characterData:true});
 }
 
 async function apply(retries=10){
@@ -34,11 +50,15 @@ async function apply(retries=10){
     if(!profile||profile.role!=='HEAD_ADMIN'||profile.account_status!=='ACTIVE')return;
     profileData=profile;
   }
-  const roots=[...document.querySelectorAll('.integrated-profile-view,.member-profile-page,.profile-page-layout,.profile-view')];
-  const root=roots.find((node)=>[...node.querySelectorAll('h1,h2,h3,strong')].some((n)=>String(n.textContent||'').trim().toLowerCase()===String(profileData.nickname||'').trim().toLowerCase()));
-  if(!root){if(retries>0)timer=setTimeout(()=>apply(retries-1),160);return;}
-  relabel(root);
-  attachObserver(root);
+
+  const roots=ownProfileRoots();
+  if(!roots.length){
+    if(retries>0)timer=setTimeout(()=>apply(retries-1),160);
+    return;
+  }
+
+  relabelAll();
+  attachObserver();
 }
 
 function schedule(){clearTimeout(timer);timer=setTimeout(()=>void apply(),30);}
