@@ -113,17 +113,17 @@ async function load(panel) {
   const list = panel.querySelector(".ec-fake-list");
   list.textContent = "Konten werden geprüft …";
   try {
-  const { data, error } = await supabase.rpc("head_admin_fake_account_candidates", { p_search: search, p_limit: 250 });
-  if (!panel.isConnected || generation !== sessionGeneration || requests.get(panel) !== request) return;
-  if (error) {
-    list.textContent = error.message;
-    return;
-  }
-  const rows = data || [];
-  const filter = panel.querySelector(".ec-fake-filter").value;
-  const visible = rows.filter(row => filter === "all" || (filter === "priority" && row.risk_score >= 40) || (filter === "unreviewed" && row.review_state === "REVIEW"));
-  panel.querySelector(".ec-fake-summary").textContent = `${rows.filter(row => row.risk_score >= 40).length} mit erhöhter Prüfpriorität · ${visible.length} angezeigt${rows.length === 250 ? " · Anzeige auf 250 Konten begrenzt; Suche eingrenzen." : ""}`;
-  renderRows(panel, visible);
+    const { data, error } = await supabase.rpc("head_admin_fake_account_candidates", { p_search: search, p_limit: 250 });
+    if (!panel.isConnected || generation !== sessionGeneration || requests.get(panel) !== request) return;
+    if (error) {
+      list.textContent = error.message;
+      return;
+    }
+    const rows = data || [];
+    const filter = panel.querySelector(".ec-fake-filter").value;
+    const visible = rows.filter(row => filter === "all" || (filter === "priority" && row.risk_score >= 40) || (filter === "unreviewed" && row.review_state === "REVIEW"));
+    panel.querySelector(".ec-fake-summary").textContent = `${rows.filter(row => row.risk_score >= 40).length} mit erhöhter Prüfpriorität · ${visible.length} angezeigt${rows.length === 250 ? " · Anzeige auf 250 Konten begrenzt; Suche eingrenzen." : ""}`;
+    renderRows(panel, visible);
   } catch {
     if (panel.isConnected && generation === sessionGeneration && requests.get(panel) === request) list.textContent = "Prüfung konnte nicht geladen werden. Bitte erneut versuchen.";
   }
@@ -156,13 +156,15 @@ async function mount() {
   mounting = true;
   const generation = sessionGeneration;
   try {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
-  const { data: profile } = await supabase.from("profiles").select("role,account_status").eq("id", user.id).maybeSingle();
-  if (profile?.role !== "HEAD_ADMIN" || profile?.account_status !== "ACTIVE") return;
-  if (root.isConnected && generation === sessionGeneration && !root.querySelector(".ec-fake-admin")) render(root);
-  } catch { /* A later navigation or authentication event retries mounting. */ }
-  finally { mounting = false; }
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error || !user) return;
+    if (root.isConnected && generation === sessionGeneration && !root.querySelector(".ec-fake-admin")) render(root);
+  } catch {
+    clearTimeout(timer);
+    timer = setTimeout(() => void mount(), 750);
+  } finally {
+    mounting = false;
+  }
 }
 
 let timer;
