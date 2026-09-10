@@ -1,0 +1,148 @@
+import { supabase } from './supabaseClient';
+
+const STYLE_ID = 'ec-member-trust-style';
+let activeProfileId = null;
+let runToken = 0;
+
+function ensureStyles() {
+  if (document.getElementById(STYLE_ID)) return;
+  const style = document.createElement('style');
+  style.id = STYLE_ID;
+  style.textContent = `
+    .ec-member-trust{margin:12px 0;padding:14px;border:1px solid rgba(31,68,104,.11);border-radius:16px;background:linear-gradient(180deg,#fff,#f7fafc);box-shadow:0 8px 22px rgba(23,55,86,.05)}
+    .ec-member-trust-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}
+    .ec-member-trust-head>div{min-width:0}.ec-member-trust-head span{display:block;color:#e85b20;font-size:.62rem;font-weight:900;letter-spacing:.12em}.ec-member-trust-head h2{margin:3px 0 2px;color:#29445e;font-size:1rem;line-height:1.2}.ec-member-trust-head p{margin:0;color:#718197;font-size:.7rem;line-height:1.35}.ec-member-trust-note{flex:0 0 auto;padding:5px 8px;border-radius:999px;background:#eef4f8;color:#66798b;font-size:.62rem;font-weight:800;white-space:nowrap}
+    .ec-member-trust-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.ec-member-trust-item{display:grid;grid-template-columns:28px minmax(0,1fr);gap:8px;align-items:center;min-width:0;padding:9px;border:1px solid rgba(31,68,104,.09);border-radius:12px;background:#fff}.ec-member-trust-icon{display:grid;place-items:center;width:28px;height:28px;border-radius:9px;background:#eef4f8;color:#29445e;font-size:.85rem}.ec-member-trust-copy{min-width:0}.ec-member-trust-copy strong{display:block;color:#2e465f;font-size:.72rem;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ec-member-trust-copy small{display:block;margin-top:2px;color:#7a8998;font-size:.62rem;line-height:1.25;overflow-wrap:anywhere}.ec-member-trust-item.good .ec-member-trust-icon{background:#ecf8ef;color:#287a3e}.ec-member-trust-item.warn .ec-member-trust-icon{background:#fff5e9;color:#b96a19}.ec-member-trust-loading{font-size:.7rem;color:#75869a}
+    @media(max-width:900px){.ec-member-trust-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:620px){.ec-member-trust{padding:11px}.ec-member-trust-head{display:grid}.ec-member-trust-note{justify-self:start}.ec-member-trust-grid{grid-template-columns:1fr}.ec-member-trust-item{padding:8px}}
+  `;
+  document.head.appendChild(style);
+}
+
+const fmtDate = (value) => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('de-AT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+};
+
+function counterpart(row, uid) {
+  return row.requester_id === uid ? row.receiver_id : row.requester_id;
+}
+
+async function acceptedFriends(uid) {
+  if (!uid || !supabase) return [];
+  const { data, error } = await supabase
+    .from('friendships')
+    .select('requester_id,receiver_id,status')
+    .eq('status', 'ACCEPTED')
+    .or(`requester_id.eq.${uid},receiver_id.eq.${uid}`);
+  if (error) return [];
+  return (data || []).map((row) => counterpart(row, uid)).filter(Boolean);
+}
+
+async function profileFacts(profileId) {
+  const full = await supabase
+    .from('profiles')
+    .select('id,created_at,is_verified,account_status,role,account_badge')
+    .eq('id', profileId)
+    .maybeSingle();
+  if (!full.error) return full.data || {};
+  const fallback = await supabase
+    .from('profiles')
+    .select('id,is_verified,account_status,role,account_badge')
+    .eq('id', profileId)
+    .maybeSingle();
+  return fallback.data || {};
+}
+
+function item(icon, title, detail, tone = '') {
+  const box = document.createElement('div');
+  box.className = `ec-member-trust-item ${tone}`.trim();
+  const ico = document.createElement('span');
+  ico.className = 'ec-member-trust-icon';
+  ico.textContent = icon;
+  const copy = document.createElement('span');
+  copy.className = 'ec-member-trust-copy';
+  const strong = document.createElement('strong');
+  strong.textContent = title;
+  const small = document.createElement('small');
+  small.textContent = detail;
+  copy.append(strong, small);
+  box.append(ico, copy);
+  return box;
+}
+
+function shell(profileId) {
+  const page = document.querySelector(`.member-profile-page[data-profile-id="${CSS.escape(profileId)}"]`);
+  if (!page) return null;
+  let panel = page.querySelector('.ec-member-trust');
+  if (panel) return panel;
+  panel = document.createElement('section');
+  panel.className = 'ec-member-trust';
+  panel.setAttribute('aria-label', 'Vertrauensprofil');
+  panel.innerHTML = `<div class="ec-member-trust-head"><div><span>VERTRAUENSPROFIL</span><h2>Hinweise zur Verbindung</h2><p>Öffentliche Vertrauenssignale ohne Bewertung oder geheime Punktzahl.</p></div><small class="ec-member-trust-note">transparent · keine Bewertung</small></div><div class="ec-member-trust-grid"><span class="ec-member-trust-loading">Vertrauenshinweise werden geladen …</span></div>`;
+  const actions = page.querySelector('.member-profile-actions');
+  const hero = page.querySelector('.member-profile-hero');
+  (actions || hero)?.insertAdjacentElement('afterend', panel);
+  return panel;
+}
+
+async function render(profileId) {
+  if (!supabase || !profileId) return;
+  ensureStyles();
+  const token = ++runToken;
+  const panel = shell(profileId);
+  if (!panel) return;
+  const grid = panel.querySelector('.ec-member-trust-grid');
+  try {
+    const { data: auth } = await supabase.auth.getUser();
+    const viewerId = auth?.user?.id;
+    const [facts, viewerFriends, memberFriends] = await Promise.all([
+      profileFacts(profileId),
+      acceptedFriends(viewerId),
+      acceptedFriends(profileId)
+    ]);
+    if (token !== runToken || !document.body.contains(panel)) return;
+    const viewerSet = new Set(viewerFriends);
+    const mutualCount = memberFriends.filter((id) => viewerSet.has(id) && id !== viewerId && id !== profileId).length;
+    grid.replaceChildren();
+
+    const verified = facts.is_verified === true;
+    grid.append(item(verified ? '✓' : '○', verified ? 'Profil verifiziert' : 'Noch nicht verifiziert', verified ? 'Von der Community-Verwaltung bestätigt.' : 'Für dieses Profil liegt noch keine Bestätigung vor.', verified ? 'good' : 'warn'));
+
+    const joined = fmtDate(facts.created_at);
+    grid.append(item('◷', joined ? `Mitglied seit ${joined}` : 'Mitglied der Community', joined ? 'Zeigt nur den Beginn der Mitgliedschaft.' : 'Ein Beitrittsdatum ist nicht öffentlich verfügbar.'));
+
+    grid.append(item('♙', `${mutualCount} gemeinsame Freund${mutualCount === 1 ? '' : 'e'}`, mutualCount ? 'Ihr seid über gemeinsame Kontakte verbunden.' : 'Aktuell keine gemeinsamen Kontakte sichtbar.', mutualCount ? 'good' : ''));
+
+    const active = String(facts.account_status || 'ACTIVE').toUpperCase() === 'ACTIVE';
+    grid.append(item(active ? '●' : '○', active ? 'Aktives Konto' : 'Konto eingeschränkt', active ? 'Das Konto ist aktuell normal nutzbar.' : 'Der Kontostatus ist derzeit eingeschränkt.', active ? 'good' : 'warn'));
+  } catch (error) {
+    if (token !== runToken) return;
+    grid.textContent = 'Vertrauenshinweise konnten gerade nicht geladen werden.';
+    console.warn('Vertrauensprofil konnte nicht geladen werden:', error);
+  }
+}
+
+function detect(retries = 7) {
+  const page = document.querySelector('.member-profile-page[data-profile-id]');
+  if (!page) {
+    activeProfileId = null;
+    if (retries > 0) setTimeout(() => detect(retries - 1), 160);
+    return;
+  }
+  const profileId = page.dataset.profileId;
+  if (!profileId) return;
+  const hasPanel = !!page.querySelector('.ec-member-trust');
+  if (profileId === activeProfileId && hasPanel) return;
+  activeProfileId = profileId;
+  void render(profileId);
+}
+
+window.addEventListener('ec:navigate', () => setTimeout(() => detect(), 0));
+window.addEventListener('focus', () => {
+  if (document.querySelector('.member-profile-page')) detect(2);
+});
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => detect(), { once: true });
+else detect();
