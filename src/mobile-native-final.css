@@ -26,8 +26,6 @@
     max-width: none !important;
   }
 
-  /* The shell wrapper itself is never a hit-test shield. Its actual desktop
-     header, nav and dashboard remain interactive. */
   .ec-regional-shell {
     pointer-events: none !important;
   }
@@ -65,7 +63,6 @@
     touch-action: auto !important;
   }
 
-  /* Keep the exact desktop navigation structure. */
   .ec-top-nav {
     display: flex !important;
     flex-wrap: nowrap !important;
@@ -113,9 +110,6 @@
     -webkit-appearance: menulist !important;
   }
 
-  /* Desktop mode means the personal dashboard stays visible just like on PC.
-     This also removes the previous dead state where the dock was hidden while
-     its desktop menu button was hidden too. */
   .ec-dock-toggle {
     display: none !important;
   }
@@ -132,11 +126,15 @@
     visibility: visible !important;
     opacity: 1 !important;
     transform: none !important;
-    width: 254px !important;
-    max-width: 254px !important;
+    width: 320px !important;
+    max-width: 320px !important;
     height: auto !important;
-    max-height: none !important;
-    overflow: hidden !important;
+    max-height: calc(100dvh - 166px) !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: pan-y !important;
     pointer-events: auto !important;
     z-index: 2800 !important;
   }
@@ -151,7 +149,6 @@
     touch-action: manipulation !important;
   }
 
-  /* Public member profiles: preserve desktop layout, only strengthen taps. */
   .member-profile-page button,
   .member-profile-page a,
   .member-profile-actions button,
@@ -163,9 +160,6 @@
     touch-action: manipulation !important;
   }
 
-  /* Profile design remains the desktop editor. Native inputs/selects/files are
-     explicitly placed above preview/decorative layers so iOS/Android can focus
-     and open them normally. */
   .my-area-layout,
   .profile-page-layout,
   .profile-form,
