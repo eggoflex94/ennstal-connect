@@ -17,6 +17,21 @@ function navigate(page) {
   window.dispatchEvent(new CustomEvent('ec:navigate', { detail: { page } }));
 }
 
+function ensureCommunityStyles() {
+  if (document.getElementById('ec-community-section-nav-style')) return;
+  const style = document.createElement('style');
+  style.id = 'ec-community-section-nav-style';
+  style.textContent = `
+    .ec-community-section-nav{display:flex;gap:7px;flex-wrap:wrap;margin:-5px 0 14px;padding:8px;border:1px solid rgba(23,50,74,.09);border-radius:14px;background:rgba(255,255,255,.78);box-shadow:0 6px 18px rgba(23,50,74,.04)}
+    .ec-community-section-nav button{min-height:34px;padding:6px 10px;border:1px solid rgba(23,50,74,.10);border-radius:999px;background:#fff;color:#29445e;font-size:.69rem;font-weight:850;line-height:1;white-space:nowrap;cursor:pointer}
+    .ec-community-section-nav button:hover,.ec-community-section-nav button:focus-visible{border-color:rgba(13,105,219,.32);background:#f4f8fc;outline:none}
+    .community-hub .ec-community-card{scroll-margin-top:110px}
+    .community-hub .ec-community-card.is-community-focus{outline:2px solid rgba(13,105,219,.24);outline-offset:2px;transition:outline-color .2s ease}
+    @media(max-width:620px){.ec-community-section-nav{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin;padding:7px}.ec-community-section-nav button{flex:0 0 auto;font-size:.66rem}}
+  `;
+  document.head.appendChild(style);
+}
+
 function buildQuickStart(page) {
   if (page.querySelector('.ec-community-quickstart')) return;
   const heading = page.querySelector('.page-heading');
@@ -107,15 +122,55 @@ function buildPulse(page) {
   pulse.querySelectorAll('[data-page]').forEach((button) => button.addEventListener('click', () => navigate(button.dataset.page)));
 }
 
+function focusCard(card) {
+  if (!card) return;
+  card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  card.classList.add('is-community-focus');
+  window.setTimeout(() => card.classList.remove('is-community-focus'), 1100);
+}
+
+function buildSectionNav(page) {
+  let nav = page.querySelector('.ec-community-section-nav');
+  if (!nav) {
+    nav = document.createElement('nav');
+    nav.className = 'ec-community-section-nav';
+    nav.setAttribute('aria-label', 'Community-Bereiche');
+    const pulse = page.querySelector('.ec-community-pulse');
+    (pulse || page.querySelector('.ec-community-quickstart') || page.querySelector('.page-heading'))?.insertAdjacentElement('afterend', nav);
+  }
+
+  const sections = [
+    ['Termine', panelByHeading(page, 'Nächste Veranstaltungen')],
+    ['Geburtstage', panelByHeading(page, 'Demnächst')],
+    ['Fotos', panelByHeading(page, 'Mitgliederfotos')],
+    ['Administration', panelByHeading(page, 'Administration')],
+    ['Moderation', panelByHeading(page, 'Forum & Gruppen')],
+    ['Unternehmen', panelByHeading(page, 'Unternehmenskonten')],
+    ['Profil-Updates', page.querySelector('.public-profile-updates')],
+    ['Regionale Angebote', page.querySelector('.community-ads')]
+  ].filter(([, target]) => target);
+
+  nav.replaceChildren();
+  sections.forEach(([label, target]) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = label;
+    button.addEventListener('click', () => focusCard(target));
+    nav.appendChild(button);
+  });
+}
+
 function enhanceCommunity() {
   const page = document.querySelector('.community-hub');
   if (!page) return false;
+  ensureCommunityStyles();
   page.classList.add('ec-community-upgraded');
   buildQuickStart(page);
   buildPulse(page);
   page.querySelectorAll('.community-hub-grid>.panel,.community-contact-sidebar>.panel,.community-ads').forEach((card) => {
     card.classList.add('ec-community-card');
   });
+  buildSectionNav(page);
   return true;
 }
 
