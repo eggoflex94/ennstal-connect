@@ -1,0 +1,83 @@
+/* Final authority for friendship symbols across member cards and profiles. */
+.native-member-friend-badge,
+.modern-main article.member-card .ec-card-badge-friend,
+.member-profile-actions .ec-profile-friendship-accepted::before,
+.profile-actions .ec-profile-friendship-accepted::before {
+  box-sizing:border-box!important;
+  width:30px!important;
+  height:30px!important;
+  min-width:30px!important;
+  min-height:30px!important;
+  flex:0 0 30px!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  padding:3px!important;
+  border:1px solid rgba(37,99,235,.28)!important;
+  border-radius:999px!important;
+  background-color:#ffffff!important;
+  box-shadow:0 3px 10px rgba(15,45,85,.16)!important;
+  overflow:visible!important;
+  opacity:1!important;
+  visibility:visible!important;
+}
+
+.member-profile-actions .ec-profile-friendship-accepted::before,
+.profile-actions .ec-profile-friendship-accepted::before {
+  content:""!important;
+  background-image:url('/badge-friend.svg')!important;
+  background-position:center!important;
+  background-repeat:no-repeat!important;
+  background-size:24px 24px!important;
+}
+
+.native-member-friend-badge img,
+.modern-main article.member-card .ec-card-badge-friend img,
+.modern-main article.member-card .ec-card-badge-friend .ec-card-badge-friend-img {
+  display:block!important;
+  width:24px!important;
+  height:24px!important;
+  min-width:24px!important;
+  min-height:24px!important;
+  max-width:24px!important;
+  max-height:24px!important;
+  object-fit:contain!important;
+  opacity:1!important;
+  visibility:visible!important;
+  filter:none!important;
+}
+
+/* The accepted-friend button must keep its text and icon aligned. */
+.member-profile-actions .ec-profile-friendship-accepted,
+.profile-actions .ec-profile-friendship-accepted {
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:8px!important;
+  white-space:nowrap!important;
+}
+
+@media(max-width:620px){
+  .native-member-friend-badge,
+  .modern-main article.member-card .ec-card-badge-friend,
+  .member-profile-actions .ec-profile-friendship-accepted::before,
+  .profile-actions .ec-profile-friendship-accepted::before {
+    width:28px!important;
+    height:28px!important;
+    min-width:28px!important;
+    min-height:28px!important;
+    flex-basis:28px!important;
+  }
+  .member-profile-actions .ec-profile-friendship-accepted::before,
+  .profile-actions .ec-profile-friendship-accepted::before {
+    background-size:22px 22px!important;
+  }
+  .native-member-friend-badge img,
+  .modern-main article.member-card .ec-card-badge-friend img,
+  .modern-main article.member-card .ec-card-badge-friend .ec-card-badge-friend-img {
+    width:22px!important;
+    height:22px!important;
+    min-width:22px!important;
+    min-height:22px!important;
+  }
+}
