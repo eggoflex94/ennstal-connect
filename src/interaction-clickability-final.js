@@ -11,9 +11,9 @@ function ensureStyle(){
   .member-profile-page button,.member-profile-page a,.member-profile-page [role="button"],
   .community-hub button,.community-hub a,.community-hub [role="button"],
   .ec-status-modal button,.ec-status-modal a,.ec-banner-manager button,.ec-banner-manager a,
-  .ec-admin-workspace button,.ec-admin-workspace a,.content-editor-overlay button,.content-editor-overlay a{
+  .ec-admin-workspace button,.ec-admin-workspace a,.content-editor-overlay button,.content-editor-overlay a,
+  .auth-box button,.auth-box a,.auth-box input,.auth-box select{
     pointer-events:auto!important;
-    touch-action:manipulation!important;
     position:relative;
   }
 
@@ -22,7 +22,8 @@ function ensureStyle(){
   .member-profile-page input,.member-profile-page textarea,.member-profile-page select,
   .ec-status-modal input,.ec-status-modal textarea,.ec-status-modal select,
   .ec-banner-manager input,.ec-banner-manager textarea,.ec-banner-manager select,
-  .content-editor-overlay input,.content-editor-overlay textarea,.content-editor-overlay select{
+  .content-editor-overlay input,.content-editor-overlay textarea,.content-editor-overlay select,
+  .auth-box input,.auth-box select{
     pointer-events:auto!important;
     touch-action:auto!important;
   }
@@ -39,7 +40,8 @@ function ensureStyle(){
   .member-profile-hero::before,.member-profile-hero::after,
   .ec-personal-card::before,.ec-personal-card::after,
   .ec-right-dock::before,.ec-right-dock::after,
-  .ec-top-nav::before,.ec-top-nav::after{
+  .ec-top-nav::before,.ec-top-nav::after,
+  .auth-box::before,.auth-box::after,.auth-box .panel::before,.auth-box .panel::after{
     pointer-events:none!important;
   }
 
@@ -49,10 +51,18 @@ function ensureStyle(){
     .modern-main button,.modern-main a,.modern-main [role="button"],
     .ec-top-nav button,.ec-right-dock button,.ec-right-dock a,
     .integrated-profile-actions button,.profile-primary-button,.profile-secondary-button,
-    .native-member-main,.ec-match,.ec-for-you button,.ec-status-pill{
+    .native-member-main,.ec-match,.ec-for-you button,.ec-status-pill,.auth-box button{
       min-height:44px;
+      touch-action:manipulation!important;
     }
-    .ec-top-nav button,.ec-right-dock button,.native-member-main,.ec-status-pill{
+    .auth-box input,.auth-box select,.integrated-profile-form input,.integrated-profile-form textarea,.integrated-profile-form select{
+      min-height:46px!important;
+      font-size:16px!important;
+      touch-action:auto!important;
+      user-select:text!important;
+      -webkit-user-select:text!important;
+    }
+    .ec-top-nav button,.ec-right-dock button,.native-member-main,.ec-status-pill,.auth-box button{
       -webkit-tap-highlight-color:rgba(0,0,0,.08);
     }
   }
@@ -61,10 +71,18 @@ function ensureStyle(){
 
 function repair(root=document){
   ensureStyle();
-  root.querySelectorAll('button,a,[role="button"],summary').forEach(el=>{
+  root.querySelectorAll('button,a,[role="button"],summary,input,textarea,select').forEach(el=>{
     if(el.matches(':disabled,[aria-disabled="true"]'))return;
     el.style.pointerEvents='auto';
-    if(el.tagName==='BUTTON'&&!el.getAttribute('type'))el.setAttribute('type','button');
+  });
+
+  /* Never rewrite button types here. Buttons without an explicit type inside a form
+     are native submit buttons; changing them to type=button breaks login/register/save. */
+  root.querySelectorAll('form button:not([type])').forEach(button=>{
+    if(button.dataset.ecForcedButtonType==='1'){
+      button.removeAttribute('type');
+      delete button.dataset.ecForcedButtonType;
+    }
   });
 }
 
