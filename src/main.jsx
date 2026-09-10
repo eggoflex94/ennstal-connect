@@ -22,6 +22,8 @@ import "./member-extras.js";
 import "./legal-evidence-admin.js";
 import "./privacy-center.js";
 import "./account-deletion-admin.js";
+import "./fake-account-admin.css";
+import "./fake-account-admin.js";
 import "./help-center.js";
 import "./notification-center.css";
 import "./notification-center.js";
