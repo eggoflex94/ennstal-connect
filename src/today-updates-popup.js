@@ -2,6 +2,9 @@ import { supabase } from './supabaseClient';
 
 const RELEASE_VERSION = '2026-09-10-community-update-v2';
 const RELEASE_TITLE = 'Neu bei Ennstal Connect';
+let pendingUserId = null;
+let onboardingStateKnown = false;
+let onboardingNeeded = false;
 
 const UPDATES = [
   ['Globale Suche', 'Mitglieder, Gruppen, Events, Forum und Neuigkeiten lassen sich jetzt über ein gemeinsames Suchfeld finden.'],
@@ -32,9 +35,18 @@ function closePopup(overlay, userId) {
   document.body.classList.remove('ec-release-popup-open');
 }
 
+function canShowNow() {
+  return onboardingStateKnown && !onboardingNeeded && !document.querySelector('.ec-onboarding-v2') && !document.body.classList.contains('ec-onboarding-open');
+}
+
 function showPopup(userId) {
   if (!userId || hasSeen(userId) || document.querySelector('.ec-release-popup-overlay')) return;
+  if (!canShowNow()) {
+    pendingUserId = userId;
+    return;
+  }
 
+  pendingUserId = null;
   const overlay = document.createElement('div');
   overlay.className = 'ec-release-popup-overlay';
   overlay.setAttribute('role', 'dialog');
@@ -76,17 +88,58 @@ function showPopup(userId) {
   overlay.querySelector('.ec-release-confirm')?.focus();
 }
 
+async function queueForUser(userId) {
+  if (!userId || hasSeen(userId)) return;
+  pendingUserId = userId;
+  onboardingStateKnown = false;
+  try {
+    const { data, error } = await supabase.rpc('member_onboarding_status');
+    if (!error) {
+      onboardingNeeded = !data?.[0]?.completed;
+      onboardingStateKnown = true;
+    } else {
+      onboardingNeeded = false;
+      onboardingStateKnown = true;
+    }
+  } catch {
+    onboardingNeeded = false;
+    onboardingStateKnown = true;
+  }
+  if (!onboardingNeeded) window.setTimeout(() => showPopup(userId), 250);
+}
+
 async function showForCurrentSession() {
   if (!supabase) return;
   const { data } = await supabase.auth.getSession();
   const userId = data?.session?.user?.id;
-  if (userId) window.setTimeout(() => showPopup(userId), 500);
+  if (userId) void queueForUser(userId);
 }
+
+window.addEventListener('ec:onboarding-opened', () => {
+  onboardingNeeded = true;
+  onboardingStateKnown = true;
+  document.querySelector('.ec-release-popup-overlay')?.remove();
+  document.body.classList.remove('ec-release-popup-open');
+});
+
+window.addEventListener('ec:onboarding-unneeded', (event) => {
+  onboardingNeeded = false;
+  onboardingStateKnown = true;
+  const userId = event.detail?.userId || pendingUserId;
+  if (userId) window.setTimeout(() => showPopup(userId), 250);
+});
+
+window.addEventListener('ec:onboarding-closed', (event) => {
+  onboardingNeeded = false;
+  onboardingStateKnown = true;
+  const userId = event.detail?.userId || pendingUserId;
+  if (userId) window.setTimeout(() => showPopup(userId), 320);
+});
 
 if (supabase) {
   supabase.auth.onAuthStateChange((event, session) => {
     if (event !== 'SIGNED_IN' || !session?.user?.id) return;
-    window.setTimeout(() => showPopup(session.user.id), 450);
+    void queueForUser(session.user.id);
   });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => void showForCurrentSession(), { once: true });
   else void showForCurrentSession();
