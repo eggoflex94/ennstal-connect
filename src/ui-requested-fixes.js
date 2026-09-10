@@ -11,6 +11,7 @@ import './member-onboarding.js';
 import './sidebar-ad-banners.js';
 import './admin-banner-entry.js';
 import './mobile-editing-final.js';
+import './mobile-media-upload-center.js';
 import './profile-status-stories.js';
 import './interaction-clickability-final.js';
 import './community-reels.js';
