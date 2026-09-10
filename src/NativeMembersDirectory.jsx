@@ -4,16 +4,24 @@ import { supabase } from "./supabaseClient";
 const DEFAULT_AVATAR = "/community-default-avatar.png";
 const ADMIN_ROLES = new Set(["HEAD_ADMIN", "ADMIN", "GLOBAL_ADMIN", "REGIONAL_ADMIN"]);
 const normalized = (value) => String(value || "").trim().toUpperCase();
-const isAdminMember = (member) => {
+const displayName = (member) => member?.nickname || [member?.first_name, member?.last_name].filter(Boolean).join(" ") || "Mitglied";
+const isBusiness = (member) => member?.account_badge === "BUSINESS";
+const isGlobalAdmin = (member) => normalized(member?.role) === "ADMIN" || normalized(member?.role) === "GLOBAL_ADMIN" || normalized(member?.nickname) === "ROLAND";
+const isHeadAdmin = (member) => normalized(member?.role) === "HEAD_ADMIN";
+
+function explicitRegionalRegions(member) {
+  if (Array.isArray(member?.regional_admin_regions)) return member.regional_admin_regions.filter(Boolean);
+  if (Array.isArray(member?.regional_admin_region_ids)) return member.regional_admin_region_ids.filter(Boolean).map((id) => ({ id }));
+  return [];
+}
+
+function isAdminMember(member) {
   const role = normalized(member?.role);
   const adminRole = normalized(member?.admin_role || member?.admin_level || member?.admin_type || member?.admin_scope || member?.scope);
   const explicitAdmin = ADMIN_ROLES.has(role) || ["GLOBAL_ADMIN", "REGIONAL_ADMIN", "GLOBAL", "REGIONAL"].includes(adminRole);
   const flags = Boolean(member?.is_global_admin || member?.is_regional_admin || member?.global_admin || member?.regional_admin || member?.community_admin);
-  const knownGlobalAdmin = normalized(member?.nickname) === "ROLAND";
-  return explicitAdmin || flags || knownGlobalAdmin;
-};
-const displayName = (member) => member?.nickname || [member?.first_name, member?.last_name].filter(Boolean).join(" ") || "Mitglied";
-const isBusiness = (member) => member?.account_badge === "BUSINESS";
+  return explicitAdmin || flags || explicitRegionalRegions(member).length > 0 || normalized(member?.nickname) === "ROLAND";
+}
 
 function presenceFor(member) {
   const mobile = Boolean(member?.is_mobile_online || member?.mobile_online || member?.online_via_mobile || member?.presence === "MOBILE" || member?.presence === "mobile");
@@ -60,35 +68,50 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
   const acceptedFriendIds = useMemo(() => new Set(friendships.filter((item) => normalized(item.status) === "ACCEPTED").map((item) => item.requester_id === profile?.id ? item.receiver_id : item.requester_id)), [friendships, profile?.id]);
   const regionalAdminByUser = useMemo(() => {
     const map = new Map();
+    members.forEach((member) => {
+      explicitRegionalRegions(member).forEach((region) => {
+        const id = region?.id;
+        if (!id) return;
+        if (!map.has(member.id)) map.set(member.id, []);
+        if (!map.get(member.id).includes(id)) map.get(member.id).push(id);
+      });
+    });
     regionalAssignments.forEach((assignment) => {
       if (!assignment?.user_id || !assignment?.region_id || assignment.active === false) return;
       if (!map.has(assignment.user_id)) map.set(assignment.user_id, []);
-      map.get(assignment.user_id).push(assignment.region_id);
+      if (!map.get(assignment.user_id).includes(assignment.region_id)) map.get(assignment.user_id).push(assignment.region_id);
     });
     return map;
-  }, [regionalAssignments]);
+  }, [members, regionalAssignments]);
 
   const regionalAdminRegion = (member) => {
+    const embedded = explicitRegionalRegions(member);
+    if (embedded.length) {
+      const active = activeRegion?.id ? embedded.find((region) => region.id === activeRegion.id) : null;
+      const home = member?.home_region_id ? embedded.find((region) => region.id === member.home_region_id) : null;
+      const picked = active || home || embedded[0];
+      return picked?.name ? picked : regionById[picked?.id] || picked;
+    }
     const ids = regionalAdminByUser.get(member?.id) || [];
     if (!ids.length) return null;
     const preferred = activeRegion?.id && ids.includes(activeRegion.id) ? activeRegion.id : member?.home_region_id && ids.includes(member.home_region_id) ? member.home_region_id : ids[0];
-    return regionById[preferred] || null;
+    return regionById[preferred] || { id: preferred };
   };
   const isRegionalAdmin = (member) => Boolean(regionalAdminRegion(member));
   const effectiveRoleLabel = (member) => {
-    if (normalized(member?.role) === "HEAD_ADMIN") return "Hauptadmin";
-    if (normalized(member?.role) === "ADMIN" || normalized(member?.role) === "GLOBAL_ADMIN" || normalized(member?.nickname) === "ROLAND") return "Global Admin";
+    if (isHeadAdmin(member)) return "Hauptadmin";
+    if (isGlobalAdmin(member)) return "Global Admin";
     const region = regionalAdminRegion(member);
-    if (region) return `Regional Admin${region.short_name ? ` · ${region.short_name}` : ""}`;
+    if (region) return `Regional Admin${region.short_name ? ` · ${region.short_name}` : region.name ? ` · ${region.name}` : ""}`;
     if (normalized(member?.role) === "SUPPORTER") return "Supporter";
     return "Mitglied";
   };
-  const roleStarSrc = (member) => isAdminMember(member) || isRegionalAdmin(member) ? "/role-star-red.svg" : member?.role === "SUPPORTER" ? "/supporter-star.svg" : isBusiness(member) ? "/role-star-blue.svg" : null;
-  const cardTone = (member) => isAdminMember(member) || isRegionalAdmin(member) ? "admin" : member?.role === "SUPPORTER" ? "supporter" : isBusiness(member) ? "business" : "member";
+  const roleStarSrc = (member) => isHeadAdmin(member) || isGlobalAdmin(member) || isRegionalAdmin(member) ? "/role-star-red.svg" : normalized(member?.role) === "SUPPORTER" ? "/supporter-star.svg" : isBusiness(member) ? "/role-star-blue.svg" : null;
+  const cardTone = (member) => isHeadAdmin(member) || isGlobalAdmin(member) || isRegionalAdmin(member) ? "admin" : normalized(member?.role) === "SUPPORTER" ? "supporter" : isBusiness(member) ? "business" : "member";
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const rank = (member) => isAdminMember(member) || regionalAdminByUser.has(member.id) ? 1 : member.role === "SUPPORTER" ? 2 : isBusiness(member) ? 3 : 4;
+    const rank = (member) => isHeadAdmin(member) ? 1 : isGlobalAdmin(member) ? 2 : regionalAdminByUser.has(member.id) || explicitRegionalRegions(member).length ? 3 : normalized(member?.role) === "SUPPORTER" ? 4 : isBusiness(member) ? 5 : 6;
     return members
       .filter((member) => member && member.account_status !== "SUSPENDED" && !member.is_test_account)
       .filter((member) => regionId === "ALL" || member.home_region_id === regionId)
@@ -96,6 +119,12 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
       .filter((member) => !q || [member.nickname, member.first_name, member.last_name, regionById[member.home_region_id]?.name, effectiveRoleLabel(member), isBusiness(member) ? "Unternehmer" : ""].filter(Boolean).join(" ").toLowerCase().includes(q))
       .sort((a, b) => rank(a) - rank(b) || displayName(a).localeCompare(displayName(b), "de"));
   }, [members, regionId, onlineOnly, query, regionById, regionalAdminByUser, activeRegion?.id]);
+
+  const openMember = (member) => {
+    if (!member) return;
+    if (onOpen) onOpen(member);
+    else window.dispatchEvent(new CustomEvent("ec:open-profile", { detail: { profileId: member.id, nickname: member.nickname }, cancelable: true }));
+  };
 
   return <section className="native-members-directory">
     <div className="page-heading native-members-heading">
@@ -126,12 +155,12 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
         const tone = cardTone(member);
         const label = effectiveRoleLabel(member);
         return <article className={`native-member-card native-member-card--${tone} panel${isSelf ? " is-self" : ""}`} key={member.id}>
-          <button type="button" className="native-member-main" onClick={() => onOpen?.(member)} aria-label={`${displayName(member)} Profil öffnen`}>
+          <button type="button" className="native-member-main" onClick={() => openMember(member)} aria-label={`${displayName(member)} Profil öffnen`}>
             <span className="native-member-avatar-wrap"><img src={member.avatar_url || DEFAULT_AVATAR} alt="" /><i className={member.is_online ? "online" : "offline"} /></span>
             <span className="native-member-copy">
               <strong>{displayName(member)}</strong>
               <span className="native-member-badges">
-                {star && <span className="native-member-role-badge"><img src={star} alt="" aria-hidden="true"/>{isBusiness(member) && !isAdminMember(member) && !isRegionalAdmin(member) && member.role !== "SUPPORTER" ? "Unternehmer" : label}</span>}
+                {star && <span className="native-member-role-badge"><img src={star} alt="" aria-hidden="true"/>{isBusiness(member) && !isAdminMember(member) && !isRegionalAdmin(member) && normalized(member?.role) !== "SUPPORTER" ? "Unternehmer" : label}</span>}
                 {!star && <span className="native-member-member-badge">Mitglied</span>}
                 {isFriend && <span className="native-member-friend-badge" title="Befreundet" aria-label="Befreundet"><img src="/badge-friend.svg?v=20260910c" alt="" aria-hidden="true" /></span>}
               </span>
