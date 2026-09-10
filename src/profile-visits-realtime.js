@@ -5,6 +5,7 @@ import './profile-visits-realtime.css';
 let channel = null;
 let currentUserId = null;
 let refreshTimer = null;
+let observedPanel = null;
 
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
@@ -97,7 +98,10 @@ window.addEventListener('focus', () => queueRefresh(0), { passive: true });
 window.addEventListener('pageshow', () => queueRefresh(0), { passive: true });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) queueRefresh(0); });
 new MutationObserver(() => {
-  if (document.querySelector('.ec-dock-detail[data-panel="visits"]')) queueRefresh(120);
+  const panel = document.querySelector('.ec-dock-detail[data-panel="visits"]');
+  if (panel === observedPanel) return;
+  observedPanel = panel;
+  if (panel) queueRefresh(120);
 }).observe(document.documentElement, { childList: true, subtree: true });
 
 void start();
