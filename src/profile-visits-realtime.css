@@ -1,0 +1,93 @@
+.ec-dock-detail[data-panel="visits"]{
+  display:grid;
+  gap:10px;
+  padding:10px;
+}
+.ec-profile-visit-row{
+  width:100%;
+  display:grid !important;
+  grid-template-columns:40px minmax(0,1fr) auto;
+  align-items:center;
+  gap:10px;
+  padding:10px 12px !important;
+  min-height:64px;
+  border:1px solid rgba(28,92,170,.18) !important;
+  border-radius:14px !important;
+  background:#fff !important;
+  color:#16263a !important;
+  text-align:left;
+  box-shadow:0 4px 14px rgba(18,55,92,.08);
+  cursor:pointer;
+  transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease;
+}
+.ec-profile-visit-row:hover{
+  transform:translateY(-1px);
+  border-color:rgba(20,100,230,.42) !important;
+  box-shadow:0 8px 20px rgba(18,55,92,.12);
+}
+.ec-profile-visit-avatar{
+  width:40px;
+  height:40px;
+  border-radius:50%;
+  object-fit:cover;
+  background:#eef4fb;
+  border:1px solid #dbe6f3;
+}
+.ec-profile-visit-main{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+}
+.ec-profile-visit-name{
+  min-width:0;
+  display:flex;
+  align-items:center;
+  gap:7px;
+}
+.ec-profile-visit-star{
+  width:18px;
+  height:18px;
+  flex:0 0 18px;
+  object-fit:contain;
+}
+.ec-profile-visit-name strong{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:15px;
+  line-height:1.2;
+  color:#12263f !important;
+  font-weight:800;
+}
+.ec-profile-visit-main small{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:#5f7084 !important;
+  font-size:12.5px;
+  line-height:1.25;
+}
+.ec-profile-visit-row time{
+  align-self:start;
+  padding-top:2px;
+  color:#718197 !important;
+  font-size:11.5px;
+  font-weight:700;
+  white-space:nowrap;
+}
+@media (max-width:640px){
+  .ec-profile-visit-row{
+    grid-template-columns:36px minmax(0,1fr);
+    gap:9px;
+    padding:9px 10px !important;
+  }
+  .ec-profile-visit-avatar{width:36px;height:36px}
+  .ec-profile-visit-row time{
+    grid-column:2;
+    justify-self:start;
+    padding-top:0;
+    font-size:11px;
+  }
+}
