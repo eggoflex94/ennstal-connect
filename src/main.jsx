@@ -173,6 +173,9 @@ import "./profile-visits-layout.css";
 import "./head-admin-menu.js";
 import "./ui-requested-fixes.js";
 
+/* Absolute final authority: keep every native file picker usable on desktop and phones. */
+import "./file-upload-authority.css";
+
 class AppErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
