@@ -8,8 +8,6 @@ let syncTimer = null;
 
 const text = (value) => String(value || "").trim();
 const normalizeRole = (value) => text(value).toUpperCase();
-const isAdmin = (profile) => ["ADMIN", "HEAD_ADMIN"].includes(normalizeRole(profile?.role));
-const isHeadAdmin = (profile) => normalizeRole(profile?.role) === "HEAD_ADMIN";
 const displayName = (profile) => text(profile?.nickname) || [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || "Community-Team";
 
 function supportAreas(profile) {
@@ -48,7 +46,7 @@ async function loadIdentity() {
     currentProfile = null;
     return;
   }
-  const result = await supabase.from("profiles").select("id,nickname,first_name,last_name,role,is_verified,region_id,admin_responsibilities,forum_moderator,group_moderator").eq("id", currentUser.id).maybeSingle();
+  const result = await supabase.from("profiles").select("id,nickname,first_name,last_name,role,is_verified,home_region_id,admin_responsibilities,forum_moderator,group_moderator").eq("id", currentUser.id).maybeSingle();
   if (!result.error) currentProfile = result.data || null;
 }
 
