@@ -1,0 +1,33 @@
+/* Optional Compact Pro layout: denser desktop-like workspace without hiding features. */
+.app.layout-compact-pro{
+  --ec-compact-gap:10px;
+}
+.app.layout-compact-pro .ec-right-dock{max-width:340px!important}
+.app.layout-compact-pro .ec-regional-shell,.app.layout-compact-pro .dashboard-layout{gap:12px!important}
+.app.layout-compact-pro .modern-main{padding:10px 12px!important}
+.app.layout-compact-pro .panel,.app.layout-compact-pro .ec-community-card,.app.layout-compact-pro .ec-personal-card{border-radius:13px!important}
+.app.layout-compact-pro .panel{padding:11px!important}
+.app.layout-compact-pro .page-heading{padding:11px 13px!important;margin-bottom:10px!important}
+.app.layout-compact-pro .page-heading h1{font-size:1.35rem!important}
+.app.layout-compact-pro .page-heading p{font-size:.72rem!important}
+.app.layout-compact-pro .ec-compact-menu-grid{gap:6px!important;grid-template-columns:repeat(5,minmax(0,1fr))!important}
+.app.layout-compact-pro .ec-compact-menu-item{min-height:42px!important;padding:6px!important;border-radius:11px!important}
+.app.layout-compact-pro .ec-compact-menu-icon,.app.layout-compact-pro .ec-compact-menu-icon svg{width:20px!important;height:20px!important;min-width:20px!important;min-height:20px!important}
+.app.layout-compact-pro .ec-compact-menu-label{font-size:.62rem!important}
+.app.layout-compact-pro .community-hub-grid,.app.layout-compact-pro .ec-personal-hub-grid,.app.layout-compact-pro .admin-log-list{gap:9px!important}
+.app.layout-compact-pro .hub-row{padding:6px!important;gap:7px!important}
+.app.layout-compact-pro .hub-row>img{width:32px!important;height:32px!important;min-width:32px!important}
+.app.layout-compact-pro .hub-row strong{font-size:.72rem!important}.app.layout-compact-pro .hub-row span,.app.layout-compact-pro .hub-row small{font-size:.62rem!important}
+.app.layout-compact-pro .ec-community-quickstart,.app.layout-compact-pro .ec-community-pulse,.app.layout-compact-pro .ec-personal-hub-head{padding:12px!important;margin-bottom:10px!important}
+.app.layout-compact-pro .ec-community-quickstart-action{min-height:54px!important;padding:8px 10px!important}
+.app.layout-compact-pro .ec-community-pulse-stats>button{min-height:60px!important;padding:9px!important}
+.app.layout-compact-pro .ec-member-trust{padding:11px!important}.app.layout-compact-pro .ec-member-trust-item{padding:7px!important}
+.app.layout-compact-pro .ec-system-health{padding:11px!important}.app.layout-compact-pro .ec-system-health-card{padding:8px!important}
+@media(max-width:900px){
+  .app.layout-compact-pro .ec-right-dock{max-width:100%!important}
+  .app.layout-compact-pro .ec-compact-menu-grid{grid-template-columns:repeat(5,minmax(54px,1fr))!important}
+}
+@media(max-width:620px){
+  .app.layout-compact-pro .modern-main{padding:8px!important}
+  .app.layout-compact-pro .ec-compact-menu-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+}
