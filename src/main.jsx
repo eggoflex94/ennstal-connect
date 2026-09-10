@@ -158,6 +158,10 @@ import "./sidebar-friends-newsfeed.css";
 
 /* One-time overview shown after the next explicit login. */
 import "./today-updates-popup.css";
+import "./community-overview-2026.js";
+
+/* Unified hierarchy for the four central community areas. */
+import "./community-overview-2026.css";
 
 class AppErrorBoundary extends React.Component {
   constructor(props) {
