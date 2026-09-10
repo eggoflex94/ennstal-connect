@@ -31,22 +31,31 @@ function bindDock(dock) {
 
 function stabilize() {
   const dock = document.querySelector('.ec-right-dock');
-  if (!dock) return;
+  if (!dock) return false;
   dock.classList.add('ec-final-stable-dock');
   bindDock(dock);
   dock.querySelectorAll('.ec-dock-detail[data-panel]').forEach((panel) => {
     if (!panel.classList.contains('is-open')) panel.hidden = true;
   });
+  return true;
+}
+
+let retryTimer = null;
+function schedule(retries = 8) {
+  clearTimeout(retryTimer);
+  const run = (left) => {
+    if (stabilize() || left <= 0) return;
+    retryTimer = setTimeout(() => run(left - 1), 170);
+  };
+  requestAnimationFrame(() => run(retries));
 }
 
 function boot() {
-  stabilize();
-  const observer = new MutationObserver(() => {
-    clearTimeout(window.__ecFinalSidebarStability);
-    window.__ecFinalSidebarStability = setTimeout(stabilize, 60);
-  });
-  observer.observe(document.documentElement, { childList: true, subtree: true });
-  window.addEventListener('ec:region-change', () => setTimeout(stabilize, 40));
+  schedule(14);
+  window.addEventListener('ec:navigate', () => schedule(6));
+  window.addEventListener('ec:region-change', () => schedule(5));
+  window.addEventListener('focus', () => schedule(2));
+  window.addEventListener('resize', () => schedule(2), { passive: true });
 }
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
