@@ -98,15 +98,19 @@ function apply() {
   makeFriendIconsVisible();
 }
 
-let queued = false;
-function schedule() {
-  if (queued) return;
-  queued = true;
-  requestAnimationFrame(() => { queued = false; apply(); });
+let retryTimer = null;
+function schedule(retries = 6) {
+  clearTimeout(retryTimer);
+  requestAnimationFrame(() => {
+    apply();
+    if (retries > 0 && !document.querySelector('.ec-right-dock')) {
+      retryTimer = setTimeout(() => schedule(retries - 1), 180);
+    }
+  });
 }
 
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', apply, { once:true });
-else apply();
-new MutationObserver(schedule).observe(document.documentElement, { childList:true, subtree:true });
-window.addEventListener('ec:navigate', schedule);
-window.addEventListener('focus', schedule);
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => schedule(), { once:true });
+else schedule();
+window.addEventListener('ec:navigate', () => schedule());
+window.addEventListener('ec:region-change', () => schedule(3));
+window.addEventListener('focus', () => schedule(1));
