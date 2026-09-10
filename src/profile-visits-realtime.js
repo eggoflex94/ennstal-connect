@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import './dashboard-community-realtime.js';
 
 let channel = null;
 let currentUserId = null;
