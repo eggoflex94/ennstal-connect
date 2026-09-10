@@ -1,0 +1,27 @@
+/* Final role-star authority for profile function cards. */
+.ec-clean-profile-role strong {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.ec-clean-profile-role strong > img,
+.ec-clean-profile-role img[src*="role-star-red.svg"],
+.member-profile-hero img.ec-role-star,
+.ec-global-role-star {
+  display: inline-block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  width: 24px !important;
+  height: 24px !important;
+  min-width: 24px !important;
+  max-width: 24px !important;
+  min-height: 24px !important;
+  max-height: 24px !important;
+  object-fit: contain !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  position: static !important;
+  transform: none !important;
+}
