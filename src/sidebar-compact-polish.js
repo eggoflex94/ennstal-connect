@@ -58,7 +58,7 @@ function compactMenu(dock) {
     .map((button) => ({ button, label: labelFor(button) }))
     .filter(({ label, button }) => label && !button.closest('.ec-dock-detail') && !button.closest('.ec-dock-admin-slot'));
 
-  if (buttons.length < 5) return;
+  if (buttons.length < 5) return false;
 
   let grid = dock.querySelector('.ec-compact-menu-grid');
   if (!grid) {
@@ -75,46 +75,44 @@ function compactMenu(dock) {
     decorateButton(entry.button, entry.label);
     if (entry.button.parentElement !== grid) grid.appendChild(entry.button);
   });
+  return true;
 }
 
 function compactIdentity(dock) {
   const head = dock.querySelector('.ec-dock-head');
   if (!head) return;
-
   const strong = head.querySelector('strong');
   if (strong) strong.classList.add('ec-compact-identity-name');
-
   const home = head.querySelector('.ec-dock-home');
   if (home) home.classList.add('ec-compact-home-region');
-
   const identity = dock.querySelector('.ec-dock-identity');
   if (identity) identity.classList.add('ec-compact-hide-duplicate-identity');
 }
 
 function compactDock() {
   const dock = document.querySelector('.ec-right-dock');
-  if (!dock) return;
+  if (!dock) return false;
   dock.classList.add('ec-compact-personal-dock');
   compactIdentity(dock);
-  compactMenu(dock);
+  return compactMenu(dock);
 }
 
-let queued = false;
-function scheduleCompact() {
-  if (queued) return;
-  queued = true;
-  requestAnimationFrame(() => {
-    queued = false;
-    compactDock();
-  });
+let retryTimer = null;
+function scheduleCompact(retries = 10) {
+  clearTimeout(retryTimer);
+  const run = (left) => {
+    if (compactDock() || left <= 0) return;
+    retryTimer = setTimeout(() => run(left - 1), 160);
+  };
+  requestAnimationFrame(() => run(retries));
 }
 
 function boot() {
-  compactDock();
-  const observer = new MutationObserver(scheduleCompact);
-  observer.observe(document.documentElement, { childList: true, subtree: true, characterData: true });
-  window.addEventListener('ec:region-change', scheduleCompact);
-  window.addEventListener('resize', scheduleCompact, { passive: true });
+  scheduleCompact(14);
+  window.addEventListener('ec:navigate', () => scheduleCompact(6));
+  window.addEventListener('ec:region-change', () => scheduleCompact(5));
+  window.addEventListener('focus', () => scheduleCompact(2));
+  window.addEventListener('resize', () => scheduleCompact(2), { passive: true });
 }
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
