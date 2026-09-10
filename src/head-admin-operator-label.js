@@ -1,9 +1,14 @@
 import { supabase } from './supabaseClient';
 
 let timer=null;
+let observer=null;
+let profileData=null;
 
 function relabel(root){
-  root.querySelectorAll('.profile-role-badge,.integrated-profile-title span,.profile-view span,.member-profile-page span').forEach((node)=>{
+  if(!root||!profileData)return;
+  const ownName=[...root.querySelectorAll('h1,h2,h3,strong,.profile-name,.integrated-profile-name')].some((n)=>String(n.textContent||'').trim().toLowerCase()===String(profileData.nickname||'').trim().toLowerCase());
+  if(!ownName)return;
+  root.querySelectorAll('.profile-role-badge,.integrated-profile-title span,.profile-function-card strong,.profile-function-card span,.profile-role-label,.member-role-label,span,strong,b').forEach((node)=>{
     const text=String(node.textContent||'').trim().toLowerCase();
     if(text==='head admin'||text==='hauptadmin'||text==='global admin'||text==='global admin · betreiber'||text==='global admin - betreiber'){
       node.textContent='Betreiber';
@@ -12,19 +17,26 @@ function relabel(root){
   });
 }
 
-async function apply(retries=8){
-  const {data:{user}}=await supabase.auth.getUser();
-  if(!user)return;
-  const {data:profile}=await supabase.from('profiles').select('id,nickname,role,account_status').eq('id',user.id).maybeSingle();
-  if(!profile||profile.role!=='HEAD_ADMIN'||profile.account_status!=='ACTIVE')return;
+function attachObserver(root){
+  observer?.disconnect();
+  if(!root)return;
+  observer=new MutationObserver(()=>relabel(root));
+  observer.observe(root,{childList:true,subtree:true,characterData:true});
+}
 
+async function apply(retries=10){
+  if(!profileData){
+    const {data:{user}}=await supabase.auth.getUser();
+    if(!user)return;
+    const {data:profile}=await supabase.from('profiles').select('id,nickname,role,account_status').eq('id',user.id).maybeSingle();
+    if(!profile||profile.role!=='HEAD_ADMIN'||profile.account_status!=='ACTIVE')return;
+    profileData=profile;
+  }
   const roots=[...document.querySelectorAll('.integrated-profile-view,.member-profile-page,.profile-page-layout,.profile-view')];
-  if(!roots.length){if(retries>0)timer=setTimeout(()=>apply(retries-1),160);return;}
-
-  roots.forEach((root)=>{
-    const ownName=[...root.querySelectorAll('h1,h2,h3,strong,.profile-name,.integrated-profile-name')].some((n)=>String(n.textContent||'').trim().toLowerCase()===String(profile.nickname||'').trim().toLowerCase());
-    if(ownName)relabel(root);
-  });
+  const root=roots.find((node)=>[...node.querySelectorAll('h1,h2,h3,strong')].some((n)=>String(n.textContent||'').trim().toLowerCase()===String(profileData.nickname||'').trim().toLowerCase()));
+  if(!root){if(retries>0)timer=setTimeout(()=>apply(retries-1),160);return;}
+  relabel(root);
+  attachObserver(root);
 }
 
 function schedule(){clearTimeout(timer);timer=setTimeout(()=>void apply(),30);}
