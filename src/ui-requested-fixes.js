@@ -12,6 +12,7 @@ import './sidebar-ad-banners.js';
 import './admin-banner-entry.js';
 import './mobile-editing-final.js';
 import './profile-status-stories.js';
+import './interaction-clickability-final.js';
 
 const FRIEND_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="3"/><circle cx="16" cy="9" r="2.5"/><path d="M2.5 20c.7-4 2.8-6 5.5-6 3 0 5.2 2 5.7 6M13.5 15c3.2-.7 6 .9 7 5"/></svg>';
 const REQUEST_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20c.7-3.6 2.8-5 6-5 2.1 0 3.8.6 4.8 1.9M18 8v6M15 11h6"/></svg>';
