@@ -4,11 +4,10 @@ import { readFile } from "node:fs/promises";
 
 const source = async (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
-test("phones use a stable desktop-width viewport instead of responsive device width", async () => {
+test("phones use a responsive device viewport", async () => {
   const html = await source("index.html");
-  assert.match(html, /content="width=1280, user-scalable=yes, viewport-fit=cover"/);
-  assert.doesNotMatch(html, /width=device-width/);
-  assert.doesNotMatch(html, /initial-scale=0\.25/);
+  assert.match(html, /content="width=device-width, initial-scale=1, viewport-fit=cover"/);
+  assert.doesNotMatch(html, /width=1280/);
 });
 
 test("touch phones keep the desktop navigation DOM", async () => {
@@ -17,25 +16,22 @@ test("touch phones keep the desktop navigation DOM", async () => {
   assert.match(code, /if \(window\.matchMedia\(TOUCH_QUERY\)\.matches\) \{\s*disableMobileNav\(nav\)/s);
 });
 
-test("final phone authority keeps desktop nav and personal dashboard visible", async () => {
+test("final phone authority keeps navigation and dashboard responsive", async () => {
   const css = await source("src/mobile-native-final.css");
-  assert.match(css, /@media \(pointer: coarse\)/);
-  assert.match(css, /min-width: 1180px !important/);
-  assert.match(css, /\.ec-top-nav \{[\s\S]*display: flex !important[\s\S]*min-width: 1180px !important/);
+  assert.match(css, /@media \(max-width: 900px\), \(pointer: coarse\)/);
+  assert.match(css, /\.ec-top-nav \{[\s\S]*display: flex !important[\s\S]*overflow-x: auto !important/);
   assert.match(css, /\.ec-dock-toggle \{[\s\S]*display: none !important/);
   assert.match(css, /body:not\(\.ec-dock-open\) \.ec-right-dock[\s\S]*visibility: visible !important/);
-  assert.doesNotMatch(css, /body:not\(\.ec-dock-open\) \.ec-right-dock\s*\{[^}]*visibility:\s*hidden/is);
-  assert.doesNotMatch(css, /body:not\(\.ec-dock-open\) \.ec-right-dock\s*\{[^}]*pointer-events:\s*none/is);
+  assert.doesNotMatch(css, /min-width: 1180px !important/);
 });
 
-test("profile design controls remain native and tappable in desktop phone mode", async () => {
+test("profile controls remain native and tappable on phones", async () => {
   const css = await source("src/mobile-native-final.css");
   const app = await source("src/App.jsx");
-  assert.match(app, /className="panel profile-form profile-editor"/);
-  assert.match(app, /type="file"[\s\S]{0,260}uploadProfileImage\(e\.target\.files\[0\]\)/);
-  assert.match(app, /type="file"[\s\S]{0,260}uploadProfileBioImage\(e\.target\.files\[0\]\)/);
+  const profileView = await source("src/ProfileView.jsx");
   assert.match(app, /onSubmit=\{saveProfile\}/);
+  assert.match(profileView, /type="file"[\s\S]{0,260}onChange=\{chooseAvatar\}/);
+  assert.match(profileView, /className="full-width"[\s\S]{0,260}Über mich[\s\S]{0,260}<textarea/);
   assert.match(css, /\.profile-form input[\s\S]*pointer-events: auto !important/);
   assert.match(css, /input\[type="file"\][\s\S]*visibility: visible !important/);
-  assert.match(css, /\.profile-form select[\s\S]*-webkit-appearance: menulist !important/);
 });
