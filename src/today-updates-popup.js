@@ -1,18 +1,16 @@
 import { supabase } from './supabaseClient';
 
-const RELEASE_VERSION = '2026-09-09-community-update-v1';
+const RELEASE_VERSION = '2026-09-10-community-update-v2';
 const RELEASE_TITLE = 'Neu bei Ennstal Connect';
 
 const UPDATES = [
-  ['Handy wie am PC', 'Die vollständige Desktop-Oberfläche bleibt am Smartphone erhalten und ist für Touch, Navigation, Regionen, Mein Bereich und Profilgestaltung abgesichert.'],
-  ['Profilbesuche synchronisiert', 'Neue Profilbesuche werden in „Mein Bereich“ automatisch aktualisiert.'],
-  ['Mein Bereich überarbeitet', 'Der persönliche Bereich und sein Kopf passen jetzt optisch mit runden Karten zum restlichen Dashboard.'],
-  ['Community-Schnellstart', 'Mitglieder, Forum, Gruppen und Community-Aktivitäten sind schneller erreichbar.'],
-  ['Was ist gerade los?', 'Die Community zeigt aktuelle Events, Profil-Aktivität, Geburtstage und weitere Signale kompakt auf einen Blick.'],
-  ['Aktivitäten mit Freunden', 'Du kannst freiwillig teilen, was du gerade machst – standardmäßig nur mit Freunden, auf Wunsch regional oder privat.'],
-  ['Events teilen & Erinnerungen', 'Events können als Aktivität geteilt werden. Zusagen und Interesse erscheinen als kommende Erinnerungen.'],
-  ['Events auf der Startseite', 'Aktuelle regionale Events stehen jetzt direkt auf der Startseite; der eigene Events-Punkt wurde aus der oberen Leiste entfernt.'],
-  ['Events erweitert', 'Veranstaltungen lassen sich jetzt noch übersichtlicher gestalten – inklusive Bild, Schriftart, Schriftgröße, Schriftfarbe und Betonung.']
+  ['Globale Suche', 'Mitglieder, Gruppen, Events, Forum und Neuigkeiten lassen sich jetzt über ein gemeinsames Suchfeld finden.'],
+  ['Vertrauensprofil erweitert', 'Bei Profilen siehst du gemeinsame Freunde, gemeinsame Gruppen und gemeinsame aktive Events – transparent und ohne geheime Bewertung.'],
+  ['Navigation stabilisiert', 'Der aktive Bereich in der oberen Navigation bleibt jetzt auch nach Seitenwechseln und Aktualisieren korrekt markiert.'],
+  ['Mein Bereich verbessert', 'Die persönliche Seitenleiste wurde stabiler und übersichtlicher gemacht; Admin-Zugänge werden klarer eingeordnet.'],
+  ['Mehr Stabilität', 'Mehrere unnötige globale DOM-Beobachter wurden entfernt, damit die Community ruhiger und zuverlässiger läuft.'],
+  ['Sicherheit verstärkt', 'Interne Prüfbereiche und sensible Verwaltungsfunktionen wurden weiter abgesichert.'],
+  ['Community-Level', 'Aktive Nutzung, Beiträge, Freundschaften, Gruppen und Events zahlen weiter auf deinen Community-Fortschritt ein.']
 ];
 
 function storageKey(userId) {
@@ -54,15 +52,15 @@ function showPopup(userId) {
     <section class="ec-release-popup">
       <header>
         <div>
-          <span class="ec-release-kicker">HEUTE NEU · 9. SEPTEMBER 2026</span>
+          <span class="ec-release-kicker">NEU · 10. SEPTEMBER 2026</span>
           <h1 id="ec-release-popup-title">${RELEASE_TITLE}</h1>
-          <p>Heute wurde Ennstal Connect an mehreren Stellen erweitert und stabilisiert.</p>
+          <p>Ennstal Connect wurde in den letzten Tagen an mehreren Stellen erweitert, stabilisiert und sicherer gemacht.</p>
         </div>
         <button type="button" class="ec-release-close" aria-label="Neuerungen schließen">×</button>
       </header>
       <div class="ec-release-update-list">${cards}</div>
       <footer>
-        <small>Aktivitäten werden nicht automatisch veröffentlicht. Du entscheidest selbst, was du teilst und wer es sehen darf.</small>
+        <small>Die Hinweise erscheinen pro Mitglied nur einmal für diese Version.</small>
         <button type="button" class="primary-button ec-release-confirm">Alles klar</button>
       </footer>
     </section>
@@ -78,9 +76,18 @@ function showPopup(userId) {
   overlay.querySelector('.ec-release-confirm')?.focus();
 }
 
+async function showForCurrentSession() {
+  if (!supabase) return;
+  const { data } = await supabase.auth.getSession();
+  const userId = data?.session?.user?.id;
+  if (userId) window.setTimeout(() => showPopup(userId), 500);
+}
+
 if (supabase) {
   supabase.auth.onAuthStateChange((event, session) => {
     if (event !== 'SIGNED_IN' || !session?.user?.id) return;
     window.setTimeout(() => showPopup(session.user.id), 450);
   });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => void showForCurrentSession(), { once: true });
+  else void showForCurrentSession();
 }
