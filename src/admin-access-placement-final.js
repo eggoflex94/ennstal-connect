@@ -7,6 +7,8 @@ const ITEMS={
 };
 let role='';
 let timer=null;
+let slotObserver=null;
+let observedSlot=null;
 
 function activate(target){
   document.body.classList.remove('ec-dock-open');
@@ -38,9 +40,42 @@ function ensureStyle(){
     .ec-right-dock .ec-compact-menu-grid .ec-admin-primary-shortcut{display:flex!important;align-items:center!important;justify-content:center!important;min-width:0!important}
     .ec-right-dock .ec-compact-menu-grid .ec-admin-primary-shortcut .ec-compact-menu-icon{display:grid!important;place-items:center!important}
     .ec-right-dock .ec-compact-menu-grid .ec-admin-primary-shortcut .ec-compact-menu-icon svg{width:22px!important;height:22px!important;fill:none!important;stroke:currentColor!important;stroke-width:1.9!important;stroke-linecap:round!important;stroke-linejoin:round!important}
-    .ec-right-dock .ec-dock-admin-slot:empty{display:none!important}
+    .ec-right-dock .ec-dock-admin-slot{display:none!important}
   `;
   document.head.appendChild(style);
+}
+
+function expectedTargets(){
+  if(role==='HEAD_ADMIN')return['admin','adminTools','legal'];
+  if(role==='ADMIN')return['admin'];
+  return[];
+}
+
+function gridIsCorrect(grid,targets){
+  const adminButtons=[...grid.querySelectorAll(':scope > [data-ec-admin-primary="1"]')];
+  return adminButtons.length===targets.length&&targets.every((target,index)=>adminButtons[index]?.dataset.ecPage===target);
+}
+
+function watchLegacySlot(slot){
+  if(!slot||observedSlot===slot)return;
+  slotObserver?.disconnect();
+  observedSlot=slot;
+  slotObserver=new MutationObserver(()=>{
+    if(slot.childElementCount>0||!slot.hidden) schedule(1);
+  });
+  slotObserver.observe(slot,{childList:true});
+}
+
+function clearLegacyArea(dock,slot){
+  if(slot){
+    if(slot.childElementCount)slot.replaceChildren();
+    slot.hidden=true;
+    watchLegacySlot(slot);
+  }
+  dock.querySelectorAll('.ec-dock-section-label').forEach(label=>{
+    const value=String(label.textContent||'').trim().toUpperCase();
+    if(value==='ADMINISTRATION'||value==='ADMIN TOOLS')label.remove();
+  });
 }
 
 function place(){
@@ -49,18 +84,20 @@ function place(){
   if(!dock||!grid)return false;
   ensureStyle();
 
-  dock.querySelectorAll('[data-ec-admin-primary="1"]').forEach(node=>{if(node.parentElement!==grid)node.remove();});
-  grid.querySelectorAll('[data-ec-page="admin"],[data-ec-page="adminTools"],[data-ec-page="legal"]').forEach(node=>node.remove());
-
-  const targets=role==='HEAD_ADMIN'?['admin','adminTools','legal']:role==='ADMIN'?['admin']:[];
-  targets.forEach(target=>grid.appendChild(buttonFor(target)));
-
+  const targets=expectedTargets();
   const slot=dock.querySelector('.ec-dock-admin-slot');
-  if(slot){slot.replaceChildren();slot.hidden=true;}
-  dock.querySelectorAll('.ec-dock-section-label').forEach(label=>{
-    const text=String(label.textContent||'').trim().toUpperCase();
-    if(text==='ADMINISTRATION'||text==='ADMIN TOOLS')label.remove();
+
+  dock.querySelectorAll('[data-ec-admin-primary="1"]').forEach(node=>{
+    if(node.parentElement!==grid)node.remove();
   });
+
+  if(!gridIsCorrect(grid,targets)){
+    grid.querySelectorAll(':scope > [data-ec-admin-primary="1"]').forEach(node=>node.remove());
+    grid.querySelectorAll(':scope > [data-ec-page="admin"],:scope > [data-ec-page="adminTools"],:scope > [data-ec-page="legal"]').forEach(node=>node.remove());
+    targets.forEach(target=>grid.appendChild(buttonFor(target)));
+  }
+
+  clearLegacyArea(dock,slot);
   return true;
 }
 
@@ -81,13 +118,13 @@ function schedule(retries=12){
     if(place()||left<=0)return;
     timer=setTimeout(()=>run(left-1),160);
   };
-  timer=setTimeout(()=>run(retries),120);
+  timer=setTimeout(()=>run(retries),80);
 }
 
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{void loadRole();schedule();},{once:true});
 else{void loadRole();schedule();}
-window.addEventListener('ec:navigate',()=>schedule(5));
-window.addEventListener('ec:region-change',()=>schedule(5));
+window.addEventListener('ec:navigate',()=>schedule(6));
+window.addEventListener('ec:region-change',()=>schedule(6));
 window.addEventListener('resize',()=>schedule(2),{passive:true});
 window.addEventListener('focus',()=>schedule(2));
 supabase?.auth?.onAuthStateChange?.(()=>setTimeout(()=>void loadRole(),120));
