@@ -4,10 +4,10 @@ import { readFile } from "node:fs/promises";
 
 const source = async (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
-test("phones use a responsive device viewport", async () => {
+test("phones use the desktop viewport", async () => {
   const html = await source("index.html");
-  assert.match(html, /content="width=device-width, initial-scale=1, viewport-fit=cover"/);
-  assert.doesNotMatch(html, /width=1280/);
+  assert.match(html, /content="width=1180"/);
+  assert.doesNotMatch(html, /width=device-width/);
 });
 
 test("touch phones keep the desktop navigation DOM", async () => {
@@ -16,22 +16,32 @@ test("touch phones keep the desktop navigation DOM", async () => {
   assert.match(code, /if \(window\.matchMedia\(TOUCH_QUERY\)\.matches\) \{\s*disableMobileNav\(nav\)/s);
 });
 
-test("final phone authority keeps navigation and dashboard responsive", async () => {
-  const css = await source("src/mobile-native-final.css");
-  assert.match(css, /@media \(max-width: 900px\), \(pointer: coarse\)/);
-  assert.match(css, /\.ec-top-nav \{[\s\S]*display: flex !important[\s\S]*overflow-x: auto !important/);
-  assert.match(css, /\.ec-dock-toggle \{[\s\S]*display: none !important/);
-  assert.match(css, /body:not\(\.ec-dock-open\) \.ec-right-dock[\s\S]*visibility: visible !important/);
-  assert.doesNotMatch(css, /min-width: 1180px !important/);
+test("mobile layout override files stay disabled for desktop parity", async () => {
+  const files = [
+    "src/mobile-authority.css",
+    "src/mobile-interaction-authority.css",
+    "src/mobile-visibility-final.css",
+    "src/community-mobile-final.css",
+    "src/mobile-forum-news-admin-final.css",
+    "src/dashboard-mobile-profile-final.css",
+    "src/mobile-native-final.css",
+  ];
+  for (const file of files) {
+    const css = await source(file);
+    assert.match(css, /disabled/i, `${file} must remain disabled`);
+    assert.doesNotMatch(css, /@media\s*\(max-width:/, `${file} must not reintroduce narrow mobile layout rules`);
+  }
 });
 
-test("profile controls remain native and tappable on phones", async () => {
-  const css = await source("src/mobile-native-final.css");
+test("profile upload remains React-owned on desktop and phones", async () => {
   const app = await source("src/App.jsx");
-  const profileView = await source("src/ProfileView.jsx");
+  const legacyAvatar = await source("src/profile-image-upload-fix.js");
+  const legacyGallery = await source("src/profile-photo-upload-fix.js");
+  assert.match(app, /async function uploadProfileImage\(file\)/);
+  assert.match(app, /profile-avatars/);
   assert.match(app, /onSubmit=\{saveProfile\}/);
-  assert.match(profileView, /type="file"[\s\S]{0,260}onChange=\{chooseAvatar\}/);
-  assert.match(profileView, /className="full-width"[\s\S]{0,260}Über mich[\s\S]{0,260}<textarea/);
-  assert.match(css, /\.profile-form input[\s\S]*pointer-events: auto !important/);
-  assert.match(css, /input\[type="file"\][\s\S]*visibility: visible !important/);
+  assert.doesNotMatch(legacyAvatar, /addEventListener\(['"]change['"]/);
+  assert.doesNotMatch(legacyAvatar, /stopImmediatePropagation/);
+  assert.doesNotMatch(legacyGallery, /addEventListener\(['"]change['"]/);
+  assert.doesNotMatch(legacyGallery, /stopImmediatePropagation/);
 });
