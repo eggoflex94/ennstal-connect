@@ -1,0 +1,40 @@
+/* Final upload interaction authority.
+   Keep the native React-owned file inputs usable on desktop and touch devices. */
+
+input[type="file"] {
+  pointer-events: auto !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  position: static !important;
+  width: 100% !important;
+  min-height: 44px !important;
+  display: block !important;
+  z-index: 2 !important;
+  touch-action: manipulation !important;
+  -webkit-user-select: auto !important;
+  user-select: auto !important;
+}
+
+.profile-upload-field,
+.photo-upload-button,
+.content-image-upload,
+.homepage-image-picker {
+  pointer-events: auto !important;
+  position: relative !important;
+  overflow: visible !important;
+  touch-action: manipulation !important;
+}
+
+.profile-upload-field input[type="file"],
+.photo-upload-button input[type="file"],
+.content-image-upload input[type="file"],
+.homepage-image-picker input[type="file"] {
+  pointer-events: auto !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  position: static !important;
+  inset: auto !important;
+  clip: auto !important;
+  clip-path: none !important;
+  transform: none !important;
+}
