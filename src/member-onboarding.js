@@ -10,6 +10,10 @@ const el = (tag, className, text) => {
   return node;
 };
 
+function signal(name, detail={}) {
+  window.dispatchEvent(new CustomEvent(name, { detail }));
+}
+
 function ensureStyle(){
   if(document.getElementById('ec-onboarding-v2-style')) return;
   const style=document.createElement('style');
@@ -64,6 +68,8 @@ async function showWizard(user, profile, regions){
   ensureStyle();
   let step=0;
   const overlay=el('div','ec-onboarding-v2');
+  document.body.classList.add('ec-onboarding-open');
+  signal('ec:onboarding-opened',{userId:user.id});
   const box=el('section','ec-onboarding-v2-box');
   box.setAttribute('role','dialog');box.setAttribute('aria-modal','true');box.setAttribute('aria-labelledby','ec-onboarding-v2-title');
   box.innerHTML=`<header class="ec-onboarding-v2-head"><span class="eyebrow">WILLKOMMEN BEI ENNSTAL CONNECT</span><h2 id="ec-onboarding-v2-title">In 4 Schritten zu deiner Community</h2><p>Richte deinen Einstieg einmal kurz ein – danach zeigen wir dir passendere Menschen, Gruppen und Veranstaltungen.</p><div class="ec-onboarding-v2-progress">${[0,1,2,3].map(i=>`<span data-p="${i}"></span>`).join('')}</div></header><div class="ec-onboarding-v2-body"><div class="ec-onboarding-v2-step" data-step="0"><h3>1. Heimatregion bestätigen</h3><p>Deine Heimatregion bestimmt, welche regionalen Inhalte du zuerst siehst.</p><div class="ec-onboarding-v2-options">${regions.map(r=>`<label class="ec-onboarding-v2-option"><input type="radio" name="region" value="${r.slug}" ${r.id===profile.home_region_id?'checked':''}><span><strong>${r.name}</strong><small>${r.description||'Regionale Community, Termine und Ansprechpartner'}</small></span></label>`).join('')}</div></div><div class="ec-onboarding-v2-step" data-step="1"><h3>2. Interessen auswählen</h3><p>Damit Mitglieder, Gruppen und Events besser zu dir passen.</p><div class="ec-onboarding-v2-options">${interests.map(i=>`<label class="ec-onboarding-v2-option"><input type="checkbox" value="${i}" ${String(profile.interests||'').toLowerCase().includes(i.toLowerCase())?'checked':''}><span><strong>${i}</strong><small>Für persönlichere Empfehlungen</small></span></label>`).join('')}</div></div><div class="ec-onboarding-v2-step" data-step="2"><h3>3. Profil vervollständigen</h3><p>Ein paar Informationen helfen anderen, Gemeinsamkeiten mit dir zu entdecken.</p><label class="ec-onboarding-v2-field"><span>Spitzname</span><input name="nickname" maxlength="50"></label><label class="ec-onboarding-v2-field"><span>Kurz über dich</span><textarea name="bio" maxlength="1000"></textarea></label></div><div class="ec-onboarding-v2-step" data-step="3"><h3>4. Dein persönlicher Start</h3><p>Hier sind erste Vorschläge passend zu deinen Angaben.</p><div class="ec-onboarding-v2-recs"></div></div><div class="ec-onboarding-v2-error" hidden></div></div><footer class="ec-onboarding-v2-actions"><button type="button" class="ec-onboarding-v2-skip">Später</button><button type="button" class="ec-onboarding-v2-back">Zurück</button><button type="button" class="ec-onboarding-v2-next">Weiter</button></footer>`;
@@ -71,6 +77,7 @@ async function showWizard(user, profile, regions){
   box.querySelector('[name="nickname"]').value=profile.nickname||'';box.querySelector('[name="bio"]').value=profile.bio||'';
   const back=box.querySelector('.ec-onboarding-v2-back'),next=box.querySelector('.ec-onboarding-v2-next'),skip=box.querySelector('.ec-onboarding-v2-skip'),error=box.querySelector('.ec-onboarding-v2-error');
   const paint=()=>{box.querySelectorAll('.ec-onboarding-v2-step').forEach((n,i)=>n.classList.toggle('is-active',i===step));box.querySelectorAll('[data-p]').forEach((n,i)=>n.classList.toggle('is-active',i<=step));back.style.visibility=step===0?'hidden':'visible';next.textContent=step===3?'Community öffnen':'Weiter'};
+  const close=(reason)=>{overlay.remove();document.body.classList.remove('ec-onboarding-open');signal('ec:onboarding-closed',{userId:user.id,reason});};
   const save=async()=>{
     const selected=box.querySelector('[name="region"]:checked')?.value;if(!selected)throw new Error('Bitte wähle deine Heimatregion.');
     const selectedInterests=[...box.querySelectorAll('[data-step="1"] input:checked')].map(n=>n.value).join(', ');
@@ -81,8 +88,8 @@ async function showWizard(user, profile, regions){
     localStorage.setItem('ec-active-region',selected);if(region)window.dispatchEvent(new CustomEvent('ec:region-change',{detail:region}));
     return {...profile,id:user.id,nickname,bio,interests:selectedInterests,home_region_id:region?.id||profile.home_region_id};
   };
-  next.onclick=async()=>{error.hidden=true;try{if(step<2){step++;paint();return}if(step===2){next.disabled=true;const updated=await save();renderRecommendations(box,await getRecommendations(updated));step=3;paint();next.disabled=false;return}next.disabled=true;await completeOnboarding();overlay.remove();window.dispatchEvent(new CustomEvent('ec:navigate',{detail:{page:'home'}}))}catch(e){error.textContent=e?.message||'Onboarding konnte nicht gespeichert werden.';error.hidden=false;next.disabled=false}};
-  back.onclick=()=>{if(step>0){step--;paint()}};skip.onclick=()=>overlay.remove();paint();next.focus();
+  next.onclick=async()=>{error.hidden=true;try{if(step<2){step++;paint();return}if(step===2){next.disabled=true;const updated=await save();renderRecommendations(box,await getRecommendations(updated));step=3;paint();next.disabled=false;return}next.disabled=true;await completeOnboarding();close('completed');window.dispatchEvent(new CustomEvent('ec:navigate',{detail:{page:'home'}}))}catch(e){error.textContent=e?.message||'Onboarding konnte nicht gespeichert werden.';error.hidden=false;next.disabled=false}};
+  back.onclick=()=>{if(step>0){step--;paint()}};skip.onclick=()=>close('later');paint();next.focus();
 }
 
 async function start() {
@@ -94,7 +101,10 @@ async function start() {
     supabase.rpc("member_onboarding_status"),
     supabase.from("regions").select("id,slug,name,description,sort_order").eq("is_active", true).order("sort_order")
   ]);
-  if (profile?.account_status !== "ACTIVE" || statusError || status?.[0]?.completed || regionError || !regions?.length) return;
+  if (profile?.account_status !== "ACTIVE" || statusError || status?.[0]?.completed || regionError || !regions?.length) {
+    signal('ec:onboarding-unneeded',{userId:user.id});
+    return;
+  }
   shown = true;
   setTimeout(() => showWizard(user, profile, regions), 700);
 }
