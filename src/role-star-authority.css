@@ -1,4 +1,6 @@
-/* Final role-star authority for profile function cards. */
+/* Final role-star authority for every profile role that owns a role star.
+   HEAD_ADMIN / ADMIN = red, SUPPORTER = supporter star, BUSINESS = blue.
+   Normal MEMBER profiles intentionally have no role star. */
 .ec-clean-profile-role strong {
   display: flex !important;
   align-items: center !important;
@@ -7,8 +9,15 @@
 
 .ec-clean-profile-role strong > img,
 .ec-clean-profile-role img[src*="role-star-red.svg"],
-.member-profile-hero img.ec-role-star,
-.ec-global-role-star {
+.ec-clean-profile-role img[src*="supporter-star.svg"],
+.ec-clean-profile-role img[src*="role-star-blue.svg"],
+.member-profile-hero .ec-role-star,
+.member-profile-hero .ec-inline-role-star,
+.member-profile-hero img[src*="role-star-red.svg"],
+.member-profile-hero img[src*="supporter-star.svg"],
+.member-profile-hero img[src*="role-star-blue.svg"],
+.ec-global-role-star,
+.ec-inline-role-star {
   display: inline-block !important;
   visibility: visible !important;
   opacity: 1 !important;
@@ -21,7 +30,20 @@
   object-fit: contain !important;
   border: 0 !important;
   border-radius: 0 !important;
-  margin: 0 !important;
+  margin: 0 8px 0 0 !important;
+  padding: 0 !important;
   position: static !important;
+  inset: auto !important;
   transform: none !important;
+  clip: auto !important;
+  clip-path: none !important;
+  filter: none !important;
+}
+
+/* Role function rows must never collapse or hide the icon. */
+.ec-clean-profile-role.role-admin strong,
+.ec-clean-profile-role.role-supporter strong,
+.ec-clean-profile-role.role-business strong {
+  min-height: 28px !important;
+  overflow: visible !important;
 }
