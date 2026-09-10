@@ -1,5 +1,7 @@
 # Fake-Account-Prüfung
 
+Aktive Head Admins öffnen Fake-Erkennung und Admin-Logbuch über die beiden Symbole im persönlichen Dashboard-Menü. Beide haben eigene Ansichten und sind aus der normalen Admin-Zentrale einschließlich der bisherigen Logbuch-Vorschau entfernt. Die Fake-Erkennung lädt beim Öffnen automatisch; das Logbuch behält Suche, Zeitfilter und eine Aktualisieren-Schaltfläche. Normale Admins, Supporter und Mitglieder erhalten weder die Symbole noch Zugriff über die Navigation.
+
 Die Head-Admin-Oberfläche zeigt eine erklärbare Prüfpriorität, keine Wahrscheinlichkeit und keinen Identitätsnachweis. Die Auswertung erfolgt serverseitig beim Öffnen und über „Neu prüfen“. Sperren bleiben manuelle Entscheidungen.
 
 ## Signale

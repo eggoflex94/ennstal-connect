@@ -146,11 +146,12 @@ function render(root) {
   panel.querySelector(".ec-fake-search").addEventListener("keydown", (event) => { if (event.key === "Enter") void load(panel); });
   const deletion = root.querySelector(".ec-deletion-admin");
   if (deletion) deletion.after(panel); else root.append(panel);
+  panel.open = true;
 }
 
 async function mount() {
   if (mounting || document.querySelector(".ec-fake-admin")) return;
-  const root = document.querySelector(".admin-page");
+  const root = document.querySelector(".fake-account-page");
   if (!root) return;
   mounting = true;
   const generation = sessionGeneration;

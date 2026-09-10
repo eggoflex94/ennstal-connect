@@ -1,0 +1,52 @@
+import {createRequire} from 'node:module';
+import fs from 'node:fs/promises';
+import assert from 'node:assert/strict';
+const {JSDOM}=createRequire(process.argv[2])('jsdom');
+const dom=new JSDOM('<aside class="ec-right-dock"><div class="ec-compact-menu-grid"></div></aside>',{runScripts:'outside-only'});
+const w=dom.window;
+const observers=[];
+const Observer=w.MutationObserver;
+w.MutationObserver=class extends Observer {constructor(fn){super(fn);observers.push(this);}};
+let role='HEAD_ADMIN',status='ACTIVE',user={id:'head'},authChange;
+w.supabase={auth:{getUser:async()=>({data:{user}}),onAuthStateChange:fn=>authChange=fn},from:()=>({select:()=>({eq:()=>({maybeSingle:async()=>({data:{role,account_status:status}})})})})};
+const src=await fs.readFile(new URL('../src/head-admin-menu.js',import.meta.url),'utf8');
+w.eval(src.replace("import { supabase } from './supabaseClient';",''));
+const settle=()=>new Promise(resolve=>setTimeout(resolve,20));
+await settle();
+assert.equal(w.document.querySelectorAll('[data-head-admin-tool]').length,2);
+const pages=[];w.addEventListener('ec:navigate',e=>pages.push(e.detail.page));
+w.document.querySelector('[aria-label="Fake-Erkennung"]').click();
+w.document.querySelector('[aria-label="Admin-Logbuch"]').click();
+assert.deepEqual(pages,['fake-accounts','admin-log']);
+console.log('PASS: head admin gets both accessible icons and their own navigation targets');
+w.document.querySelector('.ec-compact-menu-grid').replaceWith(w.document.createElement('div'));
+w.document.querySelector('.ec-right-dock div').className='ec-compact-menu-grid';
+await settle();assert.equal(w.document.querySelectorAll('[data-head-admin-tool]').length,2);
+console.log('PASS: recreated dashboard receives both icons without duplicates');
+for(const value of ['ADMIN','SUPPORTER','MEMBER']){
+ role=value;w.dispatchEvent(new w.Event('focus'));await settle();
+ assert.equal(w.document.querySelectorAll('[data-head-admin-tool]').length,0);
+}
+console.log('PASS: community admins, supporters and members receive no icons');
+role='HEAD_ADMIN';status='SUSPENDED';w.dispatchEvent(new w.Event('focus'));await settle();
+assert.equal(w.document.querySelectorAll('[data-head-admin-tool]').length,0);
+status='ACTIVE';w.dispatchEvent(new w.Event('focus'));await settle();
+user=null;authChange();assert.equal(w.document.querySelectorAll('[data-head-admin-tool]').length,0);await settle();
+console.log('PASS: suspended accounts denied and signout removes icons immediately');
+const app=await fs.readFile(new URL('../src/App.jsx',import.meta.url),'utf8');
+const start=app.indexOf('    const handleNavigation =');
+const end=app.indexOf('    window.addEventListener("ec:navigate"',start);
+for(const [role,status,expected] of [['HEAD_ADMIN','ACTIVE',2],['ADMIN','ACTIVE',0],['MEMBER','ACTIVE',0],['HEAD_ADMIN','SUSPENDED',0]]){
+ const chosen=[];
+ const fn=new Function('profile','isHeadAdmin','setPage',app.slice(start,end)+'return handleNavigation;')({role,account_status:status},r=>r==='HEAD_ADMIN',p=>chosen.push(p));
+ fn({detail:{page:'fake-accounts'}});fn({detail:{page:'admin-log'}});
+ assert.equal(chosen.length,expected);
+}
+console.log('PASS: direct navigation is also restricted to active Head Admins');
+const admin=app.slice(app.indexOf('function AdminPanel('),app.indexOf('function News('));
+assert.ok(!admin.includes('admin-log-panel'));
+const fake=await fs.readFile(new URL('../src/fake-account-admin.js',import.meta.url),'utf8');
+assert.ok(!fake.includes('querySelector(".admin-page")'));
+console.log('PASS: neither tool is embedded in AdminPanel');
+observers.forEach(observer=>observer.disconnect());
+dom.window.close();
