@@ -1,5 +1,5 @@
 // Direct navigation bridge for the visible regional shell.
-// No capture listeners, no synthetic clicks and no event suppression.
+// React is the only page-navigation owner: no capture listeners, no synthetic clicks.
 const PAGE_MAP = new Map([
   ['home', 'home'],
   ['members', 'members'],
@@ -19,8 +19,13 @@ const PAGE_MAP = new Map([
 function bindNavigationButtons() {
   document.querySelectorAll('.ec-regional-shell [data-ec-page]').forEach((button) => {
     const rawPage = String(button.dataset.ecPage || '');
-    if (!PAGE_MAP.has(rawPage) || button.dataset.ecReactNavigation === '1') return;
+    if (!PAGE_MAP.has(rawPage)) return;
 
+    // regional-shell.js assigns legacy onclick handlers that dispatch again and
+    // may trigger synthetic clicks on hidden elements. Remove that competing path.
+    button.onclick = null;
+
+    if (button.dataset.ecReactNavigation === '1') return;
     button.dataset.ecReactNavigation = '1';
     button.addEventListener('click', () => {
       const page = PAGE_MAP.get(rawPage);
@@ -50,3 +55,10 @@ new MutationObserver(scheduleNavigationBinding).observe(document.documentElement
   childList: true,
   subtree: true,
 });
+
+// Some legacy modules reassign onclick without changing the DOM. Re-assert the
+// React-only ownership after initial startup and route changes.
+setTimeout(bindNavigationButtons, 0);
+setTimeout(bindNavigationButtons, 250);
+setTimeout(bindNavigationButtons, 1000);
+window.addEventListener('ec:navigate', () => setTimeout(bindNavigationButtons, 0));
