@@ -159,6 +159,10 @@ import "./sidebar-friends-newsfeed.css";
 /* One-time overview shown after the next explicit login. */
 import "./today-updates-popup.css";
 
+/* Support, verification, responsive profile search and one-row message overview. */
+import "./community-support-verification.css";
+import "./community-support-verification.js";
+
 class AppErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
