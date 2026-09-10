@@ -1,17 +1,16 @@
-/* Absolute final phone authority.
-   Product requirement: phones render the same desktop interface as PCs.
-   Do not reflow the application on touch devices; only make desktop controls
-   reliably tappable and keep native form controls usable. */
+/* Mobile desktop-parity authority.
+   Phones use the same components, labels and controls as desktop, but they
+   fit the viewport instead of forcing a 1180px desktop canvas. */
 
-@media (pointer: coarse) {
+@media (max-width: 900px), (pointer: coarse) {
   html,
   body {
-    min-width: 1180px !important;
+    min-width: 0 !important;
     width: 100% !important;
-    max-width: none !important;
-    overflow-x: auto !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
     overflow-y: auto !important;
-    touch-action: pan-x pan-y pinch-zoom !important;
+    touch-action: pan-y pinch-zoom !important;
     -webkit-text-size-adjust: 100% !important;
     text-size-adjust: 100% !important;
   }
@@ -23,16 +22,17 @@
   .dashboard-layout,
   .modern-main,
   .content-root {
-    max-width: none !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
   }
 
-  .ec-regional-shell {
-    pointer-events: none !important;
-  }
-
+  .ec-regional-shell,
   .ec-brand-masthead,
   .ec-top-nav,
-  .ec-right-dock {
+  .ec-right-dock,
+  .modern-main {
     pointer-events: auto !important;
   }
 
@@ -63,13 +63,21 @@
     touch-action: auto !important;
   }
 
+  /* Keep the full desktop navigation, including text labels. */
   .ec-top-nav {
     display: flex !important;
+    align-items: center !important;
     flex-wrap: nowrap !important;
+    gap: 6px !important;
     width: 100% !important;
-    min-width: 1180px !important;
-    max-width: none !important;
-    overflow: visible !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    padding: 6px 8px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scrollbar-width: thin !important;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior-x: contain !important;
   }
 
   .ec-mobile-nav-rail {
@@ -77,39 +85,64 @@
   }
 
   .ec-top-nav > button,
-  .ec-top-nav > a {
+  .ec-top-nav > a,
+  .ec-top-nav > button:not(.ec-dock-toggle) {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
     flex: 0 0 auto !important;
     width: auto !important;
-    min-width: 0 !important;
+    min-width: max-content !important;
+    height: 42px !important;
+    padding: 0 10px !important;
     white-space: nowrap !important;
-    pointer-events: auto !important;
+    overflow: visible !important;
   }
 
+  .ec-top-nav > button span,
+  .ec-top-nav > a span {
+    display: inline !important;
+    font-size: 11px !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+  }
+
+  /* Region selector stays a real visible select, just like desktop. */
   .ec-region-picker {
     position: static !important;
     display: flex !important;
+    align-items: center !important;
     width: auto !important;
-    min-width: 270px !important;
-    max-width: none !important;
-    height: 44px !important;
-    margin-left: auto !important;
+    min-width: 190px !important;
+    max-width: 240px !important;
+    height: 42px !important;
+    margin-left: 0 !important;
+    padding: 0 8px !important;
     flex: 0 0 auto !important;
     pointer-events: auto !important;
+  }
+
+  .ec-region-picker > b {
+    display: inline !important;
   }
 
   .ec-region-picker select {
     position: static !important;
+    inset: auto !important;
+    display: block !important;
     width: 100% !important;
-    height: 40px !important;
-    min-height: 40px !important;
+    height: 36px !important;
+    min-height: 36px !important;
     opacity: 1 !important;
     visibility: visible !important;
     pointer-events: auto !important;
-    touch-action: auto !important;
     appearance: auto !important;
     -webkit-appearance: menulist !important;
   }
 
+  /* No full-screen/covering mobile drawer. The personal dashboard remains
+     the same card as desktop and participates in normal document flow. */
   .ec-dock-toggle {
     display: none !important;
   }
@@ -117,26 +150,22 @@
   .ec-right-dock,
   body:not(.ec-dock-open) .ec-right-dock,
   body.ec-dock-open .ec-right-dock {
-    position: fixed !important;
-    top: 148px !important;
-    right: 18px !important;
-    bottom: 18px !important;
-    left: auto !important;
+    position: static !important;
+    inset: auto !important;
     display: flex !important;
     visibility: visible !important;
     opacity: 1 !important;
     transform: none !important;
-    width: 320px !important;
-    max-width: 320px !important;
+    width: 100% !important;
+    max-width: 100% !important;
     height: auto !important;
-    max-height: calc(100dvh - 166px) !important;
-    overflow-x: hidden !important;
-    overflow-y: auto !important;
-    overscroll-behavior: contain !important;
-    -webkit-overflow-scrolling: touch !important;
-    touch-action: pan-y !important;
+    max-height: none !important;
+    margin: 10px 0 14px !important;
+    overflow: visible !important;
+    touch-action: auto !important;
     pointer-events: auto !important;
-    z-index: 2800 !important;
+    z-index: auto !important;
+    box-sizing: border-box !important;
   }
 
   .ec-right-dock *,
@@ -147,6 +176,30 @@
 
   .ec-right-dock button {
     touch-action: manipulation !important;
+  }
+
+  .ec-regional-ui .modern-main {
+    padding-top: 12px !important;
+  }
+
+  /* Desktop card language, responsive columns. */
+  .community-hub-layout,
+  .dashboard-layout,
+  .profile-page-layout,
+  .my-area-layout {
+    grid-template-columns: minmax(0, 1fr) !important;
+    width: 100% !important;
+  }
+
+  .community-hub-grid,
+  .community-contact-sidebar,
+  .admin-log-list,
+  .native-member-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .community-hub-grid > .panel:first-child {
+    grid-column: 1 / -1 !important;
   }
 
   .member-profile-page button,
@@ -167,6 +220,8 @@
   .my-area-layout form,
   .profile-page-layout form {
     position: relative !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
     pointer-events: auto !important;
   }
 
@@ -195,6 +250,7 @@
   .my-area-layout form button {
     position: relative !important;
     z-index: 22 !important;
+    max-width: 100% !important;
     pointer-events: auto !important;
   }
 
@@ -228,5 +284,46 @@
   .profile-form::before,
   .profile-form::after {
     pointer-events: none !important;
+  }
+}
+
+@media (max-width: 620px) {
+  .community-hub-grid,
+  .community-contact-sidebar,
+  .admin-log-list,
+  .native-member-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .ec-top-nav > button,
+  .ec-top-nav > a,
+  .ec-top-nav > button:not(.ec-dock-toggle) {
+    height: 40px !important;
+    padding: 0 9px !important;
+  }
+
+  .ec-top-nav > button span,
+  .ec-top-nav > a span {
+    font-size: 10.5px !important;
+  }
+
+  .ec-region-picker {
+    min-width: 168px !important;
+    max-width: 190px !important;
+  }
+
+  .community-hub .photo-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .event-rsvp-actions {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+
+  .event-rsvp-actions button {
+    flex: 1 1 130px !important;
+    width: auto !important;
   }
 }
