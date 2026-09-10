@@ -7,6 +7,15 @@ const items=[
   ['Sicher','Privatsphäre, Moderation und Profil-Belohnungen.']
 ];
 
+const CURRENT_NEWS=[
+  ['Globale Suche','Mitglieder, Gruppen, Events, Forum und Neuigkeiten lassen sich jetzt über ein gemeinsames Suchfeld finden.'],
+  ['Vertrauensprofil erweitert','Bei Profilen siehst du gemeinsame Freunde, gemeinsame Gruppen und gemeinsame aktive Events – transparent und ohne geheime Bewertung.'],
+  ['Navigation stabilisiert','Der aktive Bereich in der oberen Navigation bleibt jetzt auch nach Seitenwechseln und Aktualisieren korrekt markiert.'],
+  ['Mein Bereich verbessert','Die persönliche Seitenleiste wurde stabiler und übersichtlicher gemacht; Admin-Zugänge werden klarer eingeordnet.'],
+  ['Mehr Stabilität','Mehrere unnötige globale DOM-Beobachter wurden entfernt, damit die Community ruhiger und zuverlässiger läuft.'],
+  ['Sicherheit verstärkt','Interne Prüfbereiche und sensible Verwaltungsfunktionen wurden weiter abgesichert.']
+];
+
 let regionPromise=null;
 async function loadRegions(){
   if(!supabase)return[];
@@ -67,6 +76,18 @@ async function syncRegistrationRegions(){
   note.textContent='„Überregional“ gilt für alle Bundesländer und Regionen. Wähle diese Option, wenn du regionsübergreifend sichtbar sein möchtest oder außerhalb der beiden Kernregionen wohnst.';
 }
 
+function mountCurrentNews(intro){
+  if(!intro)return;
+  let news=intro.querySelector('.ec-auth-current-news');
+  if(!news){
+    news=document.createElement('section');
+    news.className='ec-auth-current-news public-auth-updates';
+    const updates=intro.querySelector('.public-auth-updates');
+    if(updates)intro.insertBefore(news,updates);else intro.appendChild(news);
+  }
+  news.innerHTML=`<span>NEU BEI ENNSTAL CONNECT · 10. SEPTEMBER 2026</span><h3>Die Community wurde weiter verbessert</h3><p>Schon vor der Anmeldung siehst du, was sich zuletzt geändert hat.</p><div class="ec-auth-news-grid">${CURRENT_NEWS.map(([title,text])=>`<article><strong>${title}</strong><small>${text}</small></article>`).join('')}</div><small>Diese Neuerungen werden nach der ersten Anmeldung zusätzlich einmal kompakt eingeblendet.</small>`;
+}
+
 function mountRewardNews(intro){
   if(!intro)return;
   let news=intro.querySelector('.ec-auth-reward-news');
@@ -76,14 +97,14 @@ function mountRewardNews(intro){
     const updates=intro.querySelector('.public-auth-updates');
     if(updates)intro.insertBefore(news,updates);else intro.appendChild(news);
   }
-  news.innerHTML=`<span>NEU IN DER COMMUNITY</span><h3>Aktivität wird jetzt dauerhaft belohnt</h3><p>Im persönlichen Dashboard siehst du deinen Community-Level, deine aktive Onlinezeit und jetzt auch deinen Prestige-Fortschritt. Ab 300 Punkten geht es mit Bronze, Silber, Gold und Platin weiter – dein Fortschritt endet also nicht mehr beim Stammmitglied.</p><small>Onlinezeit zählt nur bei aktiver Nutzung. Beiträge, Antworten, Freundschaften, Gruppen, Events und regionale Community-Aktivität bringen zusätzliche Punkte. Connect Rot und Connect Blau bleiben Teil des Belohnungssystems.</small>`;
+  news.innerHTML=`<span>COMMUNITY-LEVEL</span><h3>Aktivität wird dauerhaft belohnt</h3><p>Im persönlichen Dashboard siehst du deinen Community-Level, deine aktive Onlinezeit und deinen Prestige-Fortschritt. Ab 300 Punkten geht es mit Bronze, Silber, Gold und Platin weiter.</p><small>Onlinezeit zählt nur bei aktiver Nutzung. Beiträge, Antworten, Freundschaften, Gruppen, Events und regionale Community-Aktivität bringen zusätzliche Punkte.</small>`;
 }
 
 function mount(){
   const page=document.querySelector('.auth-page');
   const welcome=page?.querySelector('.ec-auth-welcome');
   const intro=welcome?.querySelector('.ec-auth-intro');
-  if(!page||!welcome||!intro)return;
+  if(!page||!welcome||!intro)return false;
   page.classList.add('ec-auth-page-clean');
   syncStaticRegionCards();
   if(!welcome.querySelector('.ec-auth-community-intro')){
@@ -93,11 +114,22 @@ function mount(){
     const updates=intro.querySelector('.public-auth-updates');
     if(updates)intro.insertBefore(section,updates);else intro.appendChild(section);
   }
+  mountCurrentNews(intro);
   mountRewardNews(intro);
   void syncRegistrationRegions();
+  return true;
 }
 
-let queued=false;
-const run=()=>{if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;mount()})};
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run,{once:true});else run();
-new MutationObserver(run).observe(document.documentElement,{childList:true,subtree:true});
+let retryTimer=null;
+function schedule(retries=10){
+  clearTimeout(retryTimer);
+  const run=(left)=>{
+    if(mount()||left<=0)return;
+    retryTimer=setTimeout(()=>run(left-1),180);
+  };
+  requestAnimationFrame(()=>run(retries));
+}
+
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>schedule(),{once:true});else schedule();
+window.addEventListener('focus',()=>schedule(2));
+window.addEventListener('ec:navigate',()=>schedule(3));
