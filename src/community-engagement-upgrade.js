@@ -4,8 +4,14 @@ const ACTIONS = [
   ['♟', 'Mitglieder entdecken', 'Finde Menschen aus deiner Region.', 'members'],
   ['▤', 'Im Forum mitreden', 'Fragen stellen, helfen und diskutieren.', 'forum'],
   ['●', 'Gruppen entdecken', 'Gemeinsame Interessen und Aktivitäten finden.', 'groups'],
-  ['▣', 'Events ansehen', 'Treffen und Veranstaltungen in der Region.', 'events']
+  ['▣', 'Events ansehen', 'Treffen und Veranstaltungen in der Region.', 'events'],
+  ['♙', 'Freunde ansehen', 'Bleib mit deinen Kontakten verbunden.', 'friends'],
+  ['✉', 'Nachrichten', 'Schreib direkt mit deinen Kontakten.', 'messages']
 ];
+
+const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
+  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+}[char]));
 
 function navigate(page) {
   window.dispatchEvent(new CustomEvent('ec:navigate', { detail: { page } }));
@@ -21,8 +27,8 @@ function buildQuickStart(page) {
   panel.innerHTML = `
     <div class="ec-community-quickstart-copy">
       <span>COMMUNITY SCHNELLSTART</span>
-      <strong>Mach mit statt nur mitzulesen.</strong>
-      <small>Ein Klick bringt dich direkt dorthin, wo in Ennstal Connect etwas passiert.</small>
+      <strong>Was möchtest du machen?</strong>
+      <small>Direkt zu Menschen, Gesprächen, Gruppen und Terminen aus deiner Region.</small>
     </div>
     <div class="ec-community-quickstart-actions"></div>
   `;
@@ -31,7 +37,8 @@ function buildQuickStart(page) {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'ec-community-quickstart-action';
-    button.innerHTML = `<b aria-hidden="true">${icon}</b><span><strong>${title}</strong><small>${text}</small></span><em aria-hidden="true">→</em>`;
+    button.setAttribute('aria-label', title);
+    button.innerHTML = `<b aria-hidden="true">${icon}</b><span><strong>${esc(title)}</strong><small>${esc(text)}</small></span><em aria-hidden="true">→</em>`;
     button.addEventListener('click', () => navigate(target));
     actions.appendChild(button);
   });
@@ -70,26 +77,29 @@ function buildPulse(page) {
   const birthdayCount = birthdaysPanel?.querySelectorAll('.hub-row').length || 0;
   const updateCount = updatesPanel?.querySelectorAll('.hub-row').length || 0;
   const photoCount = photoPanel?.querySelectorAll('.photo-strip img').length || 0;
+  const nextEvent = esc(firstRowSummary(eventsPanel, 'Noch kein kommendes Event eingetragen.'));
+  const nextUpdate = esc(firstRowSummary(updatesPanel, 'Noch keine neue Profil-Aktivität.'));
+  const nextBirthday = esc(firstRowSummary(birthdaysPanel, 'Keine freigegebenen Geburtstage in der Vorschau.'));
 
   pulse.innerHTML = `
     <div class="ec-community-pulse-head">
       <div>
         <span>WAS IST GERADE LOS?</span>
-        <strong>Deine Community auf einen Blick</strong>
-        <small>Aktuelle Signale aus der ausgewählten Region.</small>
+        <strong>Deine Region auf einen Blick</strong>
+        <small>Aktuelle Community-Signale, ohne lange suchen zu müssen.</small>
       </div>
       <button type="button" class="ec-community-pulse-cta">Im Forum mitreden →</button>
     </div>
     <div class="ec-community-pulse-stats">
-      <button type="button" data-page="events"><b>${eventCount}</b><span>kommende Events</span></button>
-      <button type="button" data-page="members"><b>${birthdayCount}</b><span>Geburtstage</span></button>
-      <button type="button" data-page="members"><b>${updateCount}</b><span>Profil-Updates</span></button>
-      <button type="button" data-page="community"><b>${photoCount}</b><span>Community-Fotos</span></button>
+      <button type="button" data-page="events" aria-label="Kommende Events öffnen"><b>${eventCount}</b><span>kommende Events</span></button>
+      <button type="button" data-page="members" aria-label="Geburtstage ansehen"><b>${birthdayCount}</b><span>Geburtstage</span></button>
+      <button type="button" data-page="members" aria-label="Profil-Aktualisierungen ansehen"><b>${updateCount}</b><span>Profil-Updates</span></button>
+      <button type="button" data-page="community" aria-label="Community-Fotos ansehen"><b>${photoCount}</b><span>Community-Fotos</span></button>
     </div>
     <div class="ec-community-pulse-feed">
-      <button type="button" data-page="events"><em>▣</em><span><strong>Nächstes Event</strong><small>${firstRowSummary(eventsPanel, 'Noch kein kommendes Event eingetragen.')}</small></span></button>
-      <button type="button" data-page="members"><em>◉</em><span><strong>Neu aus Profilen</strong><small>${firstRowSummary(updatesPanel, 'Noch keine neue Profil-Aktivität.')}</small></span></button>
-      <button type="button" data-page="members"><em>✦</em><span><strong>Demnächst Geburtstag</strong><small>${firstRowSummary(birthdaysPanel, 'Keine freigegebenen Geburtstage in der Vorschau.')}</small></span></button>
+      <button type="button" data-page="events"><em>▣</em><span><strong>Nächstes Event</strong><small>${nextEvent}</small></span></button>
+      <button type="button" data-page="members"><em>◉</em><span><strong>Neu aus Profilen</strong><small>${nextUpdate}</small></span></button>
+      <button type="button" data-page="members"><em>✦</em><span><strong>Demnächst Geburtstag</strong><small>${nextBirthday}</small></span></button>
     </div>
   `;
 
@@ -99,26 +109,30 @@ function buildPulse(page) {
 
 function enhanceCommunity() {
   const page = document.querySelector('.community-hub');
-  if (!page) return;
+  if (!page) return false;
   page.classList.add('ec-community-upgraded');
   buildQuickStart(page);
   buildPulse(page);
   page.querySelectorAll('.community-hub-grid>.panel,.community-contact-sidebar>.panel,.community-ads').forEach((card) => {
     card.classList.add('ec-community-card');
   });
+  return true;
 }
 
-let queued = false;
-function schedule() {
-  if (queued) return;
-  queued = true;
-  requestAnimationFrame(() => {
-    queued = false;
-    enhanceCommunity();
-  });
+let retryTimer = null;
+function schedule(retries = 8) {
+  clearTimeout(retryTimer);
+  const run = (remaining) => {
+    if (enhanceCommunity() || remaining <= 0) return;
+    retryTimer = setTimeout(() => run(remaining - 1), 180);
+  };
+  requestAnimationFrame(() => run(retries));
 }
 
-new MutationObserver(schedule).observe(document.documentElement, { childList: true, subtree: true });
-window.addEventListener('ec:region-change', schedule);
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', schedule, { once: true });
+window.addEventListener('ec:navigate', () => schedule());
+window.addEventListener('ec:region-change', () => schedule(5));
+window.addEventListener('focus', () => {
+  if (document.querySelector('.community-hub')) schedule(2);
+});
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => schedule(), { once: true });
 else schedule();
