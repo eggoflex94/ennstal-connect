@@ -3,6 +3,7 @@ import { supabase } from './supabaseClient';
 let timer=null;
 let observer=null;
 let profileData=null;
+let relabeling=false;
 
 const OPERATOR_LABEL='Betreiber (Hauptadmin)';
 
@@ -18,27 +19,38 @@ function ownProfileRoots(){
 function isLegacyHeadAdminLabel(text){
   return [
     'head admin','hauptadmin','global admin','betreiber','betreiber - hauptadmin',
-    'betreiber – hauptadmin','betreiber (hauptadmin)','global admin · betreiber',
-    'global admin - betreiber','hauptadmin · betreiber'
+    'betreiber – hauptadmin','global admin · betreiber','global admin - betreiber',
+    'hauptadmin · betreiber'
   ].includes(String(text||'').trim().toLowerCase());
 }
 
 function relabel(root){
-  if(!root||!profileData)return;
-  root.querySelectorAll('.ec-clean-profile-role strong,.profile-role-badge,.integrated-profile-title span,.profile-function-card strong,.profile-function-card span,.profile-role-label,.member-role-label,span,strong,b').forEach((node)=>{
-    if(!isLegacyHeadAdminLabel(node.textContent))return;
-    node.textContent=OPERATOR_LABEL;
-    node.setAttribute('data-ec-operator-label','1');
-  });
+  if(!root||!profileData||relabeling)return;
+  relabeling=true;
+  try{
+    root.querySelectorAll('.ec-clean-profile-role strong,.profile-role-badge,.integrated-profile-title span,.profile-function-card strong,.profile-function-card span,.profile-role-label,.member-role-label,span,strong,b').forEach((node)=>{
+      const current=String(node.textContent||'').trim();
+      if(!isLegacyHeadAdminLabel(current))return;
+      if(current===OPERATOR_LABEL&&node.getAttribute('data-ec-operator-label')==='1')return;
+      if(current!==OPERATOR_LABEL)node.textContent=OPERATOR_LABEL;
+      if(node.getAttribute('data-ec-operator-label')!=='1')node.setAttribute('data-ec-operator-label','1');
+    });
+  }finally{
+    relabeling=false;
+  }
 }
 
 function relabelAll(){
+  if(relabeling)return;
   ownProfileRoots().forEach(relabel);
 }
 
 function attachObserver(){
   observer?.disconnect();
-  observer=new MutationObserver(()=>relabelAll());
+  observer=new MutationObserver(()=>{
+    if(relabeling)return;
+    relabelAll();
+  });
   observer.observe(document.documentElement,{childList:true,subtree:true,characterData:true});
 }
 
