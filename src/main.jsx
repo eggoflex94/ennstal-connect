@@ -170,6 +170,7 @@ import "./automated-message-modern.css";
 import "./automated-message-modern.js";
 
 import "./profile-visits-layout.css";
+import "./head-admin-menu.js";
 
 class AppErrorBoundary extends React.Component {
   constructor(props) {
