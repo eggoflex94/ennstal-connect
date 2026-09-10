@@ -13,8 +13,9 @@ function ensureStyles() {
     .ec-member-trust-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}
     .ec-member-trust-head>div{min-width:0}.ec-member-trust-head span{display:block;color:#e85b20;font-size:.62rem;font-weight:900;letter-spacing:.12em}.ec-member-trust-head h2{margin:3px 0 2px;color:#29445e;font-size:1rem;line-height:1.2}.ec-member-trust-head p{margin:0;color:#718197;font-size:.7rem;line-height:1.35}.ec-member-trust-note{flex:0 0 auto;padding:5px 8px;border-radius:999px;background:#eef4f8;color:#66798b;font-size:.62rem;font-weight:800;white-space:nowrap}
     .ec-member-trust-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.ec-member-trust-item{display:grid;grid-template-columns:28px minmax(0,1fr);gap:8px;align-items:center;min-width:0;padding:9px;border:1px solid rgba(31,68,104,.09);border-radius:12px;background:#fff}.ec-member-trust-icon{display:grid;place-items:center;width:28px;height:28px;border-radius:9px;background:#eef4f8;color:#29445e;font-size:.85rem}.ec-member-trust-copy{min-width:0}.ec-member-trust-copy strong{display:block;color:#2e465f;font-size:.72rem;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ec-member-trust-copy small{display:block;margin-top:2px;color:#7a8998;font-size:.62rem;line-height:1.25;overflow-wrap:anywhere}.ec-member-trust-item.good .ec-member-trust-icon{background:#ecf8ef;color:#287a3e}.ec-member-trust-item.warn .ec-member-trust-icon{background:#fff5e9;color:#b96a19}.ec-member-trust-loading{font-size:.7rem;color:#75869a}
+    .ec-member-trust-mutuals{grid-column:1/-1;display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding-top:2px}.ec-member-trust-mutuals-label{color:#66798b;font-size:.63rem;font-weight:850}.ec-member-trust-person{display:inline-flex;align-items:center;gap:6px;max-width:180px;padding:4px 7px 4px 4px;border:1px solid rgba(31,68,104,.09);border-radius:999px;background:#fff;color:#344f69;font-size:.64rem;font-weight:800}.ec-member-trust-person img{width:22px;height:22px;min-width:22px;border-radius:50%;object-fit:cover}.ec-member-trust-person span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ec-member-trust-more{color:#748598;font-size:.62rem;font-weight:800}
     @media(max-width:900px){.ec-member-trust-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-    @media(max-width:620px){.ec-member-trust{padding:11px}.ec-member-trust-head{display:grid}.ec-member-trust-note{justify-self:start}.ec-member-trust-grid{grid-template-columns:1fr}.ec-member-trust-item{padding:8px}}
+    @media(max-width:620px){.ec-member-trust{padding:11px}.ec-member-trust-head{display:grid}.ec-member-trust-note{justify-self:start}.ec-member-trust-grid{grid-template-columns:1fr}.ec-member-trust-item{padding:8px}.ec-member-trust-person{max-width:145px}}
   `;
   document.head.appendChild(style);
 }
@@ -56,6 +57,21 @@ async function profileFacts(profileId) {
   return fallback.data || {};
 }
 
+async function profilesFor(ids) {
+  if (!ids?.length || !supabase) return [];
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id,nickname,first_name,last_name,avatar_url')
+    .in('id', ids.slice(0, 12));
+  if (error) return [];
+  const byId = new Map((data || []).map((row) => [row.id, row]));
+  return ids.map((id) => byId.get(id)).filter(Boolean);
+}
+
+function personName(person) {
+  return person?.nickname || [person?.first_name, person?.last_name].filter(Boolean).join(' ') || 'Mitglied';
+}
+
 function item(icon, title, detail, tone = '') {
   const box = document.createElement('div');
   box.className = `ec-member-trust-item ${tone}`.trim();
@@ -71,6 +87,33 @@ function item(icon, title, detail, tone = '') {
   copy.append(strong, small);
   box.append(ico, copy);
   return box;
+}
+
+function mutualList(people, total) {
+  const wrap = document.createElement('div');
+  wrap.className = 'ec-member-trust-mutuals';
+  const label = document.createElement('span');
+  label.className = 'ec-member-trust-mutuals-label';
+  label.textContent = total ? 'Gemeinsame Freunde:' : 'Keine gemeinsamen Freunde sichtbar';
+  wrap.appendChild(label);
+  people.slice(0, 5).forEach((person) => {
+    const chip = document.createElement('span');
+    chip.className = 'ec-member-trust-person';
+    const img = document.createElement('img');
+    img.src = person.avatar_url || '/default-avatar.svg';
+    img.alt = '';
+    const name = document.createElement('span');
+    name.textContent = personName(person);
+    chip.append(img, name);
+    wrap.appendChild(chip);
+  });
+  if (total > people.slice(0, 5).length) {
+    const more = document.createElement('span');
+    more.className = 'ec-member-trust-more';
+    more.textContent = `+${total - people.slice(0, 5).length} weitere`;
+    wrap.appendChild(more);
+  }
+  return wrap;
 }
 
 function shell(profileId) {
@@ -105,7 +148,10 @@ async function render(profileId) {
     ]);
     if (token !== runToken || !document.body.contains(panel)) return;
     const viewerSet = new Set(viewerFriends);
-    const mutualCount = memberFriends.filter((id) => viewerSet.has(id) && id !== viewerId && id !== profileId).length;
+    const mutualIds = [...new Set(memberFriends.filter((id) => viewerSet.has(id) && id !== viewerId && id !== profileId))];
+    const mutualPeople = await profilesFor(mutualIds);
+    if (token !== runToken || !document.body.contains(panel)) return;
+    const mutualCount = mutualIds.length;
     grid.replaceChildren();
 
     const verified = facts.is_verified === true;
@@ -114,10 +160,11 @@ async function render(profileId) {
     const joined = fmtDate(facts.created_at);
     grid.append(item('◷', joined ? `Mitglied seit ${joined}` : 'Mitglied der Community', joined ? 'Zeigt nur den Beginn der Mitgliedschaft.' : 'Ein Beitrittsdatum ist nicht öffentlich verfügbar.'));
 
-    grid.append(item('♙', `${mutualCount} gemeinsame Freund${mutualCount === 1 ? '' : 'e'}`, mutualCount ? 'Ihr seid über gemeinsame Kontakte verbunden.' : 'Aktuell keine gemeinsamen Kontakte sichtbar.', mutualCount ? 'good' : ''));
+    grid.append(item('♙', `${mutualCount} gemeinsame Freund${mutualCount === 1 ? '' : 'e'}`, mutualCount ? 'Gemeinsame Kontakte werden direkt darunter angezeigt.' : 'Aktuell keine gemeinsamen Kontakte sichtbar.', mutualCount ? 'good' : ''));
 
     const active = String(facts.account_status || 'ACTIVE').toUpperCase() === 'ACTIVE';
     grid.append(item(active ? '●' : '○', active ? 'Aktives Konto' : 'Konto eingeschränkt', active ? 'Das Konto ist aktuell normal nutzbar.' : 'Der Kontostatus ist derzeit eingeschränkt.', active ? 'good' : 'warn'));
+    grid.append(mutualList(mutualPeople, mutualCount));
   } catch (error) {
     if (token !== runToken) return;
     grid.textContent = 'Vertrauenshinweise konnten gerade nicht geladen werden.';
