@@ -8,8 +8,8 @@ const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({'&':'
 
 async function refreshProfileVisits() {
   if (!currentUserId) return;
-  const [{ data: visits, error: visitError }, { data: profiles }] = await Promise.all([
-    supabase.from('profile_visits').select('visitor_id,visited_at').eq('profile_id', currentUserId).order('visited_at', { ascending: false }).limit(10),
+  const [{ data: visits, count: totalCount, error: visitError }, { data: profiles }] = await Promise.all([
+    supabase.from('profile_visits').select('visitor_id,visited_at', { count:'exact' }).eq('profile_id', currentUserId).order('visited_at', { ascending: false }).limit(10),
     supabase.from('profiles').select('id,nickname,role,account_badge').eq('account_status', 'ACTIVE')
   ]);
   if (visitError) {
@@ -20,7 +20,7 @@ async function refreshProfileVisits() {
   const people = new Map((profiles || []).map((profile) => [profile.id, profile]));
   const count = document.querySelector('.ec-dock-visits-count');
   if (count) {
-    count.textContent = String(rows.length);
+    count.textContent = String(totalCount ?? rows.length);
     count.hidden = false;
   }
   const panel = document.querySelector('.ec-dock-detail[data-panel="visits"]');
@@ -39,9 +39,9 @@ async function refreshProfileVisits() {
   });
 }
 
-function queueRefresh() {
+function queueRefresh(delay = 80) {
   clearTimeout(refreshTimer);
-  refreshTimer = setTimeout(refreshProfileVisits, 80);
+  refreshTimer = setTimeout(refreshProfileVisits, delay);
 }
 
 async function start() {
@@ -52,14 +52,15 @@ async function start() {
   if (channel) await supabase.removeChannel(channel);
   channel = supabase
     .channel(`profile-visits-${user.id}`)
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'profile_visits', filter: `profile_id=eq.${user.id}` }, queueRefresh)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'profile_visits', filter: `profile_id=eq.${user.id}` }, () => queueRefresh())
     .subscribe();
 }
 
-window.addEventListener('focus', queueRefresh, { passive: true });
-document.addEventListener('visibilitychange', () => { if (!document.hidden) queueRefresh(); });
+window.addEventListener('focus', () => queueRefresh(0), { passive: true });
+window.addEventListener('pageshow', () => queueRefresh(0), { passive: true });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) queueRefresh(0); });
 new MutationObserver(() => {
-  if (document.querySelector('.ec-dock-detail[data-panel="visits"]')) queueRefresh();
+  if (document.querySelector('.ec-dock-detail[data-panel="visits"]')) queueRefresh(120);
 }).observe(document.documentElement, { childList: true, subtree: true });
 
 void start();
