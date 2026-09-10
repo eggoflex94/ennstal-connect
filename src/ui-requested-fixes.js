@@ -10,8 +10,6 @@ import './global-community-search.js';
 import './member-onboarding.js';
 import './sidebar-ad-banners.js';
 import './admin-banner-entry.js';
-import './mobile-editing-final.js';
-import './mobile-media-upload-center.js';
 import './profile-status-stories.js';
 import './interaction-clickability-final.js';
 import './community-reels.js';
@@ -103,6 +101,42 @@ const STYLES = `
   }
   .ec-right-dock .ec-admin-block > div,
   .ec-right-dock .ec-dock-admin-slot { grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important; }
+
+  @media(max-width:900px),(pointer:coarse){
+    .integrated-profile-form,
+    .personal-profile-sections,
+    .profile-section-modal,
+    .profile-section-form{
+      pointer-events:auto!important;
+      touch-action:auto!important;
+    }
+    .integrated-profile-form input,
+    .integrated-profile-form textarea,
+    .integrated-profile-form select,
+    .integrated-profile-form button,
+    .personal-profile-sections input,
+    .personal-profile-sections textarea,
+    .personal-profile-sections select,
+    .personal-profile-sections button{
+      pointer-events:auto!important;
+      touch-action:auto!important;
+    }
+    .integrated-profile-form input,
+    .integrated-profile-form textarea,
+    .integrated-profile-form select,
+    .personal-profile-sections input,
+    .personal-profile-sections textarea,
+    .personal-profile-sections select{
+      font-size:16px!important;
+      -webkit-user-select:text!important;
+      user-select:text!important;
+    }
+    .integrated-profile-form button,
+    .personal-profile-sections button{
+      min-height:44px!important;
+      touch-action:manipulation!important;
+    }
+  }
 `;
 
 function ensureStyles() {
