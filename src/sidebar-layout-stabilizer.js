@@ -1,7 +1,7 @@
 import { supabase } from './supabaseClient';
 
-const ADMIN_ICONS={admin:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 7v5c0 5 3.4 8 8 9 4.6-1 8-4 8-9V7l-8-4Z"/><path d="M9 12h6M12 9v6"/></svg>',adminTools:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M9 18h6"/><circle cx="8" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="12" cy="18" r="2"/></svg>',legal:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M5 7h14M6 7l-3 6h6L6 7Zm12 0-3 6h6l-3-6Z"/><path d="M7 21h10"/></svg>'};
-const LABELS={admin:'Admin-Zentrale',adminTools:'Admin Tools',legal:'Beweissicherung'};
+const ADMIN_ICONS={adminTools:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M9 18h6"/><circle cx="8" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="12" cy="18" r="2"/></svg>',legal:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M5 7h14M6 7l-3 6h6L6 7Zm12 0-3 6h6l-3-6Z"/><path d="M7 21h10"/></svg>'};
+const LABELS={adminTools:'Admin Tools',legal:'Beweissicherung'};
 let currentRole='';
 let running=false;
 
@@ -18,7 +18,7 @@ function openTarget(target){
     const entry=document.querySelector('.ec-legal-entry');
     if(entry){entry.click();return;}
   }
-  window.dispatchEvent(new CustomEvent('ec:navigate',{detail:{page:target==='legal'?'admin':target}}));
+  window.dispatchEvent(new CustomEvent('ec:navigate',{detail:{page:'admin'}}));
 }
 
 function makeButton(target){
@@ -34,8 +34,8 @@ function makeButton(target){
 }
 
 function expectedTargets(){
-  if(currentRole==='HEAD_ADMIN')return['admin','adminTools','legal'];
-  if(currentRole==='ADMIN')return['admin'];
+  if(currentRole==='HEAD_ADMIN')return['adminTools','legal'];
+  if(currentRole==='ADMIN')return[];
   return[];
 }
 
@@ -45,10 +45,22 @@ function adminSlotIsCorrect(slot,targets){
   return targets.every((target,index)=>buttons[index]?.dataset.ecPage===target);
 }
 
+function removeLegacyAdminEntries(dock){
+  dock.querySelectorAll('[data-ec-page="admin"], [data-key="admin-center"], [data-rf-nav="admin"].ec-duplicate-admin-center').forEach((node)=>node.remove());
+  dock.querySelectorAll('button,a,[role="button"]').forEach((node)=>{
+    const label=String(node.getAttribute('aria-label')||node.title||node.textContent||'').replace(/\s+/g,' ').trim().toLowerCase().replace(/[\s\-_]+/g,'');
+    if(label.includes('adminzentrale')||label.includes('admincenter'))node.remove();
+  });
+  dock.querySelectorAll('.ec-dock-section-label').forEach((label)=>{
+    if(/^administration$/i.test(String(label.textContent||'').trim())) label.remove();
+  });
+}
+
 function ensureAdminDock(){
   const dock=document.querySelector('.ec-right-dock');
   const slot=dock?.querySelector('.ec-dock-admin-slot');
   if(!dock||!slot)return;
+  removeLegacyAdminEntries(dock);
   const targets=expectedTargets();
   if(!targets.length){slot.replaceChildren();slot.hidden=true;slot.removeAttribute('data-ec-admin-signature');return;}
   slot.hidden=false;
