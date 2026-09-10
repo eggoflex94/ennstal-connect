@@ -25,7 +25,7 @@ const withTimeout = (promise, ms, message) => new Promise((resolve, reject) => {
     (error) => { window.clearTimeout(timer); reject(error); }
   );
 });
-const isNetworkError = (error) => /failed to fetch|networkerror|network request failed|load failed|timeout|zeitüberschreitung/i.test(String(error?.message || error || ""));
+const isNetworkError = (error) => /failed to fetch|networkerror|network request failed|load failed|timeout|zeitüberschreitung|aborted/i.test(String(error?.message || error || ""));
 
 function normalizeInterests(value) {
   if (Array.isArray(value)) return value.filter(Boolean);
@@ -85,7 +85,7 @@ export default function ProfileView({
     setAvatarPreview("");
     setAvatarUploading(false);
     setAvatarStatus("");
-  }, [member]);
+  }, [member?.id]);
 
   useEffect(() => () => {
     if (avatarPreview?.startsWith("blob:")) URL.revokeObjectURL(avatarPreview);
@@ -108,14 +108,14 @@ export default function ProfileView({
   }
 
   async function uploadAvatarObject(userId, file) {
-    const path = `${userId}/${Date.now()}-${crypto.randomUUID()}.${safeExtension(file)}`;
     let lastError = null;
     for (let attempt = 1; attempt <= 3; attempt += 1) {
+      const path = `${userId}/${Date.now()}-${crypto.randomUUID()}.${safeExtension(file)}`;
       try {
         setAvatarStatus(attempt === 1 ? "Profilbild wird hochgeladen …" : `Verbindung wird erneut aufgebaut … Versuch ${attempt}/3`);
         const result = await withTimeout(
           supabase.storage.from("profile-avatars").upload(path, file, { upsert: false, contentType: file.type, cacheControl: "3600" }),
-          18000,
+          60000,
           "Zeitüberschreitung beim Bild-Upload."
         );
         if (!result.error) {
@@ -187,11 +187,11 @@ export default function ProfileView({
       const uploaded = await uploadAvatarObject(member.id, file);
       uploadedPath = uploaded.path;
       const savedProfile = await persistAvatar(member.id, uploaded.publicUrl);
-      setDraft({ ...savedProfile, interests: interestsToInput(savedProfile.interests) });
+      setDraft((current) => ({ ...current, avatar_url: savedProfile.avatar_url }));
       if (localPreview.startsWith("blob:")) URL.revokeObjectURL(localPreview);
       setAvatarPreview("");
       setAvatarStatus("✓ Profilbild wurde gespeichert.");
-      onProfileSaved?.(savedProfile);
+      onProfileSaved?.({ ...member, avatar_url: savedProfile.avatar_url, updated_at: savedProfile.updated_at });
       window.dispatchEvent(new CustomEvent("ec:profile-updated", { detail: savedProfile }));
       window.dispatchEvent(new CustomEvent("ec:profile-media-updated", { detail: { avatar_url: savedProfile.avatar_url } }));
       window.dispatchEvent(new CustomEvent("ec:profile-image-updated", { detail: { avatarUrl: savedProfile.avatar_url } }));
