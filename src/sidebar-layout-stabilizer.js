@@ -35,14 +35,16 @@ function makeButton(target){
 
 function expectedTargets(){
   if(currentRole==='HEAD_ADMIN')return['adminTools','legal'];
-  if(currentRole==='ADMIN')return[];
   return[];
 }
 
 function adminSlotIsCorrect(slot,targets){
-  const buttons=[...slot.querySelectorAll(':scope > .ec-admin-icon-button')];
-  if(buttons.length!==targets.length)return false;
-  return targets.every((target,index)=>buttons[index]?.dataset.ecPage===target);
+  const children=[...slot.children];
+  if(children.length!==targets.length)return false;
+  return targets.every((target,index)=>{
+    const child=children[index];
+    return child?.classList?.contains('ec-admin-icon-button') && child.dataset.ecPage===target;
+  });
 }
 
 function removeLegacyAdminEntries(dock){
@@ -51,8 +53,8 @@ function removeLegacyAdminEntries(dock){
     const label=String(node.getAttribute('aria-label')||node.title||node.textContent||'').replace(/\s+/g,' ').trim().toLowerCase().replace(/[\s\-_]+/g,'');
     if(label.includes('adminzentrale')||label.includes('admincenter'))node.remove();
   });
-  dock.querySelectorAll('.ec-dock-section-label').forEach((label)=>{
-    if(/^administration$/i.test(String(label.textContent||'').trim())) label.remove();
+  dock.querySelectorAll('.ec-dock-section-label, .ec-dock-admin-slot > *').forEach((node)=>{
+    if(/^administration$/i.test(String(node.textContent||'').trim())) node.remove();
   });
 }
 
@@ -118,7 +120,7 @@ function boot(){
   void loadRole();
   const observer=new MutationObserver(()=>{
     clearTimeout(window.__ecSidebarLayoutStabilizer);
-    window.__ecSidebarLayoutStabilizer=setTimeout(stabilizeLayout,70);
+    window.__ecSidebarLayoutStabilizer=setTimeout(stabilizeLayout,40);
   });
   observer.observe(document.documentElement,{childList:true,subtree:true});
   window.addEventListener('ec:region-change',()=>setTimeout(()=>{stabilizeLayout();void loadRole();},50));
