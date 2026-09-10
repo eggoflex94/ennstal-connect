@@ -3,6 +3,7 @@ import { supabase } from './supabaseClient';
 const ADMIN_ICONS={adminTools:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M9 18h6"/><circle cx="8" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="12" cy="18" r="2"/></svg>',legal:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M5 7h14M6 7l-3 6h6L6 7Zm12 0-3 6h6l-3-6Z"/><path d="M7 21h10"/></svg>'};
 const LABELS={adminTools:'Admin Tools',legal:'Beweissicherung'};
 let currentRole='';
+let roleLoaded=false;
 let running=false;
 let bootAttempts=0;
 
@@ -41,14 +42,18 @@ function adminSlotIsCorrect(slot,targets){
 
 function ensurePrimaryAdminTools(dock){
   const grid=dock.querySelector('.ec-compact-menu-grid');
-  if(!grid)return;
-  const existing=grid.querySelector('[data-ec-page="adminTools"]');
+  if(!grid)return false;
+  grid.querySelectorAll('[data-ec-page="adminTools"]').forEach((node,index)=>{if(index>0)node.remove();});
+  let existing=grid.querySelector('[data-ec-page="adminTools"]');
   if(currentRole!=='HEAD_ADMIN'){
     existing?.remove();
-    return;
+    return roleLoaded;
   }
-  if(existing)return;
-  grid.appendChild(makeButton('adminTools',true));
+  if(!existing){
+    existing=makeButton('adminTools',true);
+    grid.appendChild(existing);
+  }
+  return true;
 }
 
 function removeLegacyAdminEntries(dock){
@@ -67,7 +72,7 @@ function stabilizeLayout(){
   if(!dock)return false;
   dock.classList.add('ec-stable-personal-dock');
   removeLegacyAdminEntries(dock);
-  ensurePrimaryAdminTools(dock);
+  const primaryReady=ensurePrimaryAdminTools(dock);
   const slot=dock.querySelector('.ec-dock-admin-slot');
   if(slot){
     const targets=expectedSlotTargets();
@@ -78,7 +83,7 @@ function stabilizeLayout(){
       if(!adminSlotIsCorrect(slot,targets))slot.replaceChildren(...targets.map(target=>makeButton(target,false)));
     }
   }
-  return true;
+  return primaryReady&&roleLoaded;
 }
 
 async function loadRole(){
@@ -87,23 +92,33 @@ async function loadRole(){
   try{
     const {data:auth}=await supabase.auth.getUser();
     const uid=auth?.user?.id;
-    if(!uid)return;
+    if(!uid){roleLoaded=true;currentRole='';return;}
     const {data}=await supabase.from('profiles').select('role').eq('id',uid).maybeSingle();
     currentRole=String(data?.role||'').toUpperCase();
+    roleLoaded=true;
     stabilizeLayout();
-  }catch(error){console.warn('Dashboard-Rechte konnten nicht geladen werden:',error)}
-  finally{running=false}
+  }catch(error){
+    roleLoaded=true;
+    console.warn('Dashboard-Rechte konnten nicht geladen werden:',error);
+  }finally{running=false}
 }
 
 function bootTick(){
   bootAttempts+=1;
   const ready=stabilizeLayout();
-  if(ready||bootAttempts>=20)return;
-  setTimeout(bootTick,250);
+  if(ready||bootAttempts>=30)return;
+  setTimeout(bootTick,200);
 }
 
-function refresh(){stabilizeLayout();void loadRole();}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{bootTick();void loadRole();},{once:true});else{bootTick();void loadRole();}
+function refresh(){
+  bootAttempts=0;
+  stabilizeLayout();
+  void loadRole();
+  setTimeout(bootTick,60);
+}
+
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{void loadRole();bootTick();},{once:true});
+else{void loadRole();bootTick();}
 window.addEventListener('ec:navigate',()=>setTimeout(refresh,0));
 window.addEventListener('ec:region-change',()=>setTimeout(refresh,50));
 window.addEventListener('resize',()=>setTimeout(stabilizeLayout,80),{passive:true});
