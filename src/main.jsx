@@ -169,6 +169,8 @@ import "./community-support-verification.js";
 import "./automated-message-modern.css";
 import "./automated-message-modern.js";
 
+import "./profile-visits-layout.css";
+
 class AppErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
