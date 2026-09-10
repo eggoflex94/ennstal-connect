@@ -165,6 +165,10 @@ import "./today-updates-popup.css";
 import "./community-support-verification.css";
 import "./community-support-verification.js";
 
+/* Modern automated chat messages with role stars and readable white text. */
+import "./automated-message-modern.css";
+import "./automated-message-modern.js";
+
 class AppErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
