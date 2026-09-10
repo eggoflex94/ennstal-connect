@@ -1,7 +1,7 @@
 // Abort stalled requests. Safe read requests get a short bounded retry window;
 // writes are never replayed because the server may already have committed them.
-// Storage uploads are allowed a longer window: image/video bodies can legitimately
-// take longer than ordinary API writes, especially on mobile connections.
+// Storage uploads are allowed a much longer window: image/video bodies can legitimately
+// take several minutes on mobile connections without meaning the request is stalled.
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const isTransientNetworkError = (error) => /failed to fetch|networkerror|network request failed|load failed|fetch failed|timeout|aborted/i.test(String(error?.message || error || ''));
 
@@ -18,7 +18,7 @@ export function createNetworkFetch(fetchImpl, timeoutMs = 12_000) {
     const attempts = canRetry ? 3 : 1;
     const url = requestUrl(input);
     const isStorageWrite = !canRetry && /\/storage\/v1\/(?:object|upload\/resumable)/i.test(url);
-    const effectiveTimeoutMs = isStorageWrite ? Math.max(timeoutMs, 60_000) : timeoutMs;
+    const effectiveTimeoutMs = isStorageWrite ? Math.max(timeoutMs, 180_000) : timeoutMs;
     let lastError = null;
 
     for (let attempt = 0; attempt < attempts; attempt += 1) {
