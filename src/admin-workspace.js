@@ -3,7 +3,7 @@ let mounted=false,isHead=false,allowed=false;
 const managed=[[".ec-deletion-admin","🗑️","Kontolöschungen","Offene Löschanträge sicher prüfen und abschließen"]];
 const el=(t,c,x)=>{const n=document.createElement(t);if(c)n.className=c;if(x!==undefined)n.textContent=x;return n;};
 function close(){document.querySelector(".ec-admin-workspace")?.remove();}
-function resultBox(grid,text,ok=true){let r=grid.querySelector(".ec-admin-tool-result");if(!r){r=el("div","ec-admin-tool-result");grid.append(r)}r.className=`ec-admin-tool-result ${ok?"ok":"bad"}`;r.textContent=text;}
+function resultBox(grid,text,ok=true){let r=grid.querySelector(".ec-admin-tool-result");if(!r){r=el("div","ec-admin-tool-result");grid.append(r)}r.className=`ec-admin-tool-result ${ok?"ok":"bad"}`;if(r.textContent!==text)r.textContent=text;}
 function actionCard(grid,ico,title,desc,handler){const c=el("button","ec-admin-tool-card");c.type="button";c.append(el("span","ec-admin-tool-icon",ico));const text=el("span");text.append(el("strong",null,title),el("small",null,desc));c.append(text,el("span","ec-admin-tool-arrow","›"));c.onclick=()=>handler(c);grid.append(c);return c;}
 async function openManaged(selector){const original=document.querySelector(selector);if(!original)return;if(original.matches("details")){original.classList.remove("ec-admin-tool-hidden");original.open=true;original.scrollIntoView({behavior:"smooth",block:"start"});return}original.click()}
 function openAdminArea(){close();window.dispatchEvent(new CustomEvent("ec:navigate",{detail:{page:"admin"}}));}
@@ -28,7 +28,11 @@ async function open(){
 function organize(){
   document.querySelectorAll(".ec-legal-entry").forEach(n=>n.classList.add("ec-admin-tool-hidden"));
   const admin=[...document.querySelectorAll("button,a")].find(n=>/admin-zentrale/i.test(n.textContent||""));
-  if(admin){let entry=document.querySelector(".ec-admin-workspace-entry");if(!entry){entry=el("button","ec-admin-workspace-entry","🔧 Admin Tools");entry.type="button";entry.onclick=open;admin.insertAdjacentElement("afterend",entry)}else entry.textContent="🔧 Admin Tools";}
+  if(admin){
+    let entry=document.querySelector(".ec-admin-workspace-entry");
+    if(!entry){entry=el("button","ec-admin-workspace-entry","🔧 Admin Tools");entry.type="button";entry.onclick=open;admin.insertAdjacentElement("afterend",entry)}
+    else if(entry.textContent!=="🔧 Admin Tools") entry.textContent="🔧 Admin Tools";
+  }
   return true;
 }
 window.addEventListener("ec:open-admin-tools",()=>void open());
