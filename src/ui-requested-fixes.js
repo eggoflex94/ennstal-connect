@@ -1,7 +1,9 @@
 const FRIEND_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="3"/><circle cx="16" cy="9" r="2.5"/><path d="M2.5 20c.7-4 2.8-6 5.5-6 3 0 5.2 2 5.7 6M13.5 15c3.2-.7 6 .9 7 5"/></svg>';
 const REQUEST_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20c.7-4 3-6 6-6 2 0 3.6.6 4.7 1.8M18 7v7M14.5 10.5h7"/></svg>';
 
-const text = (node) => String(node?.getAttribute?.('aria-label') || node?.title || node?.textContent || '')
+const text = (node) => [node?.getAttribute?.('aria-label'), node?.title, node?.textContent]
+  .filter(Boolean)
+  .join(' ')
   .replace(/\s+/g, ' ')
   .trim()
   .toLowerCase();
@@ -34,8 +36,8 @@ function makeFriendIconsVisible() {
   document.querySelectorAll('.ec-right-dock button, .ec-right-dock a').forEach((button) => {
     const label = text(button);
     const icon = button.querySelector('.ec-compact-menu-icon, i, b');
-    if (label === 'freunde') setSvg(icon, FRIEND_ICON, 'friends');
-    if (label === 'anfragen' || label.includes('freundschaftsanfragen')) setSvg(icon, REQUEST_ICON, 'requests');
+    if (label.includes('freunde') && !label.includes('anfragen')) setSvg(icon, FRIEND_ICON, 'friends');
+    if (label.includes('anfragen') || label.includes('freundschaftsanfragen')) setSvg(icon, REQUEST_ICON, 'requests');
   });
 
   document.querySelectorAll('.ec-pro-friend-badge, img[src*="badge-friendship"], img[src*="badge-friend.svg"]').forEach((img) => {
@@ -48,9 +50,12 @@ function makeFriendIconsVisible() {
 }
 
 function ensureStyles() {
-  if (document.getElementById('ec-requested-ui-fixes')) return;
-  const style = document.createElement('style');
-  style.id = 'ec-requested-ui-fixes';
+  let style = document.getElementById('ec-requested-ui-fixes');
+  if (!style) {
+    style = document.createElement('style');
+    style.id = 'ec-requested-ui-fixes';
+    document.head.appendChild(style);
+  }
   style.textContent = `
     .ec-fixed-friend-icon,
     .ec-fixed-friend-icon svg,
@@ -69,10 +74,37 @@ function ensureStyles() {
     .member-profile-actions .ec-profile-friendship-accepted::before,.profile-actions .ec-profile-friendship-accepted::before {
       background-image:url('/badge-friend.svg')!important;opacity:1!important;visibility:visible!important;
     }
-    .ec-right-dock [data-head-admin-tool] { min-width:0!important; overflow:hidden!important; }
-    .ec-right-dock [data-head-admin-tool] .ec-compact-menu-label { white-space:nowrap!important; overflow:hidden!important; text-overflow:ellipsis!important; word-break:normal!important; overflow-wrap:normal!important; }
+    .ec-right-dock .ec-admin-block,
+    .ec-right-dock .ec-dock-admin-slot {
+      min-width:0!important;
+      overflow:visible!important;
+    }
+    .ec-right-dock .ec-admin-block button,
+    .ec-right-dock .ec-admin-block a,
+    .ec-right-dock .ec-dock-admin-slot button,
+    .ec-right-dock .ec-dock-admin-slot a,
+    .ec-right-dock [data-head-admin-tool] {
+      min-width:0!important;
+      max-width:100%!important;
+      white-space:nowrap!important;
+      word-break:normal!important;
+      overflow-wrap:normal!important;
+      overflow:hidden!important;
+      text-overflow:ellipsis!important;
+    }
+    .ec-right-dock [data-head-admin-tool] .ec-compact-menu-label {
+      white-space:nowrap!important;
+      word-break:normal!important;
+      overflow-wrap:normal!important;
+      overflow:hidden!important;
+      text-overflow:ellipsis!important;
+    }
+    .ec-right-dock .ec-admin-block > div,
+    .ec-right-dock .ec-dock-admin-slot {
+      grid-template-columns:repeat(2,minmax(0,1fr))!important;
+      gap:8px!important;
+    }
   `;
-  document.head.appendChild(style);
 }
 
 function apply() {
