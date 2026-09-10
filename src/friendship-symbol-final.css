@@ -12,10 +12,10 @@
   display:inline-flex!important;
   align-items:center!important;
   justify-content:center!important;
-  padding:3px!important;
-  border:1px solid rgba(37,99,235,.28)!important;
+  padding:2px!important;
+  border:0!important;
   border-radius:999px!important;
-  background-color:#ffffff!important;
+  background-color:transparent!important;
   box-shadow:0 3px 10px rgba(15,45,85,.16)!important;
   overflow:visible!important;
   opacity:1!important;
@@ -28,19 +28,19 @@
   background-image:url('/badge-friend.svg')!important;
   background-position:center!important;
   background-repeat:no-repeat!important;
-  background-size:24px 24px!important;
+  background-size:26px 26px!important;
 }
 
 .native-member-friend-badge img,
 .modern-main article.member-card .ec-card-badge-friend img,
 .modern-main article.member-card .ec-card-badge-friend .ec-card-badge-friend-img {
   display:block!important;
-  width:24px!important;
-  height:24px!important;
-  min-width:24px!important;
-  min-height:24px!important;
-  max-width:24px!important;
-  max-height:24px!important;
+  width:26px!important;
+  height:26px!important;
+  min-width:26px!important;
+  min-height:26px!important;
+  max-width:26px!important;
+  max-height:26px!important;
   object-fit:contain!important;
   opacity:1!important;
   visibility:visible!important;
@@ -70,14 +70,16 @@
   }
   .member-profile-actions .ec-profile-friendship-accepted::before,
   .profile-actions .ec-profile-friendship-accepted::before {
-    background-size:22px 22px!important;
+    background-size:24px 24px!important;
   }
   .native-member-friend-badge img,
   .modern-main article.member-card .ec-card-badge-friend img,
   .modern-main article.member-card .ec-card-badge-friend .ec-card-badge-friend-img {
-    width:22px!important;
-    height:22px!important;
-    min-width:22px!important;
-    min-height:22px!important;
+    width:24px!important;
+    height:24px!important;
+    min-width:24px!important;
+    min-height:24px!important;
+    max-width:24px!important;
+    max-height:24px!important;
   }
 }
