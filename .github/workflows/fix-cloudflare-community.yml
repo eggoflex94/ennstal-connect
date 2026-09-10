@@ -46,7 +46,7 @@ jobs:
           PY
       - name: Verify source and production build
         run: npm run test:ci
-      - name: Verify social home features are in production bundle
+      - name: Verify critical production features are bundled
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -58,11 +58,17 @@ jobs:
               'Aktuelle Events',
               'Aktivität teilen',
               'Ich bin dabei',
-              'Interessiert'
+              'Interessiert',
+              'ec-fake-portal',
+              'Fake-Account-Prüfung',
+              'head_admin_fake_account_candidates',
+              'data-head-admin-tool',
+              'Fake-Erkennung',
+              'Admin-Logbuch'
           ]
           missing = [text for text in required if text not in bundle]
           if missing:
-              raise SystemExit('Social home features missing from production bundle: ' + ', '.join(missing))
+              raise SystemExit('Critical production features missing from bundle: ' + ', '.join(missing))
           PY
       - name: Commit verified Cloudflare dist
         run: |
