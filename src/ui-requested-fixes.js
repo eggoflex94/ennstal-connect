@@ -1,6 +1,7 @@
 import './member-trust-profile.js';
 import './admin-system-health.js';
 import './friendship-symbol-final.css';
+import './friendship-card-badges.js';
 import './personal-community-hub.js';
 import './compact-pro-layout.js';
 import './top-nav-active-sync.js';
@@ -54,7 +55,8 @@ function makeFriendIconsVisible() {
 
   document.querySelectorAll('.ec-pro-friend-badge, img[src*="badge-friendship"], img[src*="badge-friend.svg"]').forEach((img) => {
     if (img.tagName !== 'IMG') return;
-    if (!img.src.endsWith('/badge-friend.svg')) img.src = '/badge-friend.svg';
+    const expected = '/badge-friend.svg?v=20260910b';
+    if (!img.src.includes('badge-friend.svg?v=20260910b')) img.src = expected;
     if (img.alt !== 'Befreundet') img.alt = 'Befreundet';
     if (img.title !== 'Befreundet') img.title = 'Befreundet';
     img.classList.add('ec-fixed-friend-badge');
@@ -77,7 +79,7 @@ const STYLES = `
     object-fit:contain!important;opacity:1!important;visibility:visible!important;filter:none!important;position:relative!important;z-index:3!important;
   }
   .member-profile-actions .ec-profile-friendship-accepted::before,.profile-actions .ec-profile-friendship-accepted::before {
-    background-image:url('/badge-friend.svg')!important;opacity:1!important;visibility:visible!important;
+    background-image:url('/badge-friend.svg?v=20260910b')!important;opacity:1!important;visibility:visible!important;
   }
   .ec-right-dock .ec-admin-block,
   .ec-right-dock .ec-dock-admin-slot { min-width:0!important; overflow:visible!important; }
