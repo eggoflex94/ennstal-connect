@@ -41,10 +41,7 @@ function isProfileAvatarInput(input){
   if(!(input instanceof HTMLInputElement)||input.type!=='file')return false;
   const label=input.closest('label');
   const text=String(label?.textContent||'').replace(/\s+/g,' ').trim().toLowerCase();
-  return Boolean(label)&&(
-    label.classList.contains('profile-avatar-upload-field')||
-    (label.classList.contains('profile-upload-field')&&text.startsWith('profilbild'))
-  );
+  return Boolean(label)&&label.classList.contains('profile-upload-field')&&text.startsWith('profilbild');
 }
 
 function setInlineStatus(text){
@@ -56,7 +53,7 @@ function setInlineStatus(text){
     status.className='profile-upload-status';
     status.setAttribute('role','status');
     status.setAttribute('aria-live','polite');
-    const field=panel.querySelector('.profile-avatar-upload-field,.profile-upload-field');
+    const field=panel.querySelector('.profile-upload-field');
     field?.insertAdjacentElement('afterend',status);
   }
   if(status)status.textContent=text;
