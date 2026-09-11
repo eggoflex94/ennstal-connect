@@ -52,9 +52,10 @@ function canSeePresence(profile) {
   return viewer?.id === profile?.id || isAdminViewer() || !profile?.hide_online_status;
 }
 
-function roleInfo(profile) {
+function roleInfo(profile, regionalNames = []) {
   const role = String(profile?.role || 'MEMBER').toUpperCase();
   if (role === 'HEAD_ADMIN') return { label: 'Betreiber (Hauptadmin)', star: '/role-star-red.svg', cls: 'admin' };
+  if (regionalNames.length) return { label: `Regional Admin – ${regionalNames.join(' · ')}`, star: '/supporter-star.svg', cls: 'supporter' };
   if (role === 'ADMIN') return { label: 'Community Admin', star: '/role-star-red.svg', cls: 'admin' };
   if (role === 'SUPPORTER') return { label: 'Supporter', star: '/supporter-star.svg', cls: 'supporter' };
   if (profile?.account_badge === 'BUSINESS') return { label: 'Unternehmenskonto', star: '/role-star-blue.svg', cls: 'business' };
@@ -69,7 +70,7 @@ function row(label, value) {
   return `<div class="ec-restored-profile-row"><span>${esc(label)}</span><strong>${esc(value || '—')}</strong></div>`;
 }
 
-function render(profile) {
+function render(profile, regionalNames = []) {
   const page = document.querySelector('.member-profile-page[data-profile-id]');
   const hero = page?.querySelector(':scope > .member-profile-hero');
   if (!page || !hero || !profile) return;
@@ -91,7 +92,7 @@ function render(profile) {
     hero.appendChild(main);
   }
 
-  const role = roleInfo(profile);
+  const role = roleInfo(profile, regionalNames);
   const region = homeRegion(profile);
   const showName = canSee(profile, 'name');
   const showBirth = canSee(profile, 'birth_date');
@@ -101,7 +102,7 @@ function render(profile) {
 
   const signature = JSON.stringify([
     profile.id, profile.nickname, profile.first_name, profile.last_name, profile.birth_date,
-    profile.role, profile.account_badge, profile.is_verified, region, showName, showBirth,
+    profile.role, profile.account_badge, profile.is_verified, region, regionalNames, showName, showBirth,
     profile.bio, profile.head_admin_responsibilities, profile.admin_responsibilities,
     showPresence, online, lastActive, profile.hide_online_status
   ]);
@@ -126,6 +127,7 @@ function render(profile) {
     if (profile.birth_date) rows.push(row('ALTER', age(profile.birth_date)));
   }
   rows.push(row('HEIMATREGION', region));
+  if (regionalNames.length) rows.push(row('ADMIN-REGION', regionalNames.join(' · ')));
 
   const responsibility = profile.role === 'HEAD_ADMIN'
     ? (profile.head_admin_responsibilities || 'Gesamtverantwortung, Sicherheit & Regeln')
@@ -147,6 +149,19 @@ async function loadDirectoryProfile(id) {
   if (error) throw error;
   const rows = (data || []).map((row) => typeof row === 'string' ? JSON.parse(row) : row);
   return rows.find((profile) => String(profile?.id || '') === String(id)) || null;
+}
+
+async function loadRegionalAdminNames(id) {
+  const { data, error } = await supabase
+    .from('regional_admin_assignments')
+    .select('region_id,active')
+    .eq('user_id', id)
+    .eq('active', true);
+  if (error) {
+    console.warn('Regional-Admin-Zuweisungen konnten nicht geladen werden:', error.message);
+    return [];
+  }
+  return [...new Set((data || []).map((assignment) => regions.get(assignment.region_id)).filter(Boolean))];
 }
 
 async function loadProfile() {
@@ -180,7 +195,8 @@ async function loadProfile() {
       if (protectedProfile) profile = { ...profile, ...protectedProfile };
     }
 
-    render(profile);
+    const regionalNames = await loadRegionalAdminNames(id);
+    render(profile, regionalNames);
   } catch (error) {
     console.warn('Mitgliedsprofil konnte nicht auf den ursprünglichen Aufbau gebracht werden:', error?.message || error);
   }
