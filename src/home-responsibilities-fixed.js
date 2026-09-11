@@ -1,8 +1,8 @@
 import { supabase } from './supabaseClient';
 import { roleIdentity, makeRoleIcon } from './roleIdentity.js';
 
-const CACHE_KEY='ec-home-responsibilities-cache-v3';
-const CACHE_MAX_AGE=30*60*1000;
+const CACHE_KEY='ec-home-responsibilities-cache-v4';
+const CACHE_MAX_AGE=24*60*60*1000;
 let cache = { profiles: [], regions: [], assignments: [] };
 let loading = false;
 let realtimeStarted = false;
@@ -16,11 +16,12 @@ const idOf = (member) => member?.id || member?.user_id || '';
 function hydrateCache(){
   try{
     const stored=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');
-    if(!stored||!stored.savedAt||Date.now()-stored.savedAt>CACHE_MAX_AGE)return false;
+    if(!stored||!stored.savedAt)return false;
     cache={profiles:Array.isArray(stored.profiles)?stored.profiles:[],regions:Array.isArray(stored.regions)?stored.regions:[],assignments:Array.isArray(stored.assignments)?stored.assignments:[]};
     return cache.profiles.length>0&&cache.regions.length>0;
   }catch{return false}
 }
+function cacheIsFresh(){try{const stored=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');return Boolean(stored?.savedAt&&Date.now()-stored.savedAt<CACHE_MAX_AGE)}catch{return false}}
 function persistCache(){try{localStorage.setItem(CACHE_KEY,JSON.stringify({savedAt:Date.now(),...cache}))}catch{}}
 
 function responsibilities(member) {
@@ -100,21 +101,31 @@ function personCard(member, regionId) {
   return card;
 }
 
+function ensureSection(home) {
+  const duplicates=[...home.querySelectorAll('.ec-home-responsibilities, .ec-home-fixed-responsibilities')];
+  let section=duplicates.find((node)=>node.classList.contains('ec-home-fixed-responsibilities')) || null;
+  duplicates.forEach((node)=>{if(node!==section)node.remove()});
+  if(section)return section;
+  section=document.createElement('section');section.className='ec-home-fixed-responsibilities panel';
+  const heading = home.querySelector('.page-heading');
+  const overview = home.querySelector('.home-dashboard-overview, .personal-dashboard-overview, .engagement-panel, .engagement-grid');
+  if (overview) overview.insertAdjacentElement('afterend', section);else if (heading) heading.insertAdjacentElement('afterend', section);else home.prepend(section);
+  return section;
+}
+
 function render() {
   const home = document.querySelector('.home-page');
   if (!home || !cache.profiles.length || !cache.regions.length) return;
   const region = activeRegion();
   if (!region?.id) return;
-  home.querySelectorAll('.ec-home-responsibilities, .ec-home-fixed-responsibilities').forEach((node) => node.remove());
-  const section = document.createElement('section');section.className = 'ec-home-fixed-responsibilities panel';section.dataset.regionId = region.id;
-  const header = document.createElement('div');header.className = 'ec-home-fixed-head';header.innerHTML = `<span class="eyebrow">ZUSTÄNDIGKEITEN</span><h2>Ansprechpartner für ${region.name}</h2><p>Automatisch mit Admin-Rollen, regionalen Zuweisungen und Moderationsrechten gekoppelt.</p>`;section.appendChild(header);
+  const section=ensureSection(home);
+  section.dataset.regionId = region.id;
+  section.replaceChildren();
+  const header = document.createElement('div');header.className = 'ec-home-fixed-head';header.innerHTML = `<span class="eyebrow">ZUSTÄNDIGKEITEN</span><h2>Ansprechpartner für ${region.name}</h2><p>Admin-Rollen, regionale Zuweisungen und Moderation.</p>`;section.appendChild(header);
   const visible = cache.profiles.filter((member) => norm(member.account_status || 'ACTIVE') !== 'SUSPENDED' && !member.is_test_account && isVisible(member, region.id));
   visible.sort((a, b) => {const rank = (m) => norm(m.role) === 'HEAD_ADMIN' ? 1 : norm(m.role) === 'ADMIN' && assignmentsFor(m).length === 0 ? 2 : norm(m.role) === 'ADMIN' ? 3 : 4;return rank(a) - rank(b) || nameOf(a).localeCompare(nameOf(b), 'de')});
   const grid = document.createElement('div');grid.className = 'ec-home-fixed-grid';visible.forEach((member) => grid.appendChild(personCard(member, region.id)));section.appendChild(grid);
   if (!visible.length) {const empty = document.createElement('p');empty.className = 'ec-home-fixed-empty';empty.textContent = 'Für diese Region ist derzeit keine Zuständigkeit hinterlegt.';section.appendChild(empty)}
-  const heading = home.querySelector('.page-heading');
-  const overview = home.querySelector('.home-dashboard-overview, .personal-dashboard-overview, .engagement-panel');
-  if (overview) overview.insertAdjacentElement('afterend', section);else if (heading) heading.insertAdjacentElement('afterend', section);else home.prepend(section);
 }
 
 function mergeProfiles(contacts, extras) {
@@ -149,13 +160,14 @@ async function load() {
 }
 
 function boot() {
-  if(hydrateCache())render();
-  void load();
+  const hadCache=hydrateCache();
+  if(hadCache)render();
+  if(!hadCache||!cacheIsFresh())void load();else setTimeout(()=>void load(),1200);
   if (!realtimeStarted && supabase) {
     realtimeStarted = true;const refresh = () => void load();
-    supabase.channel('ec-home-fixed-responsibilities-v3').on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, refresh).on('postgres_changes', { event: '*', schema: 'public', table: 'regional_admin_assignments' }, refresh).subscribe();
+    supabase.channel('ec-home-fixed-responsibilities-v4').on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, refresh).on('postgres_changes', { event: '*', schema: 'public', table: 'regional_admin_assignments' }, refresh).subscribe();
   }
-  const observer = new MutationObserver(() => {if (!document.querySelector('.home-page')) return;if (!document.querySelector('.ec-home-fixed-responsibilities')) {if (cache.profiles.length && cache.regions.length) render();else void load()}});
+  const observer = new MutationObserver(() => {if (!document.querySelector('.home-page')) return;if (!document.querySelector('.ec-home-fixed-responsibilities')) {if (cache.profiles.length && cache.regions.length) render();else void load()}else ensureSection(document.querySelector('.home-page'))});
   observer.observe(document.documentElement, { childList: true, subtree: true });
 }
 
