@@ -15,7 +15,7 @@ function activate(target){
   document.body.classList.remove('ec-dock-open');
   if(target==='admin')window.dispatchEvent(new CustomEvent('ec:navigate',{detail:{page:'admin'}}));
   if(target==='adminTools')window.dispatchEvent(new CustomEvent('ec:open-admin-tools'));
-  if(target==='legal')window.dispatchEvent(new CustomEvent('ec:open-legal-evidence'));
+  if(target==='legal'&&role==='HEAD_ADMIN')window.dispatchEvent(new CustomEvent('ec:open-legal-evidence'));
 }
 
 function buttonFor(target){
@@ -51,7 +51,9 @@ function hasAdminAccess(){
 }
 
 function expectedTargets(){
-  return hasAdminAccess()?['admin','adminTools','legal']:[];
+  if(role==='HEAD_ADMIN')return['admin','adminTools','legal'];
+  if(role==='ADMIN'||isRegionalAdmin)return['admin','adminTools'];
+  return[];
 }
 
 function gridIsCorrect(grid,targets){
