@@ -45,3 +45,31 @@ test("profile upload remains React-owned on desktop and phones", async () => {
   assert.doesNotMatch(legacyGallery, /addEventListener\(['"]change['"]/);
   assert.doesNotMatch(legacyGallery, /stopImmediatePropagation/);
 });
+
+test("legacy interaction blockers stay disabled", async () => {
+  const blockers = [
+    "src/navigation-stability.js",
+    "src/sidebar-interaction-fix.js",
+    "src/sidebar-final-stability.js",
+  ];
+  for (const file of blockers) {
+    const code = await source(file);
+    assert.doesNotMatch(code, /stopImmediatePropagation\s*\(/, `${file} must not stop React events`);
+    assert.doesNotMatch(code, /addEventListener\(['"]click['"][^\n]*,\s*true\s*\)/, `${file} must not add capture click handlers`);
+  }
+});
+
+test("legacy clean profile runtime cannot replace React profile controls", async () => {
+  const code = await source("src/clean-profile-runtime.js");
+  assert.doesNotMatch(code, /cloneNode\s*\(/);
+  assert.doesNotMatch(code, /original\.click\s*\(/);
+  assert.doesNotMatch(code, /ec-clean-profile-hidden/);
+});
+
+test("visible shell navigation uses one direct React bridge", async () => {
+  const bridge = await source("src/react-navigation-bridge.js");
+  assert.match(bridge, /button\.onclick\s*=\s*null/);
+  assert.match(bridge, /new CustomEvent\(['"]ec:navigate['"]/);
+  assert.doesNotMatch(bridge, /stopImmediatePropagation/);
+  assert.doesNotMatch(bridge, /\.click\s*\(\s*\)/);
+});
