@@ -103,15 +103,16 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
     if (isGlobalAdmin(member)) return "Global Admin";
     const region = regionalAdminRegion(member);
     if (region) return `Regional Admin${region.short_name ? ` · ${region.short_name}` : region.name ? ` · ${region.name}` : ""}`;
+    if (isBusiness(member)) return "Unternehmer";
     if (normalized(member?.role) === "SUPPORTER") return "Supporter";
     return "Mitglied";
   };
-  const roleStarSrc = (member) => isHeadAdmin(member) || isGlobalAdmin(member) || isRegionalAdmin(member) ? "/role-star-red.svg" : normalized(member?.role) === "SUPPORTER" ? "/supporter-star.svg" : isBusiness(member) ? "/role-star-blue.svg" : null;
-  const cardTone = (member) => isHeadAdmin(member) || isGlobalAdmin(member) || isRegionalAdmin(member) ? "admin" : normalized(member?.role) === "SUPPORTER" ? "supporter" : isBusiness(member) ? "business" : "member";
+  const roleStarSrc = (member) => isHeadAdmin(member) || isGlobalAdmin(member) || isRegionalAdmin(member) ? "/role-star-red.svg" : isBusiness(member) ? "/role-star-blue.svg" : normalized(member?.role) === "SUPPORTER" ? "/supporter-star.svg" : null;
+  const cardTone = (member) => isHeadAdmin(member) || isGlobalAdmin(member) || isRegionalAdmin(member) ? "admin" : isBusiness(member) ? "business" : normalized(member?.role) === "SUPPORTER" ? "supporter" : "member";
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const rank = (member) => isHeadAdmin(member) ? 1 : isGlobalAdmin(member) ? 2 : regionalAdminByUser.has(member.id) || explicitRegionalRegions(member).length ? 3 : normalized(member?.role) === "SUPPORTER" ? 4 : isBusiness(member) ? 5 : 6;
+    const rank = (member) => isHeadAdmin(member) ? 1 : isGlobalAdmin(member) ? 2 : regionalAdminByUser.has(member.id) || explicitRegionalRegions(member).length ? 3 : isBusiness(member) ? 4 : normalized(member?.role) === "SUPPORTER" ? 5 : 6;
     return members
       .filter((member) => member && member.account_status !== "SUSPENDED" && !member.is_test_account)
       .filter((member) => regionId === "ALL" || member.home_region_id === regionId)
@@ -160,7 +161,7 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
             <span className="native-member-copy">
               <strong>{displayName(member)}</strong>
               <span className="native-member-badges">
-                {star && <span className="native-member-role-badge"><img src={star} alt="" aria-hidden="true"/>{isBusiness(member) && !isAdminMember(member) && !isRegionalAdmin(member) && normalized(member?.role) !== "SUPPORTER" ? "Unternehmer" : label}</span>}
+                {star && <span className="native-member-role-badge"><img src={star} alt="" aria-hidden="true"/>{isBusiness(member) && !isAdminMember(member) && !isRegionalAdmin(member) ? "Unternehmer" : label}</span>}
                 {!star && <span className="native-member-member-badge">Mitglied</span>}
                 {isFriend && <span className="native-member-friend-badge" title="Befreundet" aria-label="Befreundet"><img src="/badge-friend.svg?v=20260910c" alt="" aria-hidden="true" /></span>}
               </span>
