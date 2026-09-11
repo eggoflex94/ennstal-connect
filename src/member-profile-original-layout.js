@@ -55,11 +55,11 @@ function canSeePresence(profile) {
 function roleInfo(profile, regionalNames = []) {
   const role = String(profile?.role || 'MEMBER').toUpperCase();
   if (role === 'HEAD_ADMIN') return { label: 'Hauptadmin', star: '/role-star-red.svg', cls: 'admin' };
-  if (regionalNames.length) return { label: `Regional Admin – ${regionalNames.join(' · ')}`, star: '/role-star-red.svg', cls: 'supporter' };
   if (role === 'ADMIN') return { label: 'Global Admin', star: '/role-star-red.svg', cls: 'admin' };
-  if (role === 'SUPPORTER') return { label: 'Supporter', star: '/supporter-star.svg', cls: 'supporter' };
+  if (regionalNames.length) return { label: `Regional Admin – ${regionalNames.join(' · ')}`, star: '/role-star-red.svg', cls: 'regional-admin' };
   if (profile?.account_badge === 'BUSINESS') return { label: 'Unternehmenskonto', star: '/role-star-blue.svg', cls: 'business' };
-  return { label: 'Mitglied', star: '', cls: 'member' };
+  if (role === 'SUPPORTER') return { label: 'Supporter', star: '/supporter-star.svg', cls: 'supporter' };
+  return { label: 'Mitglied', star: '/role-star-member.svg', cls: 'member' };
 }
 
 function homeRegion(profile) {
@@ -103,8 +103,7 @@ function render(profile, regionalNames = []) {
   const signature = JSON.stringify([
     profile.id, profile.nickname, profile.first_name, profile.last_name, profile.birth_date,
     profile.role, profile.account_badge, profile.is_verified, region, regionalNames, showName, showBirth,
-    profile.bio, profile.head_admin_responsibilities, profile.admin_responsibilities,
-    showPresence, online, lastActive, profile.hide_online_status
+    profile.bio, showPresence, online, lastActive, profile.hide_online_status
   ]);
   if (signature === lastSignature && profile.id === lastProfileId) return;
   lastSignature = signature;
@@ -113,7 +112,7 @@ function render(profile, regionalNames = []) {
   functionCard.className = `ec-restored-profile-function role-${role.cls}`;
   functionCard.innerHTML = `
     <span class="ec-restored-profile-eyebrow">FUNKTION</span>
-    <strong>${role.star ? `<img src="${role.star}" alt="" aria-hidden="true">` : ''}<span>${esc(role.label)}</span></strong>
+    <strong><img src="${role.star}" alt="" aria-hidden="true"><span>${esc(role.label)}</span></strong>
     <small>Heimatregion: ${esc(region)}</small>
     ${showPresence ? `<div class="ec-restored-profile-presence"><b class="${online ? 'is-online' : 'is-offline'}">${online ? 'Online' : 'Offline'}</b><span>Zuletzt aktiv: ${esc(formatLastActive(lastActive))}</span></div>` : ''}`;
 
@@ -129,10 +128,6 @@ function render(profile, regionalNames = []) {
   rows.push(row('HEIMATREGION', region));
   if (regionalNames.length) rows.push(row('ADMIN-REGION', regionalNames.join(' · ')));
 
-  const responsibility = profile.role === 'HEAD_ADMIN'
-    ? (profile.head_admin_responsibilities || 'Gesamtverantwortung, Sicherheit & Regeln')
-    : (Array.isArray(profile.admin_responsibilities) && profile.admin_responsibilities.length ? profile.admin_responsibilities.join(' · ') : '');
-
   main.innerHTML = `
     <header>
       <span class="ec-restored-profile-eyebrow">MITGLIEDSPROFIL</span>
@@ -140,8 +135,7 @@ function render(profile, regionalNames = []) {
       ${profile.is_verified ? '<span class="ec-restored-profile-verified">✓ Verifiziert</span>' : ''}
     </header>
     <div class="ec-restored-profile-data">${rows.join('')}</div>
-    ${profile.bio ? `<p class="ec-restored-profile-bio">${esc(profile.bio)}</p>` : ''}
-    ${responsibility ? `<p class="ec-restored-profile-responsibility">Zuständig für: ${esc(responsibility)}</p>` : ''}`;
+    ${profile.bio ? `<p class="ec-restored-profile-bio">${esc(profile.bio)}</p>` : ''}`;
 }
 
 async function loadDirectoryProfile(id) {
@@ -189,7 +183,7 @@ async function loadProfile() {
     if (isAdminViewer()) {
       const { data: protectedProfile } = await supabase
         .from('profiles')
-        .select('id,first_name,last_name,birth_date,privacy_settings,head_admin_responsibilities,admin_responsibilities,hide_online_status,last_active_at,last_seen_at,is_online')
+        .select('id,first_name,last_name,birth_date,privacy_settings,hide_online_status,last_active_at,last_seen_at,is_online')
         .eq('id', id)
         .maybeSingle();
       if (protectedProfile) profile = { ...profile, ...protectedProfile };
@@ -213,6 +207,6 @@ function schedule() {
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', schedule, { once: true });
 else schedule();
-new MutationObserver(schedule).observe(document.documentElement, { childList: true, subtree: true });
+new MutationObserver(schedule).observe(document.documentElement, { childList: true, subtree:true });
 window.addEventListener('ec:open-profile', schedule);
 window.addEventListener('ec:profile-updated', () => { lastSignature = ''; schedule(); });
