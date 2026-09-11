@@ -95,3 +95,22 @@ test("profile presence remains visually separated", async () => {
   assert.match(css, /margin-top:18px/);
   assert.match(css, /padding-top:16px/);
 });
+
+test("point list and award controls are admin-only", async () => {
+  const code = await source("src/points-system-ui.js");
+  assert.match(code, /role === 'HEAD_ADMIN' \|\| role === 'ADMIN' \|\| Boolean\(profile\?\.isRegionalAdmin\)/);
+  assert.match(code, /if \(!isAdminLike\(current\)\) return;/);
+  assert.match(code, /if \(!admin \|\| !actions\) \{[\s\S]*listButton\?\.remove\(\);[\s\S]*awardButton\?\.remove\(\);/s);
+  assert.doesNotMatch(code, /canSeePoints = own \|\| admin/);
+});
+
+test("point controls share the same action row on desktop and touch", async () => {
+  const code = await source("src/points-system-ui.js");
+  const css = await source("src/points-system-ui.css");
+  assert.match(code, /page\.querySelector\('\.member-profile-actions, \.profile-original-actions'\)/);
+  assert.match(code, /actions\.appendChild\(listButton\)/);
+  assert.match(code, /actions\.appendChild\(awardButton\)/);
+  assert.match(css, /\.member-profile-actions,\.profile-original-actions\{display:flex!important;flex-wrap:wrap!important;align-items:center!important;gap:14px!important/);
+  assert.match(css, /@media\s*\(pointer:coarse\)/);
+  assert.doesNotMatch(css, /@media\s*\(max-width:/);
+});
