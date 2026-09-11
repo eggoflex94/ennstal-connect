@@ -55,7 +55,7 @@ function canSeePresence(profile) {
 function roleInfo(profile, regionalNames = []) {
   const role = String(profile?.role || 'MEMBER').toUpperCase();
   if (role === 'HEAD_ADMIN') return { label: 'Betreiber (Hauptadmin)', star: '/role-star-red.svg', cls: 'admin' };
-  if (regionalNames.length) return { label: `Regional Admin – ${regionalNames.join(' · ')}`, star: '/supporter-star.svg', cls: 'supporter' };
+  if (regionalNames.length) return { label: `Regional Admin – ${regionalNames.join(' · ')}`, star: '/role-star-green.svg', cls: 'supporter' };
   if (role === 'ADMIN') return { label: 'Community Admin', star: '/role-star-red.svg', cls: 'admin' };
   if (role === 'SUPPORTER') return { label: 'Supporter', star: '/supporter-star.svg', cls: 'supporter' };
   if (profile?.account_badge === 'BUSINESS') return { label: 'Unternehmenskonto', star: '/role-star-blue.svg', cls: 'business' };
