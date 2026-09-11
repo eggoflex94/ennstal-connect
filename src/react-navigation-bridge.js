@@ -1,5 +1,5 @@
 // Single navigation authority for desktop and mobile.
-// Capture the interaction before legacy handlers can trigger synthetic clicks or overlays.
+// Capture sidecar navigation reliably without breaking React's native buttons.
 const PAGE_MAP = new Map([
   ['home', 'home'],
   ['members', 'members'],
@@ -16,21 +16,32 @@ const PAGE_MAP = new Map([
   ['admin', 'admin'],
 ]);
 
-let lastTarget = null;
+let lastKey = '';
 let lastAt = 0;
 
-function resolveButton(target) {
-  return target?.closest?.('.ec-regional-shell [data-ec-page], .ec-regional-right-button[data-ec-page]') || null;
+function inferTextPage(target) {
+  const clickable = target?.closest?.('button,a,[role="button"]');
+  if (!clickable) return null;
+  if (!clickable.closest('nav,.top-nav,.modern-nav,.ec-regional-shell,.ec-regional-dock')) return null;
+  const text = String(clickable.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
+  if (text === 'community' || text.includes(' community')) return { button: clickable, raw: 'community' };
+  return null;
 }
 
-function navigateButton(button) {
-  const raw = String(button?.dataset?.ecPage || '');
+function resolveNavigation(target) {
+  const explicit = target?.closest?.('[data-ec-page]');
+  if (explicit) return { button: explicit, raw: String(explicit.dataset.ecPage || '') };
+  return inferTextPage(target);
+}
+
+function navigate(raw, button) {
   const page = PAGE_MAP.get(raw) || raw;
   if (!page || page === 'help' || page === 'adminTools' || page === 'legal' || page === 'notifications') return false;
 
   const now = Date.now();
-  if (lastTarget === button && now - lastAt < 450) return true;
-  lastTarget = button;
+  const key = `${page}:${button?.dataset?.ecPage || button?.textContent || ''}`;
+  if (key === lastKey && now - lastAt < 350) return true;
+  lastKey = key;
   lastAt = now;
 
   document.body.classList.remove('ec-dock-open');
@@ -40,28 +51,33 @@ function navigateButton(button) {
 
 function handlePointerUp(event) {
   if (event.button !== undefined && event.button !== 0) return;
-  const button = resolveButton(event.target);
-  if (!button || button.disabled) return;
-  if (!navigateButton(button)) return;
-  event.preventDefault();
-  event.stopImmediatePropagation();
+  const nav = resolveNavigation(event.target);
+  if (!nav || nav.button?.disabled) return;
+  if (!navigate(nav.raw, nav.button)) return;
+
+  // Only suppress legacy sidecar handlers. Native React navigation can still
+  // receive its regular click event outside the sidecar.
+  if (nav.button.closest('.ec-regional-shell,.ec-regional-dock') || nav.button.hasAttribute('data-ec-page')) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  }
 }
 
 function handleClick(event) {
-  const button = resolveButton(event.target);
-  if (!button || button.disabled) return;
-  if (!navigateButton(button)) return;
-  event.preventDefault();
-  event.stopImmediatePropagation();
+  const nav = resolveNavigation(event.target);
+  if (!nav || nav.button?.disabled) return;
+  if (!navigate(nav.raw, nav.button)) return;
+  if (nav.button.closest('.ec-regional-shell,.ec-regional-dock') || nav.button.hasAttribute('data-ec-page')) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  }
 }
 
-// pointerup gives touch devices immediate, reliable one-tap navigation.
 document.addEventListener('pointerup', handlePointerUp, true);
-// click remains as keyboard/accessibility and older-browser fallback.
 document.addEventListener('click', handleClick, true);
 
-function cleanLegacyHandlers() {
-  document.querySelectorAll('.ec-regional-shell [data-ec-page], .ec-regional-right-button[data-ec-page]').forEach((button) => {
+function prepareSidecarButtons() {
+  document.querySelectorAll('.ec-regional-shell [data-ec-page],.ec-regional-dock [data-ec-page],.ec-regional-right-button[data-ec-page]').forEach((button) => {
     button.onclick = null;
     button.style.touchAction = 'manipulation';
     button.style.webkitTapHighlightColor = 'transparent';
@@ -74,16 +90,15 @@ function scheduleCleanup() {
   queued = true;
   requestAnimationFrame(() => {
     queued = false;
-    cleanLegacyHandlers();
+    prepareSidecarButtons();
   });
 }
 
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', cleanLegacyHandlers, { once: true });
-else cleanLegacyHandlers();
-
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', prepareSidecarButtons, { once: true });
+else prepareSidecarButtons();
 new MutationObserver(scheduleCleanup).observe(document.documentElement, { childList: true, subtree: true });
 window.addEventListener('ec:navigate', scheduleCleanup);
-setTimeout(cleanLegacyHandlers, 0);
-setTimeout(cleanLegacyHandlers, 300);
+setTimeout(prepareSidecarButtons, 0);
+setTimeout(prepareSidecarButtons, 300);
 
 export {};
