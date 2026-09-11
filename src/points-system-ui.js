@@ -49,6 +49,13 @@ function closeModal() {
   document.querySelector('.ec-points-modal')?.remove();
 }
 
+function actorMarkup(entry) {
+  if (entry.automated || !entry.actor_id) return '<span class="ec-points-actor is-system">System</span>';
+  const star = entry.actor_star ? `<img src="${esc(entry.actor_star)}" alt="" aria-hidden="true">` : '';
+  const nickname = esc(entry.actor_nickname || 'Admin');
+  return `<span class="ec-points-actor">${star}<b>${nickname}</b></span>`;
+}
+
 function historyMarkup(history = []) {
   if (!history.length) return '<div class="ec-points-empty">Noch keine Punktebuchungen vorhanden.</div>';
   return history.map((entry) => {
@@ -57,7 +64,7 @@ function historyMarkup(history = []) {
     return `<article class="ec-points-history-row ${positive ? 'is-plus' : amount < 0 ? 'is-minus' : ''}">
       <div class="ec-points-history-amount">${positive ? '+' : ''}${amount}</div>
       <div class="ec-points-history-copy">
-        <strong>${esc(categoryLabel(entry.category))}</strong>
+        <div class="ec-points-history-top"><strong>${esc(categoryLabel(entry.category))}</strong>${actorMarkup(entry)}</div>
         <span>${esc(entry.reason || 'Keine Begründung')}</span>
         <small>${esc(fmtDate(entry.created_at))}${entry.automated ? ' · automatisch' : ''}</small>
       </div>
@@ -108,7 +115,7 @@ async function openPoints(targetUserId, { suspensionMode = false } = {}) {
       <button type="submit">Punkte buchen</button>
       <div class="ec-points-form-status" aria-live="polite"></div>
     </form>` : ''}
-    <div class="ec-points-list-title"><strong>Verlauf</strong><span>Plus- und Minuspunkte mit Begründung</span></div>
+    <div class="ec-points-list-title"><strong>Verlauf</strong><span>Plus- und Minuspunkte mit Vergabe durch und Begründung</span></div>
     <div class="ec-points-history">${historyMarkup(data.history)}</div>
     ${suspensionMode ? '<p class="ec-points-suspension-note">Der Zugang zur Community bleibt gesperrt, solange dein Konto gesperrt ist.</p>' : ''}
   </section>`;
