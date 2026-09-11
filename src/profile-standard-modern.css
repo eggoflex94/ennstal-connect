@@ -1,9 +1,8 @@
-/* Modern Standard profile skin.
-   Keeps the original React ProfileView structure and handlers intact. */
+/* Modern Standard profile skin preserving the original profile structure. */
 
 .profile-view.integrated-profile-view {
   width: 100% !important;
-  max-width: 1040px !important;
+  max-width: 1180px !important;
   margin: 0 auto !important;
   padding: 18px 0 42px !important;
 }
@@ -14,17 +13,20 @@
   margin: 0 0 14px !important;
   border: 1px solid #dbe4ec !important;
   border-radius: 12px !important;
-  background: rgba(255,255,255,.9) !important;
+  background: rgba(255,255,255,.92) !important;
   color: #405064 !important;
   box-shadow: 0 6px 18px rgba(31,42,54,.06) !important;
 }
 
 .profile-view .integrated-profile-hero {
   display: grid !important;
-  grid-template-columns: 180px minmax(0,1fr) 210px !important;
-  align-items: center !important;
-  gap: 28px !important;
-  padding: 30px !important;
+  grid-template-columns: 250px minmax(0,1fr) 310px !important;
+  grid-template-areas:
+    "left title summary"
+    "left actions summary" !important;
+  align-items: start !important;
+  gap: 24px 28px !important;
+  padding: 28px !important;
   border: 1px solid #d8e2ec !important;
   border-radius: 26px !important;
   background:
@@ -36,8 +38,10 @@
 }
 
 .profile-view .integrated-avatar-wrap {
-  width: 172px !important;
-  height: 172px !important;
+  grid-area: left !important;
+  width: 220px !important;
+  height: 220px !important;
+  align-self: start !important;
   border-radius: 24px !important;
   background: #edf3f8 !important;
   border: 2px solid rgba(255,103,0,.85) !important;
@@ -53,13 +57,14 @@
 }
 
 .profile-view .integrated-profile-title {
+  grid-area: title !important;
   min-width: 0 !important;
 }
 
 .profile-view .integrated-profile-title h1 {
   margin: 10px 0 5px !important;
   color: #172b41 !important;
-  font-size: clamp(32px, 4vw, 48px) !important;
+  font-size: clamp(34px, 4vw, 52px) !important;
   font-weight: 900 !important;
   letter-spacing: -1.4px !important;
   line-height: 1.02 !important;
@@ -73,85 +78,133 @@
 }
 
 .profile-view .integrated-profile-title p {
-  max-width: 590px !important;
+  max-width: 620px !important;
   margin: 10px 0 0 !important;
   color: #536579 !important;
   font-size: 15px !important;
   line-height: 1.65 !important;
 }
 
-/* Role badge: use the real role-star assets, not a text star. */
 .profile-view .profile-role-badge {
-  display: inline-flex !important;
+  display: none !important;
+}
+
+.profile-view .ec-profile-function-card {
+  grid-area: left !important;
+  align-self: end !important;
+  width: 220px !important;
+  margin-top: 232px !important;
+  padding: 16px !important;
+  border-radius: 16px !important;
+  border: 1px solid #e1e7ee !important;
+  background: #fff !important;
+  box-shadow: 0 8px 24px rgba(31,67,104,.07) !important;
+}
+
+.profile-view .ec-profile-function-card.role-admin {
+  background: #fff2f4 !important;
+  border-color: #f1b7c2 !important;
+}
+.profile-view .ec-profile-function-card.role-supporter {
+  background: #eefaf4 !important;
+  border-color: #b9e7d0 !important;
+}
+.profile-view .ec-profile-function-card.role-business {
+  background: #eef6ff !important;
+  border-color: #b9d5f4 !important;
+}
+
+.profile-view .ec-profile-function-eyebrow {
+  display: block !important;
+  margin-bottom: 10px !important;
+  color: #ff641e !important;
+  font-size: 12px !important;
+  font-weight: 900 !important;
+  letter-spacing: 1.1px !important;
+}
+
+.profile-view .ec-profile-function-role {
+  display: flex !important;
   align-items: center !important;
   gap: 9px !important;
-  min-height: 34px !important;
-  width: fit-content !important;
-  padding: 6px 11px !important;
-  border-radius: 12px !important;
-  font-size: 12px !important;
-  line-height: 1 !important;
-  font-weight: 900 !important;
-  letter-spacing: .45px !important;
-  text-transform: none !important;
-  box-shadow: 0 5px 14px rgba(30,55,80,.07) !important;
+  color: #26384d !important;
+  font-size: 17px !important;
+  line-height: 1.2 !important;
 }
 
-.profile-view .profile-role-icon {
+.profile-view .ec-profile-function-star {
   display: inline-block !important;
-  width: 24px !important;
-  height: 24px !important;
-  min-width: 24px !important;
-  overflow: hidden !important;
-  font-size: 0 !important;
-  line-height: 0 !important;
-  background-repeat: no-repeat !important;
-  background-position: center !important;
-  background-size: contain !important;
+  width: 26px !important;
+  height: 26px !important;
+  min-width: 26px !important;
+  object-fit: contain !important;
 }
 
-.profile-view .profile-role-badge.head-admin .profile-role-icon,
-.profile-view .profile-role-badge.admin .profile-role-icon {
-  background-image: url('/role-star-red.svg') !important;
+.profile-view .ec-profile-function-card small {
+  display: block !important;
+  margin-top: 10px !important;
+  color: #66788d !important;
+  font-size: 13px !important;
+  line-height: 1.4 !important;
 }
 
-.profile-view .profile-role-badge.supporter .profile-role-icon {
-  background-image: url('/supporter-star.svg') !important;
+.profile-view .ec-profile-function-presence {
+  display: grid !important;
+  gap: 4px !important;
+  margin-top: 12px !important;
+  padding-top: 11px !important;
+  border-top: 1px solid rgba(96,118,142,.18) !important;
+}
+.profile-view .ec-profile-function-presence b {
+  font-size: 13px !important;
+}
+.profile-view .ec-profile-function-presence b.is-online { color: #168452 !important; }
+.profile-view .ec-profile-function-presence b.is-offline { color: #7d8997 !important; }
+.profile-view .ec-profile-function-presence span {
+  color: #718196 !important;
+  font-size: 12px !important;
 }
 
-.profile-view .profile-role-badge.head-admin {
-  color: #a01832 !important;
-  background: #fff1f4 !important;
-  border: 1px solid #f1b7c2 !important;
+.profile-view .ec-profile-identity-summary {
+  grid-area: summary !important;
+  display: grid !important;
+  gap: 10px !important;
+  align-self: stretch !important;
 }
 
-.profile-view .profile-role-badge.admin {
-  color: #b43a27 !important;
-  background: #fff3ef !important;
-  border: 1px solid #efc3b8 !important;
+.profile-view .ec-profile-identity-card {
+  padding: 12px 14px !important;
+  border: 1px solid #dce5ed !important;
+  border-radius: 14px !important;
+  background: rgba(248,251,254,.96) !important;
 }
-
-.profile-view .profile-role-badge.supporter {
-  color: #176d49 !important;
-  background: #eefaf4 !important;
-  border: 1px solid #b9e7d0 !important;
+.profile-view .ec-profile-identity-card span {
+  display: block !important;
+  margin-bottom: 4px !important;
+  color: #7a8a9c !important;
+  font-size: 11px !important;
+  font-weight: 900 !important;
+  letter-spacing: .8px !important;
 }
-
-.profile-view .profile-role-badge.member {
-  color: #627286 !important;
-  background: #f4f7fa !important;
-  border: 1px solid #dce4eb !important;
+.profile-view .ec-profile-identity-card strong {
+  color: #21344a !important;
+  font-size: 16px !important;
+  line-height: 1.25 !important;
 }
 
 .profile-view .integrated-profile-actions {
-  display: grid !important;
+  grid-area: actions !important;
+  display: flex !important;
+  flex-wrap: wrap !important;
   gap: 9px !important;
+  align-self: end !important;
   width: 100% !important;
 }
 
 .profile-view .profile-primary-button,
 .profile-view .profile-secondary-button {
-  width: 100% !important;
+  width: auto !important;
+  min-width: 150px !important;
   min-height: 44px !important;
   padding: 10px 14px !important;
   border-radius: 12px !important;
@@ -209,7 +262,6 @@
   border-radius: 12px !important;
   background: #fbfdff !important;
   color: #24384d !important;
-  box-shadow: inset 0 1px 2px rgba(28,58,88,.03) !important;
 }
 
 .profile-view .integrated-profile-details {
@@ -229,8 +281,8 @@
 }
 
 .profile-view .integrated-admin-tools {
-  margin-top: 16px !important;
-  padding: 16px !important;
+  margin-top: 18px !important;
+  padding: 18px !important;
   border: 1px solid #f0c8b5 !important;
   border-radius: 18px !important;
   background: #fff9f6 !important;
@@ -241,18 +293,18 @@
   border-radius: 10px !important;
 }
 
-/* Preserve the same desktop profile structure on phones as requested. */
+/* Same desktop structure on touch devices. */
 @media (pointer: coarse) {
   .profile-view .integrated-profile-hero {
-    grid-template-columns: 180px minmax(0,1fr) 210px !important;
+    grid-template-columns: 250px minmax(0,1fr) 310px !important;
+    grid-template-areas:
+      "left title summary"
+      "left actions summary" !important;
     text-align: left !important;
   }
   .profile-view .integrated-avatar-wrap {
-    width: 172px !important;
-    height: 172px !important;
-    margin: 0 !important;
-  }
-  .profile-view .profile-role-badge {
+    width: 220px !important;
+    height: 220px !important;
     margin: 0 !important;
   }
   .profile-view .integrated-profile-details {
