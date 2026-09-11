@@ -110,7 +110,7 @@ test("point controls share the same action row on desktop and touch", async () =
   assert.match(code, /page\.querySelector\('\.member-profile-actions, \.profile-original-actions'\)/);
   assert.match(code, /actions\.appendChild\(listButton\)/);
   assert.match(code, /actions\.appendChild\(awardButton\)/);
-  assert.match(css, /\.member-profile-actions,\.profile-original-actions\{display:flex!important;flex-wrap:wrap!important;align-items:center!important;gap:14px!important/);
+  assert.match(css, /\.member-profile-actions,\.profile-original-actions\{display:flex!important;flex-wrap:wrap!important;align-items:center!important;gap:12px!important/);
   assert.match(css, /@media\s*\(pointer:coarse\)/);
   assert.doesNotMatch(css, /@media\s*\(max-width:/);
 });
