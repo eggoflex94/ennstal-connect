@@ -18,7 +18,8 @@ const automatedPatterns = [
   /rolle .* erhalten/i,
   /rechte .* erhalten/i,
   /moderationsrechte/i,
-  /regional admin/i
+  /regional admin/i,
+  /forum.?moderator/i
 ];
 
 function normalize(value){ return String(value || "").trim(); }
@@ -28,6 +29,15 @@ function roleTheme(profile){
   if(role === "SUPPORTER" || assignments.some(a => a.user_id === profile?.id && a.active)) return "supporter";
   if(profile?.account_badge === "BUSINESS") return "business";
   return "member";
+}
+function roleLabel(profile){
+  const role = normalize(profile?.role).toUpperCase();
+  if(role === "HEAD_ADMIN") return "Hauptadmin";
+  if(role === "ADMIN") return "Admin";
+  if(role === "SUPPORTER") return "Supporter";
+  if(profile?.account_badge === "BUSINESS") return "Unternehmen";
+  if(assignments.some(a => a.user_id === profile?.id && a.active)) return "Regional";
+  return "Mitglied";
 }
 function starFor(profile){
   const theme = roleTheme(profile);
@@ -108,10 +118,15 @@ function decorate(node){
     const star = document.createElement("img");
     star.className = "ec-automated-role-star";
     star.src = starFor(profile || {});
-    star.alt = "Rollenstern";
+    star.alt = `${roleLabel(profile || {})} Rollenstern`;
+    const text = document.createElement("span");
+    text.className = "ec-automated-identity-copy";
     const nick = document.createElement("strong");
     nick.textContent = profile?.nickname || name;
-    identity.append(star,nick);
+    const role = document.createElement("small");
+    role.textContent = roleLabel(profile || {});
+    text.append(nick, role);
+    identity.append(star, text);
     header.append(identity);
   }
 
@@ -123,10 +138,10 @@ function boot(){
   void loadPeople().finally(sync);
   const observer = new MutationObserver(() => {
     clearTimeout(syncTimer);
-    syncTimer = setTimeout(sync, 80);
+    syncTimer = setTimeout(sync, 60);
   });
   observer.observe(document.documentElement,{childList:true,subtree:true});
-  window.addEventListener("ec:navigate",() => setTimeout(sync,120));
+  window.addEventListener("ec:navigate",() => setTimeout(sync,80));
   window.addEventListener("ec:region-change",() => void loadPeople().finally(sync));
 }
 
