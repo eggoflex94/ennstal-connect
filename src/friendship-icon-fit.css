@@ -1,0 +1,21 @@
+/* Keep existing badge dimensions; prevent card photo rules from cropping the symbol. */
+.native-member-card .native-member-friend-badge img,
+.modern-main article.member-card .ec-card-badge-friend img {
+  position:static!important;
+  inset:auto!important;
+  transform:none!important;
+  width:100%!important;
+  height:100%!important;
+  min-width:0!important;
+  min-height:0!important;
+  max-width:100%!important;
+  max-height:100%!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  object-fit:contain!important;
+  object-position:center!important;
+  opacity:1!important;
+  filter:none!important;
+}

@@ -1,4 +1,5 @@
 import './home-social-events.js';
+import './community-engagement-upgrade.css';
 
 const ACTIONS = [
   ['♟', 'Mitglieder entdecken', 'Finde Menschen aus deiner Region.', 'members'],
