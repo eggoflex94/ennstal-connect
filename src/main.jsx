@@ -40,7 +40,6 @@ import "./profile-visits-realtime.js";
 import "./navigation-stability.js";
 import "./admin-forum-cross-region.js";
 import "./community-engagement-upgrade.js";
-import "./home-social-events.js";
 import "./home-social-force-visible.js";
 import "./event-editor-enhancement.js";
 import "./today-updates-popup.js";
@@ -97,9 +96,7 @@ import "./personal-dashboard-final-fix.js";
 
 import "./home-dashboard-modern-buttons.css";
 import "./home-dashboard-modern-buttons.js";
-
 import "./community-native-final.css";
-
 import "./home-next-event-region-final.css";
 
 import "./profile-action-final-authority.css";
@@ -130,7 +127,6 @@ import "./mobile-nav-runtime.js";
 
 import "./home-responsibilities-fixed.css";
 import "./home-responsibilities-fixed.js";
-
 import "./community-event-card-polish.css";
 import "./dashboard-mobile-profile-final.css";
 import "./standard-theme-variants.css";
@@ -138,11 +134,6 @@ import "./standard-theme-rich.css";
 import "./standard-theme-runtime.js";
 import "./mobile-native-final.css";
 import "./dashboard-header-unified.css";
-import "./community-engagement-upgrade.css";
-import "./home-social-events.css";
-import "./event-editor-enhancement.css";
-import "./sidebar-friends-newsfeed.css";
-import "./today-updates-popup.css";
 import "./community-support-verification.css";
 import "./community-support-verification.js";
 import "./automated-message-modern.css";
