@@ -7,7 +7,6 @@ function resultBox(grid,text,ok=true){let r=grid.querySelector(".ec-admin-tool-r
 function actionCard(grid,ico,title,desc,handler){const c=el("button","ec-admin-tool-card");c.type="button";c.append(el("span","ec-admin-tool-icon",ico));const text=el("span");text.append(el("strong",null,title),el("small",null,desc));c.append(text,el("span","ec-admin-tool-arrow","›"));c.onclick=()=>handler(c);grid.append(c);return c;}
 async function openManaged(selector){const original=document.querySelector(selector);if(!original)return;if(original.matches("details")){original.classList.remove("ec-admin-tool-hidden");original.open=true;original.scrollIntoView({behavior:"smooth",block:"start"});return}original.click()}
 function openAdminArea(){close();window.dispatchEvent(new CustomEvent("ec:navigate",{detail:{page:"admin"}}));}
-function openBannerManager(){if(!isHead)return;close();window.dispatchEvent(new CustomEvent("ec:open-banner-manager"));}
 async function open(){
   if(!allowed)return;
   close();
@@ -19,7 +18,6 @@ async function open(){
   actionCard(grid,"⚙️","Admin-Bereich","Mitglieder, Rollen, Meldungen und Verwaltung öffnen.",openAdminArea);
   managed.forEach(([selector,ico,title,desc])=>{if(!document.querySelector(selector))return;actionCard(grid,ico,title,desc,()=>{close();void openManaged(selector)})});
   if(isHead){
-    actionCard(grid,"🖼️","Werbebanner","Mehrere Banner hochladen, verlinken, sortieren und aktivieren.",openBannerManager);
     actionCard(grid,"🩺","Systemdiagnose","Prüft zentrale Datenbankbereiche ohne Inhalte offenzulegen.",async c=>{c.disabled=true;const {data,error}=await supabase.rpc("head_admin_system_diagnostics");c.disabled=false;if(error)return resultBox(grid,`Diagnose fehlgeschlagen: ${error.message}`,false);resultBox(grid,`Diagnose erfolgreich · ${new Date(data.checked_at).toLocaleString("de-AT")} · ${data.open_reports} offene Meldungen · ${data.open_deletion_requests} Löschanträge.`)});
     actionCard(grid,"🧹","Benachrichtigungen bereinigen","Entfernt ausschließlich gelesene Benachrichtigungen, die älter als 90 Tage sind.",async c=>{if(!confirm("Gelesene Benachrichtigungen älter als 90 Tage sicher entfernen?"))return;c.disabled=true;const {data,error}=await supabase.rpc("head_admin_cleanup_old_notifications");c.disabled=false;if(error)return resultBox(grid,error.message,false);resultBox(grid,`${data} alte gelesene Benachrichtigungen wurden entfernt.`)});
     const backup=actionCard(grid,"💾","Backup-/Recovery-Prüfung","Lädt den dokumentierten Prüfstatus …",async c=>{const note=prompt("Kurze optionale Notiz zur Prüfung:","");if(note===null)return;c.disabled=true;const {data,error}=await supabase.rpc("head_admin_mark_backup_reviewed",{p_note:note});c.disabled=false;if(error)return resultBox(grid,error.message,false);c.querySelector("small").textContent=`Zuletzt geprüft: ${new Date(data).toLocaleString("de-AT")} · Dies dokumentiert nur die externe Prüfung.`;resultBox(grid,"Backup-/Recovery-Prüfung wurde dokumentiert.")});
