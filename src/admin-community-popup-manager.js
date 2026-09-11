@@ -92,16 +92,53 @@ function scopeOptions(item){
   return global+regions.map(r=>`<option value="${esc(r.slug)}" ${item?.region_id===r.id?'selected':''}>Region · ${esc(r.name)}</option>`).join('');
 }
 
+async function uploadPopupImage(file,statusEl){
+  if(!file)return null;
+  if(!file.type.startsWith('image/'))throw new Error('Bitte eine Bilddatei auswählen.');
+  if(file.size>8*1024*1024)throw new Error('Das Bild darf maximal 8 MB groß sein.');
+  const {data:{user},error:userError}=await supabase.auth.getUser();
+  if(userError||!user)throw new Error('Nicht angemeldet.');
+  const ext=(file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
+  const path=`${user.id}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+  if(statusEl)statusEl.textContent='Bild wird hochgeladen …';
+  const {error}=await supabase.storage.from('popup-images').upload(path,file,{cacheControl:'3600',upsert:false,contentType:file.type});
+  if(error)throw error;
+  const {data}=supabase.storage.from('popup-images').getPublicUrl(path);
+  if(!data?.publicUrl)throw new Error('Bild-URL konnte nicht erstellt werden.');
+  return data.publicUrl;
+}
+
 function openEditor(item){
   document.querySelector('.ec-popup-admin-editor')?.remove();
   const overlay=document.createElement('div');overlay.className='ec-popup-admin-editor';
   const defaultRegion=item?.region_id?regionForId(item.region_id)?.slug:(canManageGlobal()?'':manageableRegions()[0]?.slug||'');
-  overlay.innerHTML=`<form class="ec-popup-admin-editor-box"><header><div><span>${item?'POPUP BEARBEITEN':'NEUES POPUP'}</span><h2>${item?esc(item.title):'Community-Ankündigung erstellen'}</h2></div><button type="button" data-close aria-label="Schließen">×</button></header><label>Freigabe<select name="scope">${scopeOptions(item)}</select></label><label>Titel<input name="title" required minlength="3" value="${esc(item?.title||'')}"></label><label>Untertitel<input name="subtitle" value="${esc(item?.subtitle||'')}"></label><label>Bild-URL<input name="image" value="${esc(item?.image_url||'/ennstal-community-news-banner.svg')}"></label><label>Inhalte<small>Erste Zeile = Bereichsüberschrift, darunter je ein Punkt. Leerzeile startet einen neuen Bereich.</small><textarea name="sections">${esc(sectionText(item))}</textarea></label><label class="ec-popup-active"><input type="checkbox" name="active" ${item?.active===false?'':'checked'}> Popup aktiv anzeigen</label><div class="ec-popup-admin-editor-actions"><button type="button" data-close>Abbrechen</button><button type="submit" class="primary">${item?'Änderungen speichern':'Popup erstellen'}</button></div><p class="ec-popup-admin-status"></p></form>`;
+  overlay.innerHTML=`<form class="ec-popup-admin-editor-box"><header><div><span>${item?'POPUP BEARBEITEN':'NEUES POPUP'}</span><h2>${item?esc(item.title):'Community-Ankündigung erstellen'}</h2></div><button type="button" data-close aria-label="Schließen">×</button></header><label>Freigabe<select name="scope">${scopeOptions(item)}</select></label><label>Titel<input name="title" required minlength="3" value="${esc(item?.title||'')}"></label><label>Untertitel<input name="subtitle" value="${esc(item?.subtitle||'')}"></label><div class="ec-popup-image-field"><span class="ec-popup-image-label">Popup-Bild</span><div class="ec-popup-image-upload"><input type="file" name="image_file" accept="image/jpeg,image/png,image/webp,image/gif" capture="environment"><button type="button" class="ec-popup-upload-button">Bild vom Gerät auswählen</button><small>PC, Handy oder Tablet · JPG, PNG, WebP oder GIF · max. 8 MB</small></div><input type="url" name="image" placeholder="Alternativ Bild-URL einfügen" value="${esc(item?.image_url||'/ennstal-community-news-banner.svg')}"><div class="ec-popup-image-preview">${item?.image_url?`<img src="${esc(item.image_url)}" alt="Vorschau">`:'<span>Noch kein Bild ausgewählt.</span>'}</div></div><label>Inhalte<small>Erste Zeile = Bereichsüberschrift, darunter je ein Punkt. Leerzeile startet einen neuen Bereich.</small><textarea name="sections">${esc(sectionText(item))}</textarea></label><label class="ec-popup-active"><input type="checkbox" name="active" ${item?.active===false?'':'checked'}> Popup aktiv anzeigen</label><div class="ec-popup-admin-editor-actions"><button type="button" data-close>Abbrechen</button><button type="submit" class="primary">${item?'Änderungen speichern':'Popup erstellen'}</button></div><p class="ec-popup-admin-status"></p></form>`;
   document.body.appendChild(overlay);document.body.classList.add('ec-popup-admin-editing');
   const form=overlay.querySelector('form');if(defaultRegion&&!form.scope.value)form.scope.value=defaultRegion;
+  const status=form.querySelector('.ec-popup-admin-status');
+  const fileInput=form.elements.image_file;
+  const imageInput=form.elements.image;
+  const preview=form.querySelector('.ec-popup-image-preview');
+  const uploadButton=form.querySelector('.ec-popup-upload-button');
+  uploadButton.onclick=()=>fileInput.click();
+  fileInput.onchange=()=>{
+    const file=fileInput.files?.[0];if(!file)return;
+    if(file.size>8*1024*1024){status.textContent='Das Bild darf maximal 8 MB groß sein.';fileInput.value='';return;}
+    const objectUrl=URL.createObjectURL(file);
+    preview.innerHTML=`<img src="${objectUrl}" alt="Vorschau">`;
+    status.textContent=`Ausgewählt: ${file.name}`;
+  };
+  imageInput.oninput=()=>{const url=imageInput.value.trim();preview.innerHTML=url?`<img src="${esc(url)}" alt="Vorschau">`:'<span>Noch kein Bild ausgewählt.</span>';};
   const close=()=>{overlay.remove();document.body.classList.remove('ec-popup-admin-editing')};overlay.querySelectorAll('[data-close]').forEach(b=>b.onclick=close);overlay.onclick=e=>{if(e.target===overlay)close()};
-  form.onsubmit=async e=>{e.preventDefault();const status=form.querySelector('.ec-popup-admin-status');const submit=form.querySelector('[type="submit"]');submit.disabled=true;status.textContent='Wird gespeichert …';
-    try{const {error}=await supabase.rpc('ec_save_community_announcement',{p_id:item?.id||null,p_title:form.title.value,p_subtitle:form.subtitle.value,p_sections:parseSections(form.sections.value),p_image_url:form.image.value,p_region_slug:form.scope.value||null,p_active:form.active.checked});if(error)throw error;status.textContent='Gespeichert.';window.dispatchEvent(new CustomEvent('ec:community-announcements-refresh'));close();await renderPage()}catch(error){status.textContent=error.message||'Speichern fehlgeschlagen.'}finally{submit.disabled=false}};
+  form.onsubmit=async e=>{e.preventDefault();const submit=form.querySelector('[type="submit"]');submit.disabled=true;status.textContent='Wird gespeichert …';
+    try{
+      const file=fileInput.files?.[0];
+      let imageUrl=imageInput.value.trim();
+      if(file){imageUrl=await uploadPopupImage(file,status);imageInput.value=imageUrl;}
+      const {error}=await supabase.rpc('ec_save_community_announcement',{p_id:item?.id||null,p_title:form.title.value,p_subtitle:form.subtitle.value,p_sections:parseSections(form.sections.value),p_image_url:imageUrl,p_region_slug:form.scope.value||null,p_active:form.active.checked});
+      if(error)throw error;
+      status.textContent='Gespeichert.';window.dispatchEvent(new CustomEvent('ec:community-announcements-refresh'));close();await renderPage();
+    }catch(error){status.textContent=error.message||'Speichern fehlgeschlagen.'}finally{submit.disabled=false}};
 }
 
 async function removeItem(item){
