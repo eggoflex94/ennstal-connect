@@ -2,7 +2,8 @@ import { supabase } from './supabaseClient';
 
 const tools = [
   ['fake-accounts', 'Fake-Erkennung', '<path d="M12 3 4 6v6c0 4 4 7 8 9 4-2 8-5 8-9V6Z"/><circle cx="11" cy="11" r="3"/><path d="m13.5 13.5 3 3"/>'],
-  ['admin-log', 'Admin-Logbuch', '<path d="M5 3h12a2 2 0 0 1 2 2v16H7a2 2 0 0 1-2-2V3Z"/><path d="M5 17h14M9 7h6M9 11h6"/>']
+  ['admin-log', 'Admin-Logbuch', '<path d="M5 3h12a2 2 0 0 1 2 2v16H7a2 2 0 0 1-2-2V3Z"/><path d="M5 17h14M9 7h6M9 11h6"/>'],
+  ['ads-manager', 'Werbung', '<rect x="3" y="5" width="18" height="14" rx="3"/><path d="M7 9h10M7 13h6M17 13h.01"/>']
 ];
 
 let allowed = null;
@@ -51,6 +52,10 @@ function syncMenu() {
       button.onclick = () => {
         if (allowed !== true) return;
         document.body.classList.remove('ec-dock-open');
+        if (page === 'ads-manager') {
+          window.dispatchEvent(new CustomEvent('ec:open-sidebar-ad-manager'));
+          return;
+        }
         window.dispatchEvent(new CustomEvent('ec:navigate', { detail: { page } }));
       };
     }
