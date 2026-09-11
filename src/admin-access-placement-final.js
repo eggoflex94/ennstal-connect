@@ -2,7 +2,6 @@ import { supabase } from './supabaseClient';
 
 const ITEMS={
   admin:{label:'Admin-Zentrale',icon:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.4-2.5 1a7 7 0 0 0-1.8-1L14.2 3h-4.4l-.4 3.1a7 7 0 0 0-1.8 1l-2.5-1-2 3.4L5.1 11a7 7 0 0 0 0 2l-2 1.5 2 3.4 2.5-1a7 7 0 0 0 1.8 1l.4 3.1h4.4l.4-3.1a7 7 0 0 0 1.8-1l2.5 1 2-3.4-2-1.5c.1-.3.1-.7.1-1Z"/></svg>'},
-  adminTools:{label:'Admin Tools',icon:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M9 18h6"/><circle cx="8" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="12" cy="18" r="2"/></svg>'},
   legal:{label:'Beweissicherung',icon:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M5 7h14M6 7l-3 6h6L6 7Zm12 0-3 6h6l-3-6Z"/><path d="M7 21h10"/></svg>'}
 };
 let role='';
@@ -14,7 +13,6 @@ let observedSlot=null;
 function activate(target){
   document.body.classList.remove('ec-dock-open');
   if(target==='admin')window.dispatchEvent(new CustomEvent('ec:navigate',{detail:{page:'admin'}}));
-  if(target==='adminTools')window.dispatchEvent(new CustomEvent('ec:open-admin-tools'));
   if(target==='legal'&&role==='HEAD_ADMIN')window.dispatchEvent(new CustomEvent('ec:open-legal-evidence'));
 }
 
@@ -46,13 +44,9 @@ function ensureStyle(){
   document.head.appendChild(style);
 }
 
-function hasAdminAccess(){
-  return role==='HEAD_ADMIN'||role==='ADMIN'||isRegionalAdmin;
-}
-
 function expectedTargets(){
-  if(role==='HEAD_ADMIN')return['admin','adminTools','legal'];
-  if(role==='ADMIN'||isRegionalAdmin)return['admin','adminTools'];
+  if(role==='HEAD_ADMIN')return['admin','legal'];
+  if(role==='ADMIN'||isRegionalAdmin)return['admin'];
   return[];
 }
 
@@ -95,6 +89,9 @@ function place(){
   dock.querySelectorAll('[data-ec-admin-primary="1"]').forEach(node=>{
     if(node.parentElement!==grid)node.remove();
   });
+
+  // Remove obsolete duplicate Admin Tools shortcuts. Profile-specific tools live only on profiles.
+  grid.querySelectorAll(':scope > [data-ec-page="adminTools"]').forEach(node=>node.remove());
 
   if(!gridIsCorrect(grid,targets)){
     grid.querySelectorAll(':scope > [data-ec-admin-primary="1"]').forEach(node=>node.remove());
