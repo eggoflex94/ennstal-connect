@@ -15,11 +15,13 @@ const automatedPatterns = [
   /bittet dich, dein profil/i,
   /du hast soeben von/i,
   /automatisch generierte nachricht/i,
+  /automatisierte nachricht/i,
   /rolle .* erhalten/i,
   /rechte .* erhalten/i,
   /moderationsrechte/i,
   /regional admin/i,
-  /forum.?moderator/i
+  /forum.?moderator/i,
+  /punkte erhalten/i
 ];
 
 function normalize(value){ return String(value || "").trim(); }
@@ -68,6 +70,8 @@ function profileForName(name){
 function extractActor(raw){
   const legacy = raw.match(/^([^\n:]{1,60}?)\s+hat\b/i) || raw.match(/^([^\n:]{1,60}?)\s+bittet\b/i);
   if(legacy?.[1]) return normalize(legacy[1]);
+  const points = raw.match(/du hast soeben von\s+★?\s*([^\n(]{1,60}?)\s+[+-]?\d+\s+punkte erhalten/i);
+  if(points?.[1]) return normalize(points[1]);
   const roleMessage = raw.match(/du hast soeben von\s+★?\s*([^\n(]{1,60}?)(?:\s*\(|\s+die\s+rolle|\s+das\s+recht|\s+die\s+rechte|\s+die\s+regionalen)/i);
   return normalize(roleMessage?.[1]);
 }
@@ -118,14 +122,12 @@ function decorate(node){
     const star = document.createElement("img");
     star.className = "ec-automated-role-star";
     star.src = starFor(profile || {});
-    star.alt = `${roleLabel(profile || {})} Rollenstern`;
+    star.alt = "Rollenstern";
     const text = document.createElement("span");
     text.className = "ec-automated-identity-copy";
     const nick = document.createElement("strong");
     nick.textContent = profile?.nickname || name;
-    const role = document.createElement("small");
-    role.textContent = roleLabel(profile || {});
-    text.append(nick, role);
+    text.append(nick);
     identity.append(star, text);
     header.append(identity);
   }
