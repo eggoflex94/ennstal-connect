@@ -26,10 +26,20 @@ const roleLabel = (profile) => {
   if (role === "SUPPORTER") return "Supporter";
   return "Mitglied";
 };
-const isAutomatedRoleMessage = (message) => String(message?.message_type || "").toUpperCase() === "ROLE" || /automatisch generierte nachricht|rolle .* erhalten|rechte .* erhalten|moderationsrechte|regional admin/i.test(String(message?.content || ""));
+const isAutomatedRoleMessage = (message) => String(message?.message_type || "").toUpperCase() === "ROLE" || /automatisch generierte nachricht|rolle .* erhalten|rechte .* erhalten|moderationsrechte|regional admin|forum.?moderator/i.test(String(message?.content || ""));
 
-function profileById(id) {
-  return profiles.find((profile) => profile.id === id) || null;
+function profileById(id) { return profiles.find((profile) => profile.id === id) || null; }
+
+function findMessagesSection() {
+  const legacy = document.querySelector(".message-overview, .chat-box");
+  if (legacy) return legacy.closest("section");
+  return [...document.querySelectorAll("section")].find((node) => String(node.querySelector(".page-heading h1, h1")?.textContent || "").trim() === "Nachrichten") || null;
+}
+
+function inferLegacyPeer(section) {
+  const name = String(section?.querySelector(".chat-box .member-mini strong")?.textContent || "").trim().toLowerCase();
+  if (!name) return null;
+  return profiles.find((profile) => getName(profile).trim().toLowerCase() === name)?.id || null;
 }
 
 async function loadOverviewData() {
@@ -41,11 +51,7 @@ async function loadOverviewData() {
   currentUser = auth?.user || null;
   profiles = people || [];
   if (!currentUser) return;
-  const { data, error } = await supabase
-    .from("messages")
-    .select("id,sender_id,receiver_id,content,is_read,created_at,message_type")
-    .or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`)
-    .order("created_at", { ascending: true });
+  const { data, error } = await supabase.from("messages").select("id,sender_id,receiver_id,content,is_read,created_at,message_type").or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`).order("created_at", { ascending: true });
   if (error) throw error;
   messages = data || [];
 }
@@ -73,10 +79,7 @@ function renderOverview(shell) {
   const rows = conversationRows();
   shell.innerHTML = `<div class="ec-chat-modern-toolbar"><div><strong>Unterhaltungen</strong><small>${rows.length} ${rows.length === 1 ? "Chat" : "Chats"} · neueste Unterhaltung zuerst</small></div></div><div class="ec-chat-modern-list"></div>`;
   const list = shell.querySelector(".ec-chat-modern-list");
-  if (!rows.length) {
-    list.innerHTML = `<div class="ec-chat-modern-empty">Noch keine privaten Nachrichten.</div>`;
-    return;
-  }
+  if (!rows.length) { list.innerHTML = `<div class="ec-chat-modern-empty">Noch keine privaten Nachrichten.</div>`; return; }
   for (const row of rows) {
     const peer = profileById(row.peerId);
     if (!peer) continue;
@@ -100,20 +103,12 @@ async function openThread(peerId) {
   if (!shell || !currentUser) return;
   const peer = profileById(peerId);
   if (!peer) return;
-  const { data, error } = await supabase
-    .from("messages")
-    .select("id,sender_id,receiver_id,content,is_read,created_at,message_type")
-    .or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${peerId}),and(sender_id.eq.${peerId},receiver_id.eq.${currentUser.id})`)
-    .order("created_at", { ascending: true });
-  if (error) return;
+  const { data, error } = await supabase.from("messages").select("id,sender_id,receiver_id,content,is_read,created_at,message_type").or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${peerId}),and(sender_id.eq.${peerId},receiver_id.eq.${currentUser.id})`).order("created_at", { ascending: true });
+  if (error) { alert(`Chat konnte nicht geladen werden: ${error.message}`); return; }
   messages = [...messages.filter((message) => peerFor(message) !== peerId), ...(data || [])].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
   await supabase.rpc("mark_messages_read", { from_user: peerId });
   shell.innerHTML = `<div class="ec-chat-modern-thread"><header class="ec-chat-modern-thread-header"><button type="button" class="ec-chat-modern-back">← Chats</button><div class="ec-chat-modern-thread-person"><img src="${esc(peer.avatar_url || "/community-default-avatar.png")}" alt=""><span><strong>${esc(getName(peer))}</strong><small>${esc(roleLabel(peer))}</small></span></div></header><div class="ec-chat-modern-messages"></div><form class="ec-chat-modern-form"><textarea name="message" placeholder="Nachricht schreiben …" required></textarea><button class="ec-chat-modern-send" type="submit">Senden</button></form></div>`;
-  shell.querySelector(".ec-chat-modern-back").onclick = async () => {
-    activePeerId = null;
-    await loadOverviewData();
-    renderOverview(shell);
-  };
+  shell.querySelector(".ec-chat-modern-back").onclick = async () => { activePeerId = null; await loadOverviewData(); renderOverview(shell); };
   const list = shell.querySelector(".ec-chat-modern-messages");
   for (const message of (data || [])) {
     const bubble = document.createElement("article");
@@ -123,10 +118,8 @@ async function openThread(peerId) {
     bubble.querySelector(".ec-chat-modern-delete").onclick = async () => {
       if (!confirm("Diese Nachricht für beide Gesprächspartner endgültig löschen?")) return;
       const { error: deleteError } = await supabase.rpc("delete_private_message", { p_message_id: message.id });
-      if (!deleteError) {
-        bubble.remove();
-        messages = messages.filter((item) => item.id !== message.id);
-      }
+      if (deleteError) return alert(deleteError.message);
+      bubble.remove(); messages = messages.filter((item) => item.id !== message.id);
     };
     list.append(bubble);
   }
@@ -135,56 +128,44 @@ async function openThread(peerId) {
   const send = form.querySelector(".ec-chat-modern-send");
   form.onsubmit = async (event) => {
     event.preventDefault();
-    const textarea = form.elements.message;
-    const text = String(textarea.value || "").trim();
-    if (!text) return;
+    const textarea = form.elements.message; const text = String(textarea.value || "").trim(); if (!text) return;
     send.disabled = true;
     const { error: sendError } = await supabase.rpc("send_private_message", { target_user: peerId, message_text: text });
     send.disabled = false;
-    if (sendError) return;
-    textarea.value = "";
-    await openThread(peerId);
+    if (sendError) return alert(`Nachricht konnte nicht gesendet werden: ${sendError.message}`);
+    textarea.value = ""; await openThread(peerId);
   };
 }
 
 async function mountMessages() {
   if (syncing) return;
-  const section = [...document.querySelectorAll("section")].find((node) => node.querySelector(":scope > .page-heading h1")?.textContent.trim() === "Nachrichten");
-  if (!section) {
-    mountedRoot = null;
-    return;
-  }
-  if (mountedRoot === section && section.querySelector(".ec-chat-modern-shell")) return;
+  const section = findMessagesSection();
+  if (!section) { mountedRoot = null; return; }
   syncing = true;
   try {
     await loadOverviewData();
+    const legacyPeer = inferLegacyPeer(section);
+    if (legacyPeer && (!activePeerId || mountedRoot !== section)) activePeerId = legacyPeer;
     mountedRoot = section;
     section.classList.add("ec-chat-modern-host");
     let shell = section.querySelector(".ec-chat-modern-shell");
-    if (!shell) {
-      shell = document.createElement("div");
-      shell.className = "ec-chat-modern-shell";
-      section.append(shell);
-    }
+    if (!shell) { shell = document.createElement("div"); shell.className = "ec-chat-modern-shell"; section.append(shell); }
     if (activePeerId) await openThread(activePeerId); else renderOverview(shell);
   } catch (error) {
     console.warn("Chat konnte nicht modernisiert werden:", error?.message || error);
-  } finally {
-    syncing = false;
-  }
+  } finally { syncing = false; }
 }
 
-function scheduleMount() {
-  clearTimeout(refreshTimer);
-  refreshTimer = setTimeout(() => void mountMessages(), 90);
-}
-
+function scheduleMount() { clearTimeout(refreshTimer); refreshTimer = setTimeout(() => void mountMessages(), 40); }
 function boot() {
   observer = new MutationObserver(scheduleMount);
   observer.observe(document.documentElement, { childList: true, subtree: true });
   window.addEventListener("ec:navigate", scheduleMount);
+  window.addEventListener("popstate", scheduleMount);
   document.addEventListener("visibilitychange", () => { if (!document.hidden) scheduleMount(); });
+  document.addEventListener("click", (event) => { if (event.target.closest("button,a")) setTimeout(scheduleMount, 0); }, true);
   scheduleMount();
 }
-
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot, { once: true }); else boot();
+
+export {};
