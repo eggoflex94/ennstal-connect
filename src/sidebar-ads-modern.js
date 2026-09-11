@@ -4,7 +4,9 @@ let viewerId = "";
 let isHeadAdmin = false;
 let activeRegionId = null;
 let activeRegionName = "Region";
+let regions = [];
 let currentAds = [];
+let managerAds = [];
 let syncing = false;
 let renderQueued = false;
 let bannerIndex = 0;
@@ -33,7 +35,7 @@ function ensureHost() {
   if (!host) {
     host = document.createElement("section");
     host.className = "ec-sidebar-ads";
-    host.setAttribute("aria-label", "Regionale Werbung");
+    host.setAttribute("aria-label", "Werbung");
     const logout = root.querySelector(".ec-logout");
     if (logout) logout.insertAdjacentElement("afterend", host);
     else root.appendChild(host);
@@ -47,6 +49,10 @@ function safeHref(value) {
     const url = new URL(value, window.location.origin);
     return ["http:", "https:"].includes(url.protocol) ? url.href : "";
   } catch { return ""; }
+}
+
+function regionName(regionId) {
+  return regions.find((region) => region.id === regionId)?.name || "Unbekannte Region";
 }
 
 function bannerMarkup(ad) {
@@ -87,7 +93,7 @@ function render() {
   const ad = currentAds[bannerIndex];
   host.hidden = false;
   host.innerHTML = `
-    <div class="ec-sidebar-ads-head"><span>REGIONAL · WERBUNG</span><strong>${esc(activeRegionName)}</strong></div>
+    <div class="ec-sidebar-ads-head"><span>WERBUNG</span><strong>${esc(ad.region_id ? activeRegionName : "Global")}</strong></div>
     <div class="ec-sidebar-ad-list">${bannerMarkup(ad)}</div>
     ${currentAds.length > 1 ? `<div class="ec-sidebar-ad-pager"><button type="button" data-ad-prev aria-label="Vorherige Werbung">‹</button><span>${bannerIndex + 1} / ${currentAds.length}</span><button type="button" data-ad-next aria-label="Nächste Werbung">›</button></div>` : ""}`;
   host.querySelector('[data-ad-prev]')?.addEventListener('click', () => {
@@ -110,15 +116,16 @@ async function resolveContext() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user?.id) return false;
   viewerId = user.id;
-  const [{ data: profile }, { data: regions }] = await Promise.all([
+  const [{ data: profile }, { data: regionRows }] = await Promise.all([
     supabase.from("profiles").select("role,home_region_id").eq("id", user.id).maybeSingle(),
-    supabase.from("regions").select("id,slug,name").eq("is_active", true),
+    supabase.from("regions").select("id,slug,name").eq("is_active", true).order("name"),
   ]);
+  regions = regionRows || [];
   isHeadAdmin = String(profile?.role || "").toUpperCase() === "HEAD_ADMIN";
   const savedSlug = localStorage.getItem("ec-active-region");
-  const selected = (regions || []).find((region) => region.slug === savedSlug)
-    || (regions || []).find((region) => region.id === profile?.home_region_id)
-    || (regions || [])[0] || null;
+  const selected = regions.find((region) => region.slug === savedSlug)
+    || regions.find((region) => region.id === profile?.home_region_id)
+    || regions[0] || null;
   activeRegionId = selected?.id || null;
   activeRegionName = selected?.name || "Region";
   return true;
@@ -135,6 +142,15 @@ async function loadAds() {
   currentAds = data || [];
   if (bannerIndex >= currentAds.length) bannerIndex = 0;
   restartRotation();
+}
+
+async function loadManagerAds() {
+  const { data, error } = await supabase.from("community_ads")
+    .select("id,title,body,image_url,link_url,is_active,created_at,region_id")
+    .eq("is_active", true)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  managerAds = data || [];
 }
 
 async function syncAds() {
@@ -173,6 +189,23 @@ function makeField(labelText, name, value = "", type = "text") {
   return { label, input };
 }
 
+function makeSelectField(labelText, name, options, value) {
+  const label = document.createElement("label");
+  label.className = "ec-sidebar-ad-field";
+  const span = document.createElement("span"); span.textContent = labelText;
+  const select = document.createElement("select");
+  select.name = name;
+  options.forEach((option) => {
+    const node = document.createElement("option");
+    node.value = option.value;
+    node.textContent = option.label;
+    select.appendChild(node);
+  });
+  select.value = value;
+  label.append(span, select);
+  return { label, select };
+}
+
 function closeOverlays() {
   document.querySelector(".ec-sidebar-ad-editor-overlay")?.remove();
   document.querySelector(".ec-sidebar-ad-manager-overlay")?.remove();
@@ -185,19 +218,31 @@ function openEditor(ad) {
   overlay.className = "ec-sidebar-ad-editor-overlay";
   const form = document.createElement("form");
   form.className = "ec-sidebar-ad-editor";
-  form.innerHTML = `<header><div><span>HEAD ADMIN TOOLS · WERBUNG</span><h2>${ad ? "Banner bearbeiten" : "Banner hinzufügen"}</h2><small>${esc(activeRegionName)}</small></div><button type="button" class="ec-sidebar-ad-close" aria-label="Schließen">×</button></header>`;
+  form.innerHTML = `<header><div><span>HEAD ADMIN TOOLS · WERBUNG</span><h2>${ad ? "Banner bearbeiten" : "Banner hinzufügen"}</h2><small>Global oder gezielt für eine Region</small></div><button type="button" class="ec-sidebar-ad-close" aria-label="Schließen">×</button></header>`;
+
+  const initialScope = ad ? (ad.region_id ? "REGIONAL" : "GLOBAL") : "REGIONAL";
+  const scope = makeSelectField("Schaltung", "scope", [
+    { value: "GLOBAL", label: "Global – in allen Regionen" },
+    { value: "REGIONAL", label: "Regional – nur in ausgewählter Region" },
+  ], initialScope);
+  const region = makeSelectField("Region", "region", regions.map((item) => ({ value: item.id, label: item.name })), ad?.region_id || activeRegionId || regions[0]?.id || "");
   const title = makeField("Firma / Titel", "title", ad?.title || "");
   const link = makeField("Ziel-Link (optional)", "link", ad?.link_url || "", "url");
   const imageUrl = makeField("Bild-URL (optional)", "imageUrl", ad?.image_url || "", "url");
   const body = makeField("Kurztext (optional)", "body", ad?.body || "", "textarea");
   const upload = makeField(ad ? "Neues Bild hochladen (optional)" : "Werbebild hochladen", "image", "", "file");
   upload.input.accept = "image/*";
+  const syncRegionState = () => { region.select.disabled = scope.select.value === "GLOBAL"; region.label.classList.toggle("is-disabled", region.select.disabled); };
+  scope.select.addEventListener("change", syncRegionState);
+  syncRegionState();
+
   const hint = document.createElement("p"); hint.className = "ec-sidebar-ad-hint";
-  hint.textContent = "Du kannst beliebig viele Banner hinzufügen. Im Dashboard werden sie automatisch nacheinander angezeigt.";
+  hint.textContent = "Globale Banner erscheinen in jeder Region. Regionale Banner nur in der ausgewählten Region. Mehrere Banner rotieren automatisch.";
   const actions = document.createElement("div"); actions.className = "ec-sidebar-ad-editor-actions";
   actions.innerHTML = '<button type="button" class="secondary ec-sidebar-ad-cancel">Abbrechen</button><button type="submit" class="primary">Speichern</button>';
-  form.append(title.label, link.label, imageUrl.label, upload.label, body.label, hint, actions);
+  form.append(scope.label, region.label, title.label, link.label, imageUrl.label, upload.label, body.label, hint, actions);
   overlay.appendChild(form); document.body.appendChild(overlay);
+
   const close = () => { overlay.remove(); openManager(); };
   form.querySelector(".ec-sidebar-ad-close").onclick = close;
   form.querySelector(".ec-sidebar-ad-cancel").onclick = close;
@@ -209,11 +254,19 @@ function openEditor(ad) {
       const uploadedUrl = await uploadImage(upload.input.files?.[0]);
       const nextImage = uploadedUrl || imageUrl.input.value.trim() || ad?.image_url || null;
       if (!ad && !nextImage) throw new Error("Bitte ein Werbebild hochladen oder eine Bild-URL eintragen.");
-      const payload = { title: title.input.value.trim() || "Werbung", body: body.input.value.trim(), image_url: nextImage, link_url: link.input.value.trim() || null };
+      const regionId = scope.select.value === "GLOBAL" ? null : region.select.value || activeRegionId;
+      if (scope.select.value === "REGIONAL" && !regionId) throw new Error("Bitte eine Region auswählen.");
+      const payload = {
+        title: title.input.value.trim() || "Werbung",
+        body: body.input.value.trim(),
+        image_url: nextImage,
+        link_url: link.input.value.trim() || null,
+        region_id: regionId,
+      };
       if (ad?.id) {
         const { error } = await supabase.from("community_ads").update(payload).eq("id", ad.id); if (error) throw error;
       } else {
-        const { error } = await supabase.from("community_ads").insert({ ...payload, is_active: true, created_by: viewerId, region_id: activeRegionId }); if (error) throw error;
+        const { error } = await supabase.from("community_ads").insert({ ...payload, is_active: true, created_by: viewerId }); if (error) throw error;
       }
       await loadAds(); render(); overlay.remove(); openManager();
     } catch (error) {
@@ -232,23 +285,27 @@ async function deactivateAd(id) {
 
 function managerRow(ad) {
   const image = safeHref(ad.image_url);
+  const scopeLabel = ad.region_id ? regionName(ad.region_id) : "Global";
+  const scopeClass = ad.region_id ? "regional" : "global";
   return `<article class="ec-sidebar-ad-manager-row">
     ${image ? `<img src="${esc(image)}" alt="">` : '<div class="ec-sidebar-ad-manager-thumb"></div>'}
-    <div><strong>${esc(ad.title || "Werbung")}</strong><span>${esc(ad.body || "Kein Kurztext")}</span></div>
+    <div><div class="ec-sidebar-ad-manager-title"><strong>${esc(ad.title || "Werbung")}</strong><em class="ec-ad-scope-badge ${scopeClass}">${esc(scopeLabel)}</em></div><span>${esc(ad.body || "Kein Kurztext")}</span></div>
     <div class="ec-sidebar-ad-manager-actions"><button type="button" data-edit="${esc(ad.id)}">Bearbeiten</button><button type="button" class="danger" data-remove="${esc(ad.id)}">Entfernen</button></div>
   </article>`;
 }
 
 async function openManager() {
   if (!(await resolveContext()) || !isHeadAdmin) return;
-  await loadAds();
+  await Promise.all([loadAds(), loadManagerAds()]);
   closeOverlays();
+  const globalCount = managerAds.filter((ad) => !ad.region_id).length;
+  const regionalCount = managerAds.length - globalCount;
   const overlay = document.createElement("div"); overlay.className = "ec-sidebar-ad-manager-overlay";
-  overlay.innerHTML = `<section class="ec-sidebar-ad-manager"><header><div><span>HEAD ADMIN TOOLS</span><h2>Werbung verwalten</h2><small>${esc(activeRegionName)} · ${currentAds.length} aktive Banner</small></div><button type="button" class="ec-sidebar-ad-close" aria-label="Schließen">×</button></header><div class="ec-sidebar-ad-manager-toolbar"><p>Mehrere Banner können parallel aktiv sein und rotieren automatisch im rechten Dashboard.</p><button type="button" class="primary ec-sidebar-ad-new">+ Weiteren Banner hinzufügen</button></div><div class="ec-sidebar-ad-manager-list">${currentAds.length ? currentAds.map(managerRow).join("") : '<div class="ec-sidebar-ad-empty"><strong>Keine aktive Werbung</strong><span>Erstelle den ersten Banner für diese Region.</span></div>'}</div></section>`;
+  overlay.innerHTML = `<section class="ec-sidebar-ad-manager"><header><div><span>HEAD ADMIN TOOLS</span><h2>Werbung verwalten</h2><small>${managerAds.length} aktive Banner · ${globalCount} global · ${regionalCount} regional</small></div><button type="button" class="ec-sidebar-ad-close" aria-label="Schließen">×</button></header><div class="ec-sidebar-ad-manager-toolbar"><p>Hier siehst du alle aktiven Werbungen aus allen Regionen.</p><button type="button" class="primary ec-sidebar-ad-new">+ Weiteren Banner hinzufügen</button></div><div class="ec-sidebar-ad-manager-list">${managerAds.length ? managerAds.map(managerRow).join("") : '<div class="ec-sidebar-ad-empty"><strong>Keine aktive Werbung</strong><span>Erstelle den ersten globalen oder regionalen Banner.</span></div>'}</div></section>`;
   document.body.appendChild(overlay);
   overlay.querySelector(".ec-sidebar-ad-close").onclick = closeOverlays;
   overlay.querySelector(".ec-sidebar-ad-new").onclick = () => openEditor(null);
-  overlay.querySelectorAll("[data-edit]").forEach((button) => button.onclick = () => openEditor(currentAds.find((ad) => ad.id === button.dataset.edit) || null));
+  overlay.querySelectorAll("[data-edit]").forEach((button) => button.onclick = () => openEditor(managerAds.find((ad) => ad.id === button.dataset.edit) || null));
   overlay.querySelectorAll("[data-remove]").forEach((button) => button.onclick = () => void deactivateAd(button.dataset.remove));
   overlay.onclick = (event) => { if (event.target === overlay) closeOverlays(); };
 }
