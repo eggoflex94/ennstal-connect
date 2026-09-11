@@ -34,13 +34,13 @@ test("notification center remains private and realtime",async()=>{const code=awa
 
 test("friend requests use the canonical friendships table",async()=>{const code=await source("src/Friends.jsx");assert.match(code,/from\("friendships"\)/);assert.match(code,/\.eq\("receiver_id", user\.id\)/);});
 
-test("admin workspace checks signed-in active admin role",async()=>{const code=await source("src/admin-workspace.js");assert.match(code,/auth\.getUser\(\)/);assert.match(code,/\["HEAD_ADMIN","ADMIN"\]\.includes\(p\?\.role\)/);assert.match(code,/head_admin_system_diagnostics/);});
+test("admin workspace checks signed-in active admin role",async()=>{const code=await source("src/admin-workspace.js");assert.match(code,/auth\.getUser\(\)/);assert.match(code,/allowed=p\?\.account_status==="ACTIVE"&&\(isHead\|\|isGlobalAdmin\|\|isRegionalAdmin\)/);assert.match(code,/a\.active&&a\.region_id===activeId/);assert.match(code,/head_admin_system_diagnostics/);});
 
 test("legal evidence and deletion flows keep explicit confirmations",async()=>{const legal=await source("src/legal-evidence-admin.js"),deletion=await source("src/account-deletion-admin.js");assert.match(legal,/RECHTLICHE ANFRAGE BESTAETIGT/);assert.match(deletion,/LOESCHUNG ENDGUELTIG DURCHFUEHREN/);});
 
 test("member privacy controls use server-side RPCs",async()=>{const center=await source("src/privacy-center.js"),lastName=await source("src/last-name-privacy.js");assert.match(center,/member_privacy_export/);assert.match(lastName,/set_last_name_privacy/);});
 
-test("clean profile runtime respects privacy and regional roles",async()=>{const code=await source("src/clean-profile-runtime.js");assert.match(code,/privacy_settings/);assert.match(code,/regional_admin_assignments/);assert.match(code,/roleInfo\(member\)/);assert.match(code,/identityMarkup/);assert.match(code,/ec-clean-profile/);});
+test("React profile keeps private fields restricted and legacy DOM replacement disabled",async()=>{const legacy=await source("src/clean-profile-runtime.js");assert.doesNotMatch(legacy,/innerHTML|replaceWith/);const code=await source("src/ProfileView.jsx");const body=code.match(/function privacyVisible\(member, field, mine, viewerIsAdmin\) \{([\s\S]*?)\n\}/)[1];const visible=new Function("member","field","mine","viewerIsAdmin",body);assert.equal(visible({privacy_settings:{city:"PRIVATE"}},"city",false,false),false);assert.equal(visible({privacy_settings:{city:"PRIVATE"}},"city",true,false),true);assert.equal(visible({privacy_settings:{city:"PRIVATE"}},"city",false,true),true);assert.equal(visible({privacy_settings:{city:"PUBLIC"}},"city",false,false),true);});
 
 test("supporter role remains gold with black nickname in clean layout",async()=>{const css=await source("src/clean-layout.css");assert.match(css,/data-role-theme="supporter"/);assert.match(css,/#ffe532/);assert.match(css,/#050505/);});
 

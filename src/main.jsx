@@ -144,6 +144,7 @@ import "./home-modern-final.js";
 
 /* Final upload authority: native React file pickers stay usable on desktop and phones. */
 import "./file-upload-authority.css";
+import "./friendship-icon-fit.css";
 
 class AppErrorBoundary extends React.Component {
   constructor(props) {
