@@ -37,7 +37,7 @@ async function loadRegional(targetId) {
 
 async function changeRole(target, newRole, button) {
   if (button.disabled || target.role === newRole) return;
-  const labels = { MEMBER: "Mitglied", SUPPORTER: "Supporter", ADMIN: "Community Admin" };
+  const labels = { MEMBER: "Mitglied", SUPPORTER: "Supporter", ADMIN: "Global Admin" };
   if (!confirm(`${nameOf(target)} wirklich auf „${labels[newRole]}“ setzen?`)) return;
   button.disabled = true;
   const original = button.textContent;
@@ -93,10 +93,10 @@ function buildPanel(ctx, target, regional) {
     <div class="ec-profile-admin-role-grid">
       <button type="button" class="secondary-button" data-role="MEMBER">Als Mitglied setzen</button>
       <button type="button" class="secondary-button" data-role="SUPPORTER">Als Supporter setzen</button>
-      <button type="button" class="primary-button" data-role="ADMIN">Als Community Admin setzen</button>
+      <button type="button" class="primary-button" data-role="ADMIN">Als Global Admin setzen</button>
       <button type="button" class="secondary-button" data-action="warn">Verwarnung senden</button>
     </div>
-    <div class="ec-profile-admin-current"><strong>Aktuelle Rolle:</strong> ${esc(target.role || "MEMBER")}</div>
+    <div class="ec-profile-admin-current"><strong>Aktuelle Rolle:</strong> ${esc(target.role === 'ADMIN' ? 'Global Admin' : target.role || "MEMBER")}</div>
     <div class="ec-profile-regional-admin-block">
       <h3>Regional-Admin-Rechte</h3>
       <div class="ec-profile-regional-list">
