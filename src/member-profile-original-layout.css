@@ -1,0 +1,138 @@
+/* Restores the original member-profile information structure without replacing React actions. */
+.member-profile-page > .member-profile-hero {
+  display:grid !important;
+  grid-template-columns:250px minmax(0,1fr) !important;
+  grid-template-rows:auto auto !important;
+  align-items:start !important;
+  gap:16px 28px !important;
+  padding:24px !important;
+  background:#fff !important;
+  color:#203247 !important;
+  border:1px solid rgba(44,112,185,.22) !important;
+  border-radius:22px !important;
+  box-shadow:0 14px 34px rgba(33,76,119,.10) !important;
+}
+.member-profile-page > .member-profile-hero > img {
+  grid-column:1 !important;
+  grid-row:1 !important;
+  width:224px !important;
+  height:224px !important;
+  object-fit:cover !important;
+  border-radius:18px !important;
+  margin:0 !important;
+  border:2px solid #d22b45 !important;
+  box-shadow:0 8px 22px rgba(26,58,92,.12) !important;
+}
+.member-profile-page > .member-profile-hero > .ec-restored-profile-original-text {
+  display:none !important;
+}
+.ec-restored-profile-function {
+  grid-column:1 !important;
+  grid-row:2 !important;
+  width:224px !important;
+  box-sizing:border-box !important;
+  padding:15px 16px !important;
+  border-radius:16px !important;
+  background:#f7f9fc !important;
+  border:1px solid #d9e3ec !important;
+}
+.ec-restored-profile-function.role-admin {background:#fff1f3 !important;border-color:#efb9c3 !important;}
+.ec-restored-profile-function.role-supporter {background:#eefaf4 !important;border-color:#b8e1ca !important;}
+.ec-restored-profile-function.role-business {background:#eff6ff !important;border-color:#b9d5f7 !important;}
+.ec-restored-profile-eyebrow {
+  display:block !important;
+  margin-bottom:8px !important;
+  color:#ff641e !important;
+  font-size:11px !important;
+  font-weight:900 !important;
+  letter-spacing:1.5px !important;
+}
+.ec-restored-profile-function strong {
+  display:flex !important;
+  align-items:center !important;
+  gap:9px !important;
+  margin-bottom:9px !important;
+  color:#26384c !important;
+  font-size:16px !important;
+}
+.ec-restored-profile-function strong img {
+  display:block !important;
+  width:26px !important;
+  height:26px !important;
+  min-width:26px !important;
+  object-fit:contain !important;
+}
+.ec-restored-profile-function small {
+  display:block !important;
+  color:#6f8093 !important;
+  font-size:12px !important;
+  line-height:1.45 !important;
+}
+.ec-restored-profile-main {
+  grid-column:2 !important;
+  grid-row:1 / span 2 !important;
+  min-width:0 !important;
+}
+.ec-restored-profile-main header {
+  padding-bottom:14px !important;
+  margin-bottom:14px !important;
+  border-bottom:1px solid #e0e7ee !important;
+}
+.ec-restored-profile-main h1 {
+  margin:0 0 8px !important;
+  color:#172b41 !important;
+  font-size:46px !important;
+  line-height:1 !important;
+  letter-spacing:-1px !important;
+}
+.ec-restored-profile-verified {
+  display:inline-flex !important;
+  align-items:center !important;
+  padding:5px 9px !important;
+  border-radius:8px !important;
+  background:#eaf8ff !important;
+  color:#ff641e !important;
+  font-size:12px !important;
+  font-weight:800 !important;
+}
+.ec-restored-profile-data {
+  display:grid !important;
+  grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+  gap:10px !important;
+}
+.ec-restored-profile-row {
+  padding:12px 14px !important;
+  border:1px solid #dde5ec !important;
+  border-radius:12px !important;
+  background:#f7f9fb !important;
+}
+.ec-restored-profile-row span {
+  display:block !important;
+  margin-bottom:4px !important;
+  color:#7b8998 !important;
+  font-size:10px !important;
+  font-weight:900 !important;
+  letter-spacing:1px !important;
+}
+.ec-restored-profile-row strong {
+  display:block !important;
+  color:#1e3045 !important;
+  font-size:16px !important;
+}
+.ec-restored-profile-bio,
+.ec-restored-profile-responsibility {
+  margin:14px 0 0 !important;
+  color:#5f7185 !important;
+  line-height:1.55 !important;
+}
+.ec-restored-profile-responsibility {
+  padding:11px 13px !important;
+  border-left:3px solid #ff641e !important;
+  background:#fff8f3 !important;
+  border-radius:0 10px 10px 0 !important;
+}
+@media (pointer:coarse) {
+  .member-profile-page > .member-profile-hero {
+    grid-template-columns:250px minmax(0,1fr) !important;
+  }
+}
