@@ -14,5 +14,7 @@ import './points-system-ui.css';
 import './points-rewards-runtime.js';
 import './community-rules-runtime.js';
 import './community-rules-runtime.css';
+import './points-announcement-popup.js';
+import './points-announcement-popup.css';
 
 export {};
