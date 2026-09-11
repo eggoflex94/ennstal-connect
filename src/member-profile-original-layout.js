@@ -17,6 +17,15 @@ function formatDate(value) {
   return d.toLocaleDateString('de-AT', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
+function formatLastActive(value) {
+  if (!value) return 'Unbekannt';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return 'Unbekannt';
+  return d.toLocaleString('de-AT', {
+    day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+  }).replace(',', ' ·');
+}
+
 function age(value) {
   if (!value) return '—';
   const b = new Date(`${value}T00:00:00`);
@@ -37,6 +46,10 @@ function canSee(profile, field) {
   if (viewer?.id === profile.id || isAdminViewer()) return true;
   const setting = String(profile?.privacy_settings?.[field] || 'PUBLIC').toUpperCase();
   return setting !== 'PRIVATE';
+}
+
+function canSeePresence(profile) {
+  return viewer?.id === profile?.id || isAdminViewer() || !profile?.hide_online_status;
 }
 
 function roleInfo(profile) {
@@ -82,10 +95,15 @@ function render(profile) {
   const region = homeRegion(profile);
   const showName = canSee(profile, 'name');
   const showBirth = canSee(profile, 'birth_date');
+  const showPresence = canSeePresence(profile);
+  const online = Boolean(profile?.is_online && profile?.last_active_at && Date.now() - new Date(profile.last_active_at).getTime() < 5 * 60 * 1000);
+  const lastActive = profile?.last_active_at || profile?.last_seen_at;
+
   const signature = JSON.stringify([
     profile.id, profile.nickname, profile.first_name, profile.last_name, profile.birth_date,
     profile.role, profile.account_badge, profile.is_verified, region, showName, showBirth,
-    profile.bio, profile.head_admin_responsibilities, profile.admin_responsibilities
+    profile.bio, profile.head_admin_responsibilities, profile.admin_responsibilities,
+    showPresence, online, lastActive, profile.hide_online_status
   ]);
   if (signature === lastSignature && profile.id === lastProfileId) return;
   lastSignature = signature;
@@ -95,7 +113,8 @@ function render(profile) {
   functionCard.innerHTML = `
     <span class="ec-restored-profile-eyebrow">FUNKTION</span>
     <strong>${role.star ? `<img src="${role.star}" alt="" aria-hidden="true">` : ''}<span>${esc(role.label)}</span></strong>
-    <small>Heimatregion: ${esc(region)}</small>`;
+    <small>Heimatregion: ${esc(region)}</small>
+    ${showPresence ? `<div class="ec-restored-profile-presence"><b class="${online ? 'is-online' : 'is-offline'}">${online ? 'Online' : 'Offline'}</b><span>Zuletzt aktiv: ${esc(formatLastActive(lastActive))}</span></div>` : ''}`;
 
   const rows = [row('NICKNAME', profile.nickname || '—')];
   if (showName) {
@@ -151,13 +170,11 @@ async function loadProfile() {
       regions = new Map((regionRows || []).map((region) => [region.id, region.name]));
     }
 
-    // For admins, enrich the directory row with protected profile details so
-    // private name/birth date stay visible to moderation as required.
     let profile = directoryProfile;
     if (isAdminViewer()) {
       const { data: protectedProfile } = await supabase
         .from('profiles')
-        .select('id,first_name,last_name,birth_date,privacy_settings,head_admin_responsibilities,admin_responsibilities')
+        .select('id,first_name,last_name,birth_date,privacy_settings,head_admin_responsibilities,admin_responsibilities,hide_online_status,last_active_at,last_seen_at,is_online')
         .eq('id', id)
         .maybeSingle();
       if (protectedProfile) profile = { ...profile, ...protectedProfile };
