@@ -12,7 +12,13 @@ const automatedPatterns = [
   /hat dein profil verifiziert/i,
   /verifizierung.*freigegeben/i,
   /verifizierung.*nicht freigegeben/i,
-  /bittet dich, dein profil/i
+  /bittet dich, dein profil/i,
+  /du hast soeben von/i,
+  /automatisch generierte nachricht/i,
+  /rolle .* erhalten/i,
+  /rechte .* erhalten/i,
+  /moderationsrechte/i,
+  /regional admin/i
 ];
 
 function normalize(value){ return String(value || "").trim(); }
@@ -43,10 +49,17 @@ async function loadPeople(){
 }
 
 function profileForName(name){
-  const wanted = normalize(name).toLocaleLowerCase("de-AT");
+  const wanted = normalize(name).replace(/^★\s*/, "").toLocaleLowerCase("de-AT");
   return profiles.find(p => normalize(p.nickname).toLocaleLowerCase("de-AT") === wanted)
     || profiles.find(p => normalize([p.first_name,p.last_name].filter(Boolean).join(" ")).toLocaleLowerCase("de-AT") === wanted)
     || null;
+}
+
+function extractActor(raw){
+  const legacy = raw.match(/^([^\n:]{1,60}?)\s+hat\b/i) || raw.match(/^([^\n:]{1,60}?)\s+bittet\b/i);
+  if(legacy?.[1]) return normalize(legacy[1]);
+  const roleMessage = raw.match(/du hast soeben von\s+★?\s*([^\n(]{1,60}?)(?:\s*\(|\s+die\s+rolle|\s+das\s+recht|\s+die\s+rechte|\s+die\s+regionalen)/i);
+  return normalize(roleMessage?.[1]);
 }
 
 function findMessageNodes(){
@@ -67,8 +80,7 @@ function decorate(node){
   const raw = normalize(node.textContent);
   if(!raw || !automatedPatterns.some(pattern => pattern.test(raw))) return;
 
-  const match = raw.match(/^([^\n:]{1,60}?)\s+hat\b/i) || raw.match(/^([^\n:]{1,60}?)\s+bittet\b/i);
-  const name = normalize(match?.[1]);
+  const name = extractActor(raw);
   const profile = name ? profileForName(name) : null;
 
   node.dataset.ecAutomatedModern = "1";
@@ -101,17 +113,6 @@ function decorate(node){
     nick.textContent = profile?.nickname || name;
     identity.append(star,nick);
     header.append(identity);
-
-    const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT);
-    let textNode;
-    while((textNode = walker.nextNode())){
-      const value = textNode.nodeValue || "";
-      const index = value.indexOf(name);
-      if(index >= 0){
-        textNode.nodeValue = value.slice(0,index) + value.slice(index + name.length).replace(/^\s+/, "");
-        break;
-      }
-    }
   }
 
   node.prepend(header);
