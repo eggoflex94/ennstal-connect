@@ -74,8 +74,26 @@ function enhancePointMessages() {
     if (paragraph.dataset.ecPointIdentity === '1') return;
     const raw = String(paragraph.textContent || '').trim();
     const lines = raw.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-    if (lines.length < 3 || !lines[0].startsWith('★ ')) return;
-    const actorLine = lines[0].replace(/^★\s*/, '');
+
+    const first = lines[0] || '';
+    const modern = first.match(/^Du hast soeben von ★\s*(.+?)\s*\((.+?)\)\s*([+-]?\d+)\s*Punkte erhalten\.$/i);
+    if (modern) {
+      const [, nickname, roleLabel, amountRaw] = modern;
+      const star = starForRoleLabel(roleLabel);
+      const reasonLine = lines.find((line) => /^Grund:/i.test(line)) || 'Grund: Keine Begründung';
+      const footer = lines.find((line) => /^Dies ist eine automatisierte Nachricht$/i) || 'Dies ist eine automatisierte Nachricht';
+      paragraph.dataset.ecPointIdentity = '1';
+      paragraph.classList.add('ec-point-message');
+      paragraph.innerHTML = `<span class="ec-point-message-sentence">Du hast soeben von <span class="ec-point-message-actor">${star ? `<img src="${star}" alt="" aria-hidden="true">` : ''}<strong></strong></span> <b class="ec-point-message-amount"></b> Punkte erhalten.</span><span class="ec-point-message-reason"></span><small class="ec-point-message-footer"></small>`;
+      paragraph.querySelector('.ec-point-message-actor strong').textContent = nickname.trim();
+      paragraph.querySelector('.ec-point-message-amount').textContent = amountRaw;
+      paragraph.querySelector('.ec-point-message-reason').textContent = reasonLine;
+      paragraph.querySelector('.ec-point-message-footer').textContent = footer;
+      return;
+    }
+
+    if (lines.length < 3 || !first.startsWith('★ ')) return;
+    const actorLine = first.replace(/^★\s*/, '');
     const divider = actorLine.lastIndexOf(' · ');
     if (divider < 0) return;
     const nickname = actorLine.slice(0, divider).trim();
