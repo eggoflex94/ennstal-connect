@@ -8,35 +8,59 @@ const tools = [
 let allowed = null;
 let generation = 0;
 let timer = null;
+let menuRetry = null;
+let rightsRetry = null;
 
 function removeTools() {
   document.querySelectorAll('[data-head-admin-tool]').forEach((button) => button.remove());
 }
 
+function findGrid() {
+  return document.querySelector('.ec-right-dock .ec-compact-menu-grid')
+    || document.querySelector('.ec-compact-menu-grid');
+}
+
+function scheduleMenuRetry() {
+  clearTimeout(menuRetry);
+  menuRetry = setTimeout(syncMenu, 140);
+}
+
 function syncMenu() {
-  const grid = document.querySelector('.ec-right-dock .ec-compact-menu-grid');
+  const grid = findGrid();
   if (allowed === false) {
     removeTools();
     return;
   }
-  if (allowed !== true || !grid) return;
+  if (allowed !== true) return;
+  if (!grid) {
+    scheduleMenuRetry();
+    return;
+  }
 
   for (const [page, label, icon] of tools) {
-    if (grid.querySelector(`[data-head-admin-tool="${page}"]`)) continue;
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'ec-compact-menu-item ec-dashboard-utility-button';
-    button.dataset.headAdminTool = page;
-    button.title = label;
-    button.setAttribute('aria-label', label);
-    button.innerHTML = `<span class="ec-compact-menu-icon"><svg viewBox="0 0 24 24" aria-hidden="true">${icon}</svg></span><span class="ec-compact-menu-label">${label}</span>`;
-    button.onclick = () => {
-      if (allowed !== true) return;
-      document.body.classList.remove('ec-dock-open');
-      window.dispatchEvent(new CustomEvent('ec:navigate', { detail: { page } }));
-    };
-    grid.append(button);
+    let button = grid.querySelector(`[data-head-admin-tool="${page}"]`)
+      || document.querySelector(`[data-head-admin-tool="${page}"]`);
+    if (!button) {
+      button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'ec-compact-menu-item ec-dashboard-utility-button';
+      button.dataset.headAdminTool = page;
+      button.title = label;
+      button.setAttribute('aria-label', label);
+      button.innerHTML = `<span class="ec-compact-menu-icon"><svg viewBox="0 0 24 24" aria-hidden="true">${icon}</svg></span><span class="ec-compact-menu-label">${label}</span>`;
+      button.onclick = () => {
+        if (allowed !== true) return;
+        document.body.classList.remove('ec-dock-open');
+        window.dispatchEvent(new CustomEvent('ec:navigate', { detail: { page } }));
+      };
+    }
+    if (button.parentElement !== grid) grid.append(button);
   }
+}
+
+function scheduleRightsRetry() {
+  clearTimeout(rightsRetry);
+  rightsRetry = setTimeout(() => void refreshRights(), 450);
 }
 
 async function refreshRights({ clearOnMissingUser = false } = {}) {
@@ -45,10 +69,11 @@ async function refreshRights({ clearOnMissingUser = false } = {}) {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (request !== generation) return;
     if (userError || !user) {
-      if (clearOnMissingUser) {
+      if (clearOnMissingUser && !user) {
         allowed = false;
         syncMenu();
       }
+      scheduleRightsRetry();
       return;
     }
 
@@ -59,13 +84,17 @@ async function refreshRights({ clearOnMissingUser = false } = {}) {
       .maybeSingle();
 
     if (request !== generation) return;
-    if (error || !profile) return;
+    if (error || !profile) {
+      scheduleRightsRetry();
+      return;
+    }
 
+    clearTimeout(rightsRetry);
     const nextAllowed = profile.role === 'HEAD_ADMIN' && profile.account_status === 'ACTIVE';
     if (nextAllowed !== allowed) allowed = nextAllowed;
     syncMenu();
   } catch {
-    // Bei kurzzeitigen Netzwerk-/Token-Refreshes den bereits bestätigten Zustand beibehalten.
+    scheduleRightsRetry();
   }
 }
 
@@ -83,6 +112,7 @@ supabase.auth.onAuthStateChange((event) => {
   clearTimeout(timer);
   if (event === 'SIGNED_OUT') {
     generation++;
+    clearTimeout(rightsRetry);
     allowed = false;
     syncMenu();
     return;
@@ -91,4 +121,6 @@ supabase.auth.onAuthStateChange((event) => {
 });
 
 window.addEventListener('focus', () => void refreshRights());
+window.addEventListener('ec:navigate', syncMenu);
+window.addEventListener('ec:region-change', syncMenu);
 void refreshRights({ clearOnMissingUser: true });

@@ -9,6 +9,7 @@ const automatedPatterns = [
   /ihr seid jetzt befreundet/i,
   /profil(?:-| )verifizierung/i,
   /profil wurde verifiziert/i,
+  /hat dein profil verifiziert/i,
   /verifizierung.*freigegeben/i,
   /verifizierung.*nicht freigegeben/i,
   /bittet dich, dein profil/i
@@ -97,7 +98,7 @@ function decorate(node){
     star.src = starFor(profile || {});
     star.alt = "Rollenstern";
     const nick = document.createElement("strong");
-    nick.textContent = name;
+    nick.textContent = profile?.nickname || name;
     identity.append(star,nick);
     header.append(identity);
 
