@@ -72,7 +72,7 @@ function historyMarkup(history = []) {
   }).join('');
 }
 
-async function openPoints(targetUserId, { suspensionMode = false } = {}) {
+async function openPoints(targetUserId, { suspensionMode = false, focusAdminForm = false } = {}) {
   if (!targetUserId) return;
   const current = await loadViewer();
   const own = current?.id === targetUserId;
@@ -120,6 +120,14 @@ async function openPoints(targetUserId, { suspensionMode = false } = {}) {
     ${suspensionMode ? '<p class="ec-points-suspension-note">Der Zugang zur Community bleibt gesperrt, solange dein Konto gesperrt ist.</p>' : ''}
   </section>`;
   document.body.appendChild(overlay);
+
+  if (focusAdminForm) {
+    const deltaInput = overlay.querySelector('.ec-points-admin-form input[name="delta"]');
+    if (deltaInput) {
+      deltaInput.focus();
+      deltaInput.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+  }
 
   overlay.querySelector('.ec-points-close')?.addEventListener('click', closeModal);
   if (!suspensionMode) overlay.addEventListener('click', (event) => { if (event.target === overlay) closeModal(); });
@@ -178,24 +186,50 @@ async function bindProfilePoints() {
   if (!page) return;
   const id = page.dataset.profileId;
   if (!id) return;
+
   const current = await loadViewer();
-  const allowed = current?.id === id || isAdminLike(current);
-  let button = page.querySelector('.ec-profile-points-button');
-  if (!allowed) {
-    button?.remove();
-    return;
+  if (!current?.id) return;
+
+  const own = current.id === id;
+  const admin = isAdminLike(current);
+  const canSeePoints = own || admin;
+  const canAwardPoints = admin && !own;
+  const actions = page.querySelector('.member-profile-actions, .profile-original-actions');
+  if (!actions) return;
+
+  let listButton = page.querySelector('.ec-profile-points-button');
+  let awardButton = page.querySelector('.ec-profile-award-points-button');
+
+  if (!canSeePoints) {
+    listButton?.remove();
+  } else {
+    if (!listButton) {
+      listButton = document.createElement('button');
+      listButton.type = 'button';
+      listButton.className = 'ec-profile-points-button';
+      listButton.textContent = '★ Punkteliste';
+    }
+    if (listButton.parentElement !== actions) actions.appendChild(listButton);
+    if (listButton.dataset.ecPointsBound !== '1') {
+      listButton.dataset.ecPointsBound = '1';
+      listButton.addEventListener('click', () => void openPoints(id));
+    }
   }
-  if (!button) {
-    button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'ec-profile-points-button';
-    button.textContent = '★ Punkteliste';
-    const actions = page.querySelector('.member-profile-actions, .profile-original-actions') || page.querySelector('.member-profile-hero');
-    actions?.insertAdjacentElement('afterend', button);
-  }
-  if (button && button.dataset.ecPointsBound !== '1') {
-    button.dataset.ecPointsBound = '1';
-    button.addEventListener('click', () => void openPoints(id));
+
+  if (!canAwardPoints) {
+    awardButton?.remove();
+  } else {
+    if (!awardButton) {
+      awardButton = document.createElement('button');
+      awardButton.type = 'button';
+      awardButton.className = 'ec-profile-award-points-button';
+      awardButton.textContent = '✚ Punkte vergeben';
+    }
+    if (awardButton.parentElement !== actions) actions.appendChild(awardButton);
+    if (awardButton.dataset.ecPointsBound !== '1') {
+      awardButton.dataset.ecPointsBound = '1';
+      awardButton.addEventListener('click', () => void openPoints(id, { focusAdminForm: true }));
+    }
   }
 }
 
