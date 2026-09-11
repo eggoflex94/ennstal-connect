@@ -1,19 +1,6 @@
-/* Final upload interaction authority.
-   Keep the native React-owned file inputs usable on desktop and touch devices. */
-
-input[type="file"] {
-  pointer-events: auto !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  position: static !important;
-  width: 100% !important;
-  min-height: 44px !important;
-  display: block !important;
-  z-index: 2 !important;
-  touch-action: manipulation !important;
-  -webkit-user-select: auto !important;
-  user-select: auto !important;
-}
+/* Upload interaction authority.
+   React owns profile and gallery uploads. Group/forum pickers keep their custom
+   button presentation instead of being forced visible globally. */
 
 .profile-upload-field,
 .photo-upload-button,
@@ -21,8 +8,8 @@ input[type="file"] {
 .homepage-image-picker {
   pointer-events: auto !important;
   position: relative !important;
-  overflow: visible !important;
   touch-action: manipulation !important;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .profile-upload-field input[type="file"],
@@ -37,4 +24,45 @@ input[type="file"] {
   clip: auto !important;
   clip-path: none !important;
   transform: none !important;
+  display: block !important;
+  width: 100% !important;
+  min-height: 44px !important;
+  z-index: 2 !important;
+  touch-action: manipulation !important;
+  -webkit-user-select: auto !important;
+  user-select: auto !important;
+  font-size: 16px !important;
+}
+
+/* The group forum intentionally uses the whole label as the upload button. */
+.gfp-image-button input[type="file"] {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  min-height: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  overflow: hidden !important;
+}
+
+.gfp-image-button {
+  min-height: 44px !important;
+  cursor: pointer !important;
+  touch-action: manipulation !important;
+}
+
+.profile-upload-field:focus-within,
+.photo-upload-button:focus-within,
+.gfp-image-button:focus-within {
+  outline: 3px solid rgba(23, 108, 69, .16);
+  outline-offset: 2px;
+}
+
+@media (max-width: 700px) {
+  .profile-upload-field input[type="file"],
+  .photo-upload-button input[type="file"],
+  .content-image-upload input[type="file"],
+  .homepage-image-picker input[type="file"] {
+    min-height: 48px !important;
+  }
 }
