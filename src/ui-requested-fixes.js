@@ -9,6 +9,8 @@ import './react-navigation-bridge.js';
 import './head-admin-dock-cleanup.js';
 import './member-profile-original-layout.js';
 import './member-profile-original-layout.css';
+import './profile-admin-tools.css';
+import './profile-admin-tools.js';
 import './points-system-ui.js';
 import './points-system-ui.css';
 import './points-rewards-runtime.js';
