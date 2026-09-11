@@ -9,5 +9,7 @@ import './react-navigation-bridge.js';
 import './head-admin-dock-cleanup.js';
 import './member-profile-original-layout.js';
 import './member-profile-original-layout.css';
+import './points-system-ui.js';
+import './points-system-ui.css';
 
 export {};
