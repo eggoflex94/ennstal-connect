@@ -27,6 +27,7 @@ import './group-page-forum.js';
 import './group-forum-actions.js';
 import './group-invitations.js';
 import './regional-rights-icons.js';
+import './login-verification-prompt.js';
 import './interaction-polish-final.css';
 
 export {};
