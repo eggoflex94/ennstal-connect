@@ -14,6 +14,8 @@ import './profile-all-groups.css';
 import './profile-all-groups.js';
 import './profile-admin-tools.css';
 import './profile-admin-tools.js';
+import './profile-photo-social.css';
+import './profile-photo-social.js';
 import './points-system-ui.js';
 import './points-system-ui.css';
 import './points-rewards-runtime.js';
