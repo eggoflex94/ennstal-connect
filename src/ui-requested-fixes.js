@@ -23,5 +23,8 @@ import './chat-modern-final.css';
 import './chat-modern-final.js';
 import './group-page-forum.css';
 import './group-page-forum.js';
+import './group-forum-actions.js';
+import './regional-rights-icons.js';
+import './interaction-polish-final.css';
 
 export {};
