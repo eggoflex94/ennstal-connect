@@ -16,50 +16,67 @@ function ownProfileRoots(){
   );
 }
 
+function normalized(text){return String(text||'').trim().toLowerCase();}
 function isLegacyHeadAdminLabel(text){
   return [
-    'head admin','hauptadmin','global admin','betreiber','betreiber (hauptadmin)','betreiber - hauptadmin',
+    'head admin','global admin','betreiber','betreiber (hauptadmin)','betreiber - hauptadmin',
     'betreiber – hauptadmin','global admin · betreiber','global admin - betreiber','hauptadmin · betreiber'
-  ].includes(String(text||'').trim().toLowerCase());
+  ].includes(normalized(text));
 }
 
 function replaceTextOnly(node){
-  if(!node || !isLegacyHeadAdminLabel(node.textContent)) return;
-  const textNodes=[...node.childNodes].filter(child=>child.nodeType===Node.TEXT_NODE && child.textContent.trim());
+  if(!node)return false;
+  const current=String(node.textContent||'').trim();
+  if(normalized(current)==='hauptadmin') return false;
+  if(!isLegacyHeadAdminLabel(current)) return false;
+
   const labelSpan=node.querySelector(':scope > span:not(.ec-restored-profile-eyebrow)');
-  if(labelSpan && isLegacyHeadAdminLabel(labelSpan.textContent)){
-    labelSpan.textContent=HEAD_LABEL;
-    labelSpan.dataset.ecHeadLabel='1';
-    return;
+  if(labelSpan){
+    const spanText=String(labelSpan.textContent||'').trim();
+    if(normalized(spanText)!=='hauptadmin' && isLegacyHeadAdminLabel(spanText)){
+      labelSpan.textContent=HEAD_LABEL;
+      labelSpan.dataset.ecHeadLabel='1';
+      return true;
+    }
   }
+
+  const textNodes=[...node.childNodes].filter(child=>child.nodeType===Node.TEXT_NODE && child.textContent.trim());
   if(textNodes.length){
-    textNodes[0].textContent=HEAD_LABEL;
-    textNodes.slice(1).forEach(n=>n.textContent='');
-    node.dataset.ecHeadLabel='1';
-    return;
+    if(normalized(textNodes[0].textContent)!=='hauptadmin'){
+      textNodes[0].textContent=HEAD_LABEL;
+      textNodes.slice(1).forEach(n=>{ if(n.textContent) n.textContent=''; });
+      node.dataset.ecHeadLabel='1';
+      return true;
+    }
+    return false;
   }
-  // Only replace plain labels. Never overwrite elements that contain the graphic role star.
+
   if(!node.querySelector('img,svg,picture')){
     node.textContent=HEAD_LABEL;
     node.dataset.ecHeadLabel='1';
+    return true;
   }
+  return false;
 }
 
 function ensureStar(root){
+  let changed=false;
   root.querySelectorAll('.ec-restored-profile-function strong,.profile-role-badge,.profile-function-card strong').forEach((holder)=>{
-    if(!isLegacyHeadAdminLabel(holder.textContent) && String(holder.textContent||'').trim()!==HEAD_LABEL)return;
+    const text=String(holder.textContent||'').trim();
+    if(normalized(text)!=='hauptadmin' && !isLegacyHeadAdminLabel(text))return;
     if(holder.querySelector('img.ec-headadmin-role-star,img[src*="role-star-red.svg"]'))return;
     const img=document.createElement('img');
     img.src='/role-star-red.svg'; img.alt=''; img.setAttribute('aria-hidden','true'); img.className='ec-headadmin-role-star';
-    holder.prepend(img);
+    holder.prepend(img); changed=true;
   });
+  return changed;
 }
 
 function relabel(root){
   if(!root||!profileData||relabeling)return;
   relabeling=true;
   try{
-    root.querySelectorAll('.ec-clean-profile-role strong,.profile-role-badge,.integrated-profile-title span,.profile-function-card strong,.profile-function-card span,.profile-role-label,.member-role-label,.ec-restored-profile-function strong,.ec-restored-profile-function strong > span,span,strong,b').forEach(replaceTextOnly);
+    root.querySelectorAll('.ec-clean-profile-role strong,.profile-role-badge,.integrated-profile-title span,.profile-function-card strong,.profile-function-card span,.profile-role-label,.member-role-label,.ec-restored-profile-function strong,.ec-restored-profile-function strong > span').forEach(replaceTextOnly);
     ensureStar(root);
   }finally{ relabeling=false; }
 }
@@ -67,7 +84,14 @@ function relabel(root){
 function relabelAll(){ if(!relabeling) ownProfileRoots().forEach(relabel); }
 function attachObserver(){
   observer?.disconnect();
-  observer=new MutationObserver(()=>{if(!relabeling)relabelAll();});
+  observer=new MutationObserver((records)=>{
+    if(relabeling)return;
+    const relevant=records.some(r=>{
+      const el=r.target?.nodeType===Node.ELEMENT_NODE?r.target:r.target?.parentElement;
+      return el?.closest?.('.profile-role-label,.profile-role-badge,.profile-function-card,.ec-restored-profile-function,.integrated-profile-title');
+    });
+    if(relevant) relabelAll();
+  });
   observer.observe(document.documentElement,{childList:true,subtree:true,characterData:true});
 }
 
