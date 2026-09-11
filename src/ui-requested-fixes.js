@@ -12,5 +12,7 @@ import './member-profile-original-layout.css';
 import './points-system-ui.js';
 import './points-system-ui.css';
 import './points-rewards-runtime.js';
+import './community-rules-runtime.js';
+import './community-rules-runtime.css';
 
 export {};
