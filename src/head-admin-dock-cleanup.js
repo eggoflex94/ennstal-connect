@@ -9,10 +9,30 @@ function normalizeText(value) {
   return String(value || '').replace(/\s+/g, ' ').trim();
 }
 
-function keepFirstAndRemoveDuplicates(dock, pattern) {
-  const matches = [...dock.querySelectorAll('button,a,[role="button"]')]
-    .filter((node) => pattern.test(normalizeText(node.textContent)));
-  matches.slice(1).forEach((node) => node.remove());
+function removeMatchingControls(dock, pattern) {
+  [...dock.querySelectorAll('button,a,[role="button"]')]
+    .filter((node) => pattern.test(normalizeText(node.textContent)))
+    .forEach((node) => node.remove());
+}
+
+function removeAdminToolsArea(dock) {
+  removeMatchingControls(dock, /^Admin-Zentrale$/i);
+  removeMatchingControls(dock, /^Admin Tools$/i);
+  removeMatchingControls(dock, /^Beweissicherung$/i);
+
+  [...dock.querySelectorAll('*')].forEach((node) => {
+    const text = normalizeText(node.textContent);
+    if (/^(ADMIN TOOLS|ADMINISTRATION)$/i.test(text)) node.remove();
+  });
+
+  // Remove now-empty wrappers left behind by the admin shortcut grid,
+  // but never remove the logout control or containers that still hold content.
+  [...dock.querySelectorAll('section,div')].reverse().forEach((node) => {
+    if (node === dock) return;
+    if (node.querySelector('button,a,[role="button"]')) return;
+    if (normalizeText(node.textContent)) return;
+    if (node.children.length === 0) node.remove();
+  });
 }
 
 function cleanupDock() {
@@ -35,13 +55,7 @@ function cleanupDock() {
     }
   });
 
-  keepFirstAndRemoveDuplicates(dock, /^Admin-Zentrale$/i);
-  keepFirstAndRemoveDuplicates(dock, /^Admin Tools$/i);
-  keepFirstAndRemoveDuplicates(dock, /^Beweissicherung$/i);
-
-  const headings = [...dock.querySelectorAll('.ec-dock-section-label')]
-    .filter((node) => /^(admin tools|administration)$/i.test(normalizeText(node.textContent)));
-  headings.slice(1).forEach((node) => node.remove());
+  removeAdminToolsArea(dock);
 }
 
 function scheduleCleanup() {
