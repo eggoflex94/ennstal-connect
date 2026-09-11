@@ -67,14 +67,16 @@ function historyMarkup(history = []) {
 
 async function openPoints(targetUserId, { suspensionMode = false } = {}) {
   if (!targetUserId) return;
+  const current = await loadViewer();
+  const own = current?.id === targetUserId;
+  if (!own && !isAdminLike(current)) return;
+
   const { data, error } = await supabase.rpc('profile_point_feed', { p_user_id: targetUserId });
   if (error) {
     console.warn('Punkteliste konnte nicht geladen werden:', error.message);
     return;
   }
 
-  const current = await loadViewer();
-  const own = current?.id === targetUserId;
   const canManage = !own && isAdminLike(current);
   closeModal();
 
@@ -169,7 +171,13 @@ async function bindProfilePoints() {
   if (!page) return;
   const id = page.dataset.profileId;
   if (!id) return;
+  const current = await loadViewer();
+  const allowed = current?.id === id || isAdminLike(current);
   let button = page.querySelector('.ec-profile-points-button');
+  if (!allowed) {
+    button?.remove();
+    return;
+  }
   if (!button) {
     button = document.createElement('button');
     button.type = 'button';
@@ -190,13 +198,13 @@ async function checkSuspension(session) {
     const { data, error } = await supabase.rpc('my_suspension_details');
     if (error || data?.account_status !== 'SUSPENDED') return;
     sessionStorage.setItem('ec:suspension-details', JSON.stringify({ ...data, userId: session.user.id, capturedAt: Date.now() }));
-    await showSuspension(data, session.user.id);
+    showSuspension(data);
   } catch (error) {
     console.warn('Sperrstatus konnte nicht geprüft werden:', error?.message || error);
   }
 }
 
-async function showSuspension(data, userId) {
+function showSuspension(data) {
   document.querySelector('.ec-points-modal')?.remove();
   const overlay = document.createElement('div');
   overlay.className = 'ec-points-modal is-suspension';
@@ -220,7 +228,7 @@ function restoreSuspensionScreen() {
       sessionStorage.removeItem('ec:suspension-details');
       return;
     }
-    void showSuspension(saved, saved.userId);
+    showSuspension(saved);
   } catch {}
 }
 
@@ -234,11 +242,19 @@ function schedule() {
   });
 }
 
+async function boot() {
+  restoreSuspensionScreen();
+  schedule();
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session?.user) void checkSuspension(session);
+}
+
 supabase.auth.onAuthStateChange((_event, session) => {
+  viewer = null;
   if (session?.user) window.setTimeout(() => void checkSuspension(session), 0);
 });
 
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => { restoreSuspensionScreen(); schedule(); }, { once: true });
-else { restoreSuspensionScreen(); schedule(); }
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => void boot(), { once: true });
+else void boot();
 new MutationObserver(schedule).observe(document.documentElement, { childList: true, subtree: true });
 window.addEventListener('ec:points-updated', schedule);
