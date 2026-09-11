@@ -1,5 +1,5 @@
 import { supabase } from "./supabaseClient";
-let mounted=false,isHead=false,allowed=false;
+let mounted=false,isHead=false,isGlobalAdmin=false,isRegionalAdmin=false,allowed=false;
 const managed=[[".ec-deletion-admin","🗑️","Kontolöschungen","Offene Löschanträge sicher prüfen und abschließen"]];
 const el=(t,c,x)=>{const n=document.createElement(t);if(c)n.className=c;if(x!==undefined)n.textContent=x;return n;};
 function close(){document.querySelector(".ec-admin-workspace")?.remove();}
@@ -7,16 +7,34 @@ function resultBox(grid,text,ok=true){let r=grid.querySelector(".ec-admin-tool-r
 function actionCard(grid,ico,title,desc,handler){const c=el("button","ec-admin-tool-card");c.type="button";c.append(el("span","ec-admin-tool-icon",ico));const text=el("span");text.append(el("strong",null,title),el("small",null,desc));c.append(text,el("span","ec-admin-tool-arrow","›"));c.onclick=()=>handler(c);grid.append(c);return c;}
 async function openManaged(selector){const original=document.querySelector(selector);if(!original)return;if(original.matches("details")){original.classList.remove("ec-admin-tool-hidden");original.open=true;original.scrollIntoView({behavior:"smooth",block:"start"});return}original.click()}
 function openAdminArea(){close();window.dispatchEvent(new CustomEvent("ec:navigate",{detail:{page:"admin"}}));}
+function activeRegionSlug(){return document.querySelector('.ec-region-picker select')?.value||localStorage.getItem('ec-active-region')||'';}
+async function resolveAccess(){
+  const {data:{user}}=await supabase.auth.getUser();
+  if(!user){allowed=false;isHead=false;isGlobalAdmin=false;isRegionalAdmin=false;return false;}
+  const [{data:p},{data:regions},{data:assignments}]=await Promise.all([
+    supabase.from("profiles").select("role,account_status,home_region_id").eq("id",user.id).maybeSingle(),
+    supabase.from("regions").select("id,slug").eq("is_active",true),
+    supabase.from("regional_admin_assignments").select("region_id,active").eq("user_id",user.id).eq("active",true)
+  ]);
+  const role=String(p?.role||'').toUpperCase();
+  const activeId=(regions||[]).find(r=>r.slug===activeRegionSlug())?.id||p?.home_region_id||null;
+  isRegionalAdmin=Boolean(activeId&&(assignments||[]).some(a=>a.active&&a.region_id===activeId));
+  isHead=role==="HEAD_ADMIN"&&p?.account_status==="ACTIVE";
+  isGlobalAdmin=role==="ADMIN"&&p?.account_status==="ACTIVE";
+  allowed=p?.account_status==="ACTIVE"&&(isHead||isGlobalAdmin||isRegionalAdmin);
+  return allowed;
+}
 async function open(){
-  if(!allowed)return;
+  if(!(await resolveAccess()))return;
   close();
   const w=el("div","ec-admin-workspace"),b=el("div","ec-admin-workspace-box"),h=el("div","ec-admin-workspace-head"),x=el("button","ec-admin-workspace-close","×");
   x.type="button";x.setAttribute("aria-label","Admin Tools schließen");x.onclick=close;
   h.append(el("div",null),x);
-  h.firstChild.append(el("span","eyebrow","GESCHÜTZTER BEREICH"),el("h2",null,"Admin Tools"),el("p",null,"Administration und sensible Werkzeuge. Änderungen werden serverseitig geprüft und protokolliert."));
+  const regionalOnly=isRegionalAdmin&&!isHead&&!isGlobalAdmin;
+  h.firstChild.append(el("span","eyebrow","GESCHÜTZTER BEREICH"),el("h2",null,"Admin Tools"),el("p",null,regionalOnly?"Regionale Werkzeuge für deine aktuell ausgewählte Zuständigkeit. Aktionen bleiben auf deine Berechtigungen begrenzt.":"Administration und sensible Werkzeuge. Änderungen werden serverseitig geprüft und protokolliert."));
   const grid=el("div","ec-admin-workspace-grid");
-  actionCard(grid,"⚙️","Admin-Bereich","Mitglieder, Rollen, Meldungen und Verwaltung öffnen.",openAdminArea);
-  managed.forEach(([selector,ico,title,desc])=>{if(!document.querySelector(selector))return;actionCard(grid,ico,title,desc,()=>{close();void openManaged(selector)})});
+  actionCard(grid,"⚙️","Admin-Bereich",regionalOnly?"Mitglieder, Meldungen und Verwaltung deiner Region öffnen.":"Mitglieder, Rollen, Meldungen und Verwaltung öffnen.",openAdminArea);
+  if(isHead||isGlobalAdmin){managed.forEach(([selector,ico,title,desc])=>{if(!document.querySelector(selector))return;actionCard(grid,ico,title,desc,()=>{close();void openManaged(selector)})});}
   if(isHead){
     actionCard(grid,"🩺","Systemdiagnose","Prüft zentrale Datenbankbereiche ohne Inhalte offenzulegen.",async c=>{c.disabled=true;const {data,error}=await supabase.rpc("head_admin_system_diagnostics");c.disabled=false;if(error)return resultBox(grid,`Diagnose fehlgeschlagen: ${error.message}`,false);resultBox(grid,`Diagnose erfolgreich · ${new Date(data.checked_at).toLocaleString("de-AT")} · ${data.open_reports} offene Meldungen · ${data.open_deletion_requests} Löschanträge.`)});
     actionCard(grid,"🧹","Benachrichtigungen bereinigen","Entfernt ausschließlich gelesene Benachrichtigungen, die älter als 90 Tage sind.",async c=>{if(!confirm("Gelesene Benachrichtigungen älter als 90 Tage sicher entfernen?"))return;c.disabled=true;const {data,error}=await supabase.rpc("head_admin_cleanup_old_notifications");c.disabled=false;if(error)return resultBox(grid,error.message,false);resultBox(grid,`${data} alte gelesene Benachrichtigungen wurden entfernt.`)});
@@ -26,15 +44,19 @@ async function open(){
   b.append(h,grid);w.append(b);w.onclick=e=>{if(e.target===w)close()};w.addEventListener("keydown",e=>{if(e.key==="Escape")close()});document.body.append(w);x.focus();
 }
 function organize(){
+  if(!allowed)return false;
   document.querySelectorAll(".ec-legal-entry").forEach(n=>n.classList.add("ec-admin-tool-hidden"));
   const admin=[...document.querySelectorAll("button,a")].find(n=>/admin-zentrale/i.test(n.textContent||""));
   if(admin){
     let entry=document.querySelector(".ec-admin-workspace-entry");
-    if(!entry){entry=el("button","ec-admin-workspace-entry","🔧 Admin Tools");entry.type="button";entry.onclick=open;admin.insertAdjacentElement("afterend",entry)}
+    if(!entry){entry=el("button","ec-admin-workspace-entry","🔧 Admin Tools");entry.type="button";entry.onclick=()=>void open();admin.insertAdjacentElement("afterend",entry)}
     else if(entry.textContent!=="🔧 Admin Tools") entry.textContent="🔧 Admin Tools";
   }
   return true;
 }
 window.addEventListener("ec:open-admin-tools",()=>void open());
-async function mount(){if(mounted)return;const {data:{user}}=await supabase.auth.getUser();if(!user)return;const {data:p}=await supabase.from("profiles").select("role,account_status").eq("id",user.id).maybeSingle();if(!["HEAD_ADMIN","ADMIN"].includes(p?.role)||p?.account_status!=="ACTIVE")return;allowed=true;isHead=p.role==="HEAD_ADMIN";organize();mounted=true;}
-let timer;const obs=new MutationObserver(()=>{if(mounted){organize();return}clearTimeout(timer);timer=setTimeout(mount,250)});obs.observe(document.documentElement,{childList:true,subtree:true});void mount();
+async function mount(){const ok=await resolveAccess();if(!ok){mounted=false;document.querySelector('.ec-admin-workspace-entry')?.remove();close();return;}organize();mounted=true;}
+let timer;const obs=new MutationObserver(()=>{if(mounted){organize();return}clearTimeout(timer);timer=setTimeout(()=>void mount(),250)});obs.observe(document.documentElement,{childList:true,subtree:true});
+window.addEventListener('ec:region-change',()=>{clearTimeout(timer);timer=setTimeout(()=>void mount(),100)});
+window.addEventListener('focus',()=>void mount());
+void mount();
