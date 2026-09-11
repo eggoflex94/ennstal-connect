@@ -38,11 +38,17 @@ function activePermissions() {
   if (!region?.id || !profile || profile.account_status !== 'ACTIVE') return [];
   const role = String(profile.role || '').toUpperCase();
   if (role === 'HEAD_ADMIN' || role === 'ADMIN') return [];
-  const isRegionalAdmin = adminAssignments.some(a => a.active !== false && a.region_id === region.id);
-  if (isRegionalAdmin) return Object.keys(PERMISSION_TO_PAGE);
-  const perms = new Set();
-  moderationAssignments.filter(a => a.active !== false && a.region_id === region.id).forEach(a => (a.permissions || []).forEach(p => perms.add(String(p).toUpperCase())));
-  return [...perms];
+
+  const hasRegionalAdminAssignment = adminAssignments.some(a => a.active !== false && a.region_id === region.id);
+  const regionalRows = moderationAssignments.filter(a => a.active !== false && a.region_id === region.id);
+  const explicit = new Set();
+  regionalRows.forEach(a => (a.permissions || []).forEach(p => explicit.add(String(p).toUpperCase())));
+
+  // A Regional Admin assignment controls access to the regional admin area.
+  // The visible shortcut icons must still reflect only the individual rights
+  // explicitly granted for the selected region.
+  if (!hasRegionalAdminAssignment && !regionalRows.length) return [];
+  return [...explicit].filter(permission => PERMISSION_TO_PAGE[permission]);
 }
 
 function makeIcon(permission) {
@@ -62,9 +68,14 @@ function makeIcon(permission) {
     if (clicked) return;
     clicked = true;
     button.disabled = true;
+    button.setAttribute('aria-busy', 'true');
     document.body.classList.remove('ec-dock-open');
     window.dispatchEvent(new CustomEvent('ec:navigate', { detail: { page } }));
-    setTimeout(() => { clicked = false; button.disabled = false; }, 700);
+    setTimeout(() => {
+      clicked = false;
+      button.disabled = false;
+      button.removeAttribute('aria-busy');
+    }, 500);
   });
   return button;
 }
@@ -72,8 +83,12 @@ function makeIcon(permission) {
 function renderIcons() {
   const grid = dockGrid();
   if (!grid) return;
+  const wanted = [...new Set(activePermissions())];
+  const current = [...document.querySelectorAll('[data-regional-right-icon="1"]')];
+  const currentKeys = current.map(node => node.dataset.permission).filter(Boolean);
+  if (wanted.length === currentKeys.length && wanted.every(key => currentKeys.includes(key))) return;
   clearIcons();
-  [...new Set(activePermissions())].forEach(permission => {
+  wanted.forEach(permission => {
     const button = makeIcon(permission);
     if (button) grid.appendChild(button);
   });
@@ -106,12 +121,21 @@ function schedule(delay = 80) {
   refreshTimer = setTimeout(() => void refresh(), delay);
 }
 
-new MutationObserver(() => { if (dockGrid()) renderIcons(); }).observe(document.documentElement, { childList: true, subtree: true });
-window.addEventListener('ec:region-change', () => schedule(30));
-window.addEventListener('ec:navigate', () => setTimeout(renderIcons, 30));
+let mutationQueued = false;
+new MutationObserver(() => {
+  if (mutationQueued || !dockGrid()) return;
+  mutationQueued = true;
+  requestAnimationFrame(() => {
+    mutationQueued = false;
+    renderIcons();
+  });
+}).observe(document.documentElement, { childList: true, subtree: true });
+
+window.addEventListener('ec:region-change', () => schedule(20));
+window.addEventListener('ec:navigate', () => setTimeout(renderIcons, 20));
 window.addEventListener('focus', () => schedule(20));
 document.addEventListener('change', event => { if (event.target?.matches?.('.ec-region-picker select')) schedule(20); });
-supabase.auth.onAuthStateChange(event => event === 'SIGNED_OUT' ? clearIcons() : schedule(30));
+supabase.auth.onAuthStateChange(event => event === 'SIGNED_OUT' ? clearIcons() : schedule(20));
 schedule(0);
 
 export {};
