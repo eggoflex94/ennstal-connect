@@ -17,5 +17,7 @@ import './community-rules-runtime.js';
 import './community-rules-runtime.css';
 import './points-announcement-popup.js';
 import './points-announcement-popup.css';
+import './sidebar-ads-modern.css';
+import './sidebar-ads-modern.js';
 
 export {};
