@@ -6,6 +6,7 @@ const ITEMS={
   legal:{label:'Beweissicherung',icon:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M5 7h14M6 7l-3 6h6L6 7Zm12 0-3 6h6l-3-6Z"/><path d="M7 21h10"/></svg>'}
 };
 let role='';
+let isRegionalAdmin=false;
 let timer=null;
 let slotObserver=null;
 let observedSlot=null;
@@ -45,10 +46,12 @@ function ensureStyle(){
   document.head.appendChild(style);
 }
 
+function hasAdminAccess(){
+  return role==='HEAD_ADMIN'||role==='ADMIN'||isRegionalAdmin;
+}
+
 function expectedTargets(){
-  if(role==='HEAD_ADMIN')return['admin','adminTools','legal'];
-  if(role==='ADMIN')return['admin'];
-  return[];
+  return hasAdminAccess()?['admin','adminTools','legal']:[];
 }
 
 function gridIsCorrect(grid,targets){
@@ -105,9 +108,20 @@ async function loadRole(){
   if(!supabase)return;
   try{
     const {data:{user}}=await supabase.auth.getUser();
-    if(!user){role='';place();return;}
+    if(!user){role='';isRegionalAdmin=false;place();return;}
     const {data}=await supabase.from('profiles').select('role').eq('id',user.id).maybeSingle();
     role=String(data?.role||'').toUpperCase();
+    isRegionalAdmin=false;
+    if(role==='SUPPORTER'){
+      const {data:assignments,error}=await supabase
+        .from('regional_admin_assignments')
+        .select('region_id')
+        .eq('user_id',user.id)
+        .eq('active',true)
+        .limit(1);
+      if(error)console.warn('Regional-Admin-Zuweisung konnte nicht geprüft werden:',error.message);
+      isRegionalAdmin=Boolean(assignments?.length);
+    }
     place();
   }catch(error){console.warn('Admin-Zugänge konnten nicht eingeordnet werden:',error);}
 }
@@ -124,7 +138,7 @@ function schedule(retries=12){
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{void loadRole();schedule();},{once:true});
 else{void loadRole();schedule();}
 window.addEventListener('ec:navigate',()=>schedule(6));
-window.addEventListener('ec:region-change',()=>schedule(6));
+window.addEventListener('ec:region-change',()=>{void loadRole();schedule(6)});
 window.addEventListener('resize',()=>schedule(2),{passive:true});
-window.addEventListener('focus',()=>schedule(2));
+window.addEventListener('focus',()=>{void loadRole();schedule(2)});
 supabase?.auth?.onAuthStateChange?.(()=>setTimeout(()=>void loadRole(),120));
