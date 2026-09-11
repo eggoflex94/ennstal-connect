@@ -34,6 +34,23 @@ function ageFromBirthDate(value) {
   return age >= 0 ? `${age} Jahre` : '—';
 }
 
+function formatLastActive(value) {
+  if (!value) return 'Unbekannt';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Unbekannt';
+  return date.toLocaleString('de-AT', {
+    day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+  }).replace(',', ' ·');
+}
+
+function isOnline(profile) {
+  if (profile?.hide_online_status) return false;
+  const raw = profile?.last_active_at || profile?.last_seen_at;
+  if (!raw) return false;
+  const time = new Date(raw).getTime();
+  return Number.isFinite(time) && Date.now() - time <= 5 * 60 * 1000;
+}
+
 function isAdminViewer() {
   const role = String(viewer?.role || '').toUpperCase();
   return role === 'HEAD_ADMIN' || role === 'ADMIN';
@@ -49,13 +66,55 @@ function homeRegionName(profile) {
   return regionNames.get(profile?.home_region_id) || profile?.home_region || profile?.region_name || 'Nicht festgelegt';
 }
 
+function roleInfo(profile) {
+  const role = String(profile?.role || 'MEMBER').toUpperCase();
+  if (role === 'HEAD_ADMIN') return { label: 'Betreiber - Hauptadmin', star: '/role-star-red.svg', cls: 'admin' };
+  if (role === 'ADMIN') return { label: 'Admin', star: '/role-star-red.svg', cls: 'admin' };
+  if (role === 'SUPPORTER') return { label: 'Supporter', star: '/supporter-star.svg', cls: 'supporter' };
+  if (profile?.account_badge === 'BUSINESS') return { label: 'Unternehmenskonto', star: '/role-star-blue.svg', cls: 'business' };
+  return { label: 'Mitglied', star: '', cls: 'member' };
+}
+
 function card(label, value) {
   return `<div class="ec-profile-identity-card"><span>${esc(label)}</span><strong>${esc(value || '—')}</strong></div>`;
+}
+
+function ensureFunctionCard(hero, profile) {
+  let functionCard = hero.querySelector('.ec-profile-function-card');
+  if (!functionCard) {
+    functionCard = document.createElement('section');
+    functionCard.className = 'ec-profile-function-card';
+    functionCard.setAttribute('aria-label', 'Funktion');
+    hero.appendChild(functionCard);
+  }
+
+  const role = roleInfo(profile);
+  const online = isOnline(profile);
+  const region = homeRegionName(profile);
+  const lastActive = formatLastActive(profile.last_active_at || profile.last_seen_at);
+  const signature = JSON.stringify([role.label, role.star, region, online, lastActive]);
+  if (functionCard.dataset.signature === signature) return;
+  functionCard.dataset.signature = signature;
+
+  functionCard.className = `ec-profile-function-card role-${role.cls}`;
+  functionCard.innerHTML = `
+    <span class="ec-profile-function-eyebrow">FUNKTION</span>
+    <strong class="ec-profile-function-role">
+      ${role.star ? `<img class="ec-profile-function-star" src="${role.star}" alt="" aria-hidden="true">` : ''}
+      <span>${esc(role.label)}</span>
+    </strong>
+    <small>Heimatregion: ${esc(region)}</small>
+    <div class="ec-profile-function-presence">
+      <b class="${online ? 'is-online' : 'is-offline'}">${online ? 'Online' : 'Offline'}</b>
+      <span>Zuletzt aktiv: ${esc(lastActive)}</span>
+    </div>`;
 }
 
 function ensureSummary(profile) {
   const hero = document.querySelector('.profile-view.integrated-profile-view .integrated-profile-hero');
   if (!hero || !profile) return;
+
+  ensureFunctionCard(hero, profile);
 
   let summary = hero.querySelector('.ec-profile-identity-summary');
   if (!summary) {
@@ -136,7 +195,7 @@ async function syncSummary() {
   try {
     const { data, error } = await supabase
       .from('profiles')
-      .select('id,nickname,first_name,last_name,birth_date,home_region_id,privacy_settings')
+      .select('id,nickname,first_name,last_name,birth_date,home_region_id,privacy_settings,role,account_badge,last_active_at,last_seen_at,hide_online_status')
       .eq('nickname', nickname)
       .maybeSingle();
     if (error) throw error;
