@@ -9,32 +9,6 @@ function normalizeText(value) {
   return String(value || '').replace(/\s+/g, ' ').trim();
 }
 
-function removeMatchingControls(dock, pattern) {
-  [...dock.querySelectorAll('button,a,[role="button"]')]
-    .filter((node) => pattern.test(normalizeText(node.textContent)))
-    .forEach((node) => node.remove());
-}
-
-function removeAdminToolsArea(dock) {
-  removeMatchingControls(dock, /^Admin-Zentrale$/i);
-  removeMatchingControls(dock, /^Admin Tools$/i);
-  removeMatchingControls(dock, /^Beweissicherung$/i);
-
-  [...dock.querySelectorAll('*')].forEach((node) => {
-    const text = normalizeText(node.textContent);
-    if (/^(ADMIN TOOLS|ADMINISTRATION)$/i.test(text)) node.remove();
-  });
-
-  // Remove now-empty wrappers left behind by the admin shortcut grid,
-  // but never remove the logout control or containers that still hold content.
-  [...dock.querySelectorAll('section,div')].reverse().forEach((node) => {
-    if (node === dock) return;
-    if (node.querySelector('button,a,[role="button"]')) return;
-    if (normalizeText(node.textContent)) return;
-    if (node.children.length === 0) node.remove();
-  });
-}
-
 function cleanupDock() {
   if (!isHeadAdmin) return;
   const dock = document.querySelector('.ec-right-dock');
@@ -55,7 +29,18 @@ function cleanupDock() {
     }
   });
 
-  removeAdminToolsArea(dock);
+  // Primary admin shortcuts are intentionally owned by admin-access-placement-final.js.
+  // Do not remove them here; only clear obsolete text-only section labels and empty legacy slot content.
+  dock.querySelectorAll('.ec-dock-section-label').forEach((node) => {
+    const text = normalizeText(node.textContent);
+    if (/^(ADMIN TOOLS|ADMINISTRATION)$/i.test(text)) node.remove();
+  });
+
+  const slot = dock.querySelector('.ec-dock-admin-slot');
+  if (slot) {
+    slot.replaceChildren();
+    slot.hidden = true;
+  }
 }
 
 function scheduleCleanup() {
