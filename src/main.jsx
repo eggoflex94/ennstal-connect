@@ -40,7 +40,6 @@ import "./profile-visits-realtime.js";
 import "./navigation-stability.js";
 import "./admin-forum-cross-region.js";
 import "./community-engagement-upgrade.js";
-import "./home-social-force-visible.js";
 import "./event-editor-enhancement.js";
 import "./today-updates-popup.js";
 import "./sidebar-friends-newsfeed.js";
@@ -139,6 +138,8 @@ import "./automated-message-modern.js";
 import "./profile-visits-layout.css";
 import "./head-admin-menu.js";
 import "./ui-requested-fixes.js";
+import "./home-modern-final.css";
+import "./home-modern-final.js";
 
 /* Final upload authority: native React file pickers stay usable on desktop and phones. */
 import "./file-upload-authority.css";
