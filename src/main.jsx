@@ -125,8 +125,6 @@ import "./mobile-forum-news-admin-final.css";
 import "./mobile-visibility-final.css";
 import "./mobile-nav-runtime.js";
 
-import "./home-responsibilities-fixed.css";
-import "./home-responsibilities-fixed.js";
 import "./community-event-card-polish.css";
 import "./dashboard-mobile-profile-final.css";
 import "./standard-theme-variants.css";
