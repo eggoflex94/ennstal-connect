@@ -7,6 +7,8 @@ let activeRegionName = "Region";
 let currentAds = [];
 let syncing = false;
 let renderQueued = false;
+let bannerIndex = 0;
+let rotationTimer = null;
 
 const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
   "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
@@ -61,19 +63,41 @@ function bannerMarkup(ad) {
     : `<div class="ec-sidebar-ad-banner">${inner}</div>`;
 }
 
+function restartRotation() {
+  clearInterval(rotationTimer);
+  rotationTimer = null;
+  if (currentAds.length < 2) return;
+  rotationTimer = setInterval(() => {
+    bannerIndex = (bannerIndex + 1) % currentAds.length;
+    render();
+  }, 7000);
+}
+
 function render() {
   const host = ensureHost();
   if (!host) return;
   if (!currentAds.length) {
     host.hidden = true;
     host.innerHTML = "";
+    clearInterval(rotationTimer);
+    rotationTimer = null;
     return;
   }
+  if (bannerIndex >= currentAds.length) bannerIndex = 0;
+  const ad = currentAds[bannerIndex];
   host.hidden = false;
-  const visible = currentAds.slice(0, 2);
   host.innerHTML = `
     <div class="ec-sidebar-ads-head"><span>REGIONAL · WERBUNG</span><strong>${esc(activeRegionName)}</strong></div>
-    <div class="ec-sidebar-ad-list">${visible.map(bannerMarkup).join("")}</div>`;
+    <div class="ec-sidebar-ad-list">${bannerMarkup(ad)}</div>
+    ${currentAds.length > 1 ? `<div class="ec-sidebar-ad-pager"><button type="button" data-ad-prev aria-label="Vorherige Werbung">‹</button><span>${bannerIndex + 1} / ${currentAds.length}</span><button type="button" data-ad-next aria-label="Nächste Werbung">›</button></div>` : ""}`;
+  host.querySelector('[data-ad-prev]')?.addEventListener('click', () => {
+    bannerIndex = (bannerIndex - 1 + currentAds.length) % currentAds.length;
+    render(); restartRotation();
+  });
+  host.querySelector('[data-ad-next]')?.addEventListener('click', () => {
+    bannerIndex = (bannerIndex + 1) % currentAds.length;
+    render(); restartRotation();
+  });
 }
 
 function scheduleRender() {
@@ -109,6 +133,8 @@ async function loadAds() {
   const { data, error } = await query;
   if (error) throw error;
   currentAds = data || [];
+  if (bannerIndex >= currentAds.length) bannerIndex = 0;
+  restartRotation();
 }
 
 async function syncAds() {
@@ -159,7 +185,7 @@ function openEditor(ad) {
   overlay.className = "ec-sidebar-ad-editor-overlay";
   const form = document.createElement("form");
   form.className = "ec-sidebar-ad-editor";
-  form.innerHTML = `<header><div><span>HEAD ADMIN TOOLS · WERBUNG</span><h2>${ad ? "Banner bearbeiten" : "Banner hochladen"}</h2><small>${esc(activeRegionName)}</small></div><button type="button" class="ec-sidebar-ad-close" aria-label="Schließen">×</button></header>`;
+  form.innerHTML = `<header><div><span>HEAD ADMIN TOOLS · WERBUNG</span><h2>${ad ? "Banner bearbeiten" : "Banner hinzufügen"}</h2><small>${esc(activeRegionName)}</small></div><button type="button" class="ec-sidebar-ad-close" aria-label="Schließen">×</button></header>`;
   const title = makeField("Firma / Titel", "title", ad?.title || "");
   const link = makeField("Ziel-Link (optional)", "link", ad?.link_url || "", "url");
   const imageUrl = makeField("Bild-URL (optional)", "imageUrl", ad?.image_url || "", "url");
@@ -167,7 +193,7 @@ function openEditor(ad) {
   const upload = makeField(ad ? "Neues Bild hochladen (optional)" : "Werbebild hochladen", "image", "", "file");
   upload.input.accept = "image/*";
   const hint = document.createElement("p"); hint.className = "ec-sidebar-ad-hint";
-  hint.textContent = "Empfohlen: 16:9 oder breiter. Die Anzeige wird im rechten Dashboard automatisch sauber zugeschnitten.";
+  hint.textContent = "Du kannst beliebig viele Banner hinzufügen. Im Dashboard werden sie automatisch nacheinander angezeigt.";
   const actions = document.createElement("div"); actions.className = "ec-sidebar-ad-editor-actions";
   actions.innerHTML = '<button type="button" class="secondary ec-sidebar-ad-cancel">Abbrechen</button><button type="submit" class="primary">Speichern</button>';
   form.append(title.label, link.label, imageUrl.label, upload.label, body.label, hint, actions);
@@ -218,7 +244,7 @@ async function openManager() {
   await loadAds();
   closeOverlays();
   const overlay = document.createElement("div"); overlay.className = "ec-sidebar-ad-manager-overlay";
-  overlay.innerHTML = `<section class="ec-sidebar-ad-manager"><header><div><span>HEAD ADMIN TOOLS</span><h2>Werbung verwalten</h2><small>${esc(activeRegionName)}</small></div><button type="button" class="ec-sidebar-ad-close" aria-label="Schließen">×</button></header><div class="ec-sidebar-ad-manager-toolbar"><p>Banner für das rechte Dashboard verwalten.</p><button type="button" class="primary ec-sidebar-ad-new">+ Banner hochladen</button></div><div class="ec-sidebar-ad-manager-list">${currentAds.length ? currentAds.map(managerRow).join("") : '<div class="ec-sidebar-ad-empty"><strong>Keine aktive Werbung</strong><span>Erstelle den ersten Banner für diese Region.</span></div>'}</div></section>`;
+  overlay.innerHTML = `<section class="ec-sidebar-ad-manager"><header><div><span>HEAD ADMIN TOOLS</span><h2>Werbung verwalten</h2><small>${esc(activeRegionName)} · ${currentAds.length} aktive Banner</small></div><button type="button" class="ec-sidebar-ad-close" aria-label="Schließen">×</button></header><div class="ec-sidebar-ad-manager-toolbar"><p>Mehrere Banner können parallel aktiv sein und rotieren automatisch im rechten Dashboard.</p><button type="button" class="primary ec-sidebar-ad-new">+ Weiteren Banner hinzufügen</button></div><div class="ec-sidebar-ad-manager-list">${currentAds.length ? currentAds.map(managerRow).join("") : '<div class="ec-sidebar-ad-empty"><strong>Keine aktive Werbung</strong><span>Erstelle den ersten Banner für diese Region.</span></div>'}</div></section>`;
   document.body.appendChild(overlay);
   overlay.querySelector(".ec-sidebar-ad-close").onclick = closeOverlays;
   overlay.querySelector(".ec-sidebar-ad-new").onclick = () => openEditor(null);
@@ -231,7 +257,7 @@ function boot() {
   ensureHost(); void syncAds();
   const observer = new MutationObserver(() => { removeLegacyActivityBlocks(); if (!dock()?.querySelector(".ec-sidebar-ads")) scheduleRender(); });
   observer.observe(document.documentElement, { childList: true, subtree: true });
-  window.addEventListener("ec:region-change", () => setTimeout(() => void syncAds(), 80));
+  window.addEventListener("ec:region-change", () => { bannerIndex = 0; setTimeout(() => void syncAds(), 80); });
   window.addEventListener("ec:community-ads-refresh", () => setTimeout(() => void syncAds(), 80));
   window.addEventListener("ec:open-sidebar-ad-manager", () => void openManager());
   document.addEventListener("visibilitychange", () => { if (!document.hidden) void syncAds(); });
