@@ -43,10 +43,6 @@ function activePermissions() {
   const regionalRows = moderationAssignments.filter(a => a.active !== false && a.region_id === region.id);
   const explicit = new Set();
   regionalRows.forEach(a => (a.permissions || []).forEach(p => explicit.add(String(p).toUpperCase())));
-
-  // A Regional Admin assignment controls access to the regional admin area.
-  // The visible shortcut icons must still reflect only the individual rights
-  // explicitly granted for the selected region.
   if (!hasRegionalAdminAssignment && !regionalRows.length) return [];
   return [...explicit].filter(permission => PERMISSION_TO_PAGE[permission]);
 }
@@ -60,23 +56,10 @@ function makeIcon(permission) {
   button.className = 'ec-compact-menu-item ec-dashboard-utility-button ec-regional-right-button';
   button.dataset.regionalRightIcon = '1';
   button.dataset.permission = permission;
+  button.dataset.ecPage = page;
   button.title = `${label} verwalten`;
   button.setAttribute('aria-label', `${label} verwalten`);
   button.innerHTML = `<span class="ec-compact-menu-icon" aria-hidden="true">${icon}</span><span class="ec-compact-menu-label">${label}</span>`;
-  let clicked = false;
-  button.addEventListener('click', () => {
-    if (clicked) return;
-    clicked = true;
-    button.disabled = true;
-    button.setAttribute('aria-busy', 'true');
-    document.body.classList.remove('ec-dock-open');
-    window.dispatchEvent(new CustomEvent('ec:navigate', { detail: { page } }));
-    setTimeout(() => {
-      clicked = false;
-      button.disabled = false;
-      button.removeAttribute('aria-busy');
-    }, 500);
-  });
   return button;
 }
 
