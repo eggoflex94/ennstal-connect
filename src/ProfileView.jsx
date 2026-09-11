@@ -7,10 +7,10 @@ const MAX_AVATAR_BYTES = 8 * 1024 * 1024;
 const AVATAR_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
 const roleMeta = {
-  HEAD_ADMIN: { icon: "★", label: "Betreiber - Hauptadmin", cls: "head-admin" },
-  ADMIN: { icon: "★", label: "Admin", cls: "admin" },
-  SUPPORTER: { icon: "★", label: "Supporter", cls: "supporter" },
-  MEMBER: { icon: "", label: "Mitglied", cls: "member" },
+  HEAD_ADMIN: { label: "Betreiber (Hauptadmin)", cls: "head-admin", star: "/role-star-red.svg" },
+  ADMIN: { label: "Admin", cls: "admin", star: "/role-star-red.svg" },
+  SUPPORTER: { label: "Supporter", cls: "supporter", star: "/supporter-star.svg" },
+  MEMBER: { label: "Mitglied", cls: "member", star: "" },
 };
 
 const displayName = (member) => member?.nickname || [member?.first_name, member?.last_name].filter(Boolean).join(" ") || "Mitglied";
@@ -46,11 +46,33 @@ function uploadErrorMessage(error) {
   if (/payload too large|too large|maximum|size/i.test(raw)) return "Die Datei ist zu groß. Maximal 8 MB.";
   return raw || "Unbekannter Fehler";
 }
+function formatBirthDate(value) {
+  if (!value) return "—";
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleDateString("de-AT", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+function ageFromBirthDate(value) {
+  if (!value) return "—";
+  const birth = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(birth.getTime())) return "—";
+  const now = new Date();
+  let age = now.getFullYear() - birth.getFullYear();
+  if (now.getMonth() < birth.getMonth() || (now.getMonth() === birth.getMonth() && now.getDate() < birth.getDate())) age -= 1;
+  return age >= 0 ? `${age} Jahre` : "—";
+}
+function privacyVisible(member, field, mine, viewerIsAdmin) {
+  if (mine || viewerIsAdmin) return true;
+  return String(member?.privacy_settings?.[field] || "PUBLIC").toUpperCase() !== "PRIVATE";
+}
 
-function RoleBadge({ role }) {
-  const item = roleMeta[normalizeRole(role)] || roleMeta.MEMBER;
+function RoleBadge({ role, accountBadge }) {
+  const normalized = normalizeRole(role);
+  const item = normalized === "MEMBER" && accountBadge === "BUSINESS"
+    ? { label: "Unternehmenskonto", cls: "business", star: "/role-star-blue.svg" }
+    : roleMeta[normalized] || roleMeta.MEMBER;
   return <span className={`profile-role-badge ${item.cls}`} title={item.label}>
-    {item.icon && <span className="profile-role-icon">{item.icon}</span>}
+    {item.star && <img className="profile-role-star" src={item.star} alt="" aria-hidden="true" />}
     <span>{item.label}</span>
   </span>;
 }
@@ -252,7 +274,7 @@ export default function ProfileView({
   }
 
   async function changeRole() {
-    if (!viewerIsHeadAdmin) return notify("Nur der Betreiber - Hauptadmin darf Rollen ändern.");
+    if (!viewerIsHeadAdmin) return notify("Nur der Betreiber (Hauptadmin) darf Rollen ändern.");
     if (member.id === currentUserId) return notify("Die eigene Betreiber-Hauptadmin-Rolle kann hier nicht geändert werden.");
     const currentRole = normalizeRole(member.role);
     const nextRole = window.prompt("Neue Rolle eingeben:\n\nMEMBER = Rolle entfernen\nSUPPORTER\nADMIN", currentRole);
@@ -285,28 +307,52 @@ export default function ProfileView({
 
   const memberIsSuspended = member.account_status === "SUSPENDED" || member.is_suspended === true;
   const shownAvatar = avatarPreview || draft.avatar_url || member.avatar_url || DEFAULT_AVATAR;
+  const showName = privacyVisible(member, "name", mine, viewerIsAdmin);
+  const showBirthDate = privacyVisible(member, "birth_date", mine, viewerIsAdmin);
+  const homeRegion = member.home_region_name || member.region_name || member.home_region || "Nicht festgelegt";
 
   return <section className="profile-view integrated-profile-view">
     {notice && <div className="profile-notice">{notice}</div>}
     <button type="button" className="profile-back-button" onClick={onClose}>← Zurück</button>
 
-    <div className="integrated-profile-hero">
-      <div className="integrated-avatar-wrap">
-        <img src={shownAvatar} alt={displayName(member)} onError={(event) => { event.currentTarget.src = DEFAULT_AVATAR; }} />
+    <div className="integrated-profile-hero profile-original-layout">
+      <div className="profile-original-left">
+        <div className="integrated-avatar-wrap">
+          <img src={shownAvatar} alt={displayName(member)} onError={(event) => { event.currentTarget.src = DEFAULT_AVATAR; }} />
+        </div>
+        <div className="profile-function-card">
+          <span className="profile-function-eyebrow">FUNKTION</span>
+          <RoleBadge role={member.role} accountBadge={member.account_badge} />
+          <small>Heimatregion: {homeRegion}</small>
+        </div>
       </div>
-      <div className="integrated-profile-title">
-        <RoleBadge role={member.role} />
-        <h1>{displayName(member)}</h1>
-        {(member.first_name || member.last_name) && <div className="integrated-real-name">{[member.first_name, member.last_name].filter(Boolean).join(" ")}</div>}
-        <p>{draft.bio || member.bio || "Dieses Mitglied hat noch keine Beschreibung hinterlegt."}</p>
+
+      <div className="profile-original-main">
+        <header className="profile-original-heading">
+          <span>MITGLIEDSPROFIL</span>
+          <h1>{displayName(member)}</h1>
+          {member.is_verified && <b className="profile-verified-badge">✓ Verifiziert</b>}
+        </header>
+
+        <div className="profile-identity-grid">
+          <div className="profile-identity-card"><span>NICKNAME</span><strong>{member.nickname || "—"}</strong></div>
+          {showName && <div className="profile-identity-card"><span>VORNAME</span><strong>{member.first_name || "—"}</strong></div>}
+          {showName && <div className="profile-identity-card"><span>NACHNAME</span><strong>{member.last_name || "—"}</strong></div>}
+          {showBirthDate && <div className="profile-identity-card"><span>GEBURTSDATUM</span><strong>{formatBirthDate(member.birth_date)}</strong></div>}
+          {showBirthDate && member.birth_date && <div className="profile-identity-card"><span>ALTER</span><strong>{ageFromBirthDate(member.birth_date)}</strong></div>}
+          <div className="profile-identity-card"><span>HEIMATREGION</span><strong>{homeRegion}</strong></div>
+        </div>
+
+        <p className="profile-original-bio">{draft.bio || member.bio || "Dieses Mitglied hat noch keine Beschreibung hinterlegt."}</p>
       </div>
-      <div className="integrated-profile-actions">
-        {canEditProfile && <button type="button" className="profile-primary-button" onClick={() => setEditing((value) => !value)}>{editing ? "Bearbeitung schließen" : mine ? "Profil bearbeiten" : "Mitglied bearbeiten"}</button>}
-        {!mine && <>
-          <button type="button" className="profile-secondary-button" onClick={() => onMessage?.(member)}>💬 Nachricht</button>
-          <button type="button" className="profile-secondary-button" onClick={() => onFriend?.(member)}>🤝 Freundschaft</button>
-        </>}
-      </div>
+    </div>
+
+    <div className="integrated-profile-actions profile-original-actions">
+      {canEditProfile && <button type="button" className="profile-primary-button" onClick={() => setEditing((value) => !value)}>{editing ? "Bearbeitung schließen" : mine ? "Profil bearbeiten" : "Mitglied bearbeiten"}</button>}
+      {!mine && <>
+        <button type="button" className="profile-secondary-button" onClick={() => onMessage?.(member)}>💬 Nachricht</button>
+        <button type="button" className="profile-secondary-button" onClick={() => onFriend?.(member)}>🤝 Freundschaft</button>
+      </>}
     </div>
 
     {editing && <form className="integrated-profile-form" onSubmit={saveProfile}>
