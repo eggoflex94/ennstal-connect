@@ -19,5 +19,7 @@ import './points-announcement-popup.js';
 import './points-announcement-popup.css';
 import './sidebar-ads-modern.css';
 import './sidebar-ads-modern.js';
+import './chat-modern-final.css';
+import './chat-modern-final.js';
 
 export {};
