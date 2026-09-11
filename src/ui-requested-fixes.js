@@ -8,5 +8,6 @@ import './profile-role-star-runtime.js';
 import './react-navigation-bridge.js';
 import './head-admin-dock-cleanup.js';
 import './profile-standard-modern.css';
+import './profile-identity-summary.js';
 
 export {};
