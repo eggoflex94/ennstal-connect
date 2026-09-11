@@ -7,5 +7,7 @@ import './role-star-authority.css';
 import './profile-role-star-runtime.js';
 import './react-navigation-bridge.js';
 import './head-admin-dock-cleanup.js';
+import './member-profile-original-layout.js';
+import './member-profile-original-layout.css';
 
 export {};
