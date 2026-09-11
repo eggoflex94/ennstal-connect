@@ -123,24 +123,46 @@ function render(profile) {
     ${responsibility ? `<p class="ec-restored-profile-responsibility">Zuständig für: ${esc(responsibility)}</p>` : ''}`;
 }
 
+async function loadDirectoryProfile(id) {
+  const { data, error } = await supabase.rpc('community_member_directory');
+  if (error) throw error;
+  const rows = (data || []).map((row) => typeof row === 'string' ? JSON.parse(row) : row);
+  return rows.find((profile) => String(profile?.id || '') === String(id)) || null;
+}
+
 async function loadProfile() {
   const page = document.querySelector('.member-profile-page[data-profile-id]');
   const id = page?.dataset.profileId;
   if (!id) return;
   try {
-    const [{ data: profile, error }, { data: auth }] = await Promise.all([
-      supabase.from('profiles').select('id,nickname,first_name,last_name,birth_date,role,account_badge,is_verified,home_region_id,privacy_settings,bio,head_admin_responsibilities,admin_responsibilities').eq('id', id).maybeSingle(),
-      supabase.auth.getUser()
+    const [{ data: auth }, directoryProfile] = await Promise.all([
+      supabase.auth.getUser(),
+      loadDirectoryProfile(id)
     ]);
-    if (error || !profile) return;
+    if (!directoryProfile) return;
+
     if (!viewer && auth?.user) {
       const { data: viewerProfile } = await supabase.from('profiles').select('id,role').eq('id', auth.user.id).maybeSingle();
       viewer = viewerProfile || { id: auth.user.id, role: 'MEMBER' };
     }
+
     if (!regions.size) {
       const { data: regionRows } = await supabase.from('regions').select('id,name').eq('is_active', true);
       regions = new Map((regionRows || []).map((region) => [region.id, region.name]));
     }
+
+    // For admins, enrich the directory row with protected profile details so
+    // private name/birth date stay visible to moderation as required.
+    let profile = directoryProfile;
+    if (isAdminViewer()) {
+      const { data: protectedProfile } = await supabase
+        .from('profiles')
+        .select('id,first_name,last_name,birth_date,privacy_settings,head_admin_responsibilities,admin_responsibilities')
+        .eq('id', id)
+        .maybeSingle();
+      if (protectedProfile) profile = { ...profile, ...protectedProfile };
+    }
+
     render(profile);
   } catch (error) {
     console.warn('Mitgliedsprofil konnte nicht auf den ursprünglichen Aufbau gebracht werden:', error?.message || error);
