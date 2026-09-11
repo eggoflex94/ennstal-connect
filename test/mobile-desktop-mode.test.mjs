@@ -91,7 +91,7 @@ test("profile role stars stay mapped to the correct functions", async () => {
 
 test("profile presence remains visually separated", async () => {
   const css = await source("src/member-profile-original-layout.css");
-  assert.match(css, /\.ec-restored-profile-presence\s*\{[\s\S]*gap:8px/s);
-  assert.match(css, /margin-top:16px/);
-  assert.match(css, /padding-top:14px/);
+  assert.match(css, /\.ec-restored-profile-presence\s*\{[\s\S]*gap:12px/s);
+  assert.match(css, /margin-top:18px/);
+  assert.match(css, /padding-top:16px/);
 });
