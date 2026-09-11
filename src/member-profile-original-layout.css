@@ -1,10 +1,10 @@
 /* Restores the original member-profile information structure without replacing React actions. */
 .member-profile-page > .member-profile-hero {
   display:grid !important;
-  grid-template-columns:260px minmax(0,1fr) !important;
+  grid-template-columns:320px minmax(0,1fr) !important;
   grid-template-rows:auto auto !important;
   align-items:start !important;
-  gap:18px 30px !important;
+  gap:20px 32px !important;
   padding:24px !important;
   background:#fff !important;
   color:#203247 !important;
@@ -31,21 +31,22 @@
   grid-column:1 !important;
   grid-row:2 !important;
   width:100% !important;
-  max-width:260px !important;
+  max-width:320px !important;
   box-sizing:border-box !important;
-  padding:16px 18px 18px !important;
+  padding:18px 20px 20px !important;
   border-radius:16px !important;
   background:#f7f9fc !important;
   border:1px solid #d9e3ec !important;
   overflow:visible !important;
 }
 .ec-restored-profile-function.role-admin { background:#fff1f3 !important; border-color:#efb9c3 !important; }
+.ec-restored-profile-function.role-regional-admin,
 .ec-restored-profile-function.role-supporter { background:#eefaf4 !important; border-color:#b8e1ca !important; }
 .ec-restored-profile-function.role-business { background:#eff6ff !important; border-color:#b9d5f7 !important; }
 
 .ec-restored-profile-eyebrow {
   display:block !important;
-  margin:0 0 10px !important;
+  margin:0 0 12px !important;
   color:#ff641e !important;
   font-size:11px !important;
   font-weight:900 !important;
@@ -56,19 +57,21 @@
 .ec-restored-profile-function strong {
   display:flex !important;
   align-items:flex-start !important;
-  gap:10px !important;
+  gap:12px !important;
   width:100% !important;
-  margin:0 0 12px !important;
+  margin:0 0 14px !important;
   color:#26384c !important;
   font-size:16px !important;
-  line-height:1.28 !important;
+  line-height:1.35 !important;
   white-space:normal !important;
 }
 .ec-restored-profile-function strong > span {
   display:block !important;
   min-width:0 !important;
-  overflow-wrap:anywhere !important;
+  max-width:245px !important;
+  overflow-wrap:normal !important;
   word-break:normal !important;
+  hyphens:none !important;
 }
 .ec-restored-profile-function strong img {
   display:block !important;
@@ -84,17 +87,18 @@
   margin:0 !important;
   color:#6f8093 !important;
   font-size:12px !important;
-  line-height:1.55 !important;
-  overflow-wrap:anywhere !important;
+  line-height:1.6 !important;
+  overflow-wrap:normal !important;
+  word-break:normal !important;
 }
 
 .ec-restored-profile-presence {
   display:flex !important;
   flex-direction:column !important;
   align-items:flex-start !important;
-  gap:8px !important;
-  margin-top:14px !important;
-  padding-top:13px !important;
+  gap:12px !important;
+  margin-top:18px !important;
+  padding-top:16px !important;
   border-top:1px solid rgba(94,112,130,.22) !important;
 }
 .ec-restored-profile-presence b {
@@ -102,7 +106,7 @@
   margin:0 !important;
   padding:0 !important;
   font-size:13px !important;
-  line-height:1.35 !important;
+  line-height:1.4 !important;
   font-weight:900 !important;
 }
 .ec-restored-profile-presence b.is-online { color:#12814f !important; }
@@ -113,9 +117,10 @@
   padding:0 !important;
   color:#6f8093 !important;
   font-size:12px !important;
-  line-height:1.5 !important;
+  line-height:1.55 !important;
   white-space:normal !important;
-  overflow-wrap:anywhere !important;
+  overflow-wrap:normal !important;
+  word-break:normal !important;
 }
 
 .ec-restored-profile-main {
@@ -190,6 +195,6 @@
 
 @media (pointer:coarse) {
   .member-profile-page > .member-profile-hero {
-    grid-template-columns:260px minmax(0,1fr) !important;
+    grid-template-columns:320px minmax(0,1fr) !important;
   }
 }
