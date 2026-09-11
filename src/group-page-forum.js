@@ -10,7 +10,12 @@ const displayName = (profile) => profile?.nickname || [profile?.first_name, prof
 const styleClass = (post) => `gfp-font-${post.font_family || "modern"} gfp-size-${post.font_size || "normal"} gfp-align-${post.text_align || "left"}`;
 
 async function resolveGroupFromCard(card) {
-  const name = (card.querySelector("h2,h3,.group-card-title")?.textContent || "").trim();
+  const directId = card?.dataset?.groupId;
+  if (directId) {
+    const { data } = await supabase.from("community_groups").select("*").eq("id", directId).maybeSingle();
+    if (data) return data;
+  }
+  const name = (card?.querySelector("h2,h3,.group-card-title")?.textContent || "").trim();
   if (!name) return null;
   const { data } = await supabase.from("community_groups").select("*").eq("name", name).limit(20);
   if (!data?.length) return null;
@@ -54,10 +59,10 @@ async function loadGroupPage(groupId) {
   const { data: replies } = posts.length
     ? await supabase.from("group_forum_replies").select("*").in("post_id", posts.map((post) => post.id)).order("created_at", { ascending: true })
     : { data: [] };
-  const profileIds = [group.created_by, group.owner_id, ...memberIds, ...posts.map((post) => post.author_id), ...(replies || []).map((reply) => reply.author_id)];
+  const profileIds = [group.created_by, group.owner_id, user?.id, ...memberIds, ...posts.map((post) => post.author_id), ...(replies || []).map((reply) => reply.author_id)];
   const profiles = await getProfiles(profileIds);
   const self = profiles.get(user?.id);
-  const isMember = Boolean(user?.id && (memberIds.includes(user.id) || group.owner_id === user.id || group.created_by === user.id || self?.role === "HEAD_ADMIN"));
+  const isMember = Boolean(user?.id && (memberIds.includes(user.id) || group.owner_id === user.id || group.created_by === user.id || self?.role === "HEAD_ADMIN" || self?.role === "ADMIN"));
   return { group, user, memberIds, posts, replies: replies || [], profiles, isMember };
 }
 
@@ -83,7 +88,6 @@ function renderPage(state) {
           <div class="gfp-meta"><span>${memberIds.length} Mitglieder</span><span>Inhaber: ${esc(displayName(owner))}</span><span>Erstellt von ${esc(displayName(creator))}</span></div>
         </div>
       </section>
-
       <div class="gfp-grid">
         <section class="gfp-forum">
           <div class="gfp-section-heading"><div><span class="gfp-kicker">GRUPPENFORUM</span><h2>Beiträge & Austausch</h2></div><span>${posts.length} Beiträge</span></div>
@@ -117,7 +121,6 @@ function renderPage(state) {
             }).join("") || `<div class="gfp-empty"><strong>Noch keine Beiträge.</strong><span>Starte das erste Thema in dieser Gruppe.</span></div>`}
           </div>
         </section>
-
         <aside class="gfp-side">
           <section class="gfp-members"><div class="gfp-section-heading"><div><span class="gfp-kicker">MITGLIEDER</span><h2>${memberIds.length} Personen</h2></div></div>
             <div>${memberIds.slice(0, 18).map((id) => { const member = profiles.get(id); return member ? `<div class="gfp-member"><img src="${esc(member.avatar_url || "/community-default-avatar.png")}" alt=""><span><strong>${esc(displayName(member))}</strong><small>${esc(member.role === "HEAD_ADMIN" ? "Hauptadmin" : member.role === "ADMIN" ? "Admin" : member.role === "SUPPORTER" ? "Supporter" : "Mitglied")}</small></span></div>` : ""; }).join("")}</div>
@@ -142,10 +145,7 @@ function renderPage(state) {
       const button = composer.querySelector("button[type=submit]"); button.disabled = true; button.textContent = "Wird veröffentlicht …";
       try {
         const imageUrl = await uploadForumImage(user.id, composer.elements.image.files?.[0]);
-        const { error } = await supabase.from("group_forum_posts").insert({
-          group_id: group.id, author_id: user.id, title: composer.elements.title.value.trim(), content: composer.elements.content.value.trim(), image_url: imageUrl,
-          font_family: composer.elements.font_family.value, font_size: composer.elements.font_size.value, text_align: composer.elements.text_align.value
-        });
+        const { error } = await supabase.from("group_forum_posts").insert({ group_id: group.id, author_id: user.id, title: composer.elements.title.value.trim(), content: composer.elements.content.value.trim(), image_url: imageUrl, font_family: composer.elements.font_family.value, font_size: composer.elements.font_size.value, text_align: composer.elements.text_align.value });
         if (error) throw error;
         await refreshCurrentPage();
       } catch (error) { alert(error?.message || "Beitrag konnte nicht veröffentlicht werden."); button.disabled = false; button.textContent = "Beitrag veröffentlichen"; }
@@ -164,7 +164,6 @@ function renderPage(state) {
   shell.querySelectorAll(".gfp-post-image").forEach((button) => button.addEventListener("click", () => { lightbox.querySelector("img").src = button.querySelector("img").src; lightbox.hidden = false; }));
   lightbox.addEventListener("click", () => { lightbox.hidden = true; });
   lightbox.querySelector("img").addEventListener("click", (event) => event.stopPropagation());
-
   return shell;
 }
 
@@ -182,7 +181,7 @@ async function openGroupPage(group, pushState = true) {
       const url = new URL(location.href); url.searchParams.set("group", group.id); history.pushState({ ...(history.state || {}), ecGroup: group.id }, "", url);
     }
     window.scrollTo(0, 0);
-  } catch (error) { console.error("[group-forum]", error); alert("Die Gruppe konnte nicht geöffnet werden."); }
+  } catch (error) { console.error("[group-forum]", error); alert(`Die Gruppe konnte nicht geöffnet werden: ${error?.message || "Unbekannter Fehler"}`); }
   finally { opening = false; }
 }
 
@@ -205,21 +204,47 @@ async function openFromUrl() {
   if (data) openGroupPage(data, false);
 }
 
+function decorateGroupCards() {
+  document.querySelectorAll(".groups-page .group-card").forEach(async (card) => {
+    if (card.dataset.groupPageReady === "1") return;
+    const group = await resolveGroupFromCard(card);
+    if (!group) return;
+    card.dataset.groupId = group.id;
+    card.dataset.groupPageReady = "1";
+    card.style.cursor = "pointer";
+    if (!card.querySelector(".group-open-full-page")) {
+      const actions = card.querySelector(".content-card-actions");
+      if (actions) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "primary-button group-open-full-page";
+        button.textContent = "Gruppe öffnen";
+        button.addEventListener("click", (event) => { event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation(); openGroupPage(group); }, true);
+        actions.prepend(button);
+      }
+    }
+  });
+}
+
 document.addEventListener("click", async (event) => {
   const card = event.target.closest(".groups-page .group-card");
-  if (!card || event.target.closest("button,input,textarea,label,select,a")) return;
+  if (!card) return;
+  const isAction = event.target.closest("input,textarea,label,select,a") || (event.target.closest("button") && !event.target.closest(".group-details-button,.group-open-full-page"));
+  if (isAction) return;
   event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation();
   const group = await resolveGroupFromCard(card);
   if (group) openGroupPage(group);
 }, true);
 
+const observer = new MutationObserver(() => decorateGroupCards());
+observer.observe(document.documentElement, { childList: true, subtree: true });
+window.addEventListener("ec:navigate", () => setTimeout(decorateGroupCards, 50));
 window.addEventListener("popstate", () => {
   const id = new URLSearchParams(location.search).get("group");
   if (!id) { activePage?.remove(); activePage = null; currentGroupId = null; document.documentElement.classList.remove("gfp-open"); }
   else openFromUrl();
 });
-
-setTimeout(openFromUrl, 800);
-window.addEventListener("ec:authenticated", openFromUrl);
+setTimeout(() => { openFromUrl(); decorateGroupCards(); }, 300);
+window.addEventListener("ec:authenticated", () => { openFromUrl(); decorateGroupCards(); });
 
 export {};
