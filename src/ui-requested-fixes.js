@@ -21,6 +21,7 @@ import './sidebar-ads-modern.css';
 import './sidebar-ads-modern.js';
 import './chat-modern-final.css';
 import './chat-modern-final.js';
+import './group-open-fast.js';
 import './group-page-forum.css';
 import './group-page-forum.js';
 import './group-forum-actions.js';
