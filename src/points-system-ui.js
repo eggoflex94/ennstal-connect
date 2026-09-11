@@ -35,14 +35,28 @@ async function loadViewer() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
     const { data } = await supabase.from('profiles').select('id,role').eq('id', user.id).maybeSingle();
-    viewer = data || { id: user.id, role: 'MEMBER' };
+    const current = data || { id: user.id, role: 'MEMBER' };
+    if (String(current.role || '').toUpperCase() === 'SUPPORTER') {
+      const { data: assignments } = await supabase
+        .from('regional_admin_assignments')
+        .select('region_id')
+        .eq('user_id', user.id)
+        .eq('active', true);
+      current.isRegionalAdmin = Boolean(assignments?.length);
+      current.regionalAdminRegions = (assignments || []).map((row) => row.region_id);
+    } else {
+      current.isRegionalAdmin = false;
+      current.regionalAdminRegions = [];
+    }
+    viewer = current;
     return viewer;
   })().finally(() => { viewerPromise = null; });
   return viewerPromise;
 }
 
 function isAdminLike(profile) {
-  return ['HEAD_ADMIN', 'ADMIN', 'SUPPORTER'].includes(String(profile?.role || '').toUpperCase());
+  const role = String(profile?.role || '').toUpperCase();
+  return role === 'HEAD_ADMIN' || role === 'ADMIN' || Boolean(profile?.isRegionalAdmin);
 }
 
 function closeModal() {
@@ -75,8 +89,7 @@ function historyMarkup(history = []) {
 async function openPoints(targetUserId, { suspensionMode = false, focusAdminForm = false } = {}) {
   if (!targetUserId) return;
   const current = await loadViewer();
-  const own = current?.id === targetUserId;
-  if (!own && !isAdminLike(current)) return;
+  if (!isAdminLike(current)) return;
 
   const { data, error } = await supabase.rpc('profile_point_feed', { p_user_id: targetUserId });
   if (error) {
@@ -84,7 +97,7 @@ async function openPoints(targetUserId, { suspensionMode = false, focusAdminForm
     return;
   }
 
-  const canManage = !own && isAdminLike(current);
+  const canManage = current?.id !== targetUserId;
   closeModal();
 
   const overlay = document.createElement('div');
@@ -165,20 +178,27 @@ async function openPoints(targetUserId, { suspensionMode = false, focusAdminForm
   });
 }
 
-function bindSidebarPoints() {
+async function bindSidebarPoints() {
   const score = document.querySelector('.ec-dock-reward-card .ec-dock-reward-head b');
-  if (!score || score.dataset.ecPointsBound === '1') return;
+  if (!score) return;
+  const current = await loadViewer();
+  const allowed = isAdminLike(current);
+  if (!allowed) {
+    score.classList.remove('ec-points-clickable');
+    score.removeAttribute('role');
+    score.removeAttribute('tabindex');
+    score.removeAttribute('title');
+    return;
+  }
+  if (score.dataset.ecPointsBound === '1') return;
   score.dataset.ecPointsBound = '1';
   score.classList.add('ec-points-clickable');
   score.setAttribute('role', 'button');
   score.setAttribute('tabindex', '0');
   score.setAttribute('title', 'Punkteliste öffnen');
-  const openOwn = async () => {
-    const current = await loadViewer();
-    if (current?.id) void openPoints(current.id);
-  };
+  const openOwn = () => void openPoints(current.id);
   score.addEventListener('click', openOwn);
-  score.addEventListener('keydown', (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); void openOwn(); } });
+  score.addEventListener('keydown', (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openOwn(); } });
 }
 
 async function bindProfilePoints() {
@@ -188,48 +208,44 @@ async function bindProfilePoints() {
   if (!id) return;
 
   const current = await loadViewer();
-  if (!current?.id) return;
-
-  const own = current.id === id;
   const admin = isAdminLike(current);
-  const canSeePoints = own || admin;
-  const canAwardPoints = admin && !own;
   const actions = page.querySelector('.member-profile-actions, .profile-original-actions');
-  if (!actions) return;
-
   let listButton = page.querySelector('.ec-profile-points-button');
   let awardButton = page.querySelector('.ec-profile-award-points-button');
 
-  if (!canSeePoints) {
+  if (!admin || !actions) {
     listButton?.remove();
-  } else {
-    if (!listButton) {
-      listButton = document.createElement('button');
-      listButton.type = 'button';
-      listButton.className = 'ec-profile-points-button';
-      listButton.textContent = '★ Punkteliste';
-    }
-    if (listButton.parentElement !== actions) actions.appendChild(listButton);
-    if (listButton.dataset.ecPointsBound !== '1') {
-      listButton.dataset.ecPointsBound = '1';
-      listButton.addEventListener('click', () => void openPoints(id));
-    }
+    awardButton?.remove();
+    return;
   }
 
-  if (!canAwardPoints) {
+  if (!listButton) {
+    listButton = document.createElement('button');
+    listButton.type = 'button';
+    listButton.className = 'ec-profile-points-button';
+    listButton.textContent = '★ Punkteliste';
+  }
+  if (listButton.parentElement !== actions) actions.appendChild(listButton);
+  if (listButton.dataset.ecPointsBound !== '1') {
+    listButton.dataset.ecPointsBound = '1';
+    listButton.addEventListener('click', () => void openPoints(id));
+  }
+
+  if (current?.id === id) {
     awardButton?.remove();
-  } else {
-    if (!awardButton) {
-      awardButton = document.createElement('button');
-      awardButton.type = 'button';
-      awardButton.className = 'ec-profile-award-points-button';
-      awardButton.textContent = '✚ Punkte vergeben';
-    }
-    if (awardButton.parentElement !== actions) actions.appendChild(awardButton);
-    if (awardButton.dataset.ecPointsBound !== '1') {
-      awardButton.dataset.ecPointsBound = '1';
-      awardButton.addEventListener('click', () => void openPoints(id, { focusAdminForm: true }));
-    }
+    return;
+  }
+
+  if (!awardButton) {
+    awardButton = document.createElement('button');
+    awardButton.type = 'button';
+    awardButton.className = 'ec-profile-award-points-button';
+    awardButton.textContent = '✚ Punkte vergeben';
+  }
+  if (awardButton.parentElement !== actions) actions.appendChild(awardButton);
+  if (awardButton.dataset.ecPointsBound !== '1') {
+    awardButton.dataset.ecPointsBound = '1';
+    awardButton.addEventListener('click', () => void openPoints(id, { focusAdminForm: true }));
   }
 }
 
@@ -278,7 +294,7 @@ function schedule() {
   queued = true;
   requestAnimationFrame(() => {
     queued = false;
-    bindSidebarPoints();
+    void bindSidebarPoints();
     void bindProfilePoints();
   });
 }
