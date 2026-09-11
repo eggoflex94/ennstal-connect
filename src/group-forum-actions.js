@@ -3,8 +3,6 @@ import { supabase } from './supabaseClient';
 let syncing = false;
 let timer = null;
 
-const esc = (value) => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-
 async function currentContext(page) {
   const groupId = page?.dataset?.groupId;
   if (!groupId) return null;
@@ -39,14 +37,14 @@ async function editGroup(ctx) {
   const cleanName = name.trim();
   const cleanDescription = description.trim();
   if (cleanName.length < 3 || cleanDescription.length < 10) return alert('Gruppenname oder Beschreibung ist zu kurz.');
-  const { error } = await supabase.from('community_groups').update({ name: cleanName, description: cleanDescription, updated_at: new Date().toISOString() }).eq('id', ctx.group.id);
+  const { error } = await supabase.rpc('update_community_group', { p_group_id: ctx.group.id, p_name: cleanName, p_description: cleanDescription, p_image_url: ctx.group.image_url || null });
   if (error) return alert(`Gruppe konnte nicht bearbeitet werden: ${error.message}`);
   location.reload();
 }
 
 async function deleteGroup(ctx) {
   if (!confirm(`Gruppe „${ctx.group.name}“ wirklich löschen? Alle Gruppenbeiträge und Antworten werden ebenfalls gelöscht.`)) return;
-  const { error } = await supabase.from('community_groups').delete().eq('id', ctx.group.id);
+  const { error } = await supabase.rpc('delete_community_group', { p_group_id: ctx.group.id });
   if (error) return alert(`Gruppe konnte nicht gelöscht werden: ${error.message}`);
   const url = new URL(location.href); url.searchParams.delete('group'); location.href = url.toString();
 }
