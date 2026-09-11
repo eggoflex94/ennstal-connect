@@ -73,3 +73,25 @@ test("visible shell navigation uses one direct React bridge", async () => {
   assert.doesNotMatch(bridge, /stopImmediatePropagation/);
   assert.doesNotMatch(bridge, /\.click\s*\(\s*\)/);
 });
+
+test("member profile keeps identical desktop structure on touch devices", async () => {
+  const css = await source("src/member-profile-original-layout.css");
+  assert.match(css, /grid-template-columns:320px minmax\(0,1fr\)/);
+  assert.match(css, /@media \(pointer:coarse\)[\s\S]*grid-template-columns:320px minmax\(0,1fr\)/);
+  assert.doesNotMatch(css, /@media\s*\(max-width:/);
+});
+
+test("profile role stars stay mapped to the correct functions", async () => {
+  const code = await source("src/member-profile-original-layout.js");
+  assert.match(code, /HEAD_ADMIN[^\n]*role-star-red\.svg/);
+  assert.match(code, /regionalNames\.length[^\n]*role-star-red\.svg/);
+  assert.match(code, /SUPPORTER[^\n]*supporter-star\.svg/);
+  assert.doesNotMatch(code, /regionalNames\.length[^\n]*supporter-star\.svg/);
+});
+
+test("profile presence remains visually separated", async () => {
+  const css = await source("src/member-profile-original-layout.css");
+  assert.match(css, /\.ec-restored-profile-presence\s*\{[\s\S]*gap:8px/s);
+  assert.match(css, /margin-top:16px/);
+  assert.match(css, /padding-top:14px/);
+});
