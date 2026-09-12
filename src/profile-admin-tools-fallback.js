@@ -18,9 +18,28 @@ async function currentAccess(targetId) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user?.id || user.id === targetId) return null;
 
-  const [{ data: viewer }, { data: target }, { data: regional }, { data: permissions }] = await Promise.all([
+  const [headResult, targetResult] = await Promise.all([
+    supabase.rpc('ec_is_head_admin'),
+    supabase.from('profiles').select('id,nickname,first_name,last_name,role,account_status,home_region_id,community_points,purchase_points,forum_moderator,is_verified,is_test_account,account_badge').eq('id', targetId).maybeSingle()
+  ]);
+
+  const isHead = headResult?.data === true;
+  const target = targetResult?.data || { id: targetId, role: 'MEMBER', account_status: 'ACTIVE' };
+
+  if (isHead) {
+    return {
+      user,
+      viewer: { id: user.id, role: 'HEAD_ADMIN', account_status: 'ACTIVE', forum_moderator: false },
+      target,
+      isHead: true,
+      isGlobal: false,
+      isRegionalForTarget: false,
+      permissions: {}
+    };
+  }
+
+  const [{ data: viewer }, { data: regional }, { data: permissions }] = await Promise.all([
     supabase.from('profiles').select('id,role,account_status,forum_moderator').eq('id', user.id).maybeSingle(),
-    supabase.from('profiles').select('id,nickname,first_name,last_name,role,account_status,home_region_id,community_points,purchase_points,forum_moderator,is_verified,is_test_account,account_badge').eq('id', targetId).maybeSingle(),
     supabase.from('regional_admin_assignments').select('region_id,active').eq('user_id', user.id).eq('active', true),
     supabase.from('user_permissions').select('*').eq('user_id', user.id).maybeSingle()
   ]);
@@ -28,18 +47,17 @@ async function currentAccess(targetId) {
   if (!viewer || viewer.account_status !== 'ACTIVE') return null;
   const viewerRole = roleOf(viewer.role);
   const targetRole = roleOf(target?.role);
-  const isHead = viewerRole === 'HEAD_ADMIN';
   const isGlobal = viewerRole === 'ADMIN';
-  if (targetRole === 'HEAD_ADMIN' && !isHead) return null;
+  if (targetRole === 'HEAD_ADMIN') return null;
 
   const regionRows = regional || [];
   const isRegionalForTarget = Boolean(target?.home_region_id && regionRows.some((row) => row.active !== false && row.region_id === target.home_region_id));
   const p = permissions || {};
   const hasGrantedTools = Boolean(viewer.forum_moderator || p.manage_members || p.manage_points || p.manage_reports || p.manage_messages || p.manage_media);
-  const allowed = isHead || isGlobal || isRegionalForTarget || hasGrantedTools;
+  const allowed = isGlobal || isRegionalForTarget || hasGrantedTools;
   if (!allowed) return null;
 
-  return { user, viewer, target: target || { id: targetId }, isHead, isGlobal, isRegionalForTarget, permissions: p };
+  return { user, viewer, target, isHead: false, isGlobal, isRegionalForTarget, permissions: p };
 }
 
 function removeLegacyProfileAdminButtons(page) {
@@ -169,17 +187,21 @@ async function handleAction(ctx, action, modal) {
     return window.alert(error ? error.message : 'Verwarnung wurde gesendet.');
   }
   if (action === 'suspend') {
+    const reason = await askReason(ctx.target?.account_status === 'SUSPENDED' ? 'Konto freischalten' : 'Konto sperren');
+    if (!reason) return;
     const nextStatus = ctx.target?.account_status === 'SUSPENDED' ? 'ACTIVE' : 'SUSPENDED';
-    const { error } = await supabase.rpc('admin_set_account_status', { target_user: ctx.target.id, new_status: nextStatus, p_reason: null });
+    const { error } = await supabase.rpc('admin_set_account_status', { target_user: ctx.target.id, new_status: nextStatus, p_reason: reason });
     if (error) return window.alert(error.message);
     window.alert(nextStatus === 'SUSPENDED' ? 'Konto wurde gesperrt.' : 'Konto wurde freigeschaltet.');
     return openTools(ctx.target.id);
   }
   if (action.startsWith('feature:')) {
     const feature = action.split(':')[1];
+    const reason = await askReason(`${featureLabels[feature] || feature} sperren / freigeben`);
+    if (!reason) return;
     const { data: lock } = await supabase.from('user_feature_locks').select('is_locked').eq('user_id', ctx.target.id).eq('feature_key', feature).maybeSingle();
     const next = lock?.is_locked !== true;
-    const { error } = await supabase.rpc('admin_set_feature_lock', { p_target_user: ctx.target.id, p_feature_key: feature, p_is_locked: next, p_reason: null });
+    const { error } = await supabase.rpc('admin_set_feature_lock', { p_target_user: ctx.target.id, p_feature_key: feature, p_is_locked: next, p_reason: reason });
     if (error) return window.alert(error.message);
     window.alert(`${featureLabels[feature] || feature} wurde ${next ? 'gesperrt' : 'freigegeben'}.`);
     return openTools(ctx.target.id);
@@ -222,6 +244,8 @@ async function openTools(targetId) {
     button.onclick = () => handleAction(ctx, button.dataset.fallbackAdminAction, modal);
   });
 }
+
+window.ecOpenProfileAdminTools = openTools;
 
 async function mountProfileButton() {
   if (mounting) return;
