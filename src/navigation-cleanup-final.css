@@ -1,11 +1,4 @@
 /* Final navigation/overlay authority. Loaded last on purpose. */
-html.ec-modal-locked,html.ec-modal-locked body{overflow:hidden!important;overscroll-behavior:none!important}
-body.ec-modal-locked #root{pointer-events:none!important;user-select:none!important}
-body.ec-modal-locked>.ec-admin-hub-overlay,
-body.ec-modal-locked>.ec-profile-admin-overlay,
-body.ec-modal-locked>.ec-admin-workspace,
-body.ec-modal-locked>.group-details-overlay,
-body.ec-modal-locked>.public-photo-lightbox{pointer-events:auto!important;user-select:auto!important}
 
 /* Nothing inside an icon may steal the click from its button. */
 .ec-right-dock .ec-compact-menu-grid>.ec-compact-menu-item,
@@ -21,7 +14,7 @@ body.ec-modal-locked>.public-photo-lightbox{pointer-events:auto!important;user-s
 .ec-right-dock [data-regional-admin-tools-bridge="1"],
 .ec-right-dock [data-ec-admin-primary="1"][data-ec-page="admin"]{display:none!important;pointer-events:none!important}
 
-/* Modal authority: these must always sit above every dock, header and legacy workspace. */
+/* Modal authority: above dock/header, without disabling the app root. */
 .ec-admin-hub-overlay{z-index:2147483000!important;pointer-events:auto!important;touch-action:pan-y!important}
 .ec-profile-admin-overlay{z-index:2147482900!important;pointer-events:auto!important}
 .ec-admin-workspace{z-index:2147482800!important}
@@ -32,13 +25,11 @@ body.ec-modal-locked>.public-photo-lightbox{pointer-events:auto!important;user-s
 .ec-compact-menu-grid::before,.ec-compact-menu-grid::after,
 .ec-admin-hub::before,.ec-admin-hub::after{pointer-events:none!important}
 
-/* Desktop: keep all primary icon buttons immediately clickable. */
 @media(min-width:761px){
   .ec-right-dock .ec-compact-menu-grid{position:relative!important;z-index:2!important}
   .ec-right-dock .ec-compact-menu-grid>.ec-compact-menu-item{height:42px!important;min-height:42px!important}
 }
 
-/* Phones/tablets: no hidden click layer, no horizontal drift, same icon size as desktop. */
 @media(max-width:760px){
   .ec-right-dock.ec-compact-personal-dock{position:relative!important;inset:auto!important;width:100%!important;max-width:100%!important;overflow:visible!important;z-index:20!important}
   .ec-right-dock.ec-compact-personal-dock .ec-compact-menu-grid{position:relative!important;z-index:2!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;width:auto!important;max-width:100%!important;overflow:visible!important}
