@@ -36,6 +36,17 @@ async function canUseAdminTools() {
   return accessPromise;
 }
 
+function removeCompetingButtons(actions = null) {
+  document.querySelectorAll('.ec-profile-admin-portal').forEach((node) => node.remove());
+  document.querySelectorAll('.ec-profile-admin-open').forEach((node) => node.remove());
+  if (actions) {
+    [...actions.querySelectorAll('button')].forEach((button) => {
+      if (button.classList.contains('ec-profile-admin-inline')) return;
+      if (String(button.textContent || '').trim() === '⚙ Admin Tools') button.remove();
+    });
+  }
+}
+
 async function openAdminTools(targetId, button) {
   if (!targetId || !button) return;
   const previous = button.textContent;
@@ -44,6 +55,7 @@ async function openAdminTools(targetId, button) {
   try {
     modulePromise ||= import('./profile-admin-tools-fallback.js');
     await modulePromise;
+    removeCompetingButtons(button.closest('.member-profile-actions'));
     if (typeof window.ecOpenProfileAdminTools !== 'function') throw new Error('Admin Tools konnten nicht geladen werden.');
     await window.ecOpenProfileAdminTools(targetId);
   } catch (error) {
@@ -53,19 +65,16 @@ async function openAdminTools(targetId, button) {
       button.disabled = false;
       button.textContent = previous || '⚙ Admin Tools';
     }
+    scheduleMount();
   }
 }
 
-function removeOldPortal() {
-  document.querySelectorAll('.ec-profile-admin-portal').forEach((node) => node.remove());
-}
-
 async function mountInlineButton() {
-  removeOldPortal();
   const page = document.querySelector('.member-profile-page[data-profile-id]');
   const actions = page?.querySelector('.member-profile-actions');
   const targetId = page?.dataset.profileId || '';
 
+  removeCompetingButtons(actions || null);
   document.querySelectorAll('.ec-profile-admin-inline').forEach((button) => {
     if (!actions || button.parentElement !== actions) button.remove();
   });
@@ -110,13 +119,13 @@ function scheduleMount() {
 }
 
 function startObserver() {
-  removeOldPortal();
+  removeCompetingButtons();
   const root = document.querySelector('.content-root') || document.querySelector('.modern-main') || document.getElementById('root');
   if (root && !observer) {
     observer = new MutationObserver((mutations) => {
       const relevant = mutations.some((mutation) => [...mutation.addedNodes, ...mutation.removedNodes].some((node) =>
         node.nodeType === Node.ELEMENT_NODE &&
-        (node.matches?.('.member-profile-page,.member-profile-actions,.ec-profile-admin-inline') || node.querySelector?.('.member-profile-page,.member-profile-actions'))
+        (node.matches?.('.member-profile-page,.member-profile-actions,.ec-profile-admin-inline,.ec-profile-admin-open,.ec-profile-admin-portal') || node.querySelector?.('.member-profile-page,.member-profile-actions,.ec-profile-admin-open'))
       ));
       if (relevant) scheduleMount();
     });
