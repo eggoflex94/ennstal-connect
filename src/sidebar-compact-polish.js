@@ -10,6 +10,15 @@ const MENU_LABELS = [
   'Heimatregion ändern'
 ];
 
+const PAGE_TARGETS = {
+  'Mein Profil': 'profile',
+  'Nachrichten': 'messages',
+  'Freunde': 'friends',
+  'Anfragen': 'requests',
+  'Blockiert': 'blocked',
+  'Einstellungen': 'profile'
+};
+
 const ICONS = {
   'Benachrichtigungen': '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>',
   'Mein Profil': '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c.8-4.2 3.4-6 8-6s7.2 1.8 8 6"/></svg>',
@@ -31,11 +40,51 @@ function labelFor(button) {
   return MENU_LABELS.find((label) => text.includes(label)) || button.dataset.ecCompactLabel || '';
 }
 
+function openHelp() {
+  const external = [...document.querySelectorAll('button,a')].find((node) => {
+    if (node.closest('.ec-right-dock')) return false;
+    const text = textOf(node);
+    return /^(Support|Hilfe)$/i.test(text) || /Community-Regeln/i.test(text);
+  });
+  if (external) {
+    external.click();
+    return;
+  }
+  const rules = [...document.querySelectorAll('footer button')].find((node) => /Regeln/i.test(textOf(node)));
+  rules?.click();
+}
+
+function bindDirectAction(button, label) {
+  if (button.dataset.ecCompactActionBound === '1') return;
+  button.dataset.ecCompactActionBound = '1';
+
+  if (PAGE_TARGETS[label]) {
+    button.onclick = (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      document.body.classList.remove('ec-dock-open');
+      window.dispatchEvent(new CustomEvent('ec:navigate', { detail: { page: PAGE_TARGETS[label] } }));
+    };
+    return;
+  }
+
+  if (label === 'Hilfe') {
+    button.onclick = (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      document.body.classList.remove('ec-dock-open');
+      openHelp();
+    };
+  }
+  // Benachrichtigungen and Heimatregion keep their native shell handlers.
+}
+
 function decorateButton(button, label) {
   button.classList.add('ec-compact-menu-item');
   button.dataset.ecCompactLabel = label;
   button.title = label;
   button.setAttribute('aria-label', label);
+  button.style.pointerEvents = 'auto';
 
   let icon = button.querySelector(':scope > .ec-compact-menu-icon');
   if (!icon) {
@@ -51,6 +100,8 @@ function decorateButton(button, label) {
   const directSpans = [...button.children].filter((child) => child.tagName === 'SPAN' && child !== icon);
   const labelSpan = directSpans.find((span) => textOf(span).includes(label));
   if (labelSpan) labelSpan.classList.add('ec-compact-menu-label');
+
+  bindDirectAction(button, label);
 }
 
 function compactMenu(dock) {
