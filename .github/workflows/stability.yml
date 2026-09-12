@@ -8,7 +8,7 @@ on:
   pull_request:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: stability-${{ github.ref }}
@@ -45,28 +45,3 @@ jobs:
           path: dist
           if-no-files-found: error
           retention-days: 7
-      - name: Publish verified dist to main
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -f dist
-          if git diff --cached --quiet; then
-            echo "dist is already current"
-            exit 0
-          fi
-          git commit -m "chore: publish verified production dist [skip ci]"
-          git fetch origin main
-          git rebase origin/main || {
-            git rebase --abort || true
-            git fetch origin main
-            git reset --hard origin/main
-            npm run build
-            git add -f dist
-            if git diff --cached --quiet; then
-              echo "Another workflow already published the same verified dist"
-              exit 0
-            fi
-            git commit -m "chore: publish verified production dist [skip ci]"
-          }
-          git push origin HEAD:main
