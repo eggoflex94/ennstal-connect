@@ -2,12 +2,18 @@ import { supabase } from './supabaseClient';
 import './profile-photo-album.css';
 
 const BUCKET = 'profile-layout-media';
+const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+const MAX_BYTES = 8 * 1024 * 1024;
+
 let observer = null;
 let observedRoot = null;
 let mountTimer = null;
+let activePage = null;
 let activeProfileId = '';
 let currentUserId = '';
 let objectUrls = [];
+let realtimeChannel = null;
+let realtimePhotoIds = new Set();
 
 const esc = (value) => String(value ?? '')
   .replaceAll('&', '&amp;')
@@ -21,8 +27,14 @@ function cleanupUrls() {
   objectUrls = [];
 }
 
-async function viewerId() {
-  if (currentUserId) return currentUserId;
+function cleanupRealtime() {
+  if (realtimeChannel) supabase.removeChannel(realtimeChannel);
+  realtimeChannel = null;
+  realtimePhotoIds = new Set();
+}
+
+async function viewerId(force = false) {
+  if (currentUserId && !force) return currentUserId;
   const { data: { user } } = await supabase.auth.getUser();
   currentUserId = user?.id || '';
   return currentUserId;
@@ -64,8 +76,7 @@ async function loadAlbum(profileId, canModerate) {
     supabase.from('member_photo_comments').select('id,photo_id,author_id,content,created_at').in('photo_id', ids).order('created_at', { ascending: true })
   ];
   if (canModerate) requests.push(supabase.from('member_photo_reports').select('id,photo_id,reporter_id,reason,status,created_at').in('photo_id', ids).eq('status', 'OPEN'));
-  const results = await Promise.all(requests);
-  const [likesResult, commentsResult, reportsResult] = results;
+  const [likesResult, commentsResult, reportsResult] = await Promise.all(requests);
   if (likesResult.error) throw likesResult.error;
   if (commentsResult.error) throw commentsResult.error;
 
@@ -88,11 +99,46 @@ function profileName(profile) {
   return profile?.nickname || [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || 'Mitglied';
 }
 
+function openLightbox(url, alt) {
+  if (!url) return;
+  const overlay = document.createElement('div');
+  overlay.className = 'ec-photo-lightbox';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.innerHTML = `<button type="button" class="ec-photo-lightbox-close" aria-label="Foto schließen">×</button><img src="${esc(url)}" alt="${esc(alt || 'Profilfoto')}">`;
+  const close = () => overlay.remove();
+  overlay.addEventListener('click', (event) => { if (event.target === overlay) close(); });
+  overlay.querySelector('.ec-photo-lightbox-close')?.addEventListener('click', close);
+  document.body.append(overlay);
+}
+
+function subscribeAlbum(profileId, photoIds) {
+  cleanupRealtime();
+  realtimePhotoIds = new Set(photoIds);
+  const shouldRefreshPhotoChild = (payload) => {
+    const id = payload?.new?.photo_id || payload?.old?.photo_id;
+    return Boolean(id && realtimePhotoIds.has(id));
+  };
+  realtimeChannel = supabase.channel(`ec-profile-album-${profileId}-${crypto.randomUUID()}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'member_photos', filter: `owner_id=eq.${profileId}` }, () => scheduleMount(80, true))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'member_photo_likes' }, (payload) => { if (shouldRefreshPhotoChild(payload)) scheduleMount(80, true); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'member_photo_comments' }, (payload) => { if (shouldRefreshPhotoChild(payload)) scheduleMount(80, true); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'member_photo_reports' }, (payload) => { if (shouldRefreshPhotoChild(payload)) scheduleMount(100, true); })
+    .subscribe();
+}
+
 async function renderAlbum(page, profileId) {
   if (!supabase || !page?.isConnected || !profileId) return;
+  activePage = page;
   activeProfileId = profileId;
   cleanupUrls();
-  let album = page.querySelector('.ec-profile-photo-album');
+  const me = await viewerId();
+  const mine = me === profileId;
+  const canModerate = !mine && await canModerateProfile(profileId);
+  if (!page.isConnected) return;
+
+  page.classList.add('ec-has-canonical-album');
+  let album = page.querySelector(':scope .ec-profile-photo-album');
   if (!album) {
     album = document.createElement('section');
     album.className = 'ec-profile-photo-album panel';
@@ -102,9 +148,6 @@ async function renderAlbum(page, profileId) {
   album.innerHTML = '<div class="ec-photo-album-loading">Fotoalbum wird geladen …</div>';
 
   try {
-    const me = await viewerId();
-    const mine = me === profileId;
-    const canModerate = !mine && await canModerateProfile(profileId);
     const { photos, likes, comments, profiles, reports } = await loadAlbum(profileId, canModerate);
     const profileMap = new Map(profiles.map((profile) => [profile.id, profile]));
     const cards = await Promise.all(photos.map(async (photo) => {
@@ -115,19 +158,23 @@ async function renderAlbum(page, profileId) {
       const photoReports = reports.filter((report) => report.photo_id === photo.id);
       const reported = photoReports.length > 0;
       return `<article class="ec-photo-card${reported ? ' is-reported' : ''}" data-photo-id="${esc(photo.id)}">
-        <div class="ec-photo-image-wrap">${url ? `<img src="${esc(url)}" alt="${esc(photo.caption || 'Profilfoto')}" loading="lazy">` : '<div class="ec-photo-image-error">Foto nicht verfügbar</div>'}${reported && canModerate ? '<span class="ec-photo-report-badge">Gemeldet</span>' : ''}</div>
+        <button type="button" class="ec-photo-image-wrap" data-photo-open="${esc(photo.id)}" aria-label="Foto groß anzeigen">
+          ${url ? `<img src="${esc(url)}" alt="${esc(photo.caption || 'Profilfoto')}" loading="lazy" decoding="async">` : '<span class="ec-photo-image-error">Foto nicht verfügbar</span>'}
+          ${reported && canModerate ? '<span class="ec-photo-report-badge">Gemeldet</span>' : ''}
+        </button>
         <div class="ec-photo-card-body">
           ${photo.caption ? `<p class="ec-photo-caption">${esc(photo.caption)}</p>` : ''}
+          <small class="ec-photo-visibility">${photo.visibility === 'FRIENDS' ? '👥 Nur Freunde' : '◎ Öffentlich'}</small>
           <div class="ec-photo-actions">
-            <button type="button" class="ec-photo-like${liked ? ' active' : ''}" data-photo-like="${esc(photo.id)}">${liked ? '♥' : '♡'} ${photoLikes.length}</button>
-            <span>💬 ${photoComments.length}</span>
+            <button type="button" class="ec-photo-like${liked ? ' active' : ''}" data-photo-like="${esc(photo.id)}" aria-pressed="${liked ? 'true' : 'false'}">${liked ? '♥ Gefällt dir' : '♡ Gefällt mir'} <span>${photoLikes.length}</span></button>
+            <span class="ec-photo-comment-count">💬 ${photoComments.length}</span>
             ${!mine ? `<button type="button" class="ec-photo-report" data-photo-report="${esc(photo.id)}">Melden</button>` : ''}
             ${mine ? `<button type="button" class="ec-photo-delete" data-photo-delete="${esc(photo.id)}" data-photo-path="${esc(photo.image_url)}">Entfernen</button>` : ''}
             ${canModerate && reported ? `<button type="button" class="ec-photo-admin-remove" data-photo-admin-remove="${esc(photo.id)}">Als Admin entfernen</button>` : ''}
           </div>
           ${canModerate && reported ? `<div class="ec-photo-report-reasons"><strong>Offene Meldung${photoReports.length > 1 ? 'en' : ''}</strong>${photoReports.map((report) => `<p>${esc(report.reason)}</p>`).join('')}</div>` : ''}
           <div class="ec-photo-comments">${photoComments.map((comment) => `<div class="ec-photo-comment"><strong>${esc(profileName(profileMap.get(comment.author_id)))}</strong><span>${esc(comment.content)}</span></div>`).join('')}</div>
-          <form class="ec-photo-comment-form" data-photo-comment-form="${esc(photo.id)}"><input name="comment" maxlength="500" placeholder="Kommentar schreiben …" required><button type="submit">Senden</button></form>
+          <form class="ec-photo-comment-form" data-photo-comment-form="${esc(photo.id)}"><input name="comment" maxlength="600" placeholder="Kommentar schreiben …" aria-label="Kommentar schreiben" required><button type="submit">Senden</button></form>
         </div>
       </article>`;
     }));
@@ -140,31 +187,40 @@ async function renderAlbum(page, profileId) {
         <div class="ec-photo-upload-actions"><button type="submit">Hochladen</button><button type="button" class="ec-photo-upload-cancel">Abbrechen</button></div>
       </form>` : ''}
       <div class="ec-photo-grid">${cards.join('') || '<p class="ec-photo-empty">Noch keine Fotos im Album.</p>'}</div>`;
-    bindAlbum(album, page, profileId);
+
+    bindAlbum(album, page, profileId, photos);
+    subscribeAlbum(profileId, photos.map((photo) => photo.id));
   } catch (error) {
     console.error('Fotoalbum konnte nicht geladen werden:', error);
     album.innerHTML = `<p class="ec-photo-album-error">Fotoalbum konnte nicht geladen werden: ${esc(error?.message || 'Unbekannter Fehler')}</p>`;
   }
 }
 
-function bindAlbum(album, page, profileId) {
+function bindAlbum(album, page, profileId, photos) {
+  const photoById = new Map(photos.map((photo) => [photo.id, photo]));
+  album.querySelectorAll('[data-photo-open]').forEach((button) => button.addEventListener('click', () => {
+    const photo = photoById.get(button.dataset.photoOpen);
+    const img = button.querySelector('img');
+    if (img?.src) openLightbox(img.src, photo?.caption || 'Profilfoto');
+  }));
+
   const open = album.querySelector('.ec-photo-upload-open');
   const form = album.querySelector('.ec-photo-upload-form');
-  open?.addEventListener('click', () => { form.hidden = false; open.hidden = true; });
+  open?.addEventListener('click', () => { form.hidden = false; open.hidden = true; form.elements.photo?.focus(); });
   album.querySelector('.ec-photo-upload-cancel')?.addEventListener('click', () => { form.hidden = true; if (open) open.hidden = false; form.reset(); });
+
   form?.addEventListener('submit', async (event) => {
     event.preventDefault();
     const file = form.elements.photo?.files?.[0];
     if (!file) return;
-    if (!['image/jpeg','image/png','image/webp','image/gif'].includes(file.type) || file.size > 8 * 1024 * 1024) {
-      window.alert('Bitte JPG, PNG, WebP oder GIF bis 8 MB auswählen.');
-      return;
-    }
-    const extension = ({'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/gif':'gif'})[file.type];
+    if (!IMAGE_TYPES.has(file.type) || file.size > MAX_BYTES) return window.alert('Bitte JPG, PNG, WebP oder GIF bis 8 MB auswählen.');
+    const extension = ({ 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif' })[file.type];
     const path = `${profileId}/album/${crypto.randomUUID()}.${extension}`;
     const submit = form.querySelector('button[type="submit"]');
     submit.disabled = true;
     try {
+      const me = await viewerId(true);
+      if (me !== profileId) throw new Error('Bitte melde dich erneut an.');
       const { error: uploadError } = await supabase.storage.from(BUCKET).upload(path, file, { contentType: file.type, upsert: false });
       if (uploadError) throw uploadError;
       const { error: insertError } = await supabase.from('member_photos').insert({ owner_id: profileId, image_url: path, caption: String(form.elements.caption?.value || '').trim(), visibility: form.elements.visibility?.value || 'PUBLIC' });
@@ -172,6 +228,7 @@ function bindAlbum(album, page, profileId) {
         await supabase.storage.from(BUCKET).remove([path]);
         throw insertError;
       }
+      form.reset();
       await renderAlbum(page, profileId);
     } catch (error) {
       window.alert(error?.message || 'Foto konnte nicht hochgeladen werden.');
@@ -186,7 +243,8 @@ function bindAlbum(album, page, profileId) {
     if (!me) return window.alert('Bitte melde dich erneut an.');
     button.disabled = true;
     try {
-      const { data } = await supabase.from('member_photo_likes').select('photo_id').eq('photo_id', photoId).eq('user_id', me).maybeSingle();
+      const { data, error: readError } = await supabase.from('member_photo_likes').select('photo_id').eq('photo_id', photoId).eq('user_id', me).maybeSingle();
+      if (readError) throw readError;
       const result = data
         ? await supabase.from('member_photo_likes').delete().eq('photo_id', photoId).eq('user_id', me)
         : await supabase.from('member_photo_likes').insert({ photo_id: photoId, user_id: me });
@@ -210,6 +268,7 @@ function bindAlbum(album, page, profileId) {
     try {
       const { error } = await supabase.from('member_photo_comments').insert({ photo_id: photoId, author_id: me, content });
       if (error) throw error;
+      input.value = '';
       await renderAlbum(page, profileId);
     } catch (error) {
       window.alert(error?.message || 'Kommentar konnte nicht gespeichert werden.');
@@ -244,7 +303,8 @@ function bindAlbum(album, page, profileId) {
       const { data: path, error } = await supabase.rpc('admin_remove_reported_member_photo', { p_photo_id: button.dataset.photoAdminRemove, p_reason: reason.trim() });
       if (error) throw error;
       if (path && !/^https?:\/\//i.test(path)) {
-        try { await supabase.storage.from(BUCKET).remove([path]); } catch {}
+        const { error: storageError } = await supabase.storage.from(BUCKET).remove([path]);
+        if (storageError) console.warn('Albumdatei konnte nach Moderation nicht entfernt werden:', storageError.message);
       }
       window.alert('Gemeldetes Foto wurde entfernt. Der Besitzer wurde automatisch benachrichtigt und die Aktion im Admin-Logbuch protokolliert.');
       await renderAlbum(page, profileId);
@@ -262,7 +322,10 @@ function bindAlbum(album, page, profileId) {
       const path = button.dataset.photoPath;
       const { error } = await supabase.from('member_photos').delete().eq('id', photoId).eq('owner_id', profileId);
       if (error) throw error;
-      if (path && !/^https?:\/\//i.test(path)) await supabase.storage.from(BUCKET).remove([path]);
+      if (path && !/^https?:\/\//i.test(path)) {
+        const { error: storageError } = await supabase.storage.from(BUCKET).remove([path]);
+        if (storageError) console.warn('Albumdatei konnte nicht entfernt werden:', storageError.message);
+      }
       await renderAlbum(page, profileId);
     } catch (error) {
       window.alert(error?.message || 'Foto konnte nicht entfernt werden.');
@@ -271,18 +334,33 @@ function bindAlbum(album, page, profileId) {
   }));
 }
 
-function mount() {
-  const page = document.querySelector('.member-profile-page[data-profile-id]');
-  if (!page) { cleanupUrls(); activeProfileId = ''; return; }
-  const profileId = page.dataset.profileId;
-  if (!profileId) return;
-  if (activeProfileId === profileId && page.querySelector('.ec-profile-photo-album')) return;
-  void renderAlbum(page, profileId);
+async function resolveTarget() {
+  const memberPage = document.querySelector('.member-profile-page[data-profile-id]:not(.public-profile-preview)');
+  if (memberPage) return { page: memberPage, profileId: memberPage.dataset.profileId || '' };
+  const ownPage = document.querySelector('.profile-page-layout');
+  if (ownPage) return { page: ownPage, profileId: await viewerId() };
+  return null;
 }
 
-function scheduleMount(delay = 50) {
+async function mount(force = false) {
+  const target = await resolveTarget();
+  if (!target?.page || !target.profileId) {
+    cleanupUrls();
+    cleanupRealtime();
+    activePage?.classList.remove('ec-has-canonical-album');
+    activePage = null;
+    activeProfileId = '';
+    return;
+  }
+  const { page, profileId } = target;
+  const existing = page.querySelector(':scope .ec-profile-photo-album');
+  if (!force && activePage === page && activeProfileId === profileId && existing) return;
+  await renderAlbum(page, profileId);
+}
+
+function scheduleMount(delay = 50, force = false) {
   window.clearTimeout(mountTimer);
-  mountTimer = window.setTimeout(mount, delay);
+  mountTimer = window.setTimeout(() => void mount(force), delay);
 }
 
 function attachObserver() {
@@ -290,15 +368,25 @@ function attachObserver() {
   if (!root || (observer && observedRoot === root)) return;
   observer?.disconnect();
   observer = new MutationObserver((mutations) => {
-    const relevant = mutations.some((mutation) => [...mutation.addedNodes, ...mutation.removedNodes].some((node) => node?.nodeType === Node.ELEMENT_NODE && (node.matches?.('.member-profile-page') || node.querySelector?.('.member-profile-page'))));
-    if (relevant) scheduleMount();
+    const relevant = mutations.some((mutation) => [...mutation.addedNodes, ...mutation.removedNodes].some((node) => node?.nodeType === Node.ELEMENT_NODE && (
+      node.matches?.('.member-profile-page,.profile-page-layout') || node.querySelector?.('.member-profile-page,.profile-page-layout')
+    )));
+    if (relevant) scheduleMount(40);
   });
   observer.observe(root, { childList: true, subtree: true });
   observedRoot = root;
 }
 
-function refresh() { attachObserver(); scheduleMount(0); }
-window.addEventListener('ec:navigate', refresh);
-window.addEventListener('focus', () => scheduleMount(20));
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', refresh, { once: true });
+function refresh(force = false) { attachObserver(); scheduleMount(0, force); }
+window.addEventListener('ec:navigate', () => refresh());
+window.addEventListener('focus', () => scheduleMount(20, true));
+document.addEventListener('visibilitychange', () => { if (!document.hidden) scheduleMount(20, true); });
+supabase.auth.onAuthStateChange(() => {
+  currentUserId = '';
+  cleanupRealtime();
+  window.setTimeout(() => refresh(true), 0);
+});
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => refresh(), { once: true });
 else refresh();
+
+export {};
