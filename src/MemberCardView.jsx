@@ -25,7 +25,8 @@ function isRecentlyActive(member) {
 
 function rolePresentation(member) {
   const role = String(member?.role || "MEMBER").toUpperCase();
-  if (role === "HEAD_ADMIN" || role === "ADMIN") {
+  const adminPresentation = ["HEAD_ADMIN", "ADMIN", "GLOBAL_ADMIN", "REGIONAL_ADMIN"].includes(role) || member?.directory_admin === true;
+  if (adminPresentation) {
     return { key: role === "HEAD_ADMIN" ? "head-admin" : "admin", theme: "admin", label: role === "HEAD_ADMIN" ? "Hauptadmin" : "Admin", star: "/role-star-red.svg" };
   }
   if (role === "SUPPORTER") return { key: "supporter", theme: "supporter", label: "Supporter", star: "/supporter-star.svg" };
@@ -49,7 +50,7 @@ export default function MemberCardView({ member, profile, friendships, onOpen })
     setOpening(true);
     try {
       const freshMember = await loadMemberProfile(member);
-      onOpen(freshMember || member);
+      if (onOpen) onOpen(freshMember || member);
     } finally {
       setOpening(false);
     }
