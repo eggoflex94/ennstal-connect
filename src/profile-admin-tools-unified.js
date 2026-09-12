@@ -1,4 +1,7 @@
 let mountTimer = null;
+let observer = null;
+let observedRoot = null;
+let observerRetry = null;
 
 async function openAdminTools(targetId, button) {
   if (!targetId || !button || button.dataset.loading === '1') return;
@@ -67,16 +70,35 @@ function scheduleMount(delay = 40) {
   mountTimer = window.setTimeout(mount, delay);
 }
 
-const root = document.getElementById('root') || document.documentElement;
-new MutationObserver((mutations) => {
-  const relevant = mutations.some((mutation) => [...mutation.addedNodes, ...mutation.removedNodes].some((node) =>
-    node?.nodeType === Node.ELEMENT_NODE &&
-    (node.matches?.('.member-profile-page,.member-profile-actions,.member-admin-tools') || node.querySelector?.('.member-profile-page,.member-profile-actions,.member-admin-tools'))
-  ));
-  if (relevant) scheduleMount();
-}).observe(root, { childList: true, subtree: true });
+function desiredObserverRoot() {
+  return document.querySelector('.content-root') || document.querySelector('.modern-main');
+}
 
-window.addEventListener('ec:navigate', () => scheduleMount());
-window.addEventListener('focus', () => scheduleMount(20));
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => scheduleMount(), { once: true });
-else scheduleMount(0);
+function attachObserver() {
+  const root = desiredObserverRoot();
+  if (!root) {
+    if (!observerRetry) observerRetry = window.setTimeout(() => { observerRetry = null; attachObserver(); }, 250);
+    return;
+  }
+  if (observer && observedRoot === root) return;
+  observer?.disconnect();
+  observer = new MutationObserver((mutations) => {
+    const relevant = mutations.some((mutation) => [...mutation.addedNodes, ...mutation.removedNodes].some((node) =>
+      node?.nodeType === Node.ELEMENT_NODE &&
+      (node.matches?.('.member-profile-page,.member-profile-actions,.member-admin-tools') || node.querySelector?.('.member-profile-page,.member-profile-actions,.member-admin-tools'))
+    ));
+    if (relevant) scheduleMount();
+  });
+  observer.observe(root, { childList: true, subtree: true });
+  observedRoot = root;
+}
+
+function refresh(delay = 40) {
+  attachObserver();
+  scheduleMount(delay);
+}
+
+window.addEventListener('ec:navigate', () => refresh());
+window.addEventListener('focus', () => refresh(20));
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => refresh(), { once: true });
+else refresh(0);
