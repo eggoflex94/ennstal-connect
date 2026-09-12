@@ -2,29 +2,54 @@
 // The renderer exposes data-ec-target-id; legacy scoped modules still read data-profile-id.
 let observer = null;
 let observedRoot = null;
+let refreshQueued = false;
+
+function notifyProfileModules() {
+  if (refreshQueued) return;
+  refreshQueued = true;
+  queueMicrotask(() => {
+    refreshQueued = false;
+    window.dispatchEvent(new CustomEvent('ec:navigate', { detail: { source: 'profile-target-compat' } }));
+  });
+}
 
 function normalizePage(page) {
-  if (!page?.matches?.('.member-profile-page')) return;
+  if (!page?.matches?.('.member-profile-page')) return false;
   const targetId = page.dataset.ecTargetId || page.dataset.profileId || '';
-  if (targetId && page.dataset.profileId !== targetId) page.dataset.profileId = targetId;
+  if (!targetId || page.dataset.profileId === targetId) return false;
+  page.dataset.profileId = targetId;
+  return true;
 }
 
 function normalize(scope = document) {
-  if (scope?.matches?.('.member-profile-page')) normalizePage(scope);
-  scope?.querySelectorAll?.('.member-profile-page').forEach(normalizePage);
+  let changed = false;
+  if (scope?.matches?.('.member-profile-page')) changed = normalizePage(scope) || changed;
+  scope?.querySelectorAll?.('.member-profile-page').forEach((page) => { changed = normalizePage(page) || changed; });
+  return changed;
 }
 
 function attach() {
   const root = document.querySelector('.content-root') || document.querySelector('.modern-main');
-  normalize(root || document);
+  if (normalize(root || document)) notifyProfileModules();
   if (!root || (observer && observedRoot === root)) return;
   observer?.disconnect();
   observer = new MutationObserver((records) => {
-    records.forEach((record) => record.addedNodes.forEach((node) => {
-      if (node?.nodeType === Node.ELEMENT_NODE) normalize(node);
-    }));
+    let changed = false;
+    records.forEach((record) => {
+      const page = record.target?.nodeType === Node.ELEMENT_NODE ? record.target.closest?.('.member-profile-page') : null;
+      if (page) changed = normalizePage(page) || changed;
+      record.addedNodes.forEach((node) => {
+        if (node?.nodeType === Node.ELEMENT_NODE) changed = normalize(node) || changed;
+      });
+    });
+    if (changed) notifyProfileModules();
   });
-  observer.observe(root, { childList: true, subtree: true });
+  observer.observe(root, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['data-ec-target-id']
+  });
   observedRoot = root;
 }
 
