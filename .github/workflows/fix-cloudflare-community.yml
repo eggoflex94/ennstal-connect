@@ -1,5 +1,6 @@
 name: Fix Cloudflare Community Build
 
+# Manual retrigger marker after member-card test alignment.
 on:
   push:
     branches: [main]
