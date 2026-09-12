@@ -85,6 +85,9 @@ function decorateButton(button, label) {
   button.title = label;
   button.setAttribute('aria-label', label);
   button.style.pointerEvents = 'auto';
+  button.style.touchAction = 'manipulation';
+  button.style.position = 'relative';
+  button.style.zIndex = '2';
 
   let icon = button.querySelector(':scope > .ec-compact-menu-icon');
   if (!icon) {
@@ -100,6 +103,10 @@ function decorateButton(button, label) {
   const directSpans = [...button.children].filter((child) => child.tagName === 'SPAN' && child !== icon);
   const labelSpan = directSpans.find((span) => textOf(span).includes(label));
   if (labelSpan) labelSpan.classList.add('ec-compact-menu-label');
+
+  [...button.children].forEach((child) => {
+    child.style.pointerEvents = 'none';
+  });
 
   bindDirectAction(button, label);
 }
