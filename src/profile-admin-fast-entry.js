@@ -3,6 +3,7 @@ import { supabase } from './supabaseClient';
 let accessCache = null;
 let accessPromise = null;
 let timer = null;
+let modulePromise = null;
 
 async function canUseAdminTools() {
   if (accessCache !== null) return accessCache;
@@ -24,11 +25,33 @@ async function canUseAdminTools() {
   return accessCache;
 }
 
+async function openAdminTools(targetId, button) {
+  if (!targetId) return;
+  const previous = button?.textContent;
+  if (button) {
+    button.disabled = true;
+    button.textContent = '⚙ Admin Tools …';
+  }
+  try {
+    modulePromise ||= import('./profile-admin-tools-fallback.js');
+    await modulePromise;
+    if (typeof window.ecOpenProfileAdminTools !== 'function') throw new Error('Admin Tools konnten nicht geladen werden.');
+    await window.ecOpenProfileAdminTools(targetId);
+  } catch (error) {
+    window.alert(error?.message || 'Admin Tools konnten nicht geladen werden.');
+  } finally {
+    if (button?.isConnected) {
+      button.disabled = false;
+      button.textContent = previous || '⚙ Admin Tools';
+    }
+  }
+}
+
 async function mountFastEntry() {
   const page = document.querySelector('.member-profile-page[data-profile-id]');
   const actions = page?.querySelector('.member-profile-actions');
   const targetId = page?.dataset.profileId;
-  if (!page || !actions || !targetId || typeof window.ecOpenProfileAdminTools !== 'function') return;
+  if (!page || !actions || !targetId) return;
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user?.id || user.id === targetId) return;
@@ -44,7 +67,7 @@ async function mountFastEntry() {
   }
   button.dataset.profileAdminAuthority = 'fast-entry';
   button.textContent = '⚙ Admin Tools';
-  button.onclick = () => window.ecOpenProfileAdminTools(targetId);
+  button.onclick = () => void openAdminTools(targetId, button);
 }
 
 function schedule(delay = 20) {
@@ -56,8 +79,7 @@ window.addEventListener('ec:navigate', () => schedule(20));
 window.addEventListener('focus', () => schedule(40));
 window.addEventListener('ec:region-change', () => { accessCache = null; schedule(40); });
 supabase?.auth?.onAuthStateChange?.((event) => {
-  if (event === 'SIGNED_OUT') accessCache = null;
-  else if (event === 'SIGNED_IN') accessCache = null;
+  if (event === 'SIGNED_OUT' || event === 'SIGNED_IN') accessCache = null;
   schedule(50);
 });
 
