@@ -28,6 +28,16 @@ function normalizedRegions(rows) {
   return [...core, { slug: 'ueberregional', name: 'Überregional', sort_order: 30, frontendOnly: true }];
 }
 
+function syncIntroRegionCopy(page) {
+  page.querySelectorAll('.ec-auth-regions article').forEach((article) => {
+    const title = article.querySelector('strong');
+    if (!title || title.textContent.trim().toLowerCase() !== 'salzkammergut') return;
+    title.textContent = 'Überregional';
+    const copy = article.querySelector('span');
+    if (copy) copy.textContent = 'Für Mitglieder aus allen anderen Bundesländern und Regionen.';
+  });
+}
+
 async function syncRegistrationRegions() {
   const select = document.querySelector('.auth-page select[name="home_region_slug"]');
   if (!select) return false;
@@ -79,8 +89,10 @@ function prepareAuthPage() {
   // Older versions injected several large promotional sections after React had
   // already rendered the login page. That caused layout jumps, duplicate
   // content and focus/navigation instability. React now remains the sole owner
-  // of the visible auth structure; this helper only synchronizes region data.
+  // of the visible auth structure; this helper only synchronizes region data
+  // and retires the last legacy region label until the React copy is removed.
   page.querySelectorAll('.ec-auth-community-intro, .ec-auth-current-news, .ec-auth-reward-news').forEach((node) => node.remove());
+  syncIntroRegionCopy(page);
   void syncRegistrationRegions();
   return true;
 }
