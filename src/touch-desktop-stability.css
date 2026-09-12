@@ -1,0 +1,85 @@
+/* Final touch-device authority.
+   Phones intentionally use the desktop layout. This layer improves tap targets,
+   focus visibility and horizontal scrolling without switching to a different DOM. */
+
+@media (pointer: coarse) {
+  html,
+  body,
+  #root {
+    min-width: 1180px;
+  }
+
+  body {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    overscroll-behavior-x: none;
+  }
+
+  button,
+  [role="button"],
+  a,
+  input,
+  select,
+  textarea {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(15, 107, 143, .14);
+  }
+
+  button,
+  [role="button"],
+  .primary-button,
+  .secondary-button,
+  .danger-button,
+  .text-button,
+  .modern-nav button,
+  .ec-top-nav button,
+  .member-message,
+  .profile-actions button,
+  .content-card-actions button,
+  .forum-reply-actions button,
+  .event-rsvp-actions button {
+    min-height: 44px;
+  }
+
+  input,
+  select,
+  textarea {
+    min-height: 44px;
+    font-size: 16px;
+  }
+
+  textarea {
+    min-height: 96px;
+  }
+
+  .modern-main,
+  .content-root,
+  .member-profile-page,
+  .groups-page,
+  .forum-page,
+  .native-members-directory,
+  .community-hub {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .native-member-card,
+  .member-card,
+  .group-card,
+  .forum-post,
+  .news-card,
+  .panel {
+    scroll-margin-top: 18px;
+  }
+
+  :focus-visible {
+    outline: 3px solid rgba(15, 107, 143, .42);
+    outline-offset: 2px;
+  }
+
+  .toast,
+  .incoming-message-popup,
+  .content-editor-overlay,
+  .public-photo-lightbox {
+    touch-action: pan-y;
+  }
+}
