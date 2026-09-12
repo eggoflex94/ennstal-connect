@@ -2,7 +2,7 @@ import { supabase } from './supabaseClient';
 
 let regions=[];
 let viewer=null;
-const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
 const age=d=>{if(!d)return'';const b=new Date(d);if(Number.isNaN(b.getTime()))return'';const n=new Date();let a=n.getFullYear()-b.getFullYear();if(n.getMonth()<b.getMonth()||(n.getMonth()===b.getMonth()&&n.getDate()<b.getDate()))a--;return `${a} Jahre`};
 const date=d=>{if(!d)return'';const x=new Date(d);return Number.isNaN(x.getTime())?'':x.toLocaleDateString('de-AT')};
 const norm=v=>String(v||'').replace(/\s+/g,' ').trim().toLowerCase();
@@ -54,6 +54,17 @@ function cleanActionText(button){
 function cleanProfileNoise(root){
   root.querySelectorAll(':scope > .profile-visible-details').forEach(node=>node.remove());
 
+  // ProfileSections owns the one public "Das bin ich" section. Older profile
+  // layers used to add another "Über mich / Das bin ich" panel. Remove every
+  // competing panel instead of trying to style two copies of the same bio.
+  const canonicalStory=root.querySelector('.personal-profile-sections > .profile-story');
+  [...root.querySelectorAll('section,article')].forEach(node=>{
+    if(node===canonicalStory||canonicalStory?.contains(node))return;
+    const heading=norm(node.querySelector(':scope > h2')?.textContent||node.querySelector(':scope > div > h2')?.textContent);
+    const eyebrow=norm(node.querySelector(':scope > .eyebrow')?.textContent||node.querySelector(':scope > div > .eyebrow')?.textContent);
+    if(heading==='das bin ich'&&(eyebrow==='über mich'||eyebrow==='persönlich'||node.classList.contains('profile-story')))node.remove();
+  });
+
   const stories=[...root.querySelectorAll('.personal-profile-sections > .profile-story')];
   stories.slice(1).forEach(node=>node.remove());
   const story=stories[0];
@@ -68,14 +79,17 @@ function cleanProfileNoise(root){
       const duplicatesLegacy=!isLegacy&&legacyText&&text===legacyText;
       const duplicateText=text&&seen.has(text);
       const redundantAbout=!isLegacy&&legacyText&&['über mich','das bin ich'].includes(title)&&(!text||text===legacyText);
-      if(duplicatesLegacy||duplicateText||redundantAbout) block.remove();
-      else if(text) seen.add(text);
+      if(duplicatesLegacy||duplicateText||redundantAbout)block.remove();
+      else if(text)seen.add(text);
     });
   }
 
+  // The hidden React hero must never leave a second visible bio behind.
+  root.querySelectorAll('.member-profile-hero .member-profile-bio').forEach(node=>{node.hidden=true});
+
   document.querySelectorAll('.toast,[role="alert"]').forEach(node=>{
     const text=String(node.textContent||'');
-    if(/Profil gespeichert, aber .*protokolliert/i.test(text)) node.remove();
+    if(/Profil gespeichert, aber .*protokolliert/i.test(text))node.remove();
   });
 }
 async function build(root){
@@ -118,7 +132,7 @@ async function build(root){
       [...sourceActions.querySelectorAll('button')].forEach(button=>{cleanActionText(button);actions.appendChild(button)});
       sourceActions.hidden=true;
     }
-    if(actions.children.length) card.after(actions);
+    if(actions.children.length)card.after(actions);
 
     cleanProfileNoise(root);
     root.dataset.ecMemberProfileFinal='1';
