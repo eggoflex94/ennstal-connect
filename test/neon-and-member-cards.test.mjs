@@ -15,6 +15,7 @@ test('neon theme stays available, persists immediately and survives React rerend
   assert.match(runtime, /MutationObserver/);
   assert.match(neonCss, /html\[data-ec-theme='neon'\]/);
   assert.ok(main.indexOf('./neon-green-theme.css') < main.indexOf('./member-card-mockup-final.css'));
+  assert.doesNotMatch(neonCss, /\.layout-theme-neon :is\([^)]*\.member-card/);
 });
 
 test('production member directory uses the approved member card component', async () => {
