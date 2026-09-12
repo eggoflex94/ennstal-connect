@@ -1,8 +1,8 @@
 const EMOJIS=['😀','😃','😄','😁','😊','😉','😍','🥰','😘','😎','🤗','🤔','😂','🤣','😅','🙈','👍','👎','👏','🙌','🙏','💪','🤝','❤️','💚','💙','💛','🧡','💜','🔥','✨','🎉','🎈','✅','❗','❓','☕','🍻','🏔️','🚗','🚲','🥾','🌲','🌞','🌧️'];
 let timer=0;
 
-function closePickers(except=null){
-  document.querySelectorAll('.ec-chat-emoji-picker').forEach(p=>{if(p!==except)p.remove();});
+function closePickers(){
+  document.querySelectorAll('.ec-chat-emoji-picker').forEach(p=>p.remove());
 }
 
 function insertEmoji(textarea,emoji){
@@ -19,8 +19,8 @@ function insertEmoji(textarea,emoji){
 
 function enhanceForm(form){
   if(!form||form.dataset.ecEmojiReady==='1')return;
-  const textarea=form.querySelector('textarea[name="message"],textarea');
-  const send=form.querySelector('.ec-chat-modern-send,button[type="submit"]');
+  const textarea=form.querySelector('textarea[name="message"]');
+  const send=form.querySelector('.ec-chat-modern-send');
   if(!textarea||!send)return;
   form.dataset.ecEmojiReady='1';
 
@@ -57,11 +57,9 @@ function enhanceForm(form){
   });
 }
 
-function sync(){
-  document.querySelectorAll('.ec-chat-modern-form,.message-form').forEach(enhanceForm);
-}
-
+function sync(){document.querySelectorAll('.ec-chat-modern-form').forEach(enhanceForm);}
 function schedule(delay=40){clearTimeout(timer);timer=setTimeout(sync,delay);}
+
 new MutationObserver(records=>{
   if(records.every(record=>record.target?.closest?.('.ec-chat-emoji-picker')))return;
   schedule();
