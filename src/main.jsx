@@ -142,6 +142,7 @@ import "./head-admin-menu.js";
 import "./head-admin-activity-folders.css";
 import "./head-admin-activity-folders.js";
 import "./profile-admin-tools-unified.css";
+import "./admin-head-access-reliability.js";
 /* Heavy profile Admin Tools load only after a permitted user clicks the button. */
 import "./profile-admin-fast-entry.js";
 import "./regional-admin-tools-bridge.js";
