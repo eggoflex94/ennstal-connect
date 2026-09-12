@@ -1,0 +1,279 @@
+:root {
+  --ec-neon: #7cff00;
+  --ec-neon-bright: #b6ff4a;
+  --ec-neon-soft: rgba(124, 255, 0, 0.18);
+  --ec-neon-line: rgba(124, 255, 0, 0.42);
+  --ec-neon-glow: 0 0 12px rgba(124, 255, 0, 0.34), 0 0 28px rgba(124, 255, 0, 0.12);
+  --ec-dark-0: #050806;
+  --ec-dark-1: #09100b;
+  --ec-dark-2: #0d1710;
+  --ec-dark-3: #122017;
+  --ec-text: #efffe9;
+  --ec-muted: #a9c5a2;
+}
+
+html,
+body,
+#root {
+  background: var(--ec-dark-0) !important;
+  color: var(--ec-text);
+}
+
+body {
+  background-image:
+    radial-gradient(circle at 12% 8%, rgba(124,255,0,.08), transparent 28rem),
+    radial-gradient(circle at 88% 18%, rgba(124,255,0,.05), transparent 34rem),
+    linear-gradient(180deg, #050806 0%, #071009 48%, #050806 100%) !important;
+  background-attachment: fixed !important;
+}
+
+/* Main shells: visual only, no sizing or positioning changes. */
+.sidebar,
+.modern-sidebar,
+.top-nav,
+.modern-top-nav,
+.modern-header,
+.app-header,
+.content-root,
+.modern-main,
+.panel,
+.card,
+.dashboard-card,
+.member-card,
+.profile-card,
+.modal,
+.dialog,
+.dropdown-menu,
+.popover,
+.ec-profile-photo-album,
+.ec-profile-youtube-panel,
+.chat-modern-shell,
+.chat-modern-sidebar,
+.chat-modern-thread {
+  background-color: rgba(9, 16, 11, 0.94) !important;
+  border-color: var(--ec-neon-line) !important;
+}
+
+.panel,
+.card,
+.dashboard-card,
+.member-card,
+.profile-card,
+.ec-profile-photo-album,
+.ec-profile-youtube-panel,
+.chat-modern-shell {
+  box-shadow: inset 0 1px 0 rgba(182,255,74,.06), 0 0 0 1px rgba(124,255,0,.05), var(--ec-neon-glow) !important;
+}
+
+h1, h2, h3,
+.section-title,
+.page-title,
+.eyebrow,
+label,
+strong {
+  color: var(--ec-text);
+}
+
+.eyebrow,
+.section-kicker,
+[data-kicker],
+a,
+.text-button {
+  color: var(--ec-neon-bright) !important;
+}
+
+p,
+small,
+.muted,
+.subtitle,
+.description,
+.helper-text,
+.meta {
+  color: var(--ec-muted);
+}
+
+button,
+.button,
+.primary-button,
+.secondary-button,
+input[type='button'],
+input[type='submit'] {
+  border-color: rgba(124,255,0,.55) !important;
+  box-shadow: 0 0 0 1px rgba(124,255,0,.04), 0 0 14px rgba(124,255,0,.10);
+}
+
+button:hover,
+.button:hover,
+.primary-button:hover,
+.secondary-button:hover {
+  border-color: var(--ec-neon) !important;
+  box-shadow: 0 0 8px rgba(124,255,0,.45), 0 0 22px rgba(124,255,0,.16) !important;
+}
+
+.primary-button,
+button.active,
+.button.active,
+[aria-current='page'],
+[aria-selected='true'] {
+  background: linear-gradient(135deg, #69e900, #9cff24) !important;
+  color: #061006 !important;
+  border-color: #b7ff63 !important;
+  text-shadow: none !important;
+}
+
+.secondary-button,
+.text-button {
+  background-color: rgba(124,255,0,.07) !important;
+}
+
+input,
+textarea,
+select {
+  background-color: #071009 !important;
+  color: var(--ec-text) !important;
+  border-color: rgba(124,255,0,.34) !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #789071 !important;
+}
+
+input:focus,
+textarea:focus,
+select:focus,
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--ec-neon) !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 4px rgba(124,255,0,.12), 0 0 18px rgba(124,255,0,.24) !important;
+}
+
+hr,
+.divider,
+.separator {
+  border-color: rgba(124,255,0,.18) !important;
+}
+
+/* Existing Ennstal Connect branding, recolored without changing dimensions. */
+img[src*='ennstal-connect-logo'],
+img[src*='ennstal-connect-community-logo'],
+img[src*='ennstal-connect-brand'],
+img[class*='logo'],
+.brand-logo img,
+.logo img {
+  filter: brightness(0) saturate(100%) invert(83%) sepia(87%) saturate(1488%) hue-rotate(35deg) brightness(107%) contrast(108%) drop-shadow(0 0 7px rgba(124,255,0,.85)) drop-shadow(0 0 18px rgba(124,255,0,.45)) !important;
+}
+
+.brand,
+.brand-name,
+.logo-text,
+.app-name {
+  color: var(--ec-neon-bright) !important;
+  text-shadow: 0 0 8px rgba(124,255,0,.72), 0 0 22px rgba(124,255,0,.30) !important;
+}
+
+/* Navigation glow stays subtle so labels remain easy to read. */
+.sidebar a,
+.modern-sidebar a,
+nav a,
+.nav-item {
+  color: #dfffd5 !important;
+}
+
+.sidebar a:hover,
+.modern-sidebar a:hover,
+nav a:hover,
+.nav-item:hover {
+  background-color: rgba(124,255,0,.08) !important;
+  color: var(--ec-neon-bright) !important;
+}
+
+/* Profile, album and video surfaces. */
+.ec-photo-card,
+.ec-profile-youtube-card,
+.profile-story-block,
+.profile-folders figure,
+.member-profile-page .ec-mp-card {
+  background: linear-gradient(145deg, rgba(13,23,16,.98), rgba(7,15,9,.98)) !important;
+  border-color: rgba(124,255,0,.30) !important;
+  box-shadow: 0 0 16px rgba(124,255,0,.08) !important;
+}
+
+.ec-profile-youtube-frame,
+.ec-photo-image-wrap {
+  border-color: rgba(124,255,0,.36) !important;
+  box-shadow: 0 0 20px rgba(124,255,0,.10) !important;
+}
+
+/* Chat stays readable; only accents are neon. */
+.ec-chat-modern-bubble,
+.chat-bubble,
+.message-bubble {
+  background-color: #0d1710 !important;
+  border-color: rgba(124,255,0,.22) !important;
+  color: var(--ec-text) !important;
+}
+
+.ec-chat-modern-bubble.is-mine,
+.chat-bubble.is-mine,
+.message-bubble.is-mine {
+  background: linear-gradient(135deg, rgba(72,154,0,.30), rgba(18,48,13,.96)) !important;
+  border-color: rgba(124,255,0,.48) !important;
+}
+
+.ec-chat-modern-read-state,
+.online,
+.presence-online,
+.status-online {
+  color: var(--ec-neon-bright) !important;
+  text-shadow: 0 0 7px rgba(124,255,0,.45);
+}
+
+/* Scrollbars where supported. */
+* {
+  scrollbar-color: rgba(124,255,0,.55) #071009;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(124,255,0,.50);
+  border-radius: 999px;
+  border: 2px solid #071009;
+}
+
+*::-webkit-scrollbar-track {
+  background: #071009;
+}
+
+::selection {
+  background: rgba(124,255,0,.34);
+  color: #fff;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .brand,
+  .brand-name,
+  .logo-text,
+  .app-name {
+    animation: ec-neon-breathe 4.8s ease-in-out infinite;
+  }
+}
+
+@keyframes ec-neon-breathe {
+  0%, 100% { text-shadow: 0 0 7px rgba(124,255,0,.62), 0 0 18px rgba(124,255,0,.22); }
+  50% { text-shadow: 0 0 11px rgba(124,255,0,.88), 0 0 28px rgba(124,255,0,.36); }
+}
+
+@media (max-width: 720px) {
+  body {
+    background-attachment: scroll !important;
+  }
+
+  .panel,
+  .card,
+  .dashboard-card,
+  .ec-profile-photo-album,
+  .ec-profile-youtube-panel {
+    box-shadow: 0 0 12px rgba(124,255,0,.08) !important;
+  }
+}
