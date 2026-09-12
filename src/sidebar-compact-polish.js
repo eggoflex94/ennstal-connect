@@ -68,6 +68,16 @@ function bindDirectAction(button, label) {
     return;
   }
 
+  if (label === 'Benachrichtigungen') {
+    button.onclick = (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      document.body.classList.remove('ec-dock-open');
+      window.dispatchEvent(new CustomEvent('ec:open-notifications'));
+    };
+    return;
+  }
+
   if (label === 'Hilfe') {
     button.onclick = (event) => {
       event.preventDefault();
@@ -76,7 +86,7 @@ function bindDirectAction(button, label) {
       openHelp();
     };
   }
-  // Benachrichtigungen and Heimatregion keep their native shell handlers.
+  // Heimatregion keeps its native shell dialog handler.
 }
 
 function decorateButton(button, label) {
