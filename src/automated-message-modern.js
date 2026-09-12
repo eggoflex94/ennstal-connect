@@ -26,7 +26,7 @@ const automatedPatterns = [
 function normalize(value){ return String(value || "").trim(); }
 function roleTheme(profile){
   const role = normalize(profile?.role).toUpperCase();
-  if(role === "HEAD_ADMIN" || role === "ADMIN") return "admin";
+  if(["HEAD_ADMIN","ADMIN","GLOBAL_ADMIN","REGIONAL_ADMIN"].includes(role)) return "admin";
   if(role === "SUPPORTER") return "supporter";
   if(profile?.account_badge === "BUSINESS") return "business";
   return "member";
