@@ -69,6 +69,26 @@
   opacity: 1;
   white-space: pre-wrap;
 }
+.ec-automated-inline-identity {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  vertical-align: -3px;
+  white-space: nowrap;
+}
+.ec-automated-inline-role-star {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  flex: 0 0 18px;
+  filter: drop-shadow(0 1px 3px rgba(15,23,42,.18));
+}
+.ec-automated-inline-identity strong {
+  font: inherit;
+  font-weight: 800;
+  color: inherit !important;
+}
 .ec-automated-content time,
 .ec-automated-message-modern time,
 .ec-automated-message-modern small {
