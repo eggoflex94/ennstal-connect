@@ -3,7 +3,7 @@ import { supabase } from './supabaseClient';
 const ADMIN_TOOL = ['admin-tools', 'Admin Tools', '<path d="M12 2.8 14 5l3-.2.8 2.9 2.5 1.7-1.1 2.8 1.1 2.8-2.5 1.7-.8 2.9-3-.2-2 2.2-2-2.2-3 .2-.8-2.9-2.5-1.7 1.1-2.8-1.1-2.8 2.5-1.7.8-2.9 3 .2Z"/><circle cx="12" cy="12" r="3.1"/>'];
 const HEAD_TOOLS = [
   ['fake-accounts', 'Fake-Erkennung', '<path d="M12 3 4 6v6c0 4 4 7 8 9 4-2 8-5 8-9V6Z"/><circle cx="11" cy="11" r="3"/><path d="m13.5 13.5 3 3"/>'],
-  ['admin-log', 'Admin-Logbuch', '<path d="M5 3h12a2 2 0 0 1 2 2v16H7a2 2 0 0 1-2-2V3Z"/><path d="M5 17h14M9 7h6M9 11h6"/>'],
+  ['admin-log', 'Team-Aktivitäten', '<path d="M5 3h12a2 2 0 0 1 2 2v16H7a2 2 0 0 1-2-2V3Z"/><path d="M5 17h14M9 7h6M9 11h6"/>'],
   ['ads-manager', 'Werbung', '<rect x="3" y="5" width="18" height="14" rx="3"/><path d="M7 9h10M7 13h6M17 13h.01"/>']
 ];
 
