@@ -165,6 +165,9 @@ import "./friendship-icon-fit.css";
 import "./navigation-cleanup-final.css";
 import "./navigation-cleanup-final.js";
 
+/* Absolute final chat styling: legacy message CSS must not override this. */
+import "./chat-final-authority.css";
+
 class AppErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
