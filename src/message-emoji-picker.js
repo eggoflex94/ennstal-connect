@@ -7,6 +7,8 @@ let panel = null;
 let activeTextarea = null;
 let scheduled = false;
 let observer = null;
+let observedRoot = null;
+let observerRetry = 0;
 
 function setTextareaValue(textarea, value) {
   const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value');
@@ -110,20 +112,37 @@ function schedulePosition() {
   });
 }
 
-function start() {
-  ensureToggle();
-  const root = document.querySelector('.content-root') || document.querySelector('.modern-main') || document.getElementById('root');
-  if (root && !observer) {
-    observer = new MutationObserver((mutations) => {
-      const relevant = mutations.some((mutation) => [...mutation.addedNodes, ...mutation.removedNodes].some((node) => node.nodeType === Node.ELEMENT_NODE && (node.matches?.('.message-form, .chat-box, textarea') || node.querySelector?.('.message-form, .chat-box'))));
-      if (relevant || document.querySelector('.message-form textarea')) schedulePosition();
-    });
-    observer.observe(root, { childList: true, subtree: true });
+function desiredObserverRoot() {
+  return document.querySelector('.content-root') || document.querySelector('.modern-main');
+}
+
+function attachObserver() {
+  const root = desiredObserverRoot();
+  if (!root) {
+    if (!observerRetry) observerRetry = window.setTimeout(() => { observerRetry = 0; attachObserver(); }, 250);
+    return;
   }
+  if (root === observedRoot && observer) return;
+  observer?.disconnect();
+  observer = new MutationObserver((mutations) => {
+    const relevant = mutations.some((mutation) => [...mutation.addedNodes, ...mutation.removedNodes].some((node) => node.nodeType === Node.ELEMENT_NODE && (node.matches?.('.message-form, .chat-box, textarea') || node.querySelector?.('.message-form, .chat-box'))));
+    if (relevant) schedulePosition();
+  });
+  observer.observe(root, { childList: true, subtree: true });
+  observedRoot = root;
+}
+
+function refresh() {
+  attachObserver();
   schedulePosition();
 }
 
-window.addEventListener('ec:navigate', schedulePosition);
+function start() {
+  ensureToggle();
+  refresh();
+}
+
+window.addEventListener('ec:navigate', refresh);
 window.addEventListener('resize', schedulePosition, { passive: true });
 window.addEventListener('scroll', schedulePosition, { passive: true, capture: true });
 window.addEventListener('focus', schedulePosition);
