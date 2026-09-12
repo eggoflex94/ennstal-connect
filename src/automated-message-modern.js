@@ -5,18 +5,6 @@ let currentUserId = "";
 let syncTimer = null;
 let observer = null;
 let observedRoot = null;
-let modernSyncRunning = false;
-
-const AUTOMATED_TYPES = new Set([
-  "ROLE",
-  "POINTS",
-  "VERIFICATION",
-  "VERIFICATION_PROMPT",
-  "GROUP_INVITE",
-  "ADMIN_FORUM_WELCOME",
-  "REGIONAL_ADMIN_FORUM_WELCOME",
-  "PHOTO_MODERATION"
-]);
 
 const automatedPatterns = [
   /hat deine Freundschaftsanfrage angenommen/i,
@@ -206,50 +194,7 @@ function decorate(node){
   node.prepend(header);
 }
 
-function restorePlainModernBubble(bubble, message){
-  bubble.classList.remove("auto-role", "group-invite", "ec-automated-message-modern");
-  bubble.removeAttribute("data-ec-automated-modern");
-  bubble.querySelectorAll(".ec-chat-modern-auto-head,.ec-automated-message-header").forEach(node => node.remove());
-  const directParagraph = [...bubble.children].find(node => node.tagName === "P");
-  if(directParagraph && message?.content != null) directParagraph.textContent = String(message.content);
-}
-
-async function syncModernMessageTypes(){
-  if(modernSyncRunning || !supabase || !currentUserId) return;
-  const thread = document.querySelector(".ec-chat-modern-thread");
-  const list = thread?.querySelector(".ec-chat-modern-messages");
-  const bubbles = list ? [...list.querySelectorAll(":scope > .ec-chat-modern-bubble")] : [];
-  if(!thread || !bubbles.length) return;
-
-  const peerName = normalize(thread.querySelector(".ec-chat-modern-thread-person strong")?.textContent);
-  const peer = peerName ? profileForName(peerName) : null;
-  if(!peer?.id) return;
-
-  modernSyncRunning = true;
-  try{
-    const { data, error } = await supabase.from("messages")
-      .select("id,sender_id,receiver_id,content,message_type,created_at")
-      .or(`and(sender_id.eq.${currentUserId},receiver_id.eq.${peer.id}),and(sender_id.eq.${peer.id},receiver_id.eq.${currentUserId})`)
-      .order("created_at", { ascending: true });
-    if(error) throw error;
-    const rows = data || [];
-    if(rows.length !== bubbles.length) return;
-    bubbles.forEach((bubble, index) => {
-      const message = rows[index];
-      const type = normalize(message?.message_type).toUpperCase();
-      if(!AUTOMATED_TYPES.has(type)) restorePlainModernBubble(bubble, message);
-    });
-  }catch(error){
-    console.warn("Nachrichtentypen konnten nicht abgeglichen werden:", error?.message || error);
-  }finally{
-    modernSyncRunning = false;
-  }
-}
-
-function sync(){
-  findMessageNodes().forEach(decorate);
-  void syncModernMessageTypes();
-}
+function sync(){ findMessageNodes().forEach(decorate); }
 function observerRoot(){ return document.querySelector(".content-root") || document.querySelector(".modern-main"); }
 function ensureObserver(){
   const root = observerRoot();
@@ -258,7 +203,7 @@ function ensureObserver(){
   observer = new MutationObserver((mutations) => {
     const relevant = mutations.some((mutation) => [...mutation.addedNodes, ...mutation.removedNodes].some((node) =>
       node?.nodeType === Node.ELEMENT_NODE &&
-      (node.matches?.(".chat-message,.message-bubble,.message-item,.chat-box,.ec-chat-modern-bubble,.ec-chat-modern-thread") || node.querySelector?.(".chat-message,.message-bubble,.message-item,.chat-box,.ec-chat-modern-bubble,.ec-chat-modern-thread"))
+      (node.matches?.(".chat-message,.message-bubble,.message-item,.chat-box") || node.querySelector?.(".chat-message,.message-bubble,.message-item,.chat-box"))
     ));
     if(!relevant) return;
     clearTimeout(syncTimer);
