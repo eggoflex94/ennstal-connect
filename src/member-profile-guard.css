@@ -10,10 +10,11 @@
 .member-profile-page>.member-profile-hero .member-profile-bio{display:none!important}
 .member-profile-page>.member-profile-hero[data-ec-effective-theme="admin"]>img{border-color:#a71930!important}.member-profile-page>.member-profile-hero[data-ec-effective-theme="supporter"]>img{border-color:#d4a900!important}.member-profile-page>.member-profile-hero[data-ec-effective-theme="business"]>img{border-color:#2e78b7!important}
 .member-profile-page>.member-profile-actions{display:flex!important;gap:8px!important;flex-wrap:wrap!important;margin:0 0 16px!important;position:relative!important;z-index:3!important}.member-profile-page>.member-profile-actions button{min-height:38px!important;padding:8px 12px!important;border-radius:9px!important}
+.member-profile-page>.member-profile-actions>.ec-profile-admin-inline{display:inline-flex!important;visibility:visible!important;opacity:1!important;align-items:center!important;justify-content:center!important}
 .member-profile-page>.member-admin-tools{display:block!important;visibility:visible!important;opacity:1!important;position:relative!important;z-index:3!important;overflow:visible!important;margin:0 0 18px!important}
 .member-profile-page>.member-admin-tools>div{display:flex!important;flex-wrap:wrap!important;gap:8px!important;position:relative!important;z-index:4!important}
 /* App.jsx still contains legacy sibling renders after MemberProfile. The canonical copies now live inside MemberProfile/ProfileSections. */
 .content-root>.member-groups,.content-root>.public-photo-folder{display:none!important}
-/* Never allow old injected community modules or admin portals to reappear above React content. */
-.member-profile-page>.ec-profile-community-modules,.member-profile-page .ec-profile-admin-portal,.member-profile-page .ec-profile-admin-open,.member-profile-page .ec-profile-admin-inline{display:none!important}
+/* Never allow old injected community modules or deprecated admin portals to reappear above React content. */
+.member-profile-page>.ec-profile-community-modules,.member-profile-page .ec-profile-admin-portal,.member-profile-page .ec-profile-admin-open{display:none!important}
 @media(max-width:760px){.member-profile-page>.member-profile-hero:not(.ec-clean-profile-hidden){grid-template-columns:1fr!important}.member-profile-page>.member-profile-hero:not(.ec-clean-profile-hidden)>img{width:150px!important;height:150px!important;min-width:150px!important;min-height:150px!important;max-width:150px!important;max-height:150px!important}}
