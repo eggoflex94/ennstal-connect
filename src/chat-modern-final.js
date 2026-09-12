@@ -7,6 +7,9 @@ let messages = [];
 let activePeerId = null;
 let mounting = false;
 let checkTimer = null;
+let observer = null;
+let observedRoot = null;
+let observerRetry = null;
 
 const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
 const getName = (profile) => profile?.nickname || [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || "Mitglied";
@@ -184,15 +187,41 @@ function scheduleCheck(delay = 60) {
   checkTimer = setTimeout(() => void mountIfNeeded(), delay);
 }
 
-new MutationObserver((records) => {
-  if (records.every((record) => record.target?.closest?.(".ec-chat-modern-shell"))) return;
-  scheduleCheck(80);
-}).observe(document.documentElement, { childList: true, subtree: true });
+function desiredObserverRoot() {
+  return document.querySelector('.content-root') || document.querySelector('.modern-main');
+}
 
-window.addEventListener("ec:navigate", () => scheduleCheck(20));
-window.addEventListener("popstate", () => scheduleCheck(20));
-document.addEventListener("visibilitychange", () => { if (!document.hidden) scheduleCheck(20); });
-setInterval(() => void mountIfNeeded(), 1200);
-scheduleCheck(0);
+function attachObserver() {
+  const root = desiredObserverRoot();
+  if (!root) {
+    if (!observerRetry) observerRetry = window.setTimeout(() => { observerRetry = null; attachObserver(); }, 250);
+    return;
+  }
+  if (observer && observedRoot === root) return;
+  observer?.disconnect();
+  observer = new MutationObserver((records) => {
+    const relevant = records.some((record) => {
+      if (record.target?.closest?.('.ec-chat-modern-shell')) return false;
+      return [...record.addedNodes, ...record.removedNodes].some((node) =>
+        node?.nodeType === Node.ELEMENT_NODE &&
+        (node.matches?.('.message-overview,.chat-box,.ec-chat-modern-host') || node.querySelector?.('.message-overview,.chat-box'))
+      );
+    });
+    if (relevant) scheduleCheck(80);
+  });
+  observer.observe(root, { childList: true, subtree: true });
+  observedRoot = root;
+}
+
+function refresh(delay = 20) {
+  attachObserver();
+  scheduleCheck(delay);
+}
+
+window.addEventListener("ec:navigate", () => refresh(20));
+window.addEventListener("popstate", () => refresh(20));
+document.addEventListener("visibilitychange", () => { if (!document.hidden) refresh(20); });
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => refresh(0), { once: true });
+else refresh(0);
 
 export {};
