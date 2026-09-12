@@ -3,6 +3,8 @@ import { supabase } from './supabaseClient';
 let mountedProfileId = null;
 let refreshTimer = null;
 let modal = null;
+let loadingProfileId = null;
+let lastRequestedAt = 0;
 
 const esc = (v) => String(v ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
 const formatTime = (v) => { try { return new Date(v).toLocaleString('de-AT'); } catch { return ''; } };
@@ -163,29 +165,44 @@ async function refreshOpenAlbum(ownerId, selectedId) {
   openAlbum(ownerId, data, selectedId);
 }
 
-async function mountFolder() {
+async function mountFolder(force = false) {
   const page = document.querySelector('.member-profile-page[data-profile-id]');
-  if (!page) { mountedProfileId = null; return; }
+  if (!page) {
+    mountedProfileId = null;
+    loadingProfileId = null;
+    return;
+  }
   const ownerId = page.dataset.profileId;
   if (!ownerId) return;
-  if (mountedProfileId === ownerId && page.querySelector('.ec-profile-photo-folder')) return;
+  if (!force && mountedProfileId === ownerId && page.querySelector('.ec-profile-photo-folder')) return;
+  if (loadingProfileId === ownerId) return;
+  const now = Date.now();
+  if (!force && now - lastRequestedAt < 500) return;
+
+  loadingProfileId = ownerId;
+  lastRequestedAt = now;
   try {
     const data = await fetchAlbum(ownerId);
+    if (!page.isConnected || page.dataset.profileId !== ownerId) return;
     renderFolder(page, data);
     mountedProfileId = ownerId;
   } catch (error) {
     console.warn('Foto-Ordner konnte nicht geladen werden:', error?.message || error);
+  } finally {
+    if (loadingProfileId === ownerId) loadingProfileId = null;
   }
 }
 
-function schedule(delay = 80) {
+function schedule(delay = 80, force = false) {
   clearTimeout(refreshTimer);
-  refreshTimer = setTimeout(() => void mountFolder(), delay);
+  refreshTimer = setTimeout(() => void mountFolder(force), delay);
 }
 
-new MutationObserver(() => schedule(120)).observe(document.documentElement, { childList: true, subtree: true });
-window.addEventListener('ec:navigate', () => schedule(40));
-window.addEventListener('focus', () => schedule(80));
+// Intentionally no full-page MutationObserver. React already owns the DOM and
+// profile navigation emits ec:navigate. Avoiding a document-wide observer keeps
+// the album from re-querying Supabase during unrelated UI updates.
+window.addEventListener('ec:navigate', () => schedule(60, true));
+window.addEventListener('focus', () => schedule(120, false));
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modal) closeAlbum(); });
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => schedule(0), { once: true });
-else schedule(0);
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => schedule(0, true), { once: true });
+else schedule(0, true);
