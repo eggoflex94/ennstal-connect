@@ -1,9 +1,11 @@
 /* Profile customization helpers only.
    Layout rewards are owned by standard-theme-runtime.js so legacy layouts
-   cannot overwrite Standard / Connect Rot / Connect Blau anymore. */
+   cannot overwrite Standard / Connect Rot / Connect Blau anymore.
+   This module is event-driven: no full-page MutationObserver. */
 
 let applyingEnhancements = false;
 let enhancementQueued = false;
+let retryTimers = [];
 
 function enhanceHeadAdminOperatorLabel() {
   document.querySelectorAll(".member-profile-hero.head-admin .admin-responsibilities").forEach((box) => {
@@ -13,7 +15,6 @@ function enhanceHeadAdminOperatorLabel() {
       .replace(/^Zuständig\s+für:\s*/i, "")
       .trim();
     if (!detail) return;
-
     const nextText = `♛ Betreiber · ${detail}`;
     if (current !== nextText) box.textContent = nextText;
     box.classList.add("operator-responsibilities");
@@ -24,7 +25,7 @@ function enhanceHeadAdminOperatorLabel() {
 function enhanceOwnProfileCustomization() {
   const form = document.querySelector(".profile-form");
   const card = document.querySelector(".my-profile-card");
-  if (!form || !card || form.dataset.fullCustomization === "true") return;
+  if (!form || !card || form.dataset.fullCustomization === "true") return false;
 
   const accent = form.querySelector('[name="profile_accent"]');
   const backgroundColor = form.querySelector('[name="profile_background_color"]');
@@ -48,6 +49,7 @@ function enhanceOwnProfileCustomization() {
   form.querySelector(".primary-button")?.before(panel);
 
   const applyPreview = () => {
+    if (!card.isConnected) return;
     if (accent?.value) {
       card.style.setProperty("--profile-accent", accent.value);
       card.style.borderColor = accent.value;
@@ -91,14 +93,15 @@ function enhanceOwnProfileCustomization() {
 
   form.dataset.fullCustomization = "true";
   applyPreview();
+  return true;
 }
 
 function applyEnhancements() {
-  if (applyingEnhancements) return;
+  if (applyingEnhancements) return false;
   applyingEnhancements = true;
   try {
     enhanceHeadAdminOperatorLabel();
-    enhanceOwnProfileCustomization();
+    return enhanceOwnProfileCustomization();
   } finally {
     applyingEnhancements = false;
   }
@@ -113,15 +116,15 @@ function queueEnhancements() {
   });
 }
 
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", applyEnhancements, { once: true });
-} else {
-  applyEnhancements();
+function scheduleProfileMounts() {
+  retryTimers.forEach(clearTimeout);
+  retryTimers = [0, 100, 300, 700, 1400].map((delay) => setTimeout(queueEnhancements, delay));
 }
 
-const observer = new MutationObserver((mutations) => {
-  if (applyingEnhancements) return;
-  const relevant = mutations.some((mutation) => mutation.addedNodes.length || mutation.removedNodes.length);
-  if (relevant) queueEnhancements();
-});
-observer.observe(document.documentElement, { childList: true, subtree: true });
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", scheduleProfileMounts, { once: true });
+} else {
+  scheduleProfileMounts();
+}
+window.addEventListener("ec:navigate", scheduleProfileMounts);
+window.addEventListener("focus", () => queueEnhancements());
