@@ -94,19 +94,22 @@ export default function MemberCardView({ member, profile, friendships, onOpen })
         {opening ? "Profil wird geladen …" : getName(member)}
       </strong>
 
-      <img
-        className={`member-avatar ec-native-avatar ${presentation.theme}`}
-        src={member.avatar_url || DEFAULT_AVATAR}
-        alt={`Profilbild von ${getName(member)}`}
-        loading="lazy"
-        decoding="async"
-        onError={(event) => { event.currentTarget.onerror = null; if (!event.currentTarget.src.endsWith(DEFAULT_AVATAR)) event.currentTarget.src = DEFAULT_AVATAR; }}
-      />
+      <div className="ec-member-avatar-wrap">
+        <img
+          className={`member-avatar ec-native-avatar ${presentation.theme}`}
+          src={member.avatar_url || DEFAULT_AVATAR}
+          alt={`Profilbild von ${getName(member)}`}
+          loading="lazy"
+          decoding="async"
+          onError={(event) => { event.currentTarget.onerror = null; if (!event.currentTarget.src.endsWith(DEFAULT_AVATAR)) event.currentTarget.src = DEFAULT_AVATAR; }}
+        />
+        {!member.hide_online_status && <span className={`ec-avatar-presence ${online ? "online" : "offline"}`} aria-hidden="true" />}
+      </div>
 
       <div className="member-meta ec-member-meta">
         <div className="member-name ec-native-member-name">
           <span className="ec-member-realname">{fullName}</span>
-          {age !== null && <small className="ec-member-age">{age} J.</small>}
+          {age !== null && <small className="ec-member-age">{age} Jahre</small>}
         </div>
       </div>
 
