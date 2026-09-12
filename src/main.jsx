@@ -137,6 +137,8 @@ import "./automated-message-modern.css";
 import "./automated-message-modern.js";
 import "./profile-visits-layout.css";
 import "./head-admin-menu.js";
+import "./head-admin-activity-folders.css";
+import "./head-admin-activity-folders.js";
 import "./regional-admin-tools-bridge.js";
 import "./ui-requested-fixes.js";
 import "./home-modern-final.css";
