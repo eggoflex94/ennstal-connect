@@ -81,10 +81,11 @@ async function loadContext(targetId) {
   const moderationPermissions = new Set(regionalMods.flatMap(x => Array.isArray(x.permissions) ? x.permissions.map(y => String(y).toUpperCase()) : []));
   const hasRegionalAdmin = regionalAdmins.length > 0;
   const hasRegionalMod = regionalMods.length > 0;
+  const isRegionalAdminForTarget = regionalAdmins.some(x => x.active !== false && x.region_id === target.home_region_id);
   const allowed = isHead || isGlobalAdmin || hasRegionalAdmin || hasRegionalMod || bool(viewer.forum_moderator) || PERMISSIONS.some(([key]) => bool(permissions[key]));
   if (!allowed) return null;
   return {
-    viewer,target,isHead,isGlobalAdmin,permissions,
+    viewer,target,isHead,isGlobalAdmin,isRegionalAdminForTarget,permissions,
     regions: regionsResult.data || [],
     regionalAdmins,regionalMods,moderationPermissions,
     targetRegionalAdmins: targetRegionalAdminResult.data || [],
@@ -96,8 +97,12 @@ function can(ctx, permission) {
   return ctx.isHead || bool(ctx.permissions?.[permission]);
 }
 
+function isBaselineAdminForTarget(ctx) {
+  return ctx.isHead || ctx.isGlobalAdmin || ctx.isRegionalAdminForTarget;
+}
+
 function canModerateMember(ctx) {
-  return ctx.isHead || can(ctx,'manage_members') || bool(ctx.viewer.forum_moderator) || ctx.moderationPermissions.has('MODERATION') || ctx.moderationPermissions.has('REPORTS');
+  return isBaselineAdminForTarget(ctx) || can(ctx,'manage_members') || bool(ctx.viewer.forum_moderator) || ctx.moderationPermissions.has('MODERATION') || ctx.moderationPermissions.has('REPORTS');
 }
 
 function targetName(target) {
@@ -112,9 +117,11 @@ function buildModal(ctx) {
   const target = ctx.target;
   const homeRegion = ctx.regions.find(r => r.id === target.home_region_id) || null;
   const isSuspended = target.account_status === 'SUSPENDED';
+  const baselineAdmin = isBaselineAdminForTarget(ctx);
   const regionOptions = ctx.regions.map(r => `<option value="${esc(r.slug)}" ${r.id===target.home_region_id?'selected':''}>${esc(r.name)}</option>`).join('');
   const targetRegionalAdminIds = new Set(ctx.targetRegionalAdmins.map(x => x.region_id));
   const targetRegionalModIds = new Set(ctx.targetRegionalMods.map(x => x.region_id));
+
   const headRoleTools = ctx.isHead ? `
     <section class="ec-profile-admin-section">
       <h3>Rolle & Rechte <span>Nur Hauptadmin</span></h3>
@@ -138,22 +145,23 @@ function buildModal(ctx) {
   const memberTools = canModerateMember(ctx) ? `
     <section class="ec-profile-admin-section">
       <h3>Mitglied moderieren</h3>
+      ${baselineAdmin ? '<p class="ec-profile-admin-note">Diese Basisfunktionen stehen jedem Global- oder Regionaladmin in seinem Zuständigkeitsbereich zur Verfügung.</p>' : ''}
       <div class="ec-profile-admin-grid">
         ${toolButton('Verwarnung senden','warn')}
-        ${toolButton(isSuspended ? 'Konto freischalten' : 'Konto sperren','suspend',isSuspended?'success':'danger')}
-        ${can(ctx,'manage_members') || ctx.isHead ? toolButton('Forum sperren / freigeben','feature:FORUM_POSTING') : ''}
-        ${can(ctx,'manage_messages') || ctx.isHead ? toolButton('Nachrichten sperren / freigeben','feature:MESSAGING') : ''}
-        ${can(ctx,'manage_friend_requests') || ctx.isHead ? toolButton('Freundschaftsanfragen sperren / freigeben','feature:FRIEND_REQUESTS') : ''}
+        ${baselineAdmin ? toolButton(isSuspended ? 'Konto freischalten' : 'Konto sperren','suspend',isSuspended?'success':'danger') : ''}
+        ${baselineAdmin ? toolButton('Forum sperren / freigeben','feature:FORUM_POSTING') : ''}
+        ${baselineAdmin ? toolButton('Nachrichten sperren / freigeben','feature:MESSAGING') : ''}
+        ${baselineAdmin ? toolButton('Freundschaftsanfragen sperren / freigeben','feature:FRIEND_REQUESTS') : ''}
         ${can(ctx,'manage_reports') || ctx.isHead ? toolButton('Meldungen zum Mitglied','reports') : ''}
       </div>
     </section>` : '';
 
-  const pointTools = can(ctx,'manage_points') ? `
+  const pointTools = baselineAdmin ? `
     <section class="ec-profile-admin-section">
       <h3>Punkte</h3>
       <div class="ec-profile-admin-summary"><span>Community-Punkte</span><strong>${Number(target.community_points || 0).toLocaleString('de-AT')}</strong><span>Kaufpunkte</span><strong>${Number(target.purchase_points || 0).toLocaleString('de-AT')}</strong></div>
       <div class="ec-profile-admin-grid">
-        ${toolButton('Punkte vergeben / abziehen','points')}
+        ${toolButton('Plus- oder Minuspunkte vergeben','points')}
         ${toolButton('Punkteverlauf anzeigen','point-history')}
       </div>
     </section>` : '';
@@ -197,7 +205,7 @@ async function managePermissions(ctx, modal) {
   const { data, error } = await supabase.rpc('admin_get_permissions',{target_user:ctx.target.id});
   if (error) return notify(error.message);
   const panel = modal.querySelector('.ec-profile-admin-body');
-  panel.innerHTML = `<section class="ec-profile-admin-section"><button class="ec-profile-admin-back" type="button">← Zurück</button><h3>Berechtigungen für ${esc(targetName(ctx.target))}</h3><p>Nur aktivierte Funktionen erscheinen später in den Admin Tools dieses Teammitglieds.</p><div class="ec-profile-permission-list">${PERMISSIONS.map(([key,label])=>`<label><input type="checkbox" data-permission="${key}" ${data?.[key]?'checked':''}><span>${esc(label)}</span></label>`).join('')}</div><button type="button" class="ec-profile-permissions-save">Berechtigungen speichern</button></section>`;
+  panel.innerHTML = `<section class="ec-profile-admin-section"><button class="ec-profile-admin-back" type="button">← Zurück</button><h3>Berechtigungen für ${esc(targetName(ctx.target))}</h3><p>Zusatzrechte steuern zusätzliche Verwaltungsbereiche. Punkte, Verwarnungen, Kontosperren und Funktionssperren sind für Global- und Regionaladmins bereits Basisfunktionen.</p><div class="ec-profile-permission-list">${PERMISSIONS.map(([key,label])=>`<label><input type="checkbox" data-permission="${key}" ${data?.[key]?'checked':''}><span>${esc(label)}</span></label>`).join('')}</div><button type="button" class="ec-profile-permissions-save">Berechtigungen speichern</button></section>`;
   panel.querySelector('.ec-profile-admin-back').onclick = () => openTools(ctx.target.id,true);
   panel.querySelector('.ec-profile-permissions-save').onclick = async () => {
     const values = Object.fromEntries(PERMISSIONS.map(([key]) => [key,!!panel.querySelector(`[data-permission="${key}"]`)?.checked]));
@@ -244,24 +252,29 @@ async function handleAction(ctx, action, modal) {
     if (text === null || text.trim().length < 10) return notify('Bitte einen Verwarnungstext mit mindestens 10 Zeichen eingeben.');
     const reason = await askReason('Verwarnung aussprechen'); if (!reason) return;
     const prepared = await preparePrivilegedAction('Verwarnung aussprechen',ctx.target.id,reason); if (prepared?.error) return notify(prepared.error.message);
-    const fn = bool(ctx.viewer.forum_moderator) && !ctx.isHead && role(ctx.viewer.role) !== 'ADMIN' ? 'forum_moderator_warn_user' : 'admin_warn_user';
+    const fn = isBaselineAdminForTarget(ctx) ? 'admin_warn_user' : 'forum_moderator_warn_user';
     const args = fn === 'forum_moderator_warn_user' ? {p_target_user:ctx.target.id,p_warning:text.trim()} : {target_user:ctx.target.id,warning_text:text.trim()};
     const { error } = await supabase.rpc(fn,args); return notify(error ? error.message : 'Verwarnung wurde gesendet.');
   }
   if (action === 'suspend') {
+    if (!isBaselineAdminForTarget(ctx)) return notify('Diese Funktion steht nur Global- oder Regionaladmins im eigenen Zuständigkeitsbereich zur Verfügung.');
     const next = ctx.target.account_status === 'SUSPENDED' ? 'ACTIVE' : 'SUSPENDED';
     const ok = await withPreparedAction(next==='SUSPENDED'?'Konto sperren':'Konto freischalten',ctx.target.id,reason => supabase.rpc('admin_set_account_status',{target_user:ctx.target.id,new_status:next,p_reason:reason}));
     if (ok) { notify(next==='SUSPENDED'?'Konto wurde gesperrt.':'Konto wurde freigeschaltet.'); openTools(ctx.target.id,true); }
     return;
   }
-  if (action.startsWith('feature:')) return toggleFeature(ctx.target.id,action.split(':')[1]);
+  if (action.startsWith('feature:')) {
+    if (!isBaselineAdminForTarget(ctx)) return notify('Diese Funktion steht nur Global- oder Regionaladmins im eigenen Zuständigkeitsbereich zur Verfügung.');
+    return toggleFeature(ctx.target.id,action.split(':')[1]);
+  }
   if (action === 'points') {
-    const amount = Number(window.prompt('Punkteänderung eingeben, z. B. 5 oder -2:', ''));
+    if (!isBaselineAdminForTarget(ctx)) return notify('Punkte können nur Global- oder Regionaladmins im eigenen Zuständigkeitsbereich vergeben.');
+    const amount = Number(window.prompt('Punkteänderung eingeben: positive Zahl für Pluspunkte, negative Zahl für Minuspunkte, z. B. 5 oder -2:', ''));
     if (!Number.isInteger(amount) || amount === 0) return notify('Bitte eine ganze Zahl ungleich 0 eingeben.');
-    const reason = await askReason(amount > 0 ? 'Punkte vergeben' : 'Punkte abziehen'); if (!reason) return;
-    const prepared = await preparePrivilegedAction(amount > 0 ? 'Punkte vergeben' : 'Punkte abziehen',ctx.target.id,reason); if (prepared?.error) return notify(prepared.error.message);
+    const reason = await askReason(amount > 0 ? 'Pluspunkte vergeben' : 'Minuspunkte vergeben'); if (!reason) return;
+    const prepared = await preparePrivilegedAction(amount > 0 ? 'Pluspunkte vergeben' : 'Minuspunkte vergeben',ctx.target.id,reason); if (prepared?.error) return notify(prepared.error.message);
     const { error } = await supabase.rpc('award_member_points',{target_user:ctx.target.id,point_delta:amount,reason_text:reason,category_text:'ADMIN_ADJUSTMENT',notify_member:true});
-    if (error) return notify(error.message); notify('Punkte wurden aktualisiert.'); return openTools(ctx.target.id,true);
+    if (error) return notify(error.message); notify(amount > 0 ? 'Pluspunkte wurden vergeben.' : 'Minuspunkte wurden vergeben.'); return openTools(ctx.target.id,true);
   }
   if (action === 'point-history') return showPointHistory(ctx,modal);
   if (action === 'reports') { window.dispatchEvent(new CustomEvent('ec:navigate',{detail:{page:'reports',targetUserId:ctx.target.id}})); modal.remove(); return; }
@@ -286,7 +299,7 @@ async function handleAction(ctx, action, modal) {
   }
 }
 
-async function openTools(targetId, replace = false) {
+async function openTools(targetId) {
   if (busy) return;
   busy = true;
   try {
