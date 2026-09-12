@@ -1,3 +1,6 @@
+import { useState } from "react";
+import { loadMemberProfile } from "./memberProfileLoader.js";
+
 const DEFAULT_AVATAR = "/community-default-avatar.png";
 
 function getAge(date) {
@@ -31,6 +34,7 @@ function rolePresentation(member) {
 }
 
 export default function MemberCardView({ member, profile, friendships, onOpen, onMessage }) {
+  const [opening, setOpening] = useState(false);
   const presentation = rolePresentation(member);
   const baseRole = String(member?.role || "MEMBER").toUpperCase();
   const isAdminCard = baseRole === "HEAD_ADMIN" || baseRole === "ADMIN";
@@ -41,23 +45,35 @@ export default function MemberCardView({ member, profile, friendships, onOpen, o
   const age = getAge(member.birth_date);
   const statusLabel = online ? (member.presence_device === "MOBILE" ? "Mobil online" : "Online") : "Offline";
 
+  const openFresh = async () => {
+    if (opening) return;
+    setOpening(true);
+    try {
+      const freshMember = await loadMemberProfile(member);
+      onOpen(freshMember || member);
+    } finally {
+      setOpening(false);
+    }
+  };
+
   return (
     <article
-      className={`member-card ${presentation.key} role-theme-${presentation.theme}`}
+      className={`member-card ${presentation.key} role-theme-${presentation.theme}${opening ? " is-opening" : ""}`}
       data-member-id={member.id}
       data-base-role={baseRole}
       data-home-region-id={member.home_region_id || ""}
       data-role-theme={presentation.theme}
-      onClick={() => onOpen(member)}
+      onClick={() => void openFresh()}
       onKeyDown={(event) => {
         if (event.target !== event.currentTarget) return;
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
-          onOpen(member);
+          void openFresh();
         }
       }}
       role="button"
       tabIndex={0}
+      aria-busy={opening}
       aria-label={`Profil von ${getName(member)} öffnen`}
     >
       <span className={`ec-role-surface ec-role-surface-${presentation.theme}`} aria-hidden="true" />
@@ -75,7 +91,7 @@ export default function MemberCardView({ member, profile, friendships, onOpen, o
             </span>
           )}
         </div>
-        <strong className={`member-nickname ec-native-nickname ${presentation.theme}`}>{getName(member)}</strong>
+        <strong className={`member-nickname ec-native-nickname ${presentation.theme}`}>{opening ? "Profil wird geladen …" : getName(member)}</strong>
       </div>
 
       <img
