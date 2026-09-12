@@ -36,15 +36,25 @@ const auditedRpcActions = new Set([
   "forum_moderator_warn_user", "forum_update_post", "forum_delete_post", "forum_update_reply",
   "forum_delete_reply", "review_community_group_owner_change", "set_featured_community_group",
   "create_weekly_poll", "update_community_group", "delete_community_group",
-  "admin_manage_featured_community_group"
+  "admin_manage_featured_community_group", "ec_set_regional_moderator", "ec_set_regional_admin",
+  "ec_set_global_admin", "ec_set_regional_featured_group", "ec_admin_create_regional_ad",
+  "ec_regional_delete_news", "ec_regional_update_news", "ec_regional_homepage_create",
+  "ec_regional_homepage_update", "ec_regional_homepage_delete", "ec_admin_update_event_style",
+  "ec_save_community_announcement", "ec_delete_community_announcement",
+  "ec_save_global_community_announcement", "ec_delete_global_community_announcement",
+  "ec_demote_global_to_regional_admin", "ec_head_set_home_region"
 ]);
-const targetKeys = ["target_user", "p_user_id", "p_target_user", "p_owner_id", "p_member_id"];
+const targetKeys = [
+  "target_user", "target_id", "p_user_id", "p_target_user", "p_target", "p_owner_id", "p_member_id",
+  "p_group_id", "p_post_id", "p_reply_id", "p_report_id", "p_request_id", "p_ad_id", "p_news_id",
+  "p_event_id", "p_section_id", "p_id"
+];
 
 preparePrivilegedAction = async function (actionName, targetId = null, suppliedReason = "") {
   const entered = suppliedReason || window.prompt(`Begründung für „${actionName}“ (verpflichtend):`, "");
   if (entered === null) return { error: new Error("Aktion abgebrochen: Begründung fehlt.") };
   const reason = String(entered).trim();
-  if (reason.length < 5) return { error: new Error("Bitte eine Begründung mit mindestens 5 Zeichen eingeben.") };
+  if (reason.length < 10) return { error: new Error("Bitte eine nachvollziehbare Begründung mit mindestens 10 Zeichen eingeben.") };
   return originalRpc("prepare_privileged_action", { p_action_name: actionName, p_reason: reason, p_target_id: targetId });
 };
 const canUseClientFallback = (error) => /schema cache|function\s+.*does not exist|function\s+upper\(user_role\)\s+does not exist/i.test(error?.message || "");
