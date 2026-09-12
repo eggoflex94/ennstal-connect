@@ -2,7 +2,7 @@ import { supabase } from './supabaseClient';
 
 let accessCache = null;
 let accessPromise = null;
-let timer = null;
+let timers = [];
 let modulePromise = null;
 
 async function canUseAdminTools() {
@@ -51,12 +51,12 @@ async function mountFastEntry() {
   const page = document.querySelector('.member-profile-page[data-profile-id]');
   const actions = page?.querySelector('.member-profile-actions');
   const targetId = page?.dataset.profileId;
-  if (!page || !actions || !targetId) return;
+  if (!page || !actions || !targetId) return false;
 
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user?.id || user.id === targetId) return;
-  if (!(await canUseAdminTools())) return;
-  if (!page.isConnected || page.dataset.profileId !== targetId) return;
+  if (!user?.id || user.id === targetId) return false;
+  if (!(await canUseAdminTools())) return false;
+  if (!page.isConnected || page.dataset.profileId !== targetId) return false;
 
   let button = actions.querySelector('.ec-profile-admin-open');
   if (!button) {
@@ -68,20 +68,30 @@ async function mountFastEntry() {
   button.dataset.profileAdminAuthority = 'fast-entry';
   button.textContent = '⚙ Admin Tools';
   button.onclick = () => void openAdminTools(targetId, button);
+  return true;
 }
 
-function schedule(delay = 20) {
-  clearTimeout(timer);
-  timer = setTimeout(() => void mountFastEntry(), delay);
+function clearTimers() {
+  timers.forEach((timer) => clearTimeout(timer));
+  timers = [];
 }
 
-window.addEventListener('ec:navigate', () => schedule(20));
-window.addEventListener('focus', () => schedule(40));
-window.addEventListener('ec:region-change', () => { accessCache = null; schedule(40); });
+function scheduleMounts() {
+  clearTimers();
+  const delays = [0, 120, 350, 800, 1500];
+  timers = delays.map((delay) => setTimeout(async () => {
+    const mounted = await mountFastEntry();
+    if (mounted) clearTimers();
+  }, delay));
+}
+
+window.addEventListener('ec:navigate', scheduleMounts);
+window.addEventListener('focus', scheduleMounts);
+window.addEventListener('ec:region-change', () => { accessCache = null; scheduleMounts(); });
 supabase?.auth?.onAuthStateChange?.((event) => {
   if (event === 'SIGNED_OUT' || event === 'SIGNED_IN') accessCache = null;
-  schedule(50);
+  scheduleMounts();
 });
 
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => schedule(0), { once: true });
-else schedule(0);
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', scheduleMounts, { once: true });
+else scheduleMounts();
