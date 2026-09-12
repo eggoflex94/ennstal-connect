@@ -55,11 +55,11 @@ function handlePointerUp(event) {
   if (!nav || nav.button?.disabled) return;
   if (!navigate(nav.raw, nav.button)) return;
 
-  // Only suppress legacy sidecar handlers. Native React navigation can still
-  // receive its regular click event outside the sidecar.
+  // Prevent the legacy sidecar from also acting on the same interaction while
+  // keeping other document listeners available for normal React behavior.
   if (nav.button.closest('.ec-regional-shell,.ec-regional-dock') || nav.button.hasAttribute('data-ec-page')) {
     event.preventDefault();
-    event.stopImmediatePropagation();
+    event.stopPropagation();
   }
 }
 
@@ -69,7 +69,7 @@ function handleClick(event) {
   if (!navigate(nav.raw, nav.button)) return;
   if (nav.button.closest('.ec-regional-shell,.ec-regional-dock') || nav.button.hasAttribute('data-ec-page')) {
     event.preventDefault();
-    event.stopImmediatePropagation();
+    event.stopPropagation();
   }
 }
 
