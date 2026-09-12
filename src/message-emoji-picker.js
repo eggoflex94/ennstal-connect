@@ -29,8 +29,18 @@ function insertEmoji(textarea, emoji) {
 function mountEmojiPicker() {
   const form = document.querySelector('.message-form');
   const textarea = form?.querySelector('textarea');
-  if (!form || !textarea || form.dataset.ecEmojiReady === '1') return false;
-  form.dataset.ecEmojiReady = '1';
+  if (!form || !textarea) return false;
+
+  const existingToggle = form.querySelector('.ec-message-emoji-toggle');
+  if (existingToggle) {
+    form.dataset.ecEmojiReady = '1';
+    form.classList.add('ec-message-form-enhanced');
+    return true;
+  }
+
+  // React can keep the form node but replace its children. Never trust the
+  // old data flag unless the actual button still exists.
+  delete form.dataset.ecEmojiReady;
   form.classList.add('ec-message-form-enhanced');
 
   const toggle = document.createElement('button');
@@ -61,6 +71,7 @@ function mountEmojiPicker() {
   };
 
   textarea.insertAdjacentElement('beforebegin', toggle);
+  form.dataset.ecEmojiReady = '1';
   return true;
 }
 
@@ -70,14 +81,11 @@ function schedule(delay = 20) {
 }
 
 function startObserver() {
-  const root = document.querySelector('.modern-main') || document.getElementById('root');
+  const root = document.querySelector('.content-root') || document.querySelector('.modern-main') || document.getElementById('root');
   if (!root || observer) return;
-  observer = new MutationObserver((mutations) => {
-    const chatAppeared = mutations.some((mutation) => [...mutation.addedNodes].some((node) =>
-      node.nodeType === Node.ELEMENT_NODE &&
-      (node.matches?.('.message-form') || node.querySelector?.('.message-form'))
-    ));
-    if (chatAppeared) schedule(0);
+  observer = new MutationObserver(() => {
+    const form = document.querySelector('.message-form');
+    if (form && !form.querySelector('.ec-message-emoji-toggle')) schedule(0);
   });
   observer.observe(root, { childList: true, subtree: true });
   schedule(0);
