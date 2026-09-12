@@ -50,19 +50,53 @@ const targetKeys = [
   "p_event_id", "p_section_id", "p_id"
 ];
 
+let preparedPrivilegedContext = null;
+let privilegeRoleCache = { userId: null, role: null, checkedAt: 0 };
+
+async function currentPrivilegeRole() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user?.id) return "";
+  if (privilegeRoleCache.userId === user.id && Date.now() - privilegeRoleCache.checkedAt < 15000) {
+    return privilegeRoleCache.role || "";
+  }
+  const { data } = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
+  const currentRole = String(data?.role || "").toUpperCase();
+  privilegeRoleCache = { userId: user.id, role: currentRole, checkedAt: Date.now() };
+  return currentRole;
+}
+
 preparePrivilegedAction = async function (actionName, targetId = null, suppliedReason = "") {
+  const actorRole = await currentPrivilegeRole();
+  if (actorRole === "HEAD_ADMIN") {
+    preparedPrivilegedContext = { targetId, preparedAt: Date.now(), headBypass: true };
+    return { data: null, error: null, headBypass: true };
+  }
+
   const entered = suppliedReason || window.prompt(`Begründung für „${actionName}“ (verpflichtend):`, "");
   if (entered === null) return { error: new Error("Aktion abgebrochen: Begründung fehlt.") };
   const reason = String(entered).trim();
   if (reason.length < 10) return { error: new Error("Bitte eine nachvollziehbare Begründung mit mindestens 10 Zeichen eingeben.") };
-  return originalRpc("prepare_privileged_action", { p_action_name: actionName, p_reason: reason, p_target_id: targetId });
+  const result = await originalRpc("prepare_privileged_action", { p_action_name: actionName, p_reason: reason, p_target_id: targetId });
+  if (!result.error) preparedPrivilegedContext = { targetId, preparedAt: Date.now(), headBypass: false };
+  return result;
 };
 const canUseClientFallback = (error) => /schema cache|function\s+.*does not exist|function\s+upper\(user_role\)\s+does not exist/i.test(error?.message || "");
 supabase.rpc = async (fn, args = {}, options) => {
   if (auditedRpcActions.has(fn)) {
     const targetId = targetKeys.map((key) => args?.[key]).find(Boolean) || null;
-    const prepared = await preparePrivilegedAction(fn.replaceAll("_", " "), targetId);
-    if (prepared.error) return { data: null, error: prepared.error };
+    const actorRole = await currentPrivilegeRole();
+    if (actorRole !== "HEAD_ADMIN") {
+      const preparedRecently = preparedPrivilegedContext
+        && Date.now() - preparedPrivilegedContext.preparedAt < 15000
+        && (!targetId || !preparedPrivilegedContext.targetId || preparedPrivilegedContext.targetId === targetId);
+      if (preparedRecently) {
+        preparedPrivilegedContext = null;
+      } else {
+        const prepared = await preparePrivilegedAction(fn.replaceAll("_", " "), targetId);
+        if (prepared.error) return { data: null, error: prepared.error };
+        preparedPrivilegedContext = null;
+      }
+    }
   }
   if (fn === "accept_friend_request") {
     const { data: { user } } = await supabase.auth.getUser();
