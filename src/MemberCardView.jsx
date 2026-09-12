@@ -29,21 +29,20 @@ function rolePresentation(member) {
     return { key: role === "HEAD_ADMIN" ? "head-admin" : "admin", theme: "admin", label: role === "HEAD_ADMIN" ? "Hauptadmin" : "Admin", star: "/role-star-red.svg" };
   }
   if (role === "SUPPORTER") return { key: "supporter", theme: "supporter", label: "Supporter", star: "/supporter-star.svg" };
-  if (member?.account_badge === "BUSINESS") return { key: "business", theme: "business", label: "Unternehmenskonto", star: "/role-star-blue.svg" };
+  if (member?.account_badge === "BUSINESS") return { key: "business", theme: "business", label: "Unternehmer", star: "/role-star-blue.svg" };
   return { key: "member", theme: "member", label: "Mitglied", star: null };
 }
 
-export default function MemberCardView({ member, profile, friendships, onOpen, onMessage }) {
+export default function MemberCardView({ member, profile, friendships, onOpen }) {
   const [opening, setOpening] = useState(false);
   const presentation = rolePresentation(member);
   const baseRole = String(member?.role || "MEMBER").toUpperCase();
-  const isAdminCard = baseRole === "HEAD_ADMIN" || baseRole === "ADMIN";
   const friendship = (friendships || []).find((item) => (item.requester_id === profile?.id && item.receiver_id === member.id) || (item.receiver_id === profile?.id && item.requester_id === member.id));
   const friend = friendship?.status === "ACCEPTED";
   const online = isRecentlyActive(member);
   const fullName = [member.first_name, member.last_name].filter(Boolean).join(" ").trim() || getName(member);
   const age = getAge(member.birth_date);
-  const statusLabel = online ? (member.presence_device === "MOBILE" ? "Mobil online" : "Online") : "Offline";
+  const statusLabel = online ? "Online" : "Offline";
 
   const openFresh = async () => {
     if (opening) return;
@@ -78,61 +77,49 @@ export default function MemberCardView({ member, profile, friendships, onOpen, o
     >
       <span className={`ec-role-surface ec-role-surface-${presentation.theme}`} aria-hidden="true" />
 
-      <div className="ec-member-card-topline">
-        <div className="ec-card-badge-rail" aria-label="Profilkennzeichnungen">
-          {presentation.star && (
-            <span className={`ec-card-badge-icon ec-card-badge-role ec-card-badge-role-${presentation.theme}`} title={presentation.label} aria-label={presentation.label}>
-              <img className="ec-card-badge-img ec-card-badge-role-img" src={presentation.star} alt="" aria-hidden="true" />
-            </span>
-          )}
-          {friend && (
-            <span className="ec-card-badge-icon ec-card-badge-friend" title="Befreundet" aria-label="Befreundet">
-              <img className="ec-card-badge-img ec-card-badge-friend-img" src="/badge-friendship.svg" alt="" aria-hidden="true" />
-            </span>
-          )}
-        </div>
-        <strong className={`member-nickname ec-native-nickname ${presentation.theme}`}>{opening ? "Profil wird geladen …" : getName(member)}</strong>
+      <div className="ec-card-badge-rail" aria-label="Profilkennzeichnungen">
+        {presentation.star && (
+          <span className={`ec-card-badge-icon ec-card-badge-role ec-card-badge-role-${presentation.theme}`} title={presentation.label} aria-label={presentation.label}>
+            <img className="ec-card-badge-img ec-card-badge-role-img" src={presentation.star} alt="" aria-hidden="true" />
+          </span>
+        )}
+        {friend && (
+          <span className="ec-card-badge-icon ec-card-badge-friend" title="Befreundet" aria-label="Befreundet">
+            <img className="ec-card-badge-img ec-card-badge-friend-img" src="/badge-friendship.svg" alt="" aria-hidden="true" />
+          </span>
+        )}
       </div>
 
-      <img
-        className={`member-avatar ec-native-avatar ${presentation.theme}`}
-        src={member.avatar_url || DEFAULT_AVATAR}
-        alt={`Profilbild von ${getName(member)}`}
-        loading="lazy"
-        decoding="async"
-        onError={(event) => { event.currentTarget.onerror = null; if (!event.currentTarget.src.endsWith(DEFAULT_AVATAR)) event.currentTarget.src = DEFAULT_AVATAR; }}
-      />
+      <strong className={`member-nickname ec-native-nickname ${presentation.theme}`}>
+        {opening ? "Profil wird geladen …" : getName(member)}
+      </strong>
+
+      <div className="ec-member-avatar-wrap">
+        <img
+          className={`member-avatar ec-native-avatar ${presentation.theme}`}
+          src={member.avatar_url || DEFAULT_AVATAR}
+          alt={`Profilbild von ${getName(member)}`}
+          loading="lazy"
+          decoding="async"
+          onError={(event) => { event.currentTarget.onerror = null; if (!event.currentTarget.src.endsWith(DEFAULT_AVATAR)) event.currentTarget.src = DEFAULT_AVATAR; }}
+        />
+        {!member.hide_online_status && <span className={`ec-avatar-presence ${online ? "online" : "offline"}`} aria-hidden="true" />}
+      </div>
 
       <div className="member-meta ec-member-meta">
         <div className="member-name ec-native-member-name">
           <span className="ec-member-realname">{fullName}</span>
-          {age !== null && <small className="ec-member-age">({age} Jahre)</small>}
+          {age !== null && <small className="ec-member-age">{age} Jahre</small>}
         </div>
-
-        {!member.hide_online_status && (
-          <div className={`member-status ${online ? "online" : "offline"}`}>
-            <div className="ec-member-presence-line">
-              <span className="ec-member-presence-dot" aria-hidden="true" />
-              <span className="ec-member-presence-label">{statusLabel}</span>
-            </div>
-            {isAdminCard && member.last_active_at && (
-              <small className="ec-member-last-active">zuletzt aktiv {new Date(member.last_active_at).toLocaleString("de-AT", { dateStyle: "short", timeStyle: "short" })}</small>
-            )}
-          </div>
-        )}
       </div>
 
-      {member.id !== profile?.id && (
-        <button
-          className="member-message"
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            onMessage(member);
-          }}
-        >
-          💬 Nachricht
-        </button>
+      {!member.hide_online_status && (
+        <div className={`member-status ${online ? "online" : "offline"}`}>
+          <div className="ec-member-presence-line">
+            <span className="ec-member-presence-dot" aria-hidden="true" />
+            <span className="ec-member-presence-label">{statusLabel}</span>
+          </div>
+        </div>
       )}
     </article>
   );
