@@ -147,6 +147,11 @@ import "./ui-requested-fixes.js";
 import "./home-modern-final.css";
 import "./home-modern-final.js";
 
+/* Final authority for the shared admin hub and icon-only colored dock. */
+import "./admin-central-hub.css";
+import "./admin-central-hub.js";
+import "./dock-icon-color-authority.js";
+
 /* Final upload authority: native React file pickers stay usable on desktop and phones. */
 import "./file-upload-authority.css";
 import "./friendship-icon-fit.css";
