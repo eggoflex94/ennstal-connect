@@ -8,8 +8,6 @@ import './profile-role-star-runtime.js';
 import './global-admin-labels.js';
 import './react-navigation-bridge.js';
 import './head-admin-dock-cleanup.js';
-import './member-profile-original-layout.js';
-import './member-profile-original-layout.css';
 import './profile-all-groups.css';
 import './profile-all-groups.js';
 import './profile-photo-social.css';
