@@ -141,6 +141,7 @@ import "./head-admin-activity-folders.css";
 import "./head-admin-activity-folders.js";
 import "./profile-admin-tools-unified.css";
 import "./profile-admin-tools-unified.js";
+import "./profile-admin-tools-fallback.js";
 import "./regional-admin-tools-bridge.js";
 import "./ui-requested-fixes.js";
 import "./home-modern-final.css";
