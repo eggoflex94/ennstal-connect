@@ -49,8 +49,6 @@ async function loadAccess() {
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { access = null; return null; }
-    const { data: allowed, error: accessError } = await supabase.rpc('ec_has_admin_central_access');
-    if (accessError || allowed !== true) { access = null; return null; }
 
     const [profileResult, permissionResult, regionalResult, moderationResult] = await Promise.all([
       supabase.from('profiles').select('id,nickname,role,account_status,forum_moderator').eq('id', user.id).maybeSingle(),
@@ -61,6 +59,7 @@ async function loadAccess() {
 
     const profile = profileResult.data;
     if (!profile || profile.account_status !== 'ACTIVE') { access = null; return null; }
+
     const regionalPermissions = (moderationResult.data || []).flatMap((row) => Array.isArray(row.permissions) ? row.permissions.map((x) => String(x).toUpperCase()) : []);
     access = {
       user,
@@ -70,6 +69,22 @@ async function loadAccess() {
       regionalPermissions,
     };
     access.rights = rightsFor(access);
+
+    const permissionValues = Object.entries(access.permissions || {})
+      .filter(([key]) => key.startsWith('manage_') || key === 'view_profile_visits')
+      .some(([, value]) => value === true);
+    const locallyAuthorized = access.rights.head
+      || access.rights.global
+      || access.rights.regional
+      || Boolean(profile.forum_moderator)
+      || regionalPermissions.length > 0
+      || permissionValues;
+
+    if (!locallyAuthorized) {
+      const { data: allowed, error: accessError } = await supabase.rpc('ec_has_admin_central_access', { p_user: user.id });
+      if (accessError || allowed !== true) { access = null; return null; }
+    }
+
     return access;
   } catch (error) {
     console.warn('Admin-Zentrale konnte nicht geprüft werden:', error);
@@ -173,7 +188,7 @@ async function openHub() {
 }
 
 async function openAdminForum(overlay, ctx) {
-  const host = overlay.querySelector('.ec-admin-hub-forum-host');
+  const host = overlay.querySelector('.ec-admin-forum-host');
   const gridEl = overlay.querySelector('.ec-admin-hub-grid');
   gridEl.hidden = true;
   host.hidden = false;
