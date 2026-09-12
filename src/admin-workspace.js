@@ -1,5 +1,6 @@
 import { supabase } from "./supabaseClient";
 let mounted=false,isHead=false,isGlobalAdmin=false,isRegionalAdmin=false,allowed=false;
+let timer=null;
 const managed=[[".ec-deletion-admin","🗑️","Kontolöschungen","Offene Löschanträge sicher prüfen und abschließen"]];
 const el=(t,c,x)=>{const n=document.createElement(t);if(c)n.className=c;if(x!==undefined)n.textContent=x;return n;};
 function close(){document.querySelector(".ec-admin-workspace")?.remove();}
@@ -56,7 +57,9 @@ function organize(){
 }
 window.addEventListener("ec:open-admin-tools",()=>void open());
 async function mount(){const ok=await resolveAccess();if(!ok){mounted=false;document.querySelector('.ec-admin-workspace-entry')?.remove();close();return;}organize();mounted=true;}
-let timer;const obs=new MutationObserver(()=>{if(mounted){organize();return}clearTimeout(timer);timer=setTimeout(()=>void mount(),250)});obs.observe(document.documentElement,{childList:true,subtree:true});
-window.addEventListener('ec:region-change',()=>{clearTimeout(timer);timer=setTimeout(()=>void mount(),100)});
-window.addEventListener('focus',()=>void mount());
-void mount();
+function scheduleMount(delay=80){clearTimeout(timer);timer=setTimeout(()=>void mount(),delay);}
+window.addEventListener('ec:navigate',()=>scheduleMount(60));
+window.addEventListener('ec:region-change',()=>scheduleMount(80));
+window.addEventListener('focus',()=>scheduleMount(30));
+supabase?.auth?.onAuthStateChange?.(()=>scheduleMount(80));
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>scheduleMount(0),{once:true});else scheduleMount(0);
