@@ -5,6 +5,7 @@ let observer = null;
 let observedRoot = null;
 let timer = null;
 let activeProfileId = '';
+let activePage = null;
 let currentUserId = '';
 
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[char]));
@@ -17,16 +18,16 @@ function youtubeId(value) {
     const host = url.hostname.replace(/^www\./,'').toLowerCase();
     let id = '';
     if (host === 'youtu.be') id = url.pathname.split('/').filter(Boolean)[0] || '';
-    if (host === 'youtube.com' || host === 'm.youtube.com') {
+    if (host === 'youtube.com' || host === 'm.youtube.com' || host === 'music.youtube.com') {
       if (url.pathname === '/watch') id = url.searchParams.get('v') || '';
-      else if (/^\/(embed|shorts)\//.test(url.pathname)) id = url.pathname.split('/')[2] || '';
+      else if (/^\/(embed|shorts|live)\//.test(url.pathname)) id = url.pathname.split('/')[2] || '';
     }
     return /^[A-Za-z0-9_-]{11}$/.test(id) ? id : '';
   } catch { return ''; }
 }
 
-async function viewerId() {
-  if (currentUserId) return currentUserId;
+async function viewerId(force = false) {
+  if (currentUserId && !force) return currentUserId;
   const { data: { user } } = await supabase.auth.getUser();
   currentUserId = user?.id || '';
   return currentUserId;
@@ -38,12 +39,21 @@ function findAboutAnchor(page) {
     const heading = String(node.querySelector?.(':scope > h2, :scope > div > h2')?.textContent || '').trim().toLowerCase();
     return heading === 'über mich' || heading === 'das bin ich';
   });
-  return about || page.querySelector('.ec-mp-actions') || page.querySelector('.ec-mp-card') || page;
+  return about || page.querySelector('.personal-profile-sections') || page.querySelector('.ec-mp-actions') || page.querySelector('.ec-mp-card') || page;
+}
+
+async function resolveTarget() {
+  const memberPage = document.querySelector('.member-profile-page[data-profile-id]:not(.public-profile-preview)');
+  if (memberPage) return { page: memberPage, profileId: memberPage.dataset.profileId || '' };
+  const ownPage = document.querySelector('.profile-page-layout');
+  if (ownPage) return { page: ownPage, profileId: await viewerId() };
+  return null;
 }
 
 async function render(page, profileId) {
   if (!supabase || !page?.isConnected || !profileId) return;
   activeProfileId = profileId;
+  activePage = page;
   const me = await viewerId();
   const mine = me === profileId;
   const { data, error } = await supabase.from('profile_sections')
@@ -54,7 +64,7 @@ async function render(page, profileId) {
   if (error) return;
   const items = (data || []).filter((item) => youtubeId(item.body));
 
-  let panel = page.querySelector('.ec-profile-youtube-panel');
+  let panel = page.querySelector(':scope .ec-profile-youtube-panel');
   if (!items.length && !mine) {
     panel?.remove();
     return;
@@ -107,18 +117,20 @@ async function render(page, profileId) {
   }));
 }
 
-function mount() {
-  const page = document.querySelector('.member-profile-page[data-profile-id]:not(.public-profile-preview)');
-  if (!page) { activeProfileId = ''; return; }
-  const profileId = page.dataset.profileId;
-  if (!profileId) return;
-  if (activeProfileId === profileId && page.querySelector('.ec-profile-youtube-panel')) return;
-  void render(page, profileId);
+async function mount(force = false) {
+  const target = await resolveTarget();
+  if (!target?.page || !target.profileId) {
+    activeProfileId = '';
+    activePage = null;
+    return;
+  }
+  if (!force && activePage === target.page && activeProfileId === target.profileId && target.page.querySelector(':scope .ec-profile-youtube-panel')) return;
+  await render(target.page, target.profileId);
 }
 
-function schedule(delay = 40) {
+function schedule(delay = 40, force = false) {
   clearTimeout(timer);
-  timer = setTimeout(mount, delay);
+  timer = setTimeout(() => void mount(force), delay);
 }
 
 function attachObserver() {
@@ -126,15 +138,16 @@ function attachObserver() {
   if (!root || (observer && observedRoot === root)) return;
   observer?.disconnect();
   observer = new MutationObserver((records) => {
-    const relevant = records.some((record) => [...record.addedNodes, ...record.removedNodes].some((node) => node?.nodeType === Node.ELEMENT_NODE && (node.matches?.('.member-profile-page') || node.querySelector?.('.member-profile-page'))));
+    const relevant = records.some((record) => [...record.addedNodes, ...record.removedNodes].some((node) => node?.nodeType === Node.ELEMENT_NODE && (node.matches?.('.member-profile-page,.profile-page-layout') || node.querySelector?.('.member-profile-page,.profile-page-layout'))));
     if (relevant) schedule();
   });
   observer.observe(root, { childList: true, subtree: true });
   observedRoot = root;
 }
 
-function refresh() { attachObserver(); schedule(0); }
-window.addEventListener('ec:navigate', refresh);
-window.addEventListener('focus', () => schedule(20));
+function refresh(force = false) { attachObserver(); schedule(0, force); }
+window.addEventListener('ec:navigate', () => refresh());
+document.addEventListener('visibilitychange', () => { if (!document.hidden) schedule(20); });
+supabase.auth.onAuthStateChange(() => { currentUserId = ''; setTimeout(() => refresh(true), 0); });
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', refresh, { once: true });
 else refresh();
