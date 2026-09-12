@@ -3,6 +3,28 @@ let observer = null;
 let observedRoot = null;
 let observerRetry = null;
 
+function legacyAdminElements(page) {
+  if (!page) return [];
+  const elements = [...page.querySelectorAll('.member-admin-tools,.feature-unlocks,.head-admin-media-tools,.member-business-tool')];
+  page.querySelectorAll('button').forEach((button) => {
+    if (/punkteliste|punkte vergeben/i.test(String(button.textContent || ''))) elements.push(button);
+  });
+  return [...new Set(elements)];
+}
+
+function restoreLegacyAdminSurface(targetId) {
+  const page = document.querySelector(`.member-profile-page[data-profile-id="${CSS.escape(String(targetId || ''))}"]`)
+    || document.querySelector('.member-profile-page[data-profile-id]');
+  if (!page) return false;
+  const elements = legacyAdminElements(page);
+  elements.forEach((element) => {
+    element.style.removeProperty('display');
+    element.hidden = false;
+  });
+  page.classList.add('ec-profile-admin-fallback-active');
+  return elements.length > 0;
+}
+
 async function openAdminTools(targetId, button) {
   if (!targetId || !button || button.dataset.loading === '1') return;
   const original = button.textContent;
@@ -17,11 +39,19 @@ async function openAdminTools(targetId, button) {
     await window.ecOpenUnifiedProfileAdminTools(targetId);
   } catch (error) {
     console.error('Admin Tools konnten nicht geladen werden:', error);
+    const restored = restoreLegacyAdminSurface(targetId);
+    if (restored) {
+      button.remove();
+      window.alert('Die erweiterten Admin Tools konnten nicht geöffnet werden. Die direkten Profil-Admin-Werkzeuge wurden stattdessen wieder eingeblendet.');
+      return;
+    }
     window.alert(error?.message || 'Admin Tools konnten nicht geladen werden.');
   } finally {
-    button.dataset.loading = '0';
-    button.disabled = false;
-    button.textContent = original;
+    if (button.isConnected) {
+      button.dataset.loading = '0';
+      button.disabled = false;
+      button.textContent = original;
+    }
   }
 }
 
@@ -37,19 +67,16 @@ function mount() {
   const actions = page.querySelector('.member-profile-actions');
   if (!targetId || !actions) return;
 
+  if (page.classList.contains('ec-profile-admin-fallback-active')) return;
+
   const existing = actions.querySelector('.ec-profile-admin-open');
   if (!hasAdminSurface(page)) {
     existing?.remove();
     return;
   }
 
-  page.querySelectorAll('.member-admin-tools,.feature-unlocks,.head-admin-media-tools,.member-business-tool').forEach((element) => {
+  legacyAdminElements(page).forEach((element) => {
     element.style.setProperty('display', 'none', 'important');
-  });
-  page.querySelectorAll('button').forEach((button) => {
-    if (/punkteliste|punkte vergeben/i.test(String(button.textContent || ''))) {
-      button.style.setProperty('display', 'none', 'important');
-    }
   });
 
   if (existing) {
