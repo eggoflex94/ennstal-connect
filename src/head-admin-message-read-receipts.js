@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import './head-admin-message-read-receipts.css';
 
 let currentUserId = null;
 let enabled = false;
