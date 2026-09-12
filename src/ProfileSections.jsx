@@ -13,7 +13,6 @@ function PrivateImage({ path, alt }) {
   useEffect(() => {
     let cancelled = false, current = '';
     if (!path || !supabase) return;
-    // Authenticated downloads re-check RLS; no publicly shareable storage URL.
     supabase.storage.from(BUCKET).download(path).then(({ data, error }) => {
       if (cancelled || error || !data) return;
       current = URL.createObjectURL(data); setUrl(current);
@@ -89,12 +88,11 @@ export default function ProfileSections({ member, editable = false, preview = fa
       {legacyFields.map(([title,,value]) => <div key={title}><dt>{title}</dt><dd>{value}</dd></div>)}
       {fields.map(item => <div key={item.id}><dt>{item.title}</dt><dd>{item.body}</dd>{editable && <small>{VISIBILITY[item.visibility]}</small>}{itemActions(item)}</div>)}
     </dl>{!fields.length && !legacyFields.length && <p>Noch keine Angaben.</p>}{editable && <div className="profile-add-actions"><button onClick={() => start('FIELD','Wohnort')}>Wohnort</button><button onClick={() => start('FIELD','Hobbys')}>Hobbys</button><button onClick={() => start('FIELD','Beruf')}>Beruf</button><button onClick={() => start('FIELD')}>+ Eigenes Feld</button></div>}</aside>
-    <section className="profile-story panel"><span className="eyebrow">MEIN BEREICH</span><h2>Das bin ich</h2>
-      {!blocks.length && visibleLegacy('bio') && member.bio && <p className="profile-story-text">{member.bio}</p>}
-      {!blocks.length && !member.bio && <p>{editable ? 'Gestalte diesen Bereich mit Texten und Bildern.' : 'Hier gibt es noch keine Beiträge.'}</p>}
+    {(blocks.length > 0 || editable) && <section className="profile-story panel"><span className="eyebrow">MEIN BEREICH</span><h2>Das bin ich</h2>
       {blocks.map(item => { const a = item.appearance || {}; return <article key={item.id} className={`profile-story-block style-${['plain','card','quote'].includes(a.style) ? a.style : 'plain'}`} style={{color:COLORS.includes(a.color)?a.color:COLORS[0],fontFamily:FONTS[a.font]||FONTS.modern,fontSize:({small:14,normal:17,large:23})[a.size]||17,textAlign:['left','center','right'].includes(a.align)?a.align:'left'}}>{item.title && <h3>{item.title}</h3>}{item.kind === 'IMAGE' && <PrivateImage path={item.media_path} alt={item.title}/>}<p className="profile-story-text">{item.body}</p>{itemActions(item)}</article> })}
+      {editable && !blocks.length && <p>Hier kannst du bei Bedarf zusätzliche Texte oder Bilder ergänzen. Dein normaler „Über mich“-Text wird oben im Profil bereits angezeigt.</p>}
       {editable && <div className="profile-add-actions"><button onClick={() => start('TEXT')}>+ Textabschnitt</button><button onClick={() => start('IMAGE')}>+ Bild</button></div>}
-    </section></div>
+    </section>}</div>
     {children}
     <section className="profile-folders panel"><span className="eyebrow">FOTOORDNER</span><h2>{editable?'Meine Fotos':'Fotos'}</h2><div className="profile-folder-tabs">{shownFolders.map(key => <button key={key} className={folder===key?'active':''} onClick={() => setFolder(key)}>{key==='PUBLIC'?'Öffentlich':key==='FRIENDS'?'Freunde':'Privat'} · {photos.filter(x=>x.visibility===key).length}</button>)}{editable && <button onClick={() => start('PHOTO')}>+ Foto hinzufügen</button>}</div><div className="profile-folder-grid">{photos.filter(x=>x.visibility===folder).map(item=><figure key={item.id}><PrivateImage path={item.media_path} alt={item.title}/><figcaption>{item.title}</figcaption>{itemActions(item)}</figure>)}</div>{!photos.some(x=>x.visibility===folder)&&<p>In diesem Ordner sind noch keine sichtbaren Fotos.</p>}</section>
     {editable && draft && <div className="profile-section-modal" role="dialog" aria-modal="true" aria-label="Profilinhalt bearbeiten"><form onSubmit={save} className="profile-section-form"><header><h2>{draft.kind==='FIELD'?'Steckbrief-Feld':draft.kind==='PHOTO'?'Foto':draft.kind==='IMAGE'?'Bildabschnitt':'Textabschnitt'}</h2><button type="button" disabled={busy} onClick={()=>setDraft(null)} aria-label="Bearbeitung schließen">×</button></header><label>{draft.kind==='FIELD'?'Feldname':'Überschrift / Bildbeschreibung'}<input value={draft.title} onChange={e=>patch({title:e.target.value})} maxLength={100} required={draft.kind==='FIELD'} autoFocus/></label>{draft.kind!=='PHOTO'&&<label>{draft.kind==='FIELD'?'Deine Angabe':'Text'}<textarea value={draft.body} onChange={e=>patch({body:e.target.value})} maxLength={10000} rows={draft.kind==='FIELD'?3:7} required={draft.kind==='FIELD'||draft.kind==='TEXT'}/></label>}
