@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import './member-directory-polish.css';
 
 let regions=[];
 let viewer=null;
@@ -104,13 +105,16 @@ async function build(root){
     card.after(actions);
     if(admin)actions.after(admin);
 
-    const bio=target.bio&&visible(target,'bio',isFriend)?target.bio:'';
-    const extras=[];
-    if(bio)extras.push(`<section class="ec-mp-section"><span>ÜBER MICH</span><h2>Über ${esc(target.nickname||'dieses Mitglied')}</h2><p>${esc(bio)}</p></section>`);
+    // Keep the single, structured "Das bin ich / Über mich" section rendered
+    // by ProfileSections below the profile. This final renderer must not create
+    // a second bio card.
     const interests=Array.isArray(target.interests)?target.interests.join(', '):target.interests;
     const info=[];if(interests&&visible(target,'interests',isFriend))info.push(row('Interessen',interests));if(target.website&&visible(target,'website',isFriend))info.push(row('Webseite',target.website));
-    if(info.length)extras.push(`<section class="ec-mp-section"><span>WEITERE ANGABEN</span><h2>Profilinformationen</h2><div class="ec-mp-rows compact">${info.join('')}</div></section>`);
-    if(extras.length){const more=document.createElement('div');more.className='ec-mp-more';more.innerHTML=extras.join('');const anchor=admin||actions;anchor.after(more)}
+    if(info.length){
+      const more=document.createElement('div');more.className='ec-mp-more';
+      more.innerHTML=`<section class="ec-mp-section"><span>WEITERE ANGABEN</span><h2>Profilinformationen</h2><div class="ec-mp-rows compact">${info.join('')}</div></section>`;
+      const anchor=admin||actions;anchor.after(more);
+    }
 
     root.dataset.ecMemberProfileFinal='1';
   }finally{
