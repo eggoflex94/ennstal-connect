@@ -147,14 +147,18 @@ import "./ui-requested-fixes.js";
 import "./home-modern-final.css";
 import "./home-modern-final.js";
 
-/* Final authority for the shared admin hub and icon-only colored dock. */
+/* Shared admin hub and colored icon-only dock. */
 import "./admin-central-hub.css";
 import "./admin-central-hub.js";
 import "./dock-icon-color-authority.js";
 
-/* Final upload authority: native React file pickers stay usable on desktop and phones. */
+/* Native upload authority. */
 import "./file-upload-authority.css";
 import "./friendship-icon-fit.css";
+
+/* Absolute final navigation authority: loaded after every older desktop/mobile layer. */
+import "./navigation-cleanup-final.css";
+import "./navigation-cleanup-final.js";
 
 class AppErrorBoundary extends React.Component {
   constructor(props) {
