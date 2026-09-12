@@ -1,3 +1,4 @@
+import './profile-photo-album-modern.css';
 import './profile-photo-album-modern.js';
 
 // Keep the native React upload path authoritative. We only normalize files that
@@ -20,7 +21,6 @@ async function decodeImage(file) {
     await image.decode();
     return image;
   } finally {
-    // The decoded image keeps its pixels; the object URL is no longer needed.
     setTimeout(() => URL.revokeObjectURL(url), 0);
   }
 }
