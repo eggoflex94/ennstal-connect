@@ -35,3 +35,10 @@ test('profile sections reset stale content when navigating between members', asy
   assert.match(code, /\[member\?\.id\]/);
   assert.match(code, /if \(cancelled\) return/);
 });
+
+test('member profile hides only duplicate top-level groups and photo folders', async () => {
+  const css = await source('src/profile-final-stability.css');
+  assert.match(css, /\.content-root:has\(> \.member-profile-page\) > \.member-groups/);
+  assert.match(css, /\.content-root:has\(> \.member-profile-page\) > \.public-photo-folder/);
+  assert.match(css, /\.member-profile-page \.member-profile-hero/);
+});
