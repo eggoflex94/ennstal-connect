@@ -4,6 +4,16 @@ import "./chat-modern-media.css";
 const MESSAGE_MEDIA_BUCKET = "message-media";
 const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const AUTOMATED_MESSAGE_TYPES = new Set([
+  "ROLE",
+  "POINTS",
+  "VERIFICATION",
+  "VERIFICATION_PROMPT",
+  "GROUP_INVITE",
+  "ADMIN_FORUM_WELCOME",
+  "REGIONAL_ADMIN_FORUM_WELCOME",
+  "PHOTO_MODERATION"
+]);
 
 let mountedSection = null;
 let currentUser = null;
@@ -38,7 +48,7 @@ const roleLabel = (profile) => {
   if (role === "SUPPORTER") return "Supporter";
   return "Mitglied";
 };
-const isAutomated = (message) => ["ROLE", "GROUP_INVITE"].includes(String(message?.message_type || "").toUpperCase()) || /automatisch generierte nachricht|automatisierte nachricht|rolle .* erhalten|rechte .* erhalten|moderationsrechte|regional admin|forum.?moderator|hat dich in die gruppe|punkte erhalten|profilverifizierung|profil-verifizierung|du hast soeben von/i.test(String(message?.content || ""));
+const isAutomated = (message) => AUTOMATED_MESSAGE_TYPES.has(String(message?.message_type || "").toUpperCase());
 
 function profileById(id) { return profiles.find((profile) => profile.id === id) || null; }
 function currentIsHeadAdmin() { return String(profileById(currentUser?.id)?.role || "").toUpperCase() === "HEAD_ADMIN"; }
