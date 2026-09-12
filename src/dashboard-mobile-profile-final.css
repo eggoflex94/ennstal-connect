@@ -17,7 +17,7 @@
 .modern-main .dashboard-card,
 .modern-main .home-card{backdrop-filter:none}
 
-/* Own profile: one deterministic grid. The preview must never overlap the editor. */
+/* Own profile: one deterministic desktop grid on every device. */
 .profile-page-layout{
   display:block!important;
   width:100%!important;
@@ -96,21 +96,4 @@
   width:100%!important;
   min-width:0!important;
   max-width:100%!important;
-}
-
-@media(max-width:1120px){
-  .profile-page-layout>.my-area-layout,
-  .my-area-layout{
-    grid-template-columns:1fr!important;
-  }
-  .my-area-layout .my-profile-card{
-    max-width:100%!important;
-  }
-}
-
-@media(max-width:700px){
-  .my-area-layout .profile-editor-grid,
-  .my-area-layout .profile-typography-grid{
-    grid-template-columns:1fr!important;
-  }
 }
