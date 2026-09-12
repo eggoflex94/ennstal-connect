@@ -20,20 +20,30 @@ const context={
 vm.runInNewContext(code,context);
 const Card=context.module.exports.default;
 
-test('directory roles render framed stars without a verification badge',()=>{
+test('directory roles render approved stars and no legacy card actions',()=>{
  for(const [role,account_badge,asset] of [['ADMIN',null,'role-star-red.svg'],['SUPPORTER',null,'supporter-star.svg'],['MEMBER','BUSINESS','role-star-blue.svg']]){
-  const html=renderToStaticMarkup(React.createElement(Card,{member:{id:'a',nickname:'Test',role,account_badge,is_verified:true},profile:{id:'b'},friendships:[],onOpen(){},onMessage(){}}));
-  assert.ok(html.includes(asset));assert.ok(!html.includes('badge-verified.svg'));assert.ok(html.includes('Nachricht'));
+  const html=renderToStaticMarkup(React.createElement(Card,{member:{id:'a',nickname:'Test',role,account_badge,is_verified:true},profile:{id:'b'},friendships:[],onOpen(){}}));
+  assert.ok(html.includes(asset));
+  assert.ok(!html.includes('badge-verified.svg'));
+  assert.ok(!html.includes('Nachricht'));
  }
 });
 
-test('keyboard events from nested controls cannot open the profile card',()=>{
+test('normal members render without a role star',()=>{
+ const html=renderToStaticMarkup(React.createElement(Card,{member:{id:'a',nickname:'Test',role:'MEMBER',account_badge:null},profile:{id:'b'},friendships:[],onOpen(){}}));
+ assert.ok(!html.includes('role-star-red.svg'));
+ assert.ok(!html.includes('supporter-star.svg'));
+ assert.ok(!html.includes('role-star-blue.svg'));
+ assert.ok(html.includes('role-theme-member'));
+});
+
+test('keyboard events from nested elements cannot open the profile card',()=>{
  assert.match(source,/if \(event\.target !== event\.currentTarget\) return;/);
  assert.match(source,/event\.key === "Enter" \|\| event\.key === " "/);
- assert.match(source,/event\.stopPropagation\(\);\s*onMessage\(member\)/s);
+ assert.doesNotMatch(source,/onMessage\(member\)/);
 });
 
 test('private online status does not render last activity',()=>{
- const html=renderToStaticMarkup(React.createElement(Card,{member:{id:'a',nickname:'Test',hide_online_status:true,last_active_at:'2026-09-07T08:00:00Z'},profile:{id:'b'},friendships:[],onOpen(){},onMessage(){}}));
+ const html=renderToStaticMarkup(React.createElement(Card,{member:{id:'a',nickname:'Test',hide_online_status:true,last_active_at:'2026-09-07T08:00:00Z'},profile:{id:'b'},friendships:[],onOpen(){}}));
  assert.ok(!html.includes('zuletzt aktiv'));assert.ok(!html.includes('Offline'));
 });
