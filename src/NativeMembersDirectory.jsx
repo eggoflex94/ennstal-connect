@@ -25,9 +25,13 @@ function isAdminMember(member) {
 }
 
 function presenceFor(member) {
-  const mobile = Boolean(member?.is_mobile_online || member?.mobile_online || member?.online_via_mobile || member?.presence === "MOBILE" || member?.presence === "mobile");
-  if (member?.is_online) return { state: mobile ? "mobile" : "online", label: mobile ? "Mobil online" : "Online", detail: "" };
+  const device = normalized(member?.presence_device || member?.presence);
+  const mobile = device === "MOBILE" || Boolean(member?.is_mobile_online || member?.mobile_online || member?.online_via_mobile);
   const raw = member?.last_active_at || member?.last_seen_at || member?.last_online_at;
+  const lastActive = raw ? new Date(raw).getTime() : NaN;
+  const recentlyActive = Number.isFinite(lastActive) && Date.now() - lastActive < 5 * 60 * 1000;
+  const online = Boolean(member?.is_online && (!raw || recentlyActive));
+  if (online) return { state: mobile ? "mobile" : "online", label: mobile ? "Mobil online" : "Online", detail: "" };
   if (!raw) return { state: "offline", label: "Offline", detail: "" };
   const date = new Date(raw);
   if (Number.isNaN(date.getTime())) return { state: "offline", label: "Offline", detail: "" };
@@ -118,7 +122,7 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
     return members
       .filter((member) => member && member.account_status !== "SUSPENDED" && !member.is_test_account)
       .filter((member) => regionId === "ALL" || member.home_region_id === regionId)
-      .filter((member) => !onlineOnly || member.is_online)
+      .filter((member) => !onlineOnly || presenceFor(member).state !== "offline")
       .filter((member) => !q || [member.nickname, member.first_name, member.last_name, regionById[member.home_region_id]?.name, effectiveRoleLabel(member), isBusiness(member) ? "Unternehmer" : ""].filter(Boolean).join(" ").toLowerCase().includes(q))
       .sort((a, b) => rank(a) - rank(b) || displayName(a).localeCompare(displayName(b), "de"));
   }, [members, regionId, onlineOnly, query, regionById, regionalAdminByUser, activeRegion?.id]);
@@ -166,7 +170,7 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
         const opening = openingMemberId === member.id;
         return <article className={`native-member-card native-member-card--${tone} panel${isSelf ? " is-self" : ""}${opening ? " is-opening" : ""}`} key={member.id}>
           <button type="button" className="native-member-main" onClick={() => void openMember(member)} aria-label={`${displayName(member)} Profil öffnen`} aria-busy={opening} disabled={Boolean(openingMemberId && !opening)}>
-            <span className="native-member-avatar-wrap"><img src={member.avatar_url || DEFAULT_AVATAR} alt="" /><i className={member.is_online ? "online" : "offline"} /></span>
+            <span className="native-member-avatar-wrap"><img src={member.avatar_url || DEFAULT_AVATAR} alt="" /><i className={presence.state !== "offline" ? "online" : "offline"} /></span>
             <span className="native-member-copy">
               <strong>{opening ? "Profil wird geladen …" : displayName(member)}</strong>
               <span className="native-member-badges">
