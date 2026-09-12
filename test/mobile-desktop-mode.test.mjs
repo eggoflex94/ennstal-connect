@@ -81,12 +81,11 @@ test("member profile keeps identical desktop structure on touch devices", async 
   assert.doesNotMatch(css, /@media\s*\(max-width:/);
 });
 
-test("profile role stars stay mapped to the correct functions", async () => {
-  const code = await source("src/member-profile-original-layout.js");
-  assert.match(code, /HEAD_ADMIN[^\n]*role-star-red\.svg/);
-  assert.match(code, /regionalNames\.length[^\n]*role-star-red\.svg/);
-  assert.match(code, /SUPPORTER[^\n]*supporter-star\.svg/);
-  assert.doesNotMatch(code, /regionalNames\.length[^\n]*supporter-star\.svg/);
+test("member role stars stay mapped to the correct functions", async () => {
+  const code = await source("src/NativeMembersDirectory.jsx");
+  assert.match(code, /isHeadAdmin\(member\) \|\| isGlobalAdmin\(member\) \|\| isRegionalAdmin\(member\) \? "\/role-star-red\.svg"/);
+  assert.match(code, /normalized\(member\?\.role\) === "SUPPORTER" \? "\/supporter-star\.svg"/);
+  assert.doesNotMatch(code, /isRegionalAdmin\(member\)[^\n]*supporter-star\.svg/);
 });
 
 test("profile presence remains visually separated", async () => {
