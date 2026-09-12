@@ -11,6 +11,7 @@ import "./admin-online-status.js";
 import "./last-name-privacy.js";
 import "./last-active-privacy.js";
 import "./online-status-sync.js";
+import "./mobile-presence-sync.js";
 import "./online-reward-tracker.js";
 import "./sidebar-reward-progress.css";
 import "./sidebar-reward-progress.js";
@@ -104,6 +105,7 @@ import "./friendship-badge-profile.js";
 import "./friendship-badge-visibility.css";
 import "./profile-image-upload-fix.js";
 import "./profile-photo-upload-fix.js";
+import "./profile-bio-image-remove.js";
 import "./community-event-region-fix.js";
 import "./regional-events-authority.css";
 import "./regional-events-authority.js";
@@ -146,6 +148,9 @@ import "./regional-admin-tools-bridge.js";
 import "./ui-requested-fixes.js";
 import "./home-modern-final.css";
 import "./home-modern-final.js";
+
+import "./message-emoji-picker.css";
+import "./message-emoji-picker.js";
 
 /* Shared admin hub and colored icon-only dock. */
 import "./admin-central-hub.css";
