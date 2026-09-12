@@ -1,3 +1,80 @@
-/* Compatibility placeholder only.
-   Intentionally inactive: dedicated navigation, admin hub, profile and
-   responsive styles remain authoritative. */
+/* Absolute final document-flow authority for the regional dashboard.
+   This file is intentionally loaded after the legacy dashboard/layout layers.
+   The right dashboard must move with the page, never remain sticky/fixed, and
+   must not create its own clipped vertical scroll area. */
+
+html,body,#root,.app,.dashboard-layout,.ec-regional-ui{
+  min-height:100%;
+  height:auto!important;
+}
+
+.ec-regional-ui .modern-main{
+  height:auto!important;
+  min-height:100vh!important;
+  max-height:none!important;
+  overflow:visible!important;
+  overflow-y:visible!important;
+}
+
+.ec-regional-ui .modern-main>.content-root{
+  height:auto!important;
+  min-height:0!important;
+  max-height:none!important;
+  overflow:visible!important;
+  overflow-y:visible!important;
+}
+
+.ec-right-dock,
+.ec-right-dock.ec-stable-personal-dock,
+.ec-right-dock.ec-document-flow-dock,
+.ec-right-dock.ec-final-stable-dock,
+.ec-right-dock.ec-stable-personal-dock.ec-document-flow-dock{
+  position:static!important;
+  inset:auto!important;
+  top:auto!important;
+  right:auto!important;
+  bottom:auto!important;
+  left:auto!important;
+  height:auto!important;
+  min-height:0!important;
+  max-height:none!important;
+  overflow:visible!important;
+  overflow-x:visible!important;
+  overflow-y:visible!important;
+  align-self:start!important;
+  transform:none!important;
+  contain:none!important;
+}
+
+.ec-right-dock .ec-dock-detail,
+.ec-right-dock .ec-dashboard-content,
+.ec-right-dock .ec-dashboard-sections,
+.ec-right-dock .ec-dashboard-body{
+  height:auto!important;
+  min-height:0!important;
+  max-height:none!important;
+  overflow:visible!important;
+  overflow-y:visible!important;
+}
+
+@media(min-width:901px){
+  .ec-regional-ui .modern-main>.ec-right-dock,
+  .ec-regional-ui .modern-main .ec-right-dock.ec-stable-personal-dock.ec-document-flow-dock{
+    position:static!important;
+    top:auto!important;
+    bottom:auto!important;
+  }
+}
+
+@media(max-width:900px){
+  .ec-right-dock,
+  .ec-right-dock.ec-stable-personal-dock.ec-document-flow-dock{
+    position:static!important;
+    inset:auto!important;
+    width:100%!important;
+    max-width:100%!important;
+    height:auto!important;
+    max-height:none!important;
+    overflow:visible!important;
+  }
+}
