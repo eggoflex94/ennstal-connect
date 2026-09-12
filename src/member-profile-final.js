@@ -63,7 +63,7 @@ async function build(root){
     const role=await functionInfo(target);
     const home=regions.find(r=>r.id===target.home_region_id)?.name||'';
 
-    root.querySelectorAll(':scope > .ec-mp-card,:scope > .ec-mp-more').forEach(node=>node.remove());
+    root.querySelectorAll(':scope > .ec-mp-card,:scope > .ec-mp-more,:scope > .ec-mp-actions').forEach(node=>node.remove());
     root.dataset.ecTargetId=target.id;
     root.classList.add('ec-member-profile-final');
 
@@ -75,11 +75,6 @@ async function build(root){
     functionBox.innerHTML=`<span>Funktion</span>${roleMarkup}`;
     left.appendChild(functionBox);
 
-    const actions=document.createElement('div');actions.className='ec-mp-actions';
-    const sourceActions=root.querySelector('.member-profile-actions');
-    if(sourceActions){[...sourceActions.querySelectorAll('button')].forEach(b=>{cleanActionText(b);actions.appendChild(b)});sourceActions.hidden=true}
-    left.appendChild(actions);
-
     const data=document.createElement('div');data.className='ec-mp-data';
     const realName=[target.first_name,target.last_name].filter(Boolean).join(' ');
     data.innerHTML=`<div class="ec-mp-data-head"><div><span>MITGLIEDSPROFIL</span><h1>${esc(target.nickname||realName||'Mitglied')}</h1></div>${target.is_verified?'<b class="ec-mp-verified" title="Verifiziert">✓</b>':''}</div><div class="ec-mp-rows">${row('Nickname',target.nickname)}${visible(target,'name',isFriend)?row('Vorname',target.first_name):''}${visible(target,'name',isFriend)?row('Nachname',target.last_name):''}${visible(target,'birth_date',isFriend)?row('Geburtsdatum',date(target.birth_date)):''}${visible(target,'birth_date',isFriend)?row('Alter',age(target.birth_date)):''}${visible(target,'location',isFriend)?row('Wohnort',target.location):''}${row('Heimatregion',home)}</div>`;
@@ -87,14 +82,27 @@ async function build(root){
     root.insertBefore(card,hero);
     hero.hidden=true;
 
+    const actions=document.createElement('div');actions.className='ec-mp-actions';
+    const sourceActions=root.querySelector('.member-profile-actions');
     const admin=root.querySelector('.member-admin-tools');
+
     if(admin){
       admin.classList.add('ec-mp-admin-panel');admin.hidden=true;
-      let toggle=functionBox.querySelector('.ec-mp-admin-toggle');
-      if(!toggle){toggle=document.createElement('button');toggle.type='button';toggle.className='ec-mp-admin-toggle';toggle.textContent='Admin Tools';functionBox.appendChild(toggle)}
+      const toggle=document.createElement('button');
+      toggle.type='button';
+      toggle.className='ec-mp-admin-toggle';
+      toggle.textContent='Admin Tools';
       toggle.onclick=()=>{admin.hidden=!admin.hidden;toggle.classList.toggle('is-open',!admin.hidden)};
-      card.after(admin);
+      actions.appendChild(toggle);
     }
+
+    if(sourceActions){
+      [...sourceActions.querySelectorAll('button')].forEach(button=>{cleanActionText(button);actions.appendChild(button)});
+      sourceActions.hidden=true;
+    }
+
+    card.after(actions);
+    if(admin)actions.after(admin);
 
     const bio=target.bio&&visible(target,'bio',isFriend)?target.bio:'';
     const extras=[];
@@ -102,7 +110,7 @@ async function build(root){
     const interests=Array.isArray(target.interests)?target.interests.join(', '):target.interests;
     const info=[];if(interests&&visible(target,'interests',isFriend))info.push(row('Interessen',interests));if(target.website&&visible(target,'website',isFriend))info.push(row('Webseite',target.website));
     if(info.length)extras.push(`<section class="ec-mp-section"><span>WEITERE ANGABEN</span><h2>Profilinformationen</h2><div class="ec-mp-rows compact">${info.join('')}</div></section>`);
-    if(extras.length){const more=document.createElement('div');more.className='ec-mp-more';more.innerHTML=extras.join('');const anchor=admin||card;anchor.after(more)}
+    if(extras.length){const more=document.createElement('div');more.className='ec-mp-more';more.innerHTML=extras.join('');const anchor=admin||actions;anchor.after(more)}
 
     root.dataset.ecMemberProfileFinal='1';
   }finally{
