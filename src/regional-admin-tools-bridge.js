@@ -9,7 +9,7 @@ let regions = [];
 let profile = null;
 let refreshTimer = null;
 let syncing = false;
-let pollTimer = null;
+let mountTimers = [];
 
 function grid() {
   return document.querySelector('.ec-right-dock .ec-compact-menu-grid');
@@ -63,6 +63,12 @@ function ensureButton() {
     return false;
   }
 
+  // The shared Admin-Zentrale is authoritative when present.
+  if (menu.querySelector('[data-ec-admin-central-hub="1"]')) {
+    removeBridgeButton();
+    return true;
+  }
+
   const native = menu.querySelector('[data-head-admin-tool="admin-tools"]');
   if (native) {
     removeBridgeButton();
@@ -114,9 +120,7 @@ async function refreshAccess() {
       supabase.from('regional_admin_assignments').select('region_id,active').eq('user_id', currentUserId).eq('active', true)
     ]);
 
-    if (profileError || regionError || assignmentError || !nextProfile) {
-      return;
-    }
+    if (profileError || regionError || assignmentError || !nextProfile) return;
 
     profile = nextProfile;
     regions = nextRegions || [];
@@ -142,24 +146,17 @@ function scheduleRefresh(delay = 50) {
   refreshTimer = setTimeout(() => void refreshAccess(), delay);
 }
 
-function startPoll() {
-  clearInterval(pollTimer);
-  pollTimer = setInterval(() => {
-    if (!document.querySelector('.ec-right-dock')) return;
-    lightweightSync();
-  }, 800);
+function scheduleMountAttempts() {
+  mountTimers.forEach((timer) => clearTimeout(timer));
+  mountTimers = [0, 180, 550, 1200].map((delay) => setTimeout(lightweightSync, delay));
 }
-
-new MutationObserver(() => {
-  if (!document.querySelector('.ec-right-dock')) return;
-  lightweightSync();
-}).observe(document.documentElement, { childList: true, subtree: true });
 
 window.addEventListener('ec:region-change', () => {
   lightweightSync();
   scheduleRefresh(40);
+  scheduleMountAttempts();
 });
-window.addEventListener('ec:navigate', lightweightSync);
+window.addEventListener('ec:navigate', scheduleMountAttempts);
 window.addEventListener('focus', () => scheduleRefresh(20));
 document.addEventListener('change', (event) => {
   if (event.target?.matches?.('.ec-region-picker select')) {
@@ -173,18 +170,21 @@ supabase.auth.onAuthStateChange((event) => {
     profile = null;
     assignments = [];
     access = { allowed: false, isHead: false, isGlobalAdmin: false, isRegionalAdmin: false };
+    mountTimers.forEach((timer) => clearTimeout(timer));
+    mountTimers = [];
     removeBridgeButton();
     return;
   }
   scheduleRefresh(30);
+  scheduleMountAttempts();
 });
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
     scheduleRefresh(0);
-    startPoll();
+    scheduleMountAttempts();
   }, { once: true });
 } else {
   scheduleRefresh(0);
-  startPoll();
+  scheduleMountAttempts();
 }
