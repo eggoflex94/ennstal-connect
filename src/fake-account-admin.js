@@ -17,6 +17,8 @@ function ensureStyles() {
     .ec-fake-portal{position:absolute;z-index:20;box-sizing:border-box;background:#fff;border:1px solid rgba(14,62,115,.16);border-radius:16px;box-shadow:0 10px 28px rgba(13,48,86,.12);color:#18344f;min-height:220px}
     .ec-fake-portal[hidden]{display:none!important}
     .ec-fake-portal .ec-fake-intro{display:flex;flex-direction:column;gap:3px;margin-bottom:12px}.ec-fake-portal .ec-fake-intro strong{font-size:1.15rem}.ec-fake-portal .ec-fake-intro small{opacity:.72}
+    .ec-fake-device-box{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin:10px 0;padding:10px;border:1px solid rgba(14,62,115,.12);border-radius:12px;background:rgba(14,62,115,.035)}
+    .ec-fake-device-box span{display:flex;flex-direction:column;gap:2px}.ec-fake-device-box b{font-size:.78rem;text-transform:uppercase;letter-spacing:.04em;opacity:.72}.ec-fake-device-box small{font-size:.9rem}
     @media(max-width:900px){.ec-fake-portal{position:fixed!important;left:12px!important;right:12px!important;top:120px!important;width:auto!important;max-height:calc(100vh - 140px);overflow:auto}}
   `;
   document.head.appendChild(style);
@@ -30,8 +32,8 @@ function ensurePortal() {
   portal.hidden = true;
   portal.innerHTML = `
     <div class="ec-fake-body">
-      <div class="ec-fake-intro"><strong>Fake-Account-Prüfung</strong><small>Nur Head Admin · Risikosignale & manuelle Entscheidung</small></div>
-      <p class="ec-fake-note">Die Prüfpriorität ist kein Beweis für ein Fake-Konto. Auffällige Kontaktmuster und Meldungen helfen bei der manuellen Prüfung. Es gibt keine automatische Sperre.</p>
+      <div class="ec-fake-intro"><strong>Fake-Account-Prüfung</strong><small>Nur Head Admin · Verhalten, IP-Abgleich & Geräteklasse</small></div>
+      <p class="ec-fake-note">Die Prüfpriorität ist kein Beweis für ein Fake-Konto. Gemeinsame IP-Adressen können z. B. durch Familien, Firmen, Mobilfunk oder öffentliches WLAN entstehen. Es gibt keine automatische Sperre.</p>
       <div class="ec-fake-toolbar">
         <input class="ec-fake-search" type="search" placeholder="Nickname oder Name suchen" aria-label="Nickname oder Name suchen">
         <select class="ec-fake-filter" aria-label="Prüffilter"><option value="priority">Erhöhte Priorität (ab 40)</option><option value="unreviewed">Noch nicht geprüft</option><option value="all">Alle Konten</option></select>
@@ -81,10 +83,12 @@ function renderRows() {
     const card = document.createElement('article');
     card.className = `ec-fake-card risk-${riskClass(Number(row.risk_score || 0))}`;
     const signals = Array.isArray(row.signals) ? row.signals : [];
+    const devices = Array.isArray(row.device_labels) ? row.device_labels : [];
     const reviewLabel = row.review_state === 'SAFE' ? 'Manuell als unauffällig eingestuft' : row.review_state === 'FAKE' ? 'Als Fake gesperrt' : 'Noch nicht geprüft';
     card.innerHTML = `
       <div class="ec-fake-top"><div><strong>${esc(row.nickname || 'Ohne Nickname')}</strong><small>${esc([row.first_name,row.last_name].filter(Boolean).join(' ') || 'Name nicht angegeben')}</small></div><span class="ec-fake-score">Prüfpriorität ${Number(row.risk_score || 0)}/100</span></div>
       <div class="ec-fake-meta"><span>Konto: ${esc(row.account_status || '–')}</span><span>Erstellt: ${fmt(row.created_at)}</span><span>Letzter Login: ${fmt(row.last_sign_in_at)}</span><span>${row.email_confirmed ? '✓ E-Mail bestätigt' : '⚠ E-Mail offen'}</span><span>${row.is_verified ? '✓ Profil verifiziert' : 'Profil nicht verifiziert'}</span></div>
+      <div class="ec-fake-device-box"><span><b>Letztes Gerät</b><small>${esc(row.latest_device || 'Keine Sitzungsdaten')}</small></span><span><b>Geräte / Browser (90 Tage)</b><small>${devices.length ? devices.map(esc).join(' · ') : 'Keine Daten'}</small></span><span><b>Verschiedene IPs</b><small>${Number(row.ip_count_90d || 0)}</small></span><span><b>Höchster IP-Abgleich</b><small>${Number(row.shared_ip_accounts || 0) > 1 ? `${Number(row.shared_ip_accounts)} Konten auf derselben IP` : 'Keine Mehrfachnutzung erkannt'}</small></span></div>
       <ul class="ec-fake-signals">${signals.length ? signals.map((s)=>`<li>${esc(s)}</li>`).join('') : '<li>Keine starken Auffälligkeiten erkannt.</li>'}</ul>
       <div class="ec-fake-stats"><span>${Number(row.open_reports || 0)} Meldungen/30 Tage</span><span>${Number(row.friend_requests_24h || 0)} Freundschaftsanfragen/24h</span><span>${Number(row.messages_24h || 0)} Nachrichten/24h</span><span>${Number(row.forum_posts || 0)} Forumsbeiträge</span></div>
       <div class="ec-fake-review"><b>${esc(reviewLabel)}</b>${row.review_note ? `<small>${esc(row.review_note)}</small>` : ''}</div>
