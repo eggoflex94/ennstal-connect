@@ -100,6 +100,45 @@ function findMessageNodes(){
   return [...new Set(selectors.flatMap(sel => [...document.querySelectorAll(sel)]))];
 }
 
+function addInlineRoleStar(content, profile, fallbackName){
+  const starSrc = profile ? starFor(profile) : null;
+  if(!starSrc || !content) return;
+
+  const aliases = [...new Set([
+    profile?.nickname,
+    [profile?.first_name, profile?.last_name].filter(Boolean).join(" "),
+    fallbackName
+  ].map(normalize).filter(Boolean))].sort((a,b) => b.length - a.length);
+  if(!aliases.length) return;
+
+  const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT);
+  let textNode;
+  while((textNode = walker.nextNode())){
+    const text = textNode.nodeValue || "";
+    const lower = text.toLocaleLowerCase("de-AT");
+    const matched = aliases.find(alias => lower.includes(alias.toLocaleLowerCase("de-AT")));
+    if(!matched) continue;
+    const index = lower.indexOf(matched.toLocaleLowerCase("de-AT"));
+    if(index < 0) continue;
+
+    const before = text.slice(0,index);
+    const actorText = text.slice(index,index + matched.length);
+    const after = text.slice(index + matched.length);
+    const inline = document.createElement("span");
+    inline.className = "ec-automated-inline-identity";
+    const star = document.createElement("img");
+    star.className = "ec-automated-inline-role-star";
+    star.src = starSrc;
+    star.alt = "";
+    star.setAttribute("aria-hidden","true");
+    const nick = document.createElement("strong");
+    nick.textContent = actorText;
+    inline.append(star,nick);
+    textNode.replaceWith(document.createTextNode(before),inline,document.createTextNode(after));
+    return;
+  }
+}
+
 function decorate(node){
   if(node.dataset.ecAutomatedModern === "1") return;
   const raw = normalize(node.textContent);
@@ -121,6 +160,7 @@ function decorate(node){
   content.className = "ec-automated-content";
   originalNodes.forEach(child => content.append(child));
   node.append(content);
+  addInlineRoleStar(content, profile, extractedName || name);
 
   const header = document.createElement("span");
   header.className = "ec-automated-message-header";
