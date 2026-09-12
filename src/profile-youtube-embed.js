@@ -124,7 +124,7 @@ async function render(page, profileId) {
 
   panel.innerHTML = `<header class="ec-profile-youtube-head"><div><span>ÜBER MICH · VIDEO</span><h2>YouTube</h2></div></header>
     ${mine ? `<form class="ec-profile-youtube-form">
-      <label><span>YouTube-Link</span><input name="youtube_link" type="url" inputmode="url" autocomplete="off" placeholder="https://www.youtube.com/watch?v=… oder https://youtu.be/…" required></label>
+      <label><span>YouTube-Link</span><input name="youtube_link" type="text" inputmode="url" autocomplete="off" placeholder="https://www.youtube.com/watch?v=… oder youtu.be/…" required></label>
       <label><span>Überschrift (optional)</span><input name="youtube_title" type="text" maxlength="100" placeholder="z. B. Mein Lieblingsvideo"></label>
       <div class="ec-profile-youtube-form-actions"><button type="submit" class="ec-profile-youtube-add">Video hinzufügen</button><small class="ec-profile-youtube-status" aria-live="polite"></small></div>
     </form>` : ''}
