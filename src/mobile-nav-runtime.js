@@ -1,7 +1,7 @@
 /* Navigation runtime without full-page DOM observation.
    Touch devices keep the complete desktop navigation DOM. */
-const MOBILE_QUERY='(max-width: 760px)';
-const TOUCH_QUERY='(pointer: coarse)';
+const MOBILE_QUERY = '(max-width: 760px)';
+const TOUCH_QUERY = '(pointer: coarse)';
 let queued=false;
 function directPageButtons(nav){return[...nav.children].filter(node=>node.matches?.('button[data-ec-page]'))}
 function enableMobileNav(nav){let rail=nav.querySelector(':scope > .ec-mobile-nav-rail');if(!rail){rail=document.createElement('div');rail.className='ec-mobile-nav-rail';rail.setAttribute('role','group');rail.setAttribute('aria-label','Hauptbereiche');nav.prepend(rail)}directPageButtons(nav).forEach(button=>rail.appendChild(button));nav.classList.add('ec-mobile-nav-ready')}
