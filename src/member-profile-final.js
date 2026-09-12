@@ -53,10 +53,6 @@ function cleanActionText(button){
 }
 function cleanProfileNoise(root){
   root.querySelectorAll(':scope > .profile-visible-details').forEach(node=>node.remove());
-
-  // ProfileSections owns the one public "Das bin ich" section. Older profile
-  // layers used to add another "Über mich / Das bin ich" panel. Remove every
-  // competing panel instead of trying to style two copies of the same bio.
   const canonicalStory=root.querySelector('.personal-profile-sections > .profile-story');
   [...root.querySelectorAll('section,article')].forEach(node=>{
     if(node===canonicalStory||canonicalStory?.contains(node))return;
@@ -64,7 +60,6 @@ function cleanProfileNoise(root){
     const eyebrow=norm(node.querySelector(':scope > .eyebrow')?.textContent||node.querySelector(':scope > div > .eyebrow')?.textContent);
     if(heading==='das bin ich'&&(eyebrow==='über mich'||eyebrow==='persönlich'||node.classList.contains('profile-story')))node.remove();
   });
-
   const stories=[...root.querySelectorAll('.personal-profile-sections > .profile-story')];
   stories.slice(1).forEach(node=>node.remove());
   const story=stories[0];
@@ -83,10 +78,7 @@ function cleanProfileNoise(root){
       else if(text)seen.add(text);
     });
   }
-
-  // The hidden React hero must never leave a second visible bio behind.
   root.querySelectorAll('.member-profile-hero .member-profile-bio').forEach(node=>{node.hidden=true});
-
   document.querySelectorAll('.toast,[role="alert"]').forEach(node=>{
     const text=String(node.textContent||'');
     if(/Profil gespeichert, aber .*protokolliert/i.test(text))node.remove();
@@ -97,7 +89,6 @@ async function build(root){
   if(root.dataset.ecMemberProfileFinal==='1'||root.dataset.ecMemberProfileBuilding==='1')return;
   const hero=root.querySelector('.member-profile-hero');
   if(!hero)return;
-
   root.dataset.ecMemberProfileBuilding='1';
   try{
     await context();
@@ -106,11 +97,9 @@ async function build(root){
     const avatar=hero.querySelector('img');
     const role=await functionInfo(target);
     const home=regions.find(r=>r.id===target.home_region_id)?.name||'';
-
     root.querySelectorAll(':scope > .ec-mp-card,:scope > .ec-mp-more,:scope > .ec-mp-actions,:scope > .profile-visible-details').forEach(node=>node.remove());
     root.dataset.ecTargetId=target.id;
     root.classList.add('ec-member-profile-final');
-
     const card=document.createElement('section');card.className='ec-mp-card';
     const left=document.createElement('div');left.className='ec-mp-left';
     const photo=document.createElement('div');photo.className='ec-mp-photo';if(avatar)photo.appendChild(avatar);left.appendChild(photo);
@@ -118,14 +107,12 @@ async function build(root){
     const roleMarkup=role.star?`<span class="ec-mp-function-role"><img class="ec-mp-role-star" src="${role.star}" alt="" aria-hidden="true"><strong>${esc(role.label)}</strong></span>`:`<span class="ec-mp-function-role"><strong>${esc(role.label)}</strong></span>`;
     functionBox.innerHTML=`<span>Funktion</span>${roleMarkup}`;
     left.appendChild(functionBox);
-
     const data=document.createElement('div');data.className='ec-mp-data';
     const realName=[target.first_name,target.last_name].filter(Boolean).join(' ');
     data.innerHTML=`<div class="ec-mp-data-head"><div><span>MITGLIEDSPROFIL</span><h1>${esc(target.nickname||realName||'Mitglied')}</h1></div>${target.is_verified?'<b class="ec-mp-verified" title="Verifiziert">✓</b>':''}</div><div class="ec-mp-rows">${row('Nickname',target.nickname)}${visible(target,'name',isFriend)?row('Vorname',target.first_name):''}${visible(target,'name',isFriend)?row('Nachname',target.last_name):''}${visible(target,'birth_date',isFriend)?row('Geburtsdatum',date(target.birth_date)):''}${visible(target,'birth_date',isFriend)?row('Alter',age(target.birth_date)):''}${row('Heimatregion',home)}</div>`;
     card.append(left,data);
     root.insertBefore(card,hero);
     hero.hidden=true;
-
     const actions=document.createElement('div');actions.className='ec-mp-actions';
     const sourceActions=root.querySelector('.member-profile-actions');
     if(sourceActions){
@@ -133,7 +120,6 @@ async function build(root){
       sourceActions.hidden=true;
     }
     if(actions.children.length)card.after(actions);
-
     cleanProfileNoise(root);
     root.dataset.ecMemberProfileFinal='1';
   }finally{
@@ -144,22 +130,32 @@ function run(){document.querySelectorAll('.member-profile-page:not(.public-profi
 
 let queued=false;
 let observer=null;
+let observedRoot=null;
+let observerRetry=0;
 function mutationTouchesMemberProfile(mutation){
   const target=mutation.target?.nodeType===Node.ELEMENT_NODE?mutation.target:null;
   if(target?.closest?.('.member-profile-page'))return true;
   return [...mutation.addedNodes,...mutation.removedNodes].some(node=>node.nodeType===Node.ELEMENT_NODE&&(node.matches?.('.member-profile-page')||node.querySelector?.('.member-profile-page')));
 }
+function desiredObserverRoot(){return document.querySelector('.content-root')||document.querySelector('.modern-main')}
 function startObserver(){
-  if(observer)return;
-  const root=document.querySelector('.content-root')||document.querySelector('.modern-main')||document.getElementById('root');
-  if(!root)return;
+  const root=desiredObserverRoot();
+  if(!root){
+    if(!observerRetry)observerRetry=window.setTimeout(()=>{observerRetry=0;startObserver()},250);
+    return;
+  }
+  if(observer&&observedRoot===root)return;
+  observer?.disconnect();
   observer=new MutationObserver(mutations=>{
     if(!mutations.some(mutationTouchesMemberProfile)||queued)return;
     queued=true;
     requestAnimationFrame(()=>{queued=false;run()});
   });
   observer.observe(root,{childList:true,subtree:true});
+  observedRoot=root;
 }
-function start(){run();startObserver()}
+function refresh(){run();startObserver()}
+function start(){refresh()}
+window.addEventListener('ec:navigate',refresh);
 window.addEventListener('DOMContentLoaded',start,{once:true});
 start();
