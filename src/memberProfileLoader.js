@@ -12,6 +12,16 @@ const normalize = (value) => {
   return value;
 };
 
+const mergeIntoMember = (member, value) => {
+  if (!member || !value) return member || value || null;
+  // Keep the directory object itself fresh as well. App.jsx may later reuse the
+  // same object from the member directory when community data refreshes. By
+  // enriching that object in place, the fully loaded profile is not replaced
+  // by an older/partial directory snapshot a moment after opening it.
+  Object.assign(member, value);
+  return member;
+};
+
 export function invalidateMemberProfile(profileId) {
   if (profileId) profileCache.delete(profileId);
   else profileCache.clear();
@@ -22,11 +32,11 @@ export async function loadMemberProfile(member, { force = false } = {}) {
   const id = member.id;
   const cached = profileCache.get(id);
   if (!force && cached && Date.now() - cached.at < PROFILE_TTL_MS) {
-    return { ...member, ...cached.value };
+    return mergeIntoMember(member, cached.value);
   }
   if (inFlight.has(id)) {
     const value = await inFlight.get(id);
-    return value ? { ...member, ...value } : member;
+    return value ? mergeIntoMember(member, value) : member;
   }
 
   const request = (async () => {
@@ -42,5 +52,5 @@ export async function loadMemberProfile(member, { force = false } = {}) {
 
   inFlight.set(id, request);
   const value = await request;
-  return value ? { ...member, ...value } : member;
+  return value ? mergeIntoMember(member, value) : member;
 }
