@@ -130,6 +130,7 @@ import "./community-event-card-polish.css";
 import "./dashboard-mobile-profile-final.css";
 import "./standard-theme-variants.css";
 import "./standard-theme-rich.css";
+import "./neon-green-theme.css";
 import "./standard-theme-runtime.js";
 import "./mobile-native-final.css";
 import "./dashboard-header-unified.css";
