@@ -74,6 +74,7 @@ async function loadContext(targetId) {
   const target = targetResult.data;
   if (!viewer || !target || viewer.account_status !== 'ACTIVE') return null;
   const isHead = role(viewer.role) === 'HEAD_ADMIN';
+  if (role(target.role) === 'HEAD_ADMIN' && !isHead) return null;
   const isGlobalAdmin = role(viewer.role) === 'ADMIN';
   const permissions = permResult.data || {};
   const regionalAdmins = regionalAdminResult.data || [];
