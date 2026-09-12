@@ -1,30 +1,42 @@
 import { supabase } from "./supabaseClient";
 
-// The profile editor is intentionally kept small. This inserts the optional
-// visibility control only for admins and keeps its value in the normal form.
+let timer = null;
+let loading = false;
+
 async function addAdminOnlineStatusControl() {
+  if (loading || !supabase) return false;
   const form = document.querySelector(".profile-form");
-  if (!form || form.querySelector("[name='hide_online_status']") || !supabase) return;
-
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
-  const { data: profile } = await supabase.from("profiles")
-    .select("role,hide_online_status")
-    .eq("id", user.id)
-    .maybeSingle();
-  if (!profile || !["ADMIN", "HEAD_ADMIN"].includes(profile.role) || form.querySelector("[name='hide_online_status']")) return;
-
-  const label = document.createElement("label");
-  label.className = "online-status-toggle";
-  const checkbox = document.createElement("input");
-  checkbox.type = "checkbox";
-  checkbox.name = "hide_online_status";
-  checkbox.checked = !!profile.hide_online_status;
-  label.append(checkbox, document.createTextNode(" Online- und „zuletzt aktiv“-Status verbergen"));
-  const genderLabel = [...form.querySelectorAll("label")].find((item) => item.textContent?.trim() === "Geschlecht *");
-  form.insertBefore(label, genderLabel || form.querySelector("button"));
+  if (!form) return false;
+  if (form.querySelector("[name='hide_online_status']")) return true;
+  loading = true;
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return false;
+    const { data: profile } = await supabase.from("profiles")
+      .select("role,hide_online_status")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (!profile || !["ADMIN", "HEAD_ADMIN"].includes(profile.role) || !form.isConnected || form.querySelector("[name='hide_online_status']")) return false;
+    const label = document.createElement("label");
+    label.className = "online-status-toggle";
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.name = "hide_online_status";
+    checkbox.checked = !!profile.hide_online_status;
+    label.append(checkbox, document.createTextNode(" Online- und „zuletzt aktiv“-Status verbergen"));
+    form.insertBefore(label, form.querySelector("button"));
+    return true;
+  } finally {
+    loading = false;
+  }
 }
 
-const observer = new MutationObserver(() => { void addAdminOnlineStatusControl(); });
-observer.observe(document.documentElement, { childList: true, subtree: true });
-void addAdminOnlineStatusControl();
+function schedule() {
+  clearTimeout(timer);
+  const tries = [0, 150, 500, 1200];
+  tries.forEach((delay) => setTimeout(() => void addAdminOnlineStatusControl(), delay));
+}
+window.addEventListener('ec:navigate', schedule);
+window.addEventListener('focus', schedule);
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", schedule, { once: true });
+else schedule();
