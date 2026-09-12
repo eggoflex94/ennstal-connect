@@ -1,4 +1,6 @@
 import { supabase } from './supabaseClient';
+import './profile-admin-tools-unified.css';
+import './profile-admin-tools-unified.js';
 
 let access = { allowed: false, isHead: false, isGlobalAdmin: false, isRegionalAdmin: false };
 let currentUserId = '';
