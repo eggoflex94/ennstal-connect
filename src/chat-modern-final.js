@@ -1,4 +1,9 @@
 import { supabase } from "./supabaseClient";
+import "./chat-modern-media.css";
+
+const MESSAGE_MEDIA_BUCKET = "message-media";
+const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 
 let mountedSection = null;
 let currentUser = null;
@@ -10,6 +15,10 @@ let checkTimer = null;
 let observer = null;
 let observedRoot = null;
 let observerRetry = null;
+let messageSenderChannel = null;
+let messageReceiverChannel = null;
+let threadRefreshTimer = null;
+let threadObjectUrls = [];
 
 const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
 const getName = (profile) => profile?.nickname || [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || "Mitglied";
@@ -32,6 +41,7 @@ const roleLabel = (profile) => {
 const isAutomated = (message) => ["ROLE", "GROUP_INVITE"].includes(String(message?.message_type || "").toUpperCase()) || /automatisch generierte nachricht|automatisierte nachricht|rolle .* erhalten|rechte .* erhalten|moderationsrechte|regional admin|forum.?moderator|hat dich in die gruppe|punkte erhalten|profilverifizierung|profil-verifizierung|du hast soeben von/i.test(String(message?.content || ""));
 
 function profileById(id) { return profiles.find((profile) => profile.id === id) || null; }
+function currentIsHeadAdmin() { return String(profileById(currentUser?.id)?.role || "").toUpperCase() === "HEAD_ADMIN"; }
 function profileByName(name) {
   const wanted = String(name || "").replace(/^★\s*/, "").trim().toLocaleLowerCase("de-AT");
   if (!wanted) return null;
@@ -54,6 +64,20 @@ function automatedActorProfile(message, peer) {
   return profileByName(actorName) || profileById(message?.sender_id) || peer || null;
 }
 
+function clearThreadUrls() {
+  threadObjectUrls.forEach((url) => URL.revokeObjectURL(url));
+  threadObjectUrls = [];
+}
+
+async function messageImageUrl(path) {
+  if (!path) return "";
+  const { data, error } = await supabase.storage.from(MESSAGE_MEDIA_BUCKET).download(path);
+  if (error || !data) return "";
+  const url = URL.createObjectURL(data);
+  threadObjectUrls.push(url);
+  return url;
+}
+
 function findMessagesSection() {
   const legacy = document.querySelector(".message-overview, .chat-box");
   if (legacy) return legacy.closest("section");
@@ -66,7 +90,32 @@ function inferLegacyPeer(section) {
   return profiles.find((profile) => getName(profile).trim().toLowerCase() === name)?.id || null;
 }
 
+function removeMessageChannels() {
+  if (messageSenderChannel) supabase.removeChannel(messageSenderChannel);
+  if (messageReceiverChannel) supabase.removeChannel(messageReceiverChannel);
+  messageSenderChannel = null;
+  messageReceiverChannel = null;
+}
+
+function scheduleThreadRefresh(delay = 80) {
+  if (!activePeerId) return;
+  clearTimeout(threadRefreshTimer);
+  threadRefreshTimer = setTimeout(() => void openThread(activePeerId, { preserveComposer: true }), delay);
+}
+
+function subscribeMessageChanges() {
+  removeMessageChannels();
+  if (!currentUser?.id) return;
+  messageSenderChannel = supabase.channel(`ec-chat-sent-${currentUser.id}`)
+    .on("postgres_changes", { event: "*", schema: "public", table: "messages", filter: `sender_id=eq.${currentUser.id}` }, () => scheduleThreadRefresh())
+    .subscribe();
+  messageReceiverChannel = supabase.channel(`ec-chat-received-${currentUser.id}`)
+    .on("postgres_changes", { event: "*", schema: "public", table: "messages", filter: `receiver_id=eq.${currentUser.id}` }, () => scheduleThreadRefresh())
+    .subscribe();
+}
+
 async function loadData() {
+  const previousUserId = currentUser?.id || null;
   const [{ data: auth }, { data: people, error: peopleError }] = await Promise.all([
     supabase.auth.getUser(),
     supabase.from("profiles").select("id,nickname,first_name,last_name,avatar_url,role,account_badge")
@@ -74,8 +123,9 @@ async function loadData() {
   if (peopleError) throw peopleError;
   currentUser = auth?.user || null;
   profiles = people || [];
-  if (!currentUser) return;
-  const { data, error } = await supabase.from("messages").select("id,sender_id,receiver_id,content,is_read,created_at,message_type").or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`).order("created_at", { ascending: true });
+  if (!currentUser) { removeMessageChannels(); return; }
+  if (previousUserId !== currentUser.id || (!messageSenderChannel && !messageReceiverChannel)) subscribeMessageChanges();
+  const { data, error } = await supabase.from("messages").select("id,sender_id,receiver_id,content,is_read,created_at,message_type,media_path").or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`).order("created_at", { ascending: true });
   if (error) throw error;
   messages = data || [];
 }
@@ -110,7 +160,8 @@ function renderOverview(shell) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "ec-chat-modern-conversation";
-    button.innerHTML = `<img src="${esc(peer.avatar_url || "/community-default-avatar.png")}" alt=""><span class="ec-chat-modern-conversation-copy"><strong>${esc(getName(peer))}</strong><small>${esc(row.latest.content || "")}</small></span><span class="ec-chat-modern-conversation-meta"><time>${esc(formatStamp(row.latest.created_at))}</time>${row.unread ? `<span class="ec-chat-modern-unread">${row.unread}</span>` : ""}</span>`;
+    const preview = row.latest.media_path ? (row.latest.content || "📷 Bild") : (row.latest.content || "");
+    button.innerHTML = `<img src="${esc(peer.avatar_url || "/community-default-avatar.png")}" alt=""><span class="ec-chat-modern-conversation-copy"><strong>${esc(getName(peer))}</strong><small>${esc(preview)}</small></span><span class="ec-chat-modern-conversation-meta"><time>${esc(formatStamp(row.latest.created_at))}</time>${row.unread ? `<span class="ec-chat-modern-unread">${row.unread}</span>` : ""}</span>`;
     button.addEventListener("click", () => void openThread(row.peerId));
     list.append(button);
   });
@@ -132,7 +183,6 @@ function automatedMessageContent(message, peer) {
     .filter(Boolean)
     .sort((a, b) => b.length - a.length);
   const star = `<img class="ec-chat-inline-role-star" src="${esc(starFor(sender))}" alt="" aria-hidden="true">`;
-
   for (const alias of aliases) {
     const index = raw.toLocaleLowerCase("de-AT").indexOf(alias.toLocaleLowerCase("de-AT"));
     if (index < 0) continue;
@@ -142,7 +192,6 @@ function automatedMessageContent(message, peer) {
     const after = raw.slice(index + alias.length);
     return `<p>${esc(beforeWithoutLegacyStar)}<span class="ec-chat-inline-role-identity">${star}<strong>${esc(actor)}</strong></span>${esc(after)}</p>`;
   }
-
   return `<p><span class="ec-chat-inline-role-identity">${star}<strong>${esc(senderName)}</strong></span> ${esc(raw)}</p>`;
 }
 
@@ -155,54 +204,113 @@ function linkifyGroupInvite(text) {
   return `<p>${esc(parts[0])}</p><a class="ec-chat-invite-link" href="${esc(url)}">Einladung öffnen</a>${parts[1] ? `<p>${esc(parts[1])}</p>` : ""}`;
 }
 
-async function openThread(peerId) {
+async function openThread(peerId, options = {}) {
   activePeerId = peerId;
   const shell = mountedSection?.querySelector(".ec-chat-modern-shell");
   if (!shell || !currentUser) return;
   const peer = profileById(peerId);
   if (!peer) return;
-  const { data, error } = await supabase.from("messages").select("id,sender_id,receiver_id,content,is_read,created_at,message_type").or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${peerId}),and(sender_id.eq.${peerId},receiver_id.eq.${currentUser.id})`).order("created_at", { ascending: true });
+  const previousText = options.preserveComposer ? String(shell.querySelector('.ec-chat-modern-form textarea')?.value || '') : '';
+  clearThreadUrls();
+  const { data, error } = await supabase.from("messages").select("id,sender_id,receiver_id,content,is_read,created_at,message_type,media_path").or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${peerId}),and(sender_id.eq.${peerId},receiver_id.eq.${currentUser.id})`).order("created_at", { ascending: true });
   if (error) return alert(`Chat konnte nicht geladen werden: ${error.message}`);
   await supabase.rpc("mark_messages_read", { from_user: peerId });
   const thread = data || [];
-  shell.innerHTML = `<div class="ec-chat-modern-thread"><header class="ec-chat-modern-thread-header"><button type="button" class="ec-chat-modern-back">← Chats</button><div class="ec-chat-modern-thread-person"><img src="${esc(peer.avatar_url || "/community-default-avatar.png")}" alt=""><span><strong>${esc(getName(peer))}</strong><small>${esc(roleLabel(peer))}</small></span></div></header><div class="ec-chat-modern-messages"></div><form class="ec-chat-modern-form"><textarea name="message" placeholder="Nachricht schreiben …" required></textarea><button class="ec-chat-modern-send" type="submit">Senden</button></form></div>`;
-  shell.querySelector(".ec-chat-modern-back").onclick = async () => { activePeerId = null; await loadData(); renderOverview(shell); };
+  const headAdmin = currentIsHeadAdmin();
+  shell.innerHTML = `<div class="ec-chat-modern-thread"><header class="ec-chat-modern-thread-header"><button type="button" class="ec-chat-modern-back">← Chats</button><div class="ec-chat-modern-thread-person"><img src="${esc(peer.avatar_url || "/community-default-avatar.png")}" alt=""><span><strong>${esc(getName(peer))}</strong><small>${esc(roleLabel(peer))}</small></span></div></header><div class="ec-chat-modern-messages"></div><form class="ec-chat-modern-form"><div class="ec-chat-modern-composer"><textarea name="message" placeholder="Nachricht schreiben …"></textarea><label class="ec-chat-modern-image-button" title="Bild senden"><span>📷 Bild</span><input type="file" name="image" accept="image/jpeg,image/png,image/webp,image/gif"></label><button class="ec-chat-modern-send" type="submit">Senden</button></div><div class="ec-chat-modern-image-preview" hidden></div></form></div>`;
+  shell.querySelector(".ec-chat-modern-back").onclick = async () => { activePeerId = null; clearThreadUrls(); await loadData(); renderOverview(shell); };
   const list = shell.querySelector(".ec-chat-modern-messages");
-  thread.forEach((message) => {
+  for (const message of thread) {
     const bubble = document.createElement("article");
+    const mine = message.sender_id === currentUser.id;
     const automatic = isAutomated(message);
     const invite = String(message.message_type || "").toUpperCase() === "GROUP_INVITE";
-    bubble.className = `ec-chat-modern-bubble${message.sender_id === currentUser.id ? " mine" : ""}${automatic ? " auto-role" : ""}${invite ? " group-invite" : ""}`;
-    const body = invite ? linkifyGroupInvite(message.content) : automatic ? automatedMessageContent(message, peer) : `<p>${esc(message.content || "")}</p>`;
-    bubble.innerHTML = `${automatic ? automatedHeader(message, peer) : ""}${body}<time>${esc(formatStamp(message.created_at, true))}</time><button type="button" class="ec-chat-modern-delete" aria-label="Nachricht löschen">×</button>`;
+    bubble.className = `ec-chat-modern-bubble${mine ? " mine" : ""}${automatic ? " auto-role" : ""}${invite ? " group-invite" : ""}`;
+    let media = "";
+    if (message.media_path) {
+      const url = await messageImageUrl(message.media_path);
+      if (url) media = `<a class="ec-chat-modern-media-link" href="${esc(url)}" target="_blank" rel="noopener"><img class="ec-chat-modern-media" src="${esc(url)}" alt="Gesendetes Bild"></a>`;
+    }
+    const textBody = message.content ? (invite ? linkifyGroupInvite(message.content) : automatic ? automatedMessageContent(message, peer) : `<p>${esc(message.content)}</p>`) : "";
+    const receipt = headAdmin && mine ? `<small class="ec-chat-modern-read-state ${message.is_read ? 'is-read' : 'is-sent'}">${message.is_read ? '✓ Gelesen' : '○ Gesendet'}</small>` : "";
+    bubble.innerHTML = `${automatic ? automatedHeader(message, peer) : ""}${media}${textBody}<div class="ec-chat-modern-bubble-meta"><time>${esc(formatStamp(message.created_at, true))}</time>${receipt}</div><button type="button" class="ec-chat-modern-delete" aria-label="Nachricht löschen">×</button>`;
     bubble.querySelector(".ec-chat-modern-delete").onclick = async () => {
       if (!confirm("Diese Nachricht für beide Gesprächspartner endgültig löschen?")) return;
       const { error: deleteError } = await supabase.rpc("delete_private_message", { p_message_id: message.id });
       if (deleteError) return alert(deleteError.message);
+      if (message.media_path && mine) {
+        try { await supabase.storage.from(MESSAGE_MEDIA_BUCKET).remove([message.media_path]); } catch {}
+      }
       bubble.remove();
     };
     list.append(bubble);
-  });
+  }
   requestAnimationFrame(() => { list.scrollTop = list.scrollHeight; });
   const form = shell.querySelector(".ec-chat-modern-form");
+  const textarea = form.elements.message;
+  textarea.value = previousText;
+  const imageInput = form.elements.image;
+  const preview = form.querySelector('.ec-chat-modern-image-preview');
   const send = form.querySelector(".ec-chat-modern-send");
+  let selectedFile = null;
+  let previewUrl = "";
+
+  function clearPreview() {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    previewUrl = "";
+    selectedFile = null;
+    imageInput.value = "";
+    preview.hidden = true;
+    preview.innerHTML = "";
+  }
+
+  imageInput.onchange = () => {
+    const file = imageInput.files?.[0] || null;
+    if (!file) return clearPreview();
+    if (!IMAGE_TYPES.has(file.type) || file.size > MAX_IMAGE_BYTES) {
+      clearPreview();
+      return alert("Bitte JPG, PNG, WebP oder GIF bis 8 MB auswählen.");
+    }
+    selectedFile = file;
+    previewUrl = URL.createObjectURL(file);
+    preview.hidden = false;
+    preview.innerHTML = `<img src="${esc(previewUrl)}" alt="Bildvorschau"><div><strong>${esc(file.name)}</strong><small>${Math.ceil(file.size / 1024)} KB</small><button type="button" class="ec-chat-modern-image-remove">Bild entfernen</button></div>`;
+    preview.querySelector('.ec-chat-modern-image-remove').onclick = clearPreview;
+  };
+
   form.onsubmit = async (event) => {
     event.preventDefault();
-    const textarea = form.elements.message;
     const text = String(textarea.value || "").trim();
-    if (!text || send.disabled) return;
+    if ((!text && !selectedFile) || send.disabled) return;
     send.disabled = true;
-    const { error: sendError } = await supabase.rpc("send_private_message", { target_user: peerId, message_text: text });
-    if (sendError) { send.disabled = false; return alert(`Nachricht konnte nicht gesendet werden: ${sendError.message}`); }
-    textarea.value = "";
-    await openThread(peerId);
+    let uploadedPath = "";
+    try {
+      if (selectedFile) {
+        const extension = ({ "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" })[selectedFile.type];
+        uploadedPath = `${currentUser.id}/${crypto.randomUUID()}.${extension}`;
+        const { error: uploadError } = await supabase.storage.from(MESSAGE_MEDIA_BUCKET).upload(uploadedPath, selectedFile, { contentType: selectedFile.type, upsert: false });
+        if (uploadError) throw uploadError;
+      }
+      const { error: sendError } = await supabase.rpc("send_private_message_media", { target_user: peerId, message_text: text, p_media_path: uploadedPath || null });
+      if (sendError) throw sendError;
+      textarea.value = "";
+      clearPreview();
+      await openThread(peerId);
+    } catch (error) {
+      if (uploadedPath) {
+        try { await supabase.storage.from(MESSAGE_MEDIA_BUCKET).remove([uploadedPath]); } catch {}
+      }
+      alert(`Nachricht konnte nicht gesendet werden: ${error?.message || 'Unbekannter Fehler'}`);
+    } finally {
+      send.disabled = false;
+    }
   };
 }
 
 async function mountIfNeeded() {
   if (mounting) return;
   const section = findMessagesSection();
-  if (!section) { mountedSection = null; activePeerId = null; return; }
+  if (!section) { mountedSection = null; activePeerId = null; clearThreadUrls(); return; }
   const shellExists = section.querySelector(".ec-chat-modern-shell");
   const sameSection = mountedSection === section && shellExists;
   if (sameSection) {
@@ -268,6 +376,7 @@ function refresh(delay = 20) {
 window.addEventListener("ec:navigate", () => refresh(20));
 window.addEventListener("popstate", () => refresh(20));
 document.addEventListener("visibilitychange", () => { if (!document.hidden) refresh(20); });
+window.addEventListener("focus", () => scheduleThreadRefresh(20));
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => refresh(0), { once: true });
 else refresh(0);
 
