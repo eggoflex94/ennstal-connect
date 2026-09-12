@@ -90,3 +90,5 @@ jobs:
           git reset --hard HEAD
           git pull --rebase origin main
           git push origin HEAD:main
+
+# Manual retry marker: repository Cloudflare secrets are expected to be configured.
