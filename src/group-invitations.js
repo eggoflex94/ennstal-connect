@@ -1,34 +1,66 @@
 import { supabase } from './supabaseClient';
 
-let syncing = false;
-let timer = null;
+const CONTEXT_TTL_MS = 10000;
+const contextCache = new Map();
+const contextLoads = new Map();
+let currentUser = null;
+let userLoad = null;
+let mountVersion = 0;
 let handledToken = '';
 
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const nameOf = (p) => p?.nickname || [p?.first_name,p?.last_name].filter(Boolean).join(' ') || 'Mitglied';
 
-async function loadContext(page){
+async function getCurrentUser() {
+  if (currentUser) return currentUser;
+  if (userLoad) return userLoad;
+  userLoad = supabase.auth.getUser().then(({ data }) => {
+    currentUser = data?.user || null;
+    return currentUser;
+  }).finally(() => { userLoad = null; });
+  return userLoad;
+}
+
+function invalidateContext(groupId = null) {
+  if (!groupId) {
+    contextCache.clear();
+    contextLoads.clear();
+    return;
+  }
+  for (const key of contextCache.keys()) if (key.startsWith(`${groupId}:`)) contextCache.delete(key);
+  for (const key of contextLoads.keys()) if (key.startsWith(`${groupId}:`)) contextLoads.delete(key);
+}
+
+async function loadContext(page, force = false) {
   const groupId = page?.dataset?.groupId;
-  if(!groupId) return null;
-  const { data: auth } = await supabase.auth.getUser();
-  const user = auth?.user;
-  if(!user) return null;
+  if (!groupId) return null;
+  const user = await getCurrentUser();
+  if (!user) return null;
+  const key = `${groupId}:${user.id}`;
+  const cached = contextCache.get(key);
+  if (!force && cached?.expiresAt > Date.now()) return cached.value;
+  if (!force && contextLoads.has(key)) return contextLoads.get(key);
 
-  const [groupResult,membersAResult,membersBResult,profilesResult,selfResult,manageResult] = await Promise.all([
-    supabase.from('community_groups').select('*').eq('id',groupId).maybeSingle(),
-    supabase.from('community_group_members').select('user_id').eq('group_id',groupId),
-    supabase.from('group_members').select('user_id').eq('group_id',groupId),
-    supabase.from('profiles').select('id,nickname,first_name,last_name,avatar_url,account_status').eq('account_status','ACTIVE').order('nickname',{ascending:true}),
-    supabase.from('profiles').select('role,account_status').eq('id',user.id).maybeSingle(),
-    supabase.rpc('ec_can_manage_community_groups',{p_user:user.id})
-  ]);
-
-  const group = groupResult.data;
-  if(!group) return null;
-  const memberIds = [...new Set([...(membersAResult.data||[]),...(membersBResult.data||[])].map(x=>x.user_id))];
-  const role = String(selfResult.data?.role || '').toUpperCase();
-  const canInvite = group.owner_id===user.id || group.created_by===user.id || role==='HEAD_ADMIN' || role==='ADMIN' || manageResult.data===true;
-  return {user,group,memberIds,profiles:profilesResult.data||[],canInvite};
+  const load = (async () => {
+    const [groupResult,membersAResult,membersBResult,profilesResult,selfResult,manageResult] = await Promise.all([
+      supabase.from('community_groups').select('*').eq('id',groupId).maybeSingle(),
+      supabase.from('community_group_members').select('user_id').eq('group_id',groupId),
+      supabase.from('group_members').select('user_id').eq('group_id',groupId),
+      supabase.from('profiles').select('id,nickname,first_name,last_name,avatar_url,account_status').eq('account_status','ACTIVE').order('nickname',{ascending:true}),
+      supabase.from('profiles').select('role,account_status').eq('id',user.id).maybeSingle(),
+      supabase.rpc('ec_can_manage_community_groups',{p_user:user.id})
+    ]);
+    const group = groupResult.data;
+    if (!group) return null;
+    const memberIds = [...new Set([...(membersAResult.data||[]),...(membersBResult.data||[])].map(x=>x.user_id))];
+    const role = String(selfResult.data?.role || '').toUpperCase();
+    const canInvite = group.owner_id===user.id || group.created_by===user.id || role==='HEAD_ADMIN' || role==='ADMIN' || manageResult.data===true;
+    const value = {user,group,memberIds,profiles:profilesResult.data||[],canInvite};
+    contextCache.set(key,{value,expiresAt:Date.now()+CONTEXT_TTL_MS});
+    return value;
+  })().finally(() => contextLoads.delete(key));
+  contextLoads.set(key, load);
+  return load;
 }
 
 async function sendInvite(groupId,targetId,button){
@@ -40,6 +72,7 @@ async function sendInvite(groupId,targetId,button){
   const { error } = await supabase.rpc('invite_to_community_group',{p_group_id:groupId,p_target_user:targetId});
   button.removeAttribute('aria-busy');
   if(error){ alert(`Einladung konnte nicht gesendet werden: ${error.message}`); button.disabled=false; button.textContent=original; return; }
+  invalidateContext(groupId);
   button.textContent = '✓ Einladung gesendet';
 }
 
@@ -58,7 +91,7 @@ function buildPanel(ctx){
       const row=document.createElement('div'); row.className='gfp-invite-row';
       row.innerHTML=`<img src="${esc(p.avatar_url||'/community-default-avatar.png')}" alt=""><span><strong>${esc(nameOf(p))}</strong><small>Einladung per privater Nachricht</small></span><button type="button">Einladen</button>`;
       const button=row.querySelector('button');
-      button.onclick=()=>void sendInvite(ctx.group.id,p.id,button);
+      button.addEventListener('click',()=>void sendInvite(ctx.group.id,p.id,button));
       list.append(row);
     });
   };
@@ -67,14 +100,12 @@ function buildPanel(ctx){
   return panel;
 }
 
-async function mountInvites(){
-  if(syncing) return;
-  const page = document.querySelector('.gfp-page');
+async function mountInvites(page = document.querySelector('.gfp-page'), force = false){
   if(!page || page.querySelector('.gfp-invite-panel')) return;
-  syncing=true;
+  const version = ++mountVersion;
   try{
-    const ctx = await loadContext(page);
-    if(!ctx?.canInvite) return;
+    const ctx = await loadContext(page, force);
+    if(version !== mountVersion || !page.isConnected || !ctx?.canInvite || page.querySelector('.gfp-invite-panel')) return;
     const main = page.querySelector('.gfp-main');
     const hero = page.querySelector('.gfp-hero');
     if(!main) return;
@@ -83,19 +114,20 @@ async function mountInvites(){
     else main.prepend(panel);
   } catch(error){
     console.warn('[group-invitations]',error?.message||error);
-  } finally { syncing=false; }
+  }
 }
 
 async function handleInviteFromUrl(){
   const token = new URLSearchParams(location.search).get('group_invite');
   if(!token || token === handledToken) return;
-  const {data:auth}=await supabase.auth.getUser();
-  if(!auth?.user) return;
+  const user = await getCurrentUser();
+  if(!user) return;
   handledToken = token;
   const accept = confirm('Du hast eine Gruppeneinladung erhalten. Möchtest du der Gruppe beitreten?');
   if(accept){
     const {data:groupId,error}=await supabase.rpc('accept_group_invitation',{p_token:token});
     if(error){ handledToken=''; return alert(error.message); }
+    invalidateContext(groupId);
     const url=new URL(location.href); url.searchParams.delete('group_invite'); url.searchParams.set('group',groupId); history.replaceState({},'',url); window.dispatchEvent(new PopStateEvent('popstate'));
   } else {
     const {error}=await supabase.rpc('decline_group_invitation',{p_token:token});
@@ -104,13 +136,23 @@ async function handleInviteFromUrl(){
   }
 }
 
-function schedule(){clearTimeout(timer);timer=setTimeout(()=>void mountInvites(),60);}
-new MutationObserver((records)=>{if(records.every(r=>r.target?.closest?.('.gfp-invite-panel')))return;schedule();}).observe(document.documentElement,{childList:true,subtree:true});
-window.addEventListener('ec:navigate',schedule);
-window.addEventListener('popstate',()=>{schedule();void handleInviteFromUrl();});
-window.addEventListener('focus',()=>{schedule();void handleInviteFromUrl();});
-supabase.auth.onAuthStateChange((event)=>{if(event==='SIGNED_IN'||event==='INITIAL_SESSION') setTimeout(()=>{void handleInviteFromUrl();schedule();},60);});
-setInterval(()=>{if(document.querySelector('.gfp-page')&&!document.querySelector('.gfp-invite-panel'))schedule();},1000);
-setTimeout(()=>{void handleInviteFromUrl();schedule();},150);
+function onGroupPageRendered(event) {
+  const page = event.detail?.page || document.querySelector('.gfp-page');
+  void mountInvites(page);
+}
+
+window.addEventListener('ec:group-page-rendered', onGroupPageRendered);
+window.addEventListener('ec:navigate',()=>{ mountVersion++; void handleInviteFromUrl(); });
+window.addEventListener('popstate',()=>{ mountVersion++; void handleInviteFromUrl(); });
+window.addEventListener('focus',()=>void handleInviteFromUrl());
+supabase.auth.onAuthStateChange((event, session)=>{
+  currentUser = session?.user || null;
+  invalidateContext();
+  if(event==='SIGNED_IN'||event==='INITIAL_SESSION') {
+    void handleInviteFromUrl();
+    void mountInvites();
+  }
+});
+queueMicrotask(()=>{ void handleInviteFromUrl(); void mountInvites(); });
 
 export {};
