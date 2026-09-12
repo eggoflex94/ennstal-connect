@@ -144,6 +144,7 @@ import "./head-admin-activity-folders.js";
 import "./profile-admin-tools-unified.css";
 import "./admin-head-access-reliability.js";
 import "./profile-admin-tools-unified.js";
+import "./profile-admin-role-actions.js";
 import "./regional-admin-tools-bridge.js";
 import "./ui-requested-fixes.js";
 import "./home-modern-final.css";
