@@ -1,0 +1,4 @@
+/* The final member profile owns the visible profile header. Keep legacy blocks out on every member profile. */
+.member-profile-page:not(.public-profile-preview) > .member-profile-hero{display:none!important}
+.member-profile-page .admin-responsibilities{display:none!important}
+.member-profile-page .verified-profile-badge{display:none!important}
