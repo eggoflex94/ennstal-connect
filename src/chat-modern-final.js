@@ -97,10 +97,19 @@ function removeMessageChannels() {
   messageReceiverChannel = null;
 }
 
+function composerHasPendingMedia() {
+  const form = mountedSection?.querySelector(".ec-chat-modern-form");
+  if (!form) return false;
+  return form.dataset.uploading === "true" || Boolean(form.elements?.image?.files?.length);
+}
+
 function scheduleThreadRefresh(delay = 80) {
-  if (!activePeerId) return;
+  if (!activePeerId || composerHasPendingMedia()) return;
   clearTimeout(threadRefreshTimer);
-  threadRefreshTimer = setTimeout(() => void openThread(activePeerId, { preserveComposer: true }), delay);
+  threadRefreshTimer = setTimeout(() => {
+    if (!activePeerId || composerHasPendingMedia()) return;
+    void openThread(activePeerId, { preserveComposer: true });
+  }, delay);
 }
 
 function subscribeMessageChanges() {
@@ -283,6 +292,7 @@ async function openThread(peerId, options = {}) {
     const text = String(textarea.value || "").trim();
     if ((!text && !selectedFile) || send.disabled) return;
     send.disabled = true;
+    form.dataset.uploading = "true";
     let uploadedPath = "";
     try {
       if (selectedFile) {
@@ -302,6 +312,7 @@ async function openThread(peerId, options = {}) {
       }
       alert(`Nachricht konnte nicht gesendet werden: ${error?.message || 'Unbekannter Fehler'}`);
     } finally {
+      form.dataset.uploading = "false";
       send.disabled = false;
     }
   };
@@ -376,7 +387,6 @@ function refresh(delay = 20) {
 window.addEventListener("ec:navigate", () => refresh(20));
 window.addEventListener("popstate", () => refresh(20));
 document.addEventListener("visibilitychange", () => { if (!document.hidden) refresh(20); });
-window.addEventListener("focus", () => scheduleThreadRefresh(20));
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => refresh(0), { once: true });
 else refresh(0);
 
