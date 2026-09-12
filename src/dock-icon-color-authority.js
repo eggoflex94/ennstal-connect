@@ -16,25 +16,13 @@ const ICONS = {
 };
 
 const TONES = {
-  'Benachrichtigungen': 'amber',
-  'Mein Profil': 'blue',
-  'Nachrichten': 'cyan',
-  'Freunde': 'green',
-  'Anfragen': 'lime',
-  'Blockiert': 'red',
-  'Einstellungen': 'slate',
-  'Hilfe': 'violet',
-  'Heimatregion ändern': 'orange',
-  'Admin-Zentrale': 'admin',
-  'Team-Aktivitäten': 'gold',
-  'Fake-Erkennung': 'rose',
-  'Werbung': 'pink',
-  'Beweissicherung': 'indigo'
+  'Benachrichtigungen': 'amber', 'Mein Profil': 'blue', 'Nachrichten': 'cyan', 'Freunde': 'green',
+  'Anfragen': 'lime', 'Blockiert': 'red', 'Einstellungen': 'slate', 'Hilfe': 'violet',
+  'Heimatregion ändern': 'orange', 'Admin-Zentrale': 'admin', 'Team-Aktivitäten': 'gold',
+  'Fake-Erkennung': 'rose', 'Werbung': 'pink', 'Beweissicherung': 'indigo'
 };
 
-function clean(value) {
-  return String(value || '').replace(/\s+/g, ' ').trim();
-}
+function clean(value) { return String(value || '').replace(/\s+/g, ' ').trim(); }
 
 function labelFor(button) {
   const candidates = [button.dataset.ecCompactLabel, button.getAttribute('aria-label'), button.title, clean(button.textContent)];
@@ -82,14 +70,15 @@ function applyAll() {
   return true;
 }
 
-let queued = false;
-new MutationObserver(() => {
-  if (queued) return;
-  queued = true;
-  requestAnimationFrame(() => { queued = false; applyAll(); });
-}).observe(document.documentElement, { childList: true, subtree: true });
-window.addEventListener('ec:navigate', () => requestAnimationFrame(applyAll));
-window.addEventListener('ec:region-change', () => requestAnimationFrame(applyAll));
-window.addEventListener('focus', () => requestAnimationFrame(applyAll));
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applyAll, { once: true });
-else applyAll();
+let timers = [];
+function scheduleApply() {
+  timers.forEach((timer) => clearTimeout(timer));
+  timers = [0, 120, 350, 800, 1400].map((delay) => setTimeout(applyAll, delay));
+}
+
+window.addEventListener('ec:navigate', scheduleApply);
+window.addEventListener('ec:region-change', scheduleApply);
+window.addEventListener('focus', scheduleApply);
+window.addEventListener('ec:open-notifications', scheduleApply);
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', scheduleApply, { once: true });
+else scheduleApply();
