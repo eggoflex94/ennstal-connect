@@ -5,6 +5,8 @@ let refreshTimer = null;
 let modal = null;
 let loadingProfileId = null;
 let lastRequestedAt = 0;
+let observedPage = null;
+let profileObserver = null;
 
 const esc = (v) => String(v ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
 const formatTime = (v) => { try { return new Date(v).toLocaleString('de-AT'); } catch { return ''; } };
@@ -42,6 +44,48 @@ function memberName(p) {
   return p?.nickname || [p?.first_name, p?.last_name].filter(Boolean).join(' ') || 'Mitglied';
 }
 
+function openStandaloneImage(src, title = 'Profilfoto') {
+  if (!src) return;
+  closeAlbum();
+  modal = document.createElement('div');
+  modal.className = 'ec-photo-album-overlay ec-profile-image-lightbox';
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
+  modal.innerHTML = `
+    <section class="ec-photo-album-modal ec-profile-image-modal">
+      <header><div><span>PROFIL</span><strong>${esc(title)}</strong></div><button type="button" class="ec-photo-album-close" aria-label="Schließen">×</button></header>
+      <div class="ec-photo-album-stage ec-profile-image-stage"><img src="${esc(src)}" alt="${esc(title)}" decoding="async"></div>
+    </section>`;
+  document.body.appendChild(modal);
+  modal.querySelector('.ec-photo-album-close').onclick = closeAlbum;
+  modal.onclick = (event) => { if (event.target === modal) closeAlbum(); };
+}
+
+function bindProfileImages(page) {
+  const heroImage = page.querySelector('.member-profile-hero > img');
+  if (heroImage && heroImage.dataset.ecProfileImageOpen !== '1') {
+    heroImage.dataset.ecProfileImageOpen = '1';
+    heroImage.classList.add('ec-clickable-profile-photo');
+    heroImage.setAttribute('role', 'button');
+    heroImage.setAttribute('tabindex', '0');
+    heroImage.title = 'Profilbild vergrößern';
+    const open = () => openStandaloneImage(heroImage.currentSrc || heroImage.src, 'Profilbild');
+    heroImage.addEventListener('click', open);
+    heroImage.addEventListener('keydown', (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); open(); } });
+  }
+  page.querySelectorAll('.profile-bio-image').forEach((image) => {
+    if (image.dataset.ecProfileImageOpen === '1') return;
+    image.dataset.ecProfileImageOpen = '1';
+    image.classList.add('ec-clickable-profile-photo');
+    image.setAttribute('role', 'button');
+    image.setAttribute('tabindex', '0');
+    image.title = 'Foto vergrößern';
+    const open = () => openStandaloneImage(image.currentSrc || image.src, 'Profilfoto');
+    image.addEventListener('click', open);
+    image.addEventListener('keydown', (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); open(); } });
+  });
+}
+
 function renderFolder(page, data) {
   page.querySelector('.ec-profile-photo-folder')?.remove();
   const folder = document.createElement('section');
@@ -58,7 +102,13 @@ function renderFolder(page, data) {
     </div>
     ${data.photos.length ? `<div class="ec-profile-photo-preview-grid">${thumbs}</div>` : '<p class="ec-profile-photo-empty">Noch keine für dich sichtbaren Fotos.</p>'}
   `;
-  page.appendChild(folder);
+
+  const anchor = page.querySelector('.member-profile-actions') || page.querySelector('.member-profile-hero');
+  if (anchor) anchor.insertAdjacentElement('afterend', folder);
+  else page.appendChild(folder);
+
+  page.querySelectorAll(':scope > .public-photo-folder').forEach((nativeFolder) => { nativeFolder.hidden = true; });
+  bindProfileImages(page);
   folder.querySelector('.ec-profile-photo-open-all')?.addEventListener('click', () => openAlbum(page.dataset.profileId, data, data.photos[0]?.id));
   folder.querySelectorAll('[data-photo-id]').forEach((btn) => btn.addEventListener('click', () => openAlbum(page.dataset.profileId, data, btn.dataset.photoId)));
 }
@@ -174,10 +224,11 @@ async function mountFolder(force = false) {
   }
   const ownerId = page.dataset.profileId;
   if (!ownerId) return;
+  bindProfileImages(page);
   if (!force && mountedProfileId === ownerId && page.querySelector('.ec-profile-photo-folder')) return;
   if (loadingProfileId === ownerId) return;
   const now = Date.now();
-  if (!force && now - lastRequestedAt < 500) return;
+  if (!force && now - lastRequestedAt < 350) return;
 
   loadingProfileId = ownerId;
   lastRequestedAt = now;
@@ -188,21 +239,42 @@ async function mountFolder(force = false) {
     mountedProfileId = ownerId;
   } catch (error) {
     console.warn('Foto-Ordner konnte nicht geladen werden:', error?.message || error);
+    if (page.isConnected && !page.querySelector('.ec-profile-photo-folder')) {
+      renderFolder(page, { photos: [], likes: [], comments: [], people: new Map(), user: null });
+    }
   } finally {
     if (loadingProfileId === ownerId) loadingProfileId = null;
   }
 }
 
-function schedule(delay = 80, force = false) {
+function schedule(delay = 40, force = false) {
   clearTimeout(refreshTimer);
   refreshTimer = setTimeout(() => void mountFolder(force), delay);
 }
 
-// Intentionally no full-page MutationObserver. React already owns the DOM and
-// profile navigation emits ec:navigate. Avoiding a document-wide observer keeps
-// the album from re-querying Supabase during unrelated UI updates.
-window.addEventListener('ec:navigate', () => schedule(60, true));
-window.addEventListener('focus', () => schedule(120, false));
+function detectProfilePage() {
+  const page = document.querySelector('.member-profile-page[data-profile-id]');
+  if (page === observedPage) {
+    if (page) bindProfileImages(page);
+    return;
+  }
+  observedPage = page || null;
+  mountedProfileId = null;
+  loadingProfileId = null;
+  if (page) schedule(0, true);
+}
+
+function startProfileObserver() {
+  if (profileObserver) return;
+  const root = document.querySelector('.modern-main') || document.getElementById('root');
+  if (!root) return;
+  profileObserver = new MutationObserver(detectProfilePage);
+  profileObserver.observe(root, { childList: true, subtree: true });
+  detectProfilePage();
+}
+
+window.addEventListener('ec:navigate', () => { detectProfilePage(); schedule(30, true); });
+window.addEventListener('focus', () => { detectProfilePage(); schedule(80, false); });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modal) closeAlbum(); });
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => schedule(0, true), { once: true });
-else schedule(0, true);
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startProfileObserver, { once: true });
+else startProfileObserver();
