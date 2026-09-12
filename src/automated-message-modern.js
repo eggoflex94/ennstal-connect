@@ -39,7 +39,7 @@ function starFor(profile){
   return theme === "admin" ? "/role-star-red.svg"
     : theme === "supporter" ? "/supporter-star.svg"
     : theme === "business" ? "/role-star-blue.svg"
-    : null;
+    : "/role-star-member.svg";
 }
 
 async function loadPeople(){
