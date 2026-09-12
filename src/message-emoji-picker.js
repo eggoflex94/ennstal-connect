@@ -1,11 +1,10 @@
 const EMOJIS = ['😀','😃','😄','😁','😊','🙂','😉','😍','🥰','😘','😎','🤗','🤔','😅','😂','🤣','😢','😭','😡','👍','👎','👏','🙌','🙏','💪','❤️','💙','💚','💛','🧡','💜','🔥','🎉','✅','⭐','🍀','☕','🍻','🚗','🏔️'];
-let timer = null;
-let observer = null;
 
-function closePicker(form) {
-  form?.querySelector('.ec-message-emoji-panel')?.remove();
-  form?.querySelector('.ec-message-emoji-toggle')?.setAttribute('aria-expanded', 'false');
-}
+let toggle = null;
+let panel = null;
+let activeTextarea = null;
+let scheduled = false;
+let observer = null;
 
 function setTextareaValue(textarea, value) {
   const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value');
@@ -26,36 +25,29 @@ function insertEmoji(textarea, emoji) {
   });
 }
 
-function mountEmojiPicker() {
-  const form = document.querySelector('.message-form');
-  const textarea = form?.querySelector('textarea');
-  if (!form || !textarea) return false;
+function closePanel() {
+  panel?.remove();
+  panel = null;
+  toggle?.setAttribute('aria-expanded', 'false');
+}
 
-  const existingToggle = form.querySelector('.ec-message-emoji-toggle');
-  if (existingToggle) {
-    form.dataset.ecEmojiReady = '1';
-    form.classList.add('ec-message-form-enhanced');
-    return true;
-  }
-
-  // React can keep the form node but replace its children. Never trust the
-  // old data flag unless the actual button still exists.
-  delete form.dataset.ecEmojiReady;
-  form.classList.add('ec-message-form-enhanced');
-
-  const toggle = document.createElement('button');
+function ensureToggle() {
+  if (toggle?.isConnected) return toggle;
+  toggle = document.createElement('button');
   toggle.type = 'button';
-  toggle.className = 'ec-message-emoji-toggle';
+  toggle.className = 'ec-message-emoji-portal-toggle';
   toggle.textContent = '😊';
   toggle.title = 'Smileys und Emojis';
   toggle.setAttribute('aria-label', 'Smileys und Emojis öffnen');
   toggle.setAttribute('aria-expanded', 'false');
-
-  toggle.onclick = () => {
-    const existing = form.querySelector('.ec-message-emoji-panel');
-    if (existing) return closePicker(form);
-    const panel = document.createElement('div');
-    panel.className = 'ec-message-emoji-panel';
+  toggle.hidden = true;
+  toggle.onclick = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!activeTextarea?.isConnected) return;
+    if (panel?.isConnected) return closePanel();
+    panel = document.createElement('div');
+    panel.className = 'ec-message-emoji-portal-panel';
     panel.setAttribute('role', 'listbox');
     panel.setAttribute('aria-label', 'Emoji auswählen');
     EMOJIS.forEach((emoji) => {
@@ -63,40 +55,81 @@ function mountEmojiPicker() {
       button.type = 'button';
       button.textContent = emoji;
       button.setAttribute('aria-label', `Emoji ${emoji}`);
-      button.onclick = () => insertEmoji(textarea, emoji);
+      button.onclick = (clickEvent) => {
+        clickEvent.preventDefault();
+        clickEvent.stopPropagation();
+        insertEmoji(activeTextarea, emoji);
+      };
       panel.appendChild(button);
     });
-    form.appendChild(panel);
+    document.body.appendChild(panel);
     toggle.setAttribute('aria-expanded', 'true');
+    positionPortal();
   };
-
-  textarea.insertAdjacentElement('beforebegin', toggle);
-  form.dataset.ecEmojiReady = '1';
-  return true;
+  document.body.appendChild(toggle);
+  return toggle;
 }
 
-function schedule(delay = 20) {
-  clearTimeout(timer);
-  timer = setTimeout(mountEmojiPicker, delay);
+function positionPortal() {
+  const textarea = document.querySelector('.message-form textarea');
+  const button = ensureToggle();
+  if (!textarea) {
+    activeTextarea = null;
+    button.hidden = true;
+    closePanel();
+    return;
+  }
+  activeTextarea = textarea;
+  button.hidden = false;
+  const rect = textarea.getBoundingClientRect();
+  const size = 42;
+  const left = Math.max(8, Math.min(window.innerWidth - size - 8, rect.left + 8));
+  const top = Math.max(8, Math.min(window.innerHeight - size - 8, rect.bottom - size - 8));
+  button.style.left = `${Math.round(left)}px`;
+  button.style.top = `${Math.round(top)}px`;
+  textarea.style.paddingLeft = '58px';
+  if (panel?.isConnected) {
+    const panelWidth = Math.min(340, window.innerWidth - 24);
+    panel.style.width = `${panelWidth}px`;
+    const panelLeft = Math.max(8, Math.min(window.innerWidth - panelWidth - 8, rect.left));
+    const preferredTop = top - 250 - 8;
+    const panelTop = preferredTop > 8 ? preferredTop : Math.min(window.innerHeight - 260, rect.bottom + 8);
+    panel.style.left = `${Math.round(panelLeft)}px`;
+    panel.style.top = `${Math.max(8, Math.round(panelTop))}px`;
+  }
 }
 
-function startObserver() {
-  const root = document.querySelector('.content-root') || document.querySelector('.modern-main') || document.getElementById('root');
-  if (!root || observer) return;
-  observer = new MutationObserver(() => {
-    const form = document.querySelector('.message-form');
-    if (form && !form.querySelector('.ec-message-emoji-toggle')) schedule(0);
+function schedulePosition() {
+  if (scheduled) return;
+  scheduled = true;
+  requestAnimationFrame(() => {
+    scheduled = false;
+    positionPortal();
   });
-  observer.observe(root, { childList: true, subtree: true });
-  schedule(0);
 }
 
-window.addEventListener('ec:navigate', () => schedule(20));
-window.addEventListener('focus', () => schedule(40));
+function start() {
+  ensureToggle();
+  const root = document.querySelector('.content-root') || document.querySelector('.modern-main') || document.getElementById('root');
+  if (root && !observer) {
+    observer = new MutationObserver((mutations) => {
+      const relevant = mutations.some((mutation) => [...mutation.addedNodes, ...mutation.removedNodes].some((node) => node.nodeType === Node.ELEMENT_NODE && (node.matches?.('.message-form, .chat-box, textarea') || node.querySelector?.('.message-form, .chat-box'))));
+      if (relevant || document.querySelector('.message-form textarea')) schedulePosition();
+    });
+    observer.observe(root, { childList: true, subtree: true });
+  }
+  schedulePosition();
+}
+
+window.addEventListener('ec:navigate', schedulePosition);
+window.addEventListener('resize', schedulePosition, { passive: true });
+window.addEventListener('scroll', schedulePosition, { passive: true, capture: true });
+window.addEventListener('focus', schedulePosition);
 document.addEventListener('click', (event) => {
-  const form = document.querySelector('.message-form.ec-message-form-enhanced');
-  if (!form || form.contains(event.target)) return;
-  closePicker(form);
+  if (event.target === toggle || toggle?.contains(event.target) || panel?.contains(event.target)) return;
+  closePanel();
 });
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startObserver, { once: true });
-else startObserver();
+document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closePanel(); });
+
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
+else start();
