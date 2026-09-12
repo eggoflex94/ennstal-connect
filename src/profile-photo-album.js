@@ -379,8 +379,6 @@ function attachObserver() {
 
 function refresh(force = false) { attachObserver(); scheduleMount(0, force); }
 window.addEventListener('ec:navigate', () => refresh());
-window.addEventListener('focus', () => scheduleMount(20, true));
-document.addEventListener('visibilitychange', () => { if (!document.hidden) scheduleMount(20, true); });
 supabase.auth.onAuthStateChange(() => {
   currentUserId = '';
   cleanupRealtime();
