@@ -139,6 +139,8 @@ import "./profile-visits-layout.css";
 import "./head-admin-menu.js";
 import "./head-admin-activity-folders.css";
 import "./head-admin-activity-folders.js";
+import "./profile-admin-tools-unified.css";
+import "./profile-admin-tools-unified.js";
 import "./regional-admin-tools-bridge.js";
 import "./ui-requested-fixes.js";
 import "./home-modern-final.css";
