@@ -35,6 +35,10 @@ function closePanel() {
   toggle?.setAttribute('aria-expanded', 'false');
 }
 
+function findTextarea() {
+  return document.querySelector('.ec-chat-modern-form textarea[name="message"], .message-form textarea');
+}
+
 function ensureToggle() {
   if (toggle?.isConnected) return toggle;
   toggle = document.createElement('button');
@@ -75,7 +79,7 @@ function ensureToggle() {
 }
 
 function positionPortal() {
-  const textarea = document.querySelector('.message-form textarea');
+  const textarea = findTextarea();
   const button = ensureToggle();
   if (!textarea) {
     activeTextarea = null;
@@ -125,7 +129,7 @@ function attachObserver() {
   if (root === observedRoot && observer) return;
   observer?.disconnect();
   observer = new MutationObserver((mutations) => {
-    const relevant = mutations.some((mutation) => [...mutation.addedNodes, ...mutation.removedNodes].some((node) => node.nodeType === Node.ELEMENT_NODE && (node.matches?.('.message-form, .chat-box, textarea') || node.querySelector?.('.message-form, .chat-box'))));
+    const relevant = mutations.some((mutation) => [...mutation.addedNodes, ...mutation.removedNodes].some((node) => node.nodeType === Node.ELEMENT_NODE && (node.matches?.('.message-form, .ec-chat-modern-form, .chat-box, textarea') || node.querySelector?.('.message-form, .ec-chat-modern-form, .chat-box'))));
     if (relevant) schedulePosition();
   });
   observer.observe(root, { childList: true, subtree: true });
