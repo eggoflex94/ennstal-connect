@@ -1,14 +1,21 @@
 import { supabase } from './supabaseClient';
+import './profile-live-presence.js';
+import './profile-live-presence.css';
 
 let lastSentAt = 0;
 let sending = false;
 const MIN_INTERVAL = 55_000;
 
 function deviceType() {
-  const coarse = window.matchMedia?.('(pointer: coarse)')?.matches;
-  const narrow = window.matchMedia?.('(max-width: 820px)')?.matches;
   const ua = String(navigator.userAgent || '');
-  return coarse || narrow || /Android|iPhone|iPad|iPod|Mobile/i.test(ua) ? 'MOBILE' : 'DESKTOP';
+  const uaDataMobile = navigator.userAgentData?.mobile === true;
+  const touchPoints = Number(navigator.maxTouchPoints || 0);
+  const coarse = window.matchMedia?.('(pointer: coarse)')?.matches === true;
+  const noHoverCoarse = window.matchMedia?.('(hover: none) and (pointer: coarse)')?.matches === true;
+  const shortSide = Math.min(Number(screen?.width || 0), Number(screen?.height || 0));
+  const touchSizedDevice = touchPoints > 0 && shortSide > 0 && shortSide <= 1100;
+  const mobileUa = /Android|iPhone|iPad|iPod|Mobile|Windows Phone|webOS/i.test(ua);
+  return uaDataMobile || mobileUa || noHoverCoarse || (coarse && touchPoints > 0) || touchSizedDevice ? 'MOBILE' : 'DESKTOP';
 }
 
 async function touchPresence(force = false) {
@@ -19,9 +26,13 @@ async function touchPresence(force = false) {
   try {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) return;
-    const { error } = await supabase.rpc('ec_touch_presence', { p_device: deviceType() });
-    if (!error) lastSentAt = Date.now();
-    else console.warn('Geräte-Online-Status konnte nicht aktualisiert werden:', error.message);
+    const device = deviceType();
+    const { error } = await supabase.rpc('ec_touch_presence', { p_device: device });
+    if (!error) {
+      lastSentAt = Date.now();
+      document.documentElement.dataset.ecPresenceDevice = device;
+      window.dispatchEvent(new CustomEvent('ec:presence-device', { detail: { device } }));
+    } else console.warn('Geräte-Online-Status konnte nicht aktualisiert werden:', error.message);
   } catch (error) {
     console.warn('Geräte-Online-Status konnte nicht aktualisiert werden:', error?.message || error);
   } finally {
