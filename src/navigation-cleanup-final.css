@@ -1,0 +1,57 @@
+/* Final navigation/overlay authority. Loaded last on purpose. */
+html.ec-modal-locked,html.ec-modal-locked body{overflow:hidden!important;overscroll-behavior:none!important}
+body.ec-modal-locked #root{pointer-events:none!important;user-select:none!important}
+body.ec-modal-locked>.ec-admin-hub-overlay,
+body.ec-modal-locked>.ec-profile-admin-overlay,
+body.ec-modal-locked>.ec-admin-workspace,
+body.ec-modal-locked>.group-details-overlay,
+body.ec-modal-locked>.public-photo-lightbox{pointer-events:auto!important;user-select:auto!important}
+
+/* Nothing inside an icon may steal the click from its button. */
+.ec-right-dock .ec-compact-menu-grid>.ec-compact-menu-item,
+.ec-right-dock .ec-compact-menu-grid>.ec-compact-menu-item *{touch-action:manipulation!important}
+.ec-right-dock .ec-compact-menu-grid>.ec-compact-menu-item>.ec-compact-menu-icon,
+.ec-right-dock .ec-compact-menu-grid>.ec-compact-menu-item>.ec-compact-menu-icon *,
+.ec-right-dock .ec-compact-menu-grid>.ec-compact-menu-item>.ec-compact-menu-label{pointer-events:none!important}
+.ec-right-dock .ec-compact-menu-grid>.ec-compact-menu-item{isolation:isolate!important;z-index:1!important;cursor:pointer!important;-webkit-tap-highlight-color:transparent!important}
+.ec-right-dock .ec-compact-menu-grid>.ec-compact-menu-item:focus-visible{outline:3px solid rgba(16,99,201,.28)!important;outline-offset:2px!important}
+
+/* The final admin entry is unique and visually above legacy slots. */
+.ec-right-dock [data-ec-admin-central-hub="1"]{position:relative!important;z-index:3!important}
+.ec-right-dock [data-regional-admin-tools-bridge="1"],
+.ec-right-dock [data-ec-admin-primary="1"][data-ec-page="admin"]{display:none!important;pointer-events:none!important}
+
+/* Modal authority: these must always sit above every dock, header and legacy workspace. */
+.ec-admin-hub-overlay{z-index:2147483000!important;pointer-events:auto!important;touch-action:pan-y!important}
+.ec-profile-admin-overlay{z-index:2147482900!important;pointer-events:auto!important}
+.ec-admin-workspace{z-index:2147482800!important}
+.ec-admin-hub,.ec-profile-admin-modal,.ec-admin-workspace-box{position:relative!important;z-index:1!important;pointer-events:auto!important}
+
+/* Prevent decorative/pseudo layers from covering real controls. */
+.ec-right-dock::before,.ec-right-dock::after,
+.ec-compact-menu-grid::before,.ec-compact-menu-grid::after,
+.ec-admin-hub::before,.ec-admin-hub::after{pointer-events:none!important}
+
+/* Desktop: keep all primary icon buttons immediately clickable. */
+@media(min-width:761px){
+  .ec-right-dock .ec-compact-menu-grid{position:relative!important;z-index:2!important}
+  .ec-right-dock .ec-compact-menu-grid>.ec-compact-menu-item{height:42px!important;min-height:42px!important}
+}
+
+/* Phones/tablets: no hidden click layer, no horizontal drift, same icon size as desktop. */
+@media(max-width:760px){
+  .ec-right-dock.ec-compact-personal-dock{position:relative!important;inset:auto!important;width:100%!important;max-width:100%!important;overflow:visible!important;z-index:20!important}
+  .ec-right-dock.ec-compact-personal-dock .ec-compact-menu-grid{position:relative!important;z-index:2!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;width:auto!important;max-width:100%!important;overflow:visible!important}
+  .ec-right-dock.ec-compact-personal-dock .ec-compact-menu-grid>.ec-compact-menu-item{width:100%!important;height:42px!important;min-height:42px!important;min-width:0!important;margin:0!important}
+  .ec-admin-hub-overlay,.ec-profile-admin-overlay{padding:max(8px,env(safe-area-inset-top)) 8px max(8px,env(safe-area-inset-bottom))!important;align-items:start!important;overflow:auto!important}
+  .ec-admin-hub,.ec-profile-admin-modal{width:100%!important;max-width:100%!important;max-height:none!important;margin:0!important;border-radius:16px!important}
+  .ec-admin-hub>header{position:sticky!important;top:0!important;z-index:5!important}
+  .ec-admin-hub-close,.ec-profile-admin-close{min-width:42px!important;min-height:42px!important;touch-action:manipulation!important}
+  .ec-admin-hub-tile{min-height:72px!important;touch-action:manipulation!important}
+}
+
+@media(max-width:430px){
+  .ec-admin-hub-grid{grid-template-columns:1fr!important;gap:10px!important;padding:12px!important}
+  .ec-admin-hub-tile{min-height:68px!important;padding:13px!important}
+  .ec-admin-hub-forum-host{padding:12px!important}
+}
