@@ -114,7 +114,7 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
     if (isSupporterPresentation(member)) return "Supporter";
     return "Mitglied";
   };
-  const roleStarSrc = (member) => isHeadAdmin(member) || isGlobalAdmin(member) || isRegionalAdmin(member) ? "/role-star-red.svg" : isBusiness(member) ? "/role-star-blue.svg" : isSupporterPresentation(member) ? "/supporter-star.svg" : null;
+  const roleStarSrc = (member) => isHeadAdmin(member) || isGlobalAdmin(member) || isRegionalAdmin(member) ? "/role-star-red.svg" : isBusiness(member) ? "/role-star-blue.svg" : normalized(member?.role) === "SUPPORTER" ? "/supporter-star.svg" : null;
   const cardTone = (member) => isHeadAdmin(member) || isGlobalAdmin(member) || isRegionalAdmin(member) ? "admin" : isBusiness(member) ? "business" : isSupporterPresentation(member) ? "supporter" : "member";
 
   const visible = useMemo(() => {
