@@ -1,7 +1,6 @@
 import { supabase } from "./supabaseClient";
 
 let profiles = [];
-let assignments = [];
 let syncTimer = null;
 
 const automatedPatterns = [
@@ -28,33 +27,26 @@ function normalize(value){ return String(value || "").trim(); }
 function roleTheme(profile){
   const role = normalize(profile?.role).toUpperCase();
   if(role === "HEAD_ADMIN" || role === "ADMIN") return "admin";
-  if(role === "SUPPORTER" || assignments.some(a => a.user_id === profile?.id && a.active)) return "supporter";
+  if(role === "SUPPORTER") return "supporter";
   if(profile?.account_badge === "BUSINESS") return "business";
   return "member";
 }
-function roleLabel(profile){
-  const role = normalize(profile?.role).toUpperCase();
-  if(role === "HEAD_ADMIN") return "Hauptadmin";
-  if(role === "ADMIN") return "Admin";
-  if(role === "SUPPORTER") return "Supporter";
-  if(profile?.account_badge === "BUSINESS") return "Unternehmen";
-  if(assignments.some(a => a.user_id === profile?.id && a.active)) return "Regional";
-  return "Mitglied";
-}
 function starFor(profile){
   const theme = roleTheme(profile);
-  return theme === "admin" ? "/role-star-red.svg" : theme === "supporter" ? "/supporter-star.svg" : theme === "business" ? "/role-star-blue.svg" : "/role-star-member.svg";
+  return theme === "admin" ? "/role-star-red.svg"
+    : theme === "supporter" ? "/supporter-star.svg"
+    : theme === "business" ? "/role-star-blue.svg"
+    : null;
 }
 
 async function loadPeople(){
   if(!supabase) return;
   try{
-    const [{data: ps},{data: ra}] = await Promise.all([
-      supabase.from("profiles").select("id,nickname,first_name,last_name,role,account_badge"),
-      supabase.from("regional_admin_assignments").select("user_id,active").eq("active",true)
-    ]);
-    profiles = ps || [];
-    assignments = ra || [];
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id,nickname,first_name,last_name,role,account_badge");
+    if(error) throw error;
+    profiles = data || [];
   }catch(error){
     console.warn("Rollensterne für automatische Nachrichten konnten nicht vorgeladen werden:", error);
   }
@@ -70,10 +62,13 @@ function profileForName(name){
 function extractActor(raw){
   const legacy = raw.match(/^([^\n:]{1,60}?)\s+hat\b/i) || raw.match(/^([^\n:]{1,60}?)\s+bittet\b/i);
   if(legacy?.[1]) return normalize(legacy[1]);
-  const points = raw.match(/du hast soeben von\s+★?\s*([^\n(]{1,60}?)\s+[+-]?\d+\s+punkte erhalten/i);
-  if(points?.[1]) return normalize(points[1]);
-  const roleMessage = raw.match(/du hast soeben von\s+★?\s*([^\n(]{1,60}?)(?:\s*\(|\s+die\s+rolle|\s+das\s+recht|\s+die\s+rechte|\s+die\s+regionalen)/i);
-  return normalize(roleMessage?.[1]);
+
+  const fromMessage = raw.match(
+    /du hast soeben von\s+★?\s*([^\n(]{1,60}?)(?=\s+(?:eine\s+bestätigung|[+-]?\d+\s+punkte|die\s+rolle|das\s+recht|die\s+rechte|die\s+regionalen|moderationsrechte|forum.?moderator))/i
+  );
+  if(fromMessage?.[1]) return normalize(fromMessage[1]);
+
+  return "";
 }
 
 function findMessageNodes(){
@@ -119,16 +114,21 @@ function decorate(node){
   if(name){
     const identity = document.createElement("span");
     identity.className = "ec-automated-identity";
-    const star = document.createElement("img");
-    star.className = "ec-automated-role-star";
-    star.src = starFor(profile || {});
-    star.alt = "Rollenstern";
     const text = document.createElement("span");
     text.className = "ec-automated-identity-copy";
     const nick = document.createElement("strong");
     nick.textContent = profile?.nickname || name;
+    const starSrc = profile ? starFor(profile) : null;
+    if(starSrc){
+      const star = document.createElement("img");
+      star.className = "ec-automated-role-star";
+      star.src = starSrc;
+      star.alt = "";
+      star.setAttribute("aria-hidden", "true");
+      identity.append(star);
+    }
     text.append(nick);
-    identity.append(star, text);
+    identity.append(text);
     header.append(identity);
   }
 
