@@ -1,5 +1,6 @@
 const EMOJIS = ['😀','😃','😄','😁','😊','🙂','😉','😍','🥰','😘','😎','🤗','🤔','😅','😂','🤣','😢','😭','😡','👍','👎','👏','🙌','🙏','💪','❤️','💙','💚','💛','🧡','💜','🔥','🎉','✅','⭐','🍀','☕','🍻','🚗','🏔️'];
 let timer = null;
+let observer = null;
 
 function closePicker(form) {
   form?.querySelector('.ec-message-emoji-panel')?.remove();
@@ -28,7 +29,7 @@ function insertEmoji(textarea, emoji) {
 function mountEmojiPicker() {
   const form = document.querySelector('.message-form');
   const textarea = form?.querySelector('textarea');
-  if (!form || !textarea || form.dataset.ecEmojiReady === '1') return;
+  if (!form || !textarea || form.dataset.ecEmojiReady === '1') return false;
   form.dataset.ecEmojiReady = '1';
   form.classList.add('ec-message-form-enhanced');
 
@@ -60,19 +61,34 @@ function mountEmojiPicker() {
   };
 
   textarea.insertAdjacentElement('beforebegin', toggle);
+  return true;
 }
 
-function schedule(delay = 30) {
+function schedule(delay = 20) {
   clearTimeout(timer);
   timer = setTimeout(mountEmojiPicker, delay);
 }
 
+function startObserver() {
+  const root = document.querySelector('.modern-main') || document.getElementById('root');
+  if (!root || observer) return;
+  observer = new MutationObserver((mutations) => {
+    const chatAppeared = mutations.some((mutation) => [...mutation.addedNodes].some((node) =>
+      node.nodeType === Node.ELEMENT_NODE &&
+      (node.matches?.('.message-form') || node.querySelector?.('.message-form'))
+    ));
+    if (chatAppeared) schedule(0);
+  });
+  observer.observe(root, { childList: true, subtree: true });
+  schedule(0);
+}
+
 window.addEventListener('ec:navigate', () => schedule(20));
-window.addEventListener('focus', () => schedule(50));
+window.addEventListener('focus', () => schedule(40));
 document.addEventListener('click', (event) => {
   const form = document.querySelector('.message-form.ec-message-form-enhanced');
   if (!form || form.contains(event.target)) return;
   closePicker(form);
 });
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => schedule(0), { once: true });
-else schedule(0);
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startObserver, { once: true });
+else startObserver();
