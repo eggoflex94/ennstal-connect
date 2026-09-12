@@ -7,6 +7,7 @@ const svg = {
 let access = null;
 let loading = false;
 let refreshTimer = null;
+let mountTimers = [];
 
 const escapeHtml = (value) => String(value ?? '')
   .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
@@ -105,13 +106,19 @@ async function ensureButton() {
     button.className = 'ec-compact-menu-item ec-dashboard-utility-button';
     menu.appendChild(button);
   }
+
   button.dataset.ecAdminCentralHub = '1';
   button.dataset.headAdminTool = 'admin-tools';
   button.dataset.ecCompactLabel = 'Admin-Zentrale';
   button.dataset.ecIconTone = 'admin';
   button.title = 'Admin-Zentrale';
   button.setAttribute('aria-label', 'Admin-Zentrale');
-  button.innerHTML = `<span class="ec-compact-menu-icon">${svg.admin}</span><span class="ec-compact-menu-label">Admin-Zentrale</span>`;
+
+  if (button.dataset.ecAdminCentralReady !== '1') {
+    button.innerHTML = `<span class="ec-compact-menu-icon">${svg.admin}</span><span class="ec-compact-menu-label">Admin-Zentrale</span>`;
+    button.dataset.ecAdminCentralReady = '1';
+  }
+
   button.onclick = async (event) => {
     event.preventDefault();
     event.stopPropagation();
@@ -211,21 +218,35 @@ async function openAdminForum(overlay, ctx) {
   });
 }
 
+function clearMountTimers() {
+  mountTimers.forEach((timer) => clearTimeout(timer));
+  mountTimers = [];
+}
+
+function scheduleMountAttempts() {
+  clearMountTimers();
+  mountTimers = [0, 180, 550, 1200].map((delay) => setTimeout(() => void ensureButton(), delay));
+}
+
 function scheduleRefresh(delay = 80) {
   clearTimeout(refreshTimer);
   refreshTimer = setTimeout(async () => {
     access = null;
     await loadAccess();
-    await ensureButton();
+    scheduleMountAttempts();
   }, delay);
 }
 
-new MutationObserver(() => { if (grid()) void ensureButton(); }).observe(document.documentElement, { childList: true, subtree: true });
 window.addEventListener('focus', () => scheduleRefresh(30));
-window.addEventListener('ec:navigate', () => void ensureButton());
+window.addEventListener('ec:navigate', scheduleMountAttempts);
 window.addEventListener('ec:region-change', () => scheduleRefresh(30));
 supabase?.auth?.onAuthStateChange?.((event) => {
-  if (event === 'SIGNED_OUT') { access = null; document.querySelector('[data-ec-admin-central-hub="1"]')?.remove(); return; }
+  if (event === 'SIGNED_OUT') {
+    access = null;
+    clearMountTimers();
+    document.querySelector('[data-ec-admin-central-hub="1"]')?.remove();
+    return;
+  }
   scheduleRefresh(50);
 });
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => scheduleRefresh(0), { once: true });
