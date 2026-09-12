@@ -33,6 +33,17 @@ test("mobile layout override files stay disabled for desktop parity", async () =
   }
 });
 
+test("final touch layer keeps desktop width while improving tap targets", async () => {
+  const main = await source("src/main.jsx");
+  const css = await source("src/touch-desktop-stability.css");
+  assert.match(main, /import "\.\/touch-desktop-stability\.css";/);
+  assert.match(css, /@media \(pointer: coarse\)/);
+  assert.match(css, /min-width:\s*1180px/);
+  assert.match(css, /min-height:\s*44px/);
+  assert.match(css, /touch-action:\s*manipulation/);
+  assert.doesNotMatch(css, /@media\s*\(max-width:/);
+});
+
 test("profile upload remains React-owned on desktop and phones", async () => {
   const app = await source("src/App.jsx");
   const legacyAvatar = await source("src/profile-image-upload-fix.js");
