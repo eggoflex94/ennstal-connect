@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import './auth-professional-final.css';
 
 const items=[
   ['Regional','Regionale Startseite, Termine und Neuigkeiten.'],
