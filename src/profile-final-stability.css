@@ -7,3 +7,20 @@
 .member-profile-page.public-profile-preview .member-profile-hero .member-profile-bio {
   display: none !important;
 }
+
+/* Old runtime-generated profile fragments are no longer part of the canonical
+   profile. Keep them hidden even if a stale browser bundle created them before
+   the new bundle finished loading. */
+.member-profile-page > .profile-visible-details,
+.member-profile-page .ec-restored-profile-function,
+.member-profile-page .ec-restored-profile-main,
+.member-profile-page .ec-restored-profile-bio {
+  display: none !important;
+}
+
+/* If the retired renderer previously hid the React-owned hero text, restore it. */
+.member-profile-page .ec-restored-profile-original-text {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
