@@ -28,6 +28,17 @@ async function viewerId() {
   return currentUserId;
 }
 
+async function canModerateProfile(profileId) {
+  if (!profileId) return false;
+  const { data, error } = await supabase.rpc('ec_can_profile_admin_action', {
+    p_target_user: profileId,
+    p_permission: 'manage_media',
+    p_regional_permission: 'MEMBERS',
+    p_allow_forum_moderator: false
+  });
+  return !error && data === true;
+}
+
 async function photoUrl(path) {
   if (!path) return '';
   if (/^https?:\/\//i.test(path)) return path;
@@ -38,7 +49,7 @@ async function photoUrl(path) {
   return url;
 }
 
-async function loadAlbum(profileId) {
+async function loadAlbum(profileId, canModerate) {
   const { data: photos, error } = await supabase
     .from('member_photos')
     .select('id,owner_id,image_url,caption,visibility,created_at')
@@ -46,12 +57,15 @@ async function loadAlbum(profileId) {
     .order('created_at', { ascending: false });
   if (error) throw error;
   const ids = (photos || []).map((photo) => photo.id);
-  if (!ids.length) return { photos: [], likes: [], comments: [], profiles: [] };
+  if (!ids.length) return { photos: [], likes: [], comments: [], profiles: [], reports: [] };
 
-  const [likesResult, commentsResult] = await Promise.all([
+  const requests = [
     supabase.from('member_photo_likes').select('photo_id,user_id,created_at').in('photo_id', ids),
     supabase.from('member_photo_comments').select('id,photo_id,author_id,content,created_at').in('photo_id', ids).order('created_at', { ascending: true })
-  ]);
+  ];
+  if (canModerate) requests.push(supabase.from('member_photo_reports').select('id,photo_id,reporter_id,reason,status,created_at').in('photo_id', ids).eq('status', 'OPEN'));
+  const results = await Promise.all(requests);
+  const [likesResult, commentsResult, reportsResult] = results;
   if (likesResult.error) throw likesResult.error;
   if (commentsResult.error) throw commentsResult.error;
 
@@ -61,7 +75,13 @@ async function loadAlbum(profileId) {
     const profilesResult = await supabase.from('profiles').select('id,nickname,first_name,last_name').in('id', authorIds);
     if (!profilesResult.error) profiles = profilesResult.data || [];
   }
-  return { photos: photos || [], likes: likesResult.data || [], comments: commentsResult.data || [], profiles };
+  return {
+    photos: photos || [],
+    likes: likesResult.data || [],
+    comments: commentsResult.data || [],
+    profiles,
+    reports: reportsResult?.error ? [] : (reportsResult?.data || [])
+  };
 }
 
 function profileName(profile) {
@@ -84,29 +104,35 @@ async function renderAlbum(page, profileId) {
   try {
     const me = await viewerId();
     const mine = me === profileId;
-    const { photos, likes, comments, profiles } = await loadAlbum(profileId);
+    const canModerate = !mine && await canModerateProfile(profileId);
+    const { photos, likes, comments, profiles, reports } = await loadAlbum(profileId, canModerate);
     const profileMap = new Map(profiles.map((profile) => [profile.id, profile]));
     const cards = await Promise.all(photos.map(async (photo) => {
       const url = await photoUrl(photo.image_url);
       const photoLikes = likes.filter((like) => like.photo_id === photo.id);
       const liked = photoLikes.some((like) => like.user_id === me);
       const photoComments = comments.filter((comment) => comment.photo_id === photo.id);
-      return `<article class="ec-photo-card" data-photo-id="${esc(photo.id)}">
-        <div class="ec-photo-image-wrap">${url ? `<img src="${esc(url)}" alt="${esc(photo.caption || 'Profilfoto')}" loading="lazy">` : '<div class="ec-photo-image-error">Foto nicht verfügbar</div>'}</div>
+      const photoReports = reports.filter((report) => report.photo_id === photo.id);
+      const reported = photoReports.length > 0;
+      return `<article class="ec-photo-card${reported ? ' is-reported' : ''}" data-photo-id="${esc(photo.id)}">
+        <div class="ec-photo-image-wrap">${url ? `<img src="${esc(url)}" alt="${esc(photo.caption || 'Profilfoto')}" loading="lazy">` : '<div class="ec-photo-image-error">Foto nicht verfügbar</div>'}${reported && canModerate ? '<span class="ec-photo-report-badge">Gemeldet</span>' : ''}</div>
         <div class="ec-photo-card-body">
           ${photo.caption ? `<p class="ec-photo-caption">${esc(photo.caption)}</p>` : ''}
           <div class="ec-photo-actions">
             <button type="button" class="ec-photo-like${liked ? ' active' : ''}" data-photo-like="${esc(photo.id)}">${liked ? '♥' : '♡'} ${photoLikes.length}</button>
             <span>💬 ${photoComments.length}</span>
+            ${!mine ? `<button type="button" class="ec-photo-report" data-photo-report="${esc(photo.id)}">Melden</button>` : ''}
             ${mine ? `<button type="button" class="ec-photo-delete" data-photo-delete="${esc(photo.id)}" data-photo-path="${esc(photo.image_url)}">Entfernen</button>` : ''}
+            ${canModerate && reported ? `<button type="button" class="ec-photo-admin-remove" data-photo-admin-remove="${esc(photo.id)}">Als Admin entfernen</button>` : ''}
           </div>
+          ${canModerate && reported ? `<div class="ec-photo-report-reasons"><strong>Offene Meldung${photoReports.length > 1 ? 'en' : ''}</strong>${photoReports.map((report) => `<p>${esc(report.reason)}</p>`).join('')}</div>` : ''}
           <div class="ec-photo-comments">${photoComments.map((comment) => `<div class="ec-photo-comment"><strong>${esc(profileName(profileMap.get(comment.author_id)))}</strong><span>${esc(comment.content)}</span></div>`).join('')}</div>
           <form class="ec-photo-comment-form" data-photo-comment-form="${esc(photo.id)}"><input name="comment" maxlength="500" placeholder="Kommentar schreiben …" required><button type="submit">Senden</button></form>
         </div>
       </article>`;
     }));
 
-    album.innerHTML = `<header class="ec-photo-album-head"><div><span class="eyebrow">FOTOALBUM</span><h2>${mine ? 'Mein Fotoalbum' : 'Fotoalbum'}</h2><p>Profilfotos mit Likes und Kommentaren.</p></div>${mine ? '<button type="button" class="secondary-button ec-photo-upload-open">+ Foto hinzufügen</button>' : ''}</header>
+    album.innerHTML = `<header class="ec-photo-album-head"><div><span class="eyebrow">FOTOALBUM</span><h2>${mine ? 'Mein Fotoalbum' : 'Fotoalbum'}</h2><p>Profilfotos mit Likes, Kommentaren und Meldefunktion.</p></div>${mine ? '<button type="button" class="secondary-button ec-photo-upload-open">+ Foto hinzufügen</button>' : ''}</header>
       ${mine ? `<form class="ec-photo-upload-form" hidden>
         <label>Foto<input type="file" name="photo" accept="image/jpeg,image/png,image/webp,image/gif" required></label>
         <label>Beschreibung<input type="text" name="caption" maxlength="160" placeholder="Optional"></label>
@@ -187,6 +213,43 @@ function bindAlbum(album, page, profileId) {
       await renderAlbum(page, profileId);
     } catch (error) {
       window.alert(error?.message || 'Kommentar konnte nicht gespeichert werden.');
+      button.disabled = false;
+    }
+  }));
+
+  album.querySelectorAll('[data-photo-report]').forEach((button) => button.addEventListener('click', async () => {
+    const reason = window.prompt('Warum möchtest du dieses Foto melden? (mindestens 3 Zeichen)', '');
+    if (reason === null) return;
+    const cleanReason = reason.trim();
+    if (cleanReason.length < 3) return window.alert('Bitte einen Meldegrund mit mindestens 3 Zeichen angeben.');
+    const me = await viewerId();
+    if (!me) return window.alert('Bitte melde dich erneut an.');
+    button.disabled = true;
+    try {
+      const { error } = await supabase.from('member_photo_reports').insert({ photo_id: button.dataset.photoReport, reporter_id: me, reason: cleanReason, status: 'OPEN' });
+      if (error) throw error;
+      window.alert('Foto wurde gemeldet. Die Administration prüft die Meldung.');
+      await renderAlbum(page, profileId);
+    } catch (error) {
+      window.alert(error?.message || 'Foto konnte nicht gemeldet werden.');
+      button.disabled = false;
+    }
+  }));
+
+  album.querySelectorAll('[data-photo-admin-remove]').forEach((button) => button.addEventListener('click', async () => {
+    const reason = window.prompt('Begründung für die Entfernung des gemeldeten Fotos:', 'Verstoß gegen Community-Regeln');
+    if (reason === null) return;
+    button.disabled = true;
+    try {
+      const { data: path, error } = await supabase.rpc('admin_remove_reported_member_photo', { p_photo_id: button.dataset.photoAdminRemove, p_reason: reason.trim() });
+      if (error) throw error;
+      if (path && !/^https?:\/\//i.test(path)) {
+        try { await supabase.storage.from(BUCKET).remove([path]); } catch {}
+      }
+      window.alert('Gemeldetes Foto wurde entfernt. Der Besitzer wurde automatisch benachrichtigt und die Aktion im Admin-Logbuch protokolliert.');
+      await renderAlbum(page, profileId);
+    } catch (error) {
+      window.alert(error?.message || 'Gemeldetes Foto konnte nicht entfernt werden.');
       button.disabled = false;
     }
   }));
