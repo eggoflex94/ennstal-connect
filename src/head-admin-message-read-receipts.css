@@ -1,0 +1,17 @@
+.ec-head-admin-read-receipt {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: right;
+  opacity: 0.72;
+}
+
+.ec-head-admin-read-receipt.is-read {
+  opacity: 1;
+}
+
+.ec-head-admin-read-receipt.is-sent {
+  font-weight: 600;
+}
