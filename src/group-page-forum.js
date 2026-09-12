@@ -1,33 +1,33 @@
 import { supabase } from "./supabaseClient";
 
+const PAGE_TTL_MS = 8000;
+const pageCache = new Map();
+const pageLoads = new Map();
+const groupRevisions = new Map();
 let activePage = null;
-let opening = false;
 let currentGroupId = null;
+let viewEpoch = 0;
 
 const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
 const fmtDate = (value) => value ? new Date(value).toLocaleString("de-AT", { dateStyle: "medium", timeStyle: "short" }) : "";
 const displayName = (profile) => profile?.nickname || [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || "Mitglied";
 const styleClass = (post) => `gfp-font-${post.font_family || "modern"} gfp-size-${post.font_size || "normal"} gfp-align-${post.text_align || "left"}`;
 
-async function resolveGroupFromCard(card) {
-  const directId = card?.dataset?.groupId;
-  if (directId) {
-    const { data } = await supabase.from("community_groups").select("*").eq("id", directId).maybeSingle();
-    if (data) return data;
-  }
-  const name = (card?.querySelector("h2,h3,.group-card-title")?.textContent || "").trim();
-  if (!name) return null;
-  const { data } = await supabase.from("community_groups").select("*").eq("name", name).limit(20);
-  if (!data?.length) return null;
-  if (data.length === 1) return data[0];
-  const activeRegion = localStorage.getItem("ec-active-region");
-  return data.find((group) => group.region_id === activeRegion) || data[0];
+function revisionFor(groupId) {
+  return groupRevisions.get(groupId) || 0;
+}
+
+function invalidateGroupData(groupId) {
+  if (!groupId) return;
+  groupRevisions.set(groupId, revisionFor(groupId) + 1);
+  pageCache.delete(groupId);
 }
 
 async function getProfiles(ids) {
   const unique = [...new Set(ids.filter(Boolean))];
   if (!unique.length) return new Map();
-  const { data } = await supabase.from("profiles").select("id,nickname,first_name,last_name,avatar_url,role").in("id", unique);
+  const { data, error } = await supabase.from("profiles").select("id,nickname,first_name,last_name,avatar_url,role").in("id", unique);
+  if (error) throw error;
   return new Map((data || []).map((profile) => [profile.id, profile]));
 }
 
@@ -43,27 +43,57 @@ async function uploadForumImage(userId, file) {
 }
 
 async function loadGroupPage(groupId) {
-  const [{ data: group, error: groupError }, { data: auth }] = await Promise.all([
-    supabase.from("community_groups").select("*").eq("id", groupId).single(),
-    supabase.auth.getUser()
-  ]);
-  if (groupError || !group) throw groupError || new Error("Gruppe nicht gefunden.");
-  const user = auth?.user;
-  const [membersA, membersB, postsResult] = await Promise.all([
-    supabase.from("community_group_members").select("user_id,joined_at").eq("group_id", group.id),
-    supabase.from("group_members").select("user_id,joined_at").eq("group_id", group.id),
-    supabase.from("group_forum_posts").select("*").eq("group_id", group.id).order("created_at", { ascending: false })
-  ]);
-  const memberIds = [...new Set([...(membersA.data || []), ...(membersB.data || [])].map((entry) => entry.user_id))];
-  const posts = postsResult.data || [];
-  const { data: replies } = posts.length
-    ? await supabase.from("group_forum_replies").select("*").in("post_id", posts.map((post) => post.id)).order("created_at", { ascending: true })
-    : { data: [] };
-  const profileIds = [group.created_by, group.owner_id, user?.id, ...memberIds, ...posts.map((post) => post.author_id), ...(replies || []).map((reply) => reply.author_id)];
-  const profiles = await getProfiles(profileIds);
-  const self = profiles.get(user?.id);
-  const isMember = Boolean(user?.id && (memberIds.includes(user.id) || group.owner_id === user.id || group.created_by === user.id || self?.role === "HEAD_ADMIN" || self?.role === "ADMIN"));
-  return { group, user, memberIds, posts, replies: replies || [], profiles, isMember };
+  const revision = revisionFor(groupId);
+  const cached = pageCache.get(groupId);
+  if (cached?.revision === revision && cached.expiresAt > Date.now()) return cached.state;
+
+  const loadKey = `${groupId}:${revision}`;
+  if (pageLoads.has(loadKey)) return pageLoads.get(loadKey);
+
+  const load = (async () => {
+    const [{ data: group, error: groupError }, { data: auth }] = await Promise.all([
+      supabase.from("community_groups").select("*").eq("id", groupId).single(),
+      supabase.auth.getUser()
+    ]);
+    if (groupError || !group) throw groupError || new Error("Gruppe nicht gefunden.");
+
+    const user = auth?.user;
+    const [membersA, membersB, postsResult] = await Promise.all([
+      supabase.from("community_group_members").select("user_id,joined_at").eq("group_id", group.id),
+      supabase.from("group_members").select("user_id,joined_at").eq("group_id", group.id),
+      supabase.from("group_forum_posts").select("*").eq("group_id", group.id).order("created_at", { ascending: false })
+    ]);
+    if (membersA.error) throw membersA.error;
+    if (membersB.error) throw membersB.error;
+    if (postsResult.error) throw postsResult.error;
+
+    const memberIds = [...new Set([...(membersA.data || []), ...(membersB.data || [])].map((entry) => entry.user_id))];
+    const posts = postsResult.data || [];
+    const repliesResult = posts.length
+      ? await supabase.from("group_forum_replies").select("*").in("post_id", posts.map((post) => post.id)).order("created_at", { ascending: true })
+      : { data: [], error: null };
+    if (repliesResult.error) throw repliesResult.error;
+    const replies = repliesResult.data || [];
+
+    const profileIds = [group.created_by, group.owner_id, user?.id, ...memberIds, ...posts.map((post) => post.author_id), ...replies.map((reply) => reply.author_id)];
+    const profiles = await getProfiles(profileIds);
+    const self = profiles.get(user?.id);
+    const isMember = Boolean(user?.id && (memberIds.includes(user.id) || group.owner_id === user.id || group.created_by === user.id || self?.role === "HEAD_ADMIN" || self?.role === "ADMIN"));
+    const state = { group, user, memberIds, posts, replies, profiles, isMember };
+
+    if (revisionFor(groupId) === revision) {
+      pageCache.set(groupId, { state, revision, expiresAt: Date.now() + PAGE_TTL_MS });
+    }
+    return state;
+  })().finally(() => pageLoads.delete(loadKey));
+
+  pageLoads.set(loadKey, load);
+  return load;
+}
+
+function announceRendered(page, state) {
+  Object.defineProperty(page, "__ecForumState", { value: state, configurable: true });
+  window.dispatchEvent(new CustomEvent("ec:group-page-rendered", { detail: { groupId: state.group.id, page, state } }));
 }
 
 function renderPage(state) {
@@ -114,7 +144,7 @@ function renderPage(state) {
                 <div class="gfp-post-content ${styleClass(post)}">${esc(post.content).replace(/\n/g, "<br>")}</div>
                 ${post.image_url ? `<button class="gfp-post-image" type="button"><img src="${esc(post.image_url)}" alt="Bild zum Forumsbeitrag"></button>` : ""}
                 <div class="gfp-replies">
-                  ${postReplies.map((reply) => { const ra = profiles.get(reply.author_id); return `<div class="gfp-reply"><img src="${esc(ra?.avatar_url || "/community-default-avatar.png")}" alt=""><div><div><strong>${esc(displayName(ra))}</strong><small>${esc(fmtDate(reply.created_at))}</small></div><p>${esc(reply.content).replace(/\n/g, "<br>")}</p></div></div>`; }).join("")}
+                  ${postReplies.map((reply) => { const ra = profiles.get(reply.author_id); return `<div class="gfp-reply" data-reply-id="${reply.id}"><img src="${esc(ra?.avatar_url || "/community-default-avatar.png")}" alt=""><div><div><strong>${esc(displayName(ra))}</strong><small>${esc(fmtDate(reply.created_at))}</small></div><p>${esc(reply.content).replace(/\n/g, "<br>")}</p></div></div>`; }).join("")}
                 </div>
                 ${isMember ? `<form class="gfp-reply-form"><input name="content" maxlength="2000" placeholder="Antwort schreiben …" required><button type="submit">Antworten</button></form>` : ""}
               </article>`;
@@ -139,112 +169,122 @@ function renderPage(state) {
       preview.textContent = textarea.value || "So wird dein Text aussehen.";
       preview.className = styleClass({ font_family: composer.elements.font_family.value, font_size: composer.elements.font_size.value, text_align: composer.elements.text_align.value });
     };
-    composer.addEventListener("input", updatePreview); composer.addEventListener("change", updatePreview); updatePreview();
+    composer.addEventListener("input", updatePreview);
+    composer.addEventListener("change", updatePreview);
+    updatePreview();
     composer.addEventListener("submit", async (event) => {
       event.preventDefault();
-      const button = composer.querySelector("button[type=submit]"); button.disabled = true; button.textContent = "Wird veröffentlicht …";
+      if (!user?.id) return;
+      const button = composer.querySelector("button[type=submit]");
+      button.disabled = true;
+      button.textContent = "Wird veröffentlicht …";
       try {
         const imageUrl = await uploadForumImage(user.id, composer.elements.image.files?.[0]);
         const { error } = await supabase.from("group_forum_posts").insert({ group_id: group.id, author_id: user.id, title: composer.elements.title.value.trim(), content: composer.elements.content.value.trim(), image_url: imageUrl, font_family: composer.elements.font_family.value, font_size: composer.elements.font_size.value, text_align: composer.elements.text_align.value });
         if (error) throw error;
+        invalidateGroupData(group.id);
         await refreshCurrentPage();
-      } catch (error) { alert(error?.message || "Beitrag konnte nicht veröffentlicht werden."); button.disabled = false; button.textContent = "Beitrag veröffentlichen"; }
+      } catch (error) {
+        alert(error?.message || "Beitrag konnte nicht veröffentlicht werden.");
+        button.disabled = false;
+        button.textContent = "Beitrag veröffentlichen";
+      }
     });
   }
 
   shell.querySelectorAll(".gfp-reply-form").forEach((form) => form.addEventListener("submit", async (event) => {
-    event.preventDefault(); const postId = form.closest(".gfp-post")?.dataset.postId; const input = form.elements.content; const button = form.querySelector("button");
-    if (!postId || !input.value.trim()) return; button.disabled = true;
+    event.preventDefault();
+    const postId = form.closest(".gfp-post")?.dataset.postId;
+    const input = form.elements.content;
+    const button = form.querySelector("button");
+    if (!postId || !user?.id || !input.value.trim()) return;
+    button.disabled = true;
     const { error } = await supabase.from("group_forum_replies").insert({ post_id: postId, author_id: user.id, content: input.value.trim() });
     if (error) { alert(error.message); button.disabled = false; return; }
+    invalidateGroupData(group.id);
     await refreshCurrentPage();
   }));
 
   const lightbox = shell.querySelector(".gfp-lightbox");
-  shell.querySelectorAll(".gfp-post-image").forEach((button) => button.addEventListener("click", () => { lightbox.querySelector("img").src = button.querySelector("img").src; lightbox.hidden = false; }));
+  shell.querySelectorAll(".gfp-post-image").forEach((button) => button.addEventListener("click", () => {
+    lightbox.querySelector("img").src = button.querySelector("img").src;
+    lightbox.hidden = false;
+  }));
   lightbox.addEventListener("click", () => { lightbox.hidden = true; });
   lightbox.querySelector("img").addEventListener("click", (event) => event.stopPropagation());
   return shell;
 }
 
-async function openGroupPage(group, pushState = true) {
-  if (!group?.id || opening) return;
-  opening = true;
+async function openGroupPage(groupId) {
+  if (!groupId) return;
+  if (groupId === currentGroupId && activePage?.isConnected) return;
+  currentGroupId = groupId;
+  const epoch = ++viewEpoch;
   try {
-    currentGroupId = group.id;
-    const state = await loadGroupPage(group.id);
+    const state = await loadGroupPage(groupId);
+    if (epoch !== viewEpoch || currentGroupId !== groupId) return;
+    const page = renderPage(state);
     activePage?.remove();
-    activePage = renderPage(state);
-    document.body.appendChild(activePage);
+    activePage = page;
+    document.body.appendChild(page);
     document.documentElement.classList.add("gfp-open");
-    if (pushState) {
-      const url = new URL(location.href); url.searchParams.set("group", group.id); history.pushState({ ...(history.state || {}), ecGroup: group.id }, "", url);
-    }
+    announceRendered(page, state);
     window.scrollTo(0, 0);
-  } catch (error) { console.error("[group-forum]", error); alert(`Die Gruppe konnte nicht geöffnet werden: ${error?.message || "Unbekannter Fehler"}`); }
-  finally { opening = false; }
+  } catch (error) {
+    if (epoch !== viewEpoch || currentGroupId !== groupId) return;
+    currentGroupId = null;
+    console.error("[group-forum]", error);
+    alert(`Die Gruppe konnte nicht geöffnet werden: ${error?.message || "Unbekannter Fehler"}`);
+  }
 }
 
 async function refreshCurrentPage() {
-  if (!currentGroupId) return;
-  const state = await loadGroupPage(currentGroupId);
-  const replacement = renderPage(state);
-  activePage?.replaceWith(replacement); activePage = replacement;
+  const groupId = currentGroupId;
+  if (!groupId) return;
+  const epoch = ++viewEpoch;
+  try {
+    const state = await loadGroupPage(groupId);
+    if (epoch !== viewEpoch || currentGroupId !== groupId) return;
+    const replacement = renderPage(state);
+    activePage?.replaceWith(replacement);
+    activePage = replacement;
+    announceRendered(replacement, state);
+  } catch (error) {
+    if (epoch === viewEpoch && currentGroupId === groupId) console.error("[group-forum-refresh]", error);
+  }
 }
 
-function closeGroupPage() {
-  activePage?.remove(); activePage = null; currentGroupId = null; document.documentElement.classList.remove("gfp-open");
-  const url = new URL(location.href); url.searchParams.delete("group"); history.pushState({ ...(history.state || {}), ecGroup: null }, "", url);
+function closeGroupPage({ updateHistory = true } = {}) {
+  viewEpoch++;
+  activePage?.remove();
+  activePage = null;
+  currentGroupId = null;
+  document.documentElement.classList.remove("gfp-open");
+  if (updateHistory) {
+    const url = new URL(location.href);
+    url.searchParams.delete("group");
+    history.pushState({ ...(history.state || {}), ecGroup: null }, "", url);
+  }
 }
 
-async function openFromUrl() {
+function syncFromUrl() {
   const id = new URLSearchParams(location.search).get("group");
-  if (!id || id === currentGroupId) return;
-  const { data } = await supabase.from("community_groups").select("*").eq("id", id).maybeSingle();
-  if (data) openGroupPage(data, false);
+  if (!id) {
+    if (currentGroupId || activePage) closeGroupPage({ updateHistory: false });
+    return;
+  }
+  void openGroupPage(id);
 }
 
-function decorateGroupCards() {
-  document.querySelectorAll(".groups-page .group-card").forEach(async (card) => {
-    if (card.dataset.groupPageReady === "1") return;
-    const group = await resolveGroupFromCard(card);
-    if (!group) return;
-    card.dataset.groupId = group.id;
-    card.dataset.groupPageReady = "1";
-    card.style.cursor = "pointer";
-    if (!card.querySelector(".group-open-full-page")) {
-      const actions = card.querySelector(".content-card-actions");
-      if (actions) {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "primary-button group-open-full-page";
-        button.textContent = "Gruppe öffnen";
-        button.addEventListener("click", (event) => { event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation(); openGroupPage(group); }, true);
-        actions.prepend(button);
-      }
-    }
-  });
-}
-
-document.addEventListener("click", async (event) => {
-  const card = event.target.closest(".groups-page .group-card");
-  if (!card) return;
-  const isAction = event.target.closest("input,textarea,label,select,a") || (event.target.closest("button") && !event.target.closest(".group-details-button,.group-open-full-page"));
-  if (isAction) return;
-  event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation();
-  const group = await resolveGroupFromCard(card);
-  if (group) openGroupPage(group);
-}, true);
-
-const observer = new MutationObserver(() => decorateGroupCards());
-observer.observe(document.documentElement, { childList: true, subtree: true });
-window.addEventListener("ec:navigate", () => setTimeout(decorateGroupCards, 50));
-window.addEventListener("popstate", () => {
-  const id = new URLSearchParams(location.search).get("group");
-  if (!id) { activePage?.remove(); activePage = null; currentGroupId = null; document.documentElement.classList.remove("gfp-open"); }
-  else openFromUrl();
+window.addEventListener("popstate", syncFromUrl);
+window.addEventListener("ec:navigate", syncFromUrl);
+window.addEventListener("ec:authenticated", syncFromUrl);
+window.addEventListener("ec:group-forum-changed", (event) => {
+  const groupId = event.detail?.groupId;
+  if (!groupId) return;
+  invalidateGroupData(groupId);
+  if (groupId === currentGroupId) void refreshCurrentPage();
 });
-setTimeout(() => { openFromUrl(); decorateGroupCards(); }, 300);
-window.addEventListener("ec:authenticated", () => { openFromUrl(); decorateGroupCards(); });
+queueMicrotask(syncFromUrl);
 
 export {};
