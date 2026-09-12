@@ -141,5 +141,25 @@ async function build(root){
   }
 }
 function run(){document.querySelectorAll('.member-profile-page:not(.public-profile-preview)').forEach(root=>{cleanProfileNoise(root);build(root)})}
-let queued=false;new MutationObserver(()=>{if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;run()})}).observe(document.documentElement,{childList:true,subtree:true});
-window.addEventListener('DOMContentLoaded',run);run();
+
+let queued=false;
+let observer=null;
+function mutationTouchesMemberProfile(mutation){
+  const target=mutation.target?.nodeType===Node.ELEMENT_NODE?mutation.target:null;
+  if(target?.closest?.('.member-profile-page'))return true;
+  return [...mutation.addedNodes,...mutation.removedNodes].some(node=>node.nodeType===Node.ELEMENT_NODE&&(node.matches?.('.member-profile-page')||node.querySelector?.('.member-profile-page')));
+}
+function startObserver(){
+  if(observer)return;
+  const root=document.querySelector('.content-root')||document.querySelector('.modern-main')||document.getElementById('root');
+  if(!root)return;
+  observer=new MutationObserver(mutations=>{
+    if(!mutations.some(mutationTouchesMemberProfile)||queued)return;
+    queued=true;
+    requestAnimationFrame(()=>{queued=false;run()});
+  });
+  observer.observe(root,{childList:true,subtree:true});
+}
+function start(){run();startObserver()}
+window.addEventListener('DOMContentLoaded',start,{once:true});
+start();
