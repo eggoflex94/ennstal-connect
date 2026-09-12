@@ -173,6 +173,9 @@ import "./chat-final-authority.css";
 /* Touch devices keep the desktop layout, with larger reliable tap targets. */
 import "./touch-desktop-stability.css";
 
+/* Absolute final member-card authority: approved visual mockup. */
+import "./member-card-mockup-final.css";
+
 class AppErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
