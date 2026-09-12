@@ -1,130 +1,82 @@
-import { preparePrivilegedAction, supabase } from './supabaseClient';
+let mountTimer = null;
 
-const PERMISSIONS = [
-  ['manage_members','Mitglieder verwalten'],['manage_points','Punkte verwalten'],['manage_messages','Nachrichten verwalten'],['manage_media','Medien verwalten'],['manage_roles','Rollen verwalten'],['manage_admins','Admins verwalten'],['view_profile_visits','Profilbesuche sehen'],['manage_news','Neuigkeiten verwalten'],['manage_groups','Gruppen verwalten'],['manage_events','Veranstaltungen verwalten'],['manage_marketplace','Marktplatz verwalten'],['manage_friend_requests','Freundschaftsanfragen verwalten'],['manage_homepage','Startseite verwalten'],['manage_reports','Meldungen verwalten']
-];
-const REGIONAL_LABELS={FORUM:'Forum',GROUPS:'Gruppen',EVENTS:'Events',NEWS:'Neuigkeiten',HOMEPAGE:'Startseite',MEMBERS:'Mitglieder',BUSINESSES:'Unternehmen',ANNOUNCEMENTS:'Ankündigungen'};
-let busy=false,lastProfileId='';
-const esc=v=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
-const role=v=>String(v||'MEMBER').toUpperCase();
-const roleLabel=v=>({HEAD_ADMIN:'Hauptadmin',ADMIN:'Community Admin',SUPPORTER:'Supporter',MEMBER:'Mitglied'})[role(v)]||role(v);
-const bool=v=>v===true;
-const notify=text=>window.alert(text);
-
-async function askReason(action){const value=window.prompt(`Begründung für „${action}“ (verpflichtend, mindestens 10 Zeichen):`,'');if(value===null)return null;const reason=value.trim();if(reason.length<10){notify('Bitte gib eine nachvollziehbare Begründung mit mindestens 10 Zeichen ein.');return null;}return reason;}
-async function withPreparedAction(action,targetId,task){const reason=await askReason(action);if(!reason)return false;const prepared=await preparePrivilegedAction(action,targetId,reason);if(prepared?.error){notify(prepared.error.message||'Die Aktion konnte nicht vorbereitet werden.');return false;}const result=await task(reason);if(result?.error){notify(result.error.message||'Die Aktion konnte nicht durchgeführt werden.');return false;}return true;}
-
-async function loadContext(targetId){
-  const {data:{user}}=await supabase.auth.getUser(); if(!user?.id||!targetId||user.id===targetId)return null;
-  const [viewerResult,targetResult,permResult,regionsResult,regionalAdminResult,regionalModResult,targetRegionalAdminResult,targetRegionalModResult]=await Promise.all([
-    supabase.from('profiles').select('id,nickname,role,account_status,forum_moderator,home_region_id').eq('id',user.id).maybeSingle(),
-    supabase.from('profiles').select('id,nickname,first_name,last_name,role,account_status,forum_moderator,is_verified,is_test_account,account_badge,home_region_id,community_points,purchase_points,avatar_url,profile_background,bio_image_url,admin_responsibilities').eq('id',targetId).maybeSingle(),
-    supabase.from('user_permissions').select('*').eq('user_id',user.id).maybeSingle(),
-    supabase.from('regions').select('id,slug,name').eq('is_active',true).order('sort_order'),
-    supabase.from('regional_admin_assignments').select('region_id,active').eq('user_id',user.id).eq('active',true),
-    supabase.from('regional_moderation_assignments').select('region_id,permissions,active').eq('user_id',user.id).eq('active',true),
-    supabase.from('regional_admin_assignments').select('region_id,active').eq('user_id',targetId).eq('active',true),
-    supabase.from('regional_moderation_assignments').select('region_id,permissions,active').eq('user_id',targetId).eq('active',true)
-  ]);
-  const viewer=viewerResult.data,target=targetResult.data;if(!viewer||!target||viewer.account_status!=='ACTIVE')return null;
-  const isHead=role(viewer.role)==='HEAD_ADMIN';
-  const isGlobalAdmin=role(viewer.role)==='ADMIN';
-  const targetRegionalAdmins=(targetRegionalAdminResult.data||[]).filter(x=>x.active!==false);
-  const targetProtected=role(target.role)==='HEAD_ADMIN'||role(target.role)==='ADMIN'||targetRegionalAdmins.length>0;
-  if(targetProtected&&!isHead)return null;
-  const permissions=permResult.data||{};
-  const viewerRegionalAdmins=(regionalAdminResult.data||[]).filter(x=>x.active!==false);
-  const isRegionalAdminForTarget=viewerRegionalAdmins.some(x=>x.region_id===target.home_region_id);
-  const regionalMods=regionalModResult.data||[];
-  const targetRegionalPermissions=new Set(regionalMods.filter(x=>x.active!==false&&x.region_id===target.home_region_id).flatMap(x=>Array.isArray(x.permissions)?x.permissions:[]).map(x=>String(x).toUpperCase()));
-  const hasBasicAdmin=isHead||isGlobalAdmin||isRegionalAdminForTarget;
-  const hasExtraProfileTool=bool(viewer.forum_moderator)||Object.values(permissions).some(v=>v===true)||targetRegionalPermissions.size>0;
-  if(!hasBasicAdmin&&!hasExtraProfileTool)return null;
-  let targetPermissions={};if(isHead){const {data}=await supabase.rpc('admin_get_permissions',{target_user:targetId});targetPermissions=data||{};}
-  return {viewer,target,isHead,isGlobalAdmin,isRegionalAdminForTarget,hasBasicAdmin,permissions,targetRegionalPermissions,targetPermissions,regions:regionsResult.data||[],targetRegionalAdmins,targetRegionalMods:targetRegionalModResult.data||[]};
+async function openAdminTools(targetId, button) {
+  if (!targetId || !button || button.dataset.loading === '1') return;
+  const original = button.textContent;
+  button.dataset.loading = '1';
+  button.disabled = true;
+  button.textContent = '⚙ Admin Tools werden geladen …';
+  try {
+    await import('./profile-admin-tools-runtime.js');
+    if (typeof window.ecOpenUnifiedProfileAdminTools !== 'function') {
+      throw new Error('Admin Tools konnten nicht initialisiert werden.');
+    }
+    await window.ecOpenUnifiedProfileAdminTools(targetId);
+  } catch (error) {
+    console.error('Admin Tools konnten nicht geladen werden:', error);
+    window.alert(error?.message || 'Admin Tools konnten nicht geladen werden.');
+  } finally {
+    button.dataset.loading = '0';
+    button.disabled = false;
+    button.textContent = original;
+  }
 }
 
-const canGlobal=(ctx,key)=>ctx.isHead||bool(ctx.permissions?.[key]);
-const canRegional=(ctx,key)=>ctx.isHead||ctx.targetRegionalPermissions.has(key);
-const canWarn=ctx=>ctx.hasBasicAdmin||canGlobal(ctx,'manage_reports')||canGlobal(ctx,'manage_members')||canRegional(ctx,'MEMBERS')||bool(ctx.viewer.forum_moderator);
-const canSuspend=ctx=>ctx.hasBasicAdmin||canGlobal(ctx,'manage_members')||canRegional(ctx,'MEMBERS');
-const canForumLock=ctx=>ctx.hasBasicAdmin||canGlobal(ctx,'manage_members')||canRegional(ctx,'MEMBERS')||canRegional(ctx,'FORUM')||bool(ctx.viewer.forum_moderator);
-const canMessageLock=ctx=>ctx.hasBasicAdmin||canGlobal(ctx,'manage_members')||canGlobal(ctx,'manage_messages')||canRegional(ctx,'MEMBERS');
-const canFriendLock=ctx=>ctx.hasBasicAdmin||canGlobal(ctx,'manage_members')||canGlobal(ctx,'manage_friend_requests')||canRegional(ctx,'MEMBERS');
-const canVerificationRequest=ctx=>ctx.hasBasicAdmin||canGlobal(ctx,'manage_members')||canRegional(ctx,'MEMBERS');
-const canPoints=ctx=>ctx.hasBasicAdmin||canGlobal(ctx,'manage_points');
-const canReports=ctx=>ctx.hasBasicAdmin||canGlobal(ctx,'manage_reports')||canRegional(ctx,'MEMBERS');
-const targetName=t=>t.nickname||[t.first_name,t.last_name].filter(Boolean).join(' ')||'Mitglied';
-const toolButton=(label,action,cls='')=>`<button type="button" class="ec-profile-admin-action ${cls}" data-admin-action="${esc(action)}">${esc(label)}</button>`;
-const section=(icon,title,subtitle,body,cls='')=>`<section class="ec-profile-admin-section ${cls}"><header class="ec-profile-admin-section-head"><span class="ec-profile-admin-section-icon">${icon}</span><div><h3>${esc(title)}</h3>${subtitle?`<p>${esc(subtitle)}</p>`:''}</div></header>${body}</section>`;
+function hasAdminSurface(page) {
+  if (page.querySelector('.member-admin-tools,.feature-unlocks,.head-admin-media-tools,.member-business-tool')) return true;
+  return [...page.querySelectorAll('button')].some((button) => /punkteliste|punkte vergeben/i.test(String(button.textContent || '')));
+}
 
-function buildModal(ctx){
-  const t=ctx.target,homeRegion=ctx.regions.find(r=>r.id===t.home_region_id)||null,isSuspended=t.account_status==='SUSPENDED';
-  const blocks=[];
-  if(ctx.isHead){
-    const regionOptions=ctx.regions.map(r=>`<option value="${esc(r.slug)}" ${r.id===t.home_region_id?'selected':''}>${esc(r.name)}</option>`).join('');
-    const targetRegionalAdminIds=new Set(ctx.targetRegionalAdmins.map(x=>x.region_id));
-    const targetRegionalModIds=new Set((ctx.targetRegionalMods||[]).filter(x=>x.active!==false).map(x=>x.region_id));
-    const groupMod=bool(ctx.targetPermissions?.manage_groups)||(t.admin_responsibilities||[]).some(x=>/gruppen verwalten/i.test(String(x)));
-    blocks.push(section('★','Rolle & Zuständigkeiten','Nur Hauptadmin – Rollen, Moderatorstatus und Einzelrechte',`<div class="ec-profile-admin-grid">${toolButton('Rolle entfernen → Mitglied','role:MEMBER')}${toolButton('Zum Supporter machen','role:SUPPORTER')}${toolButton('Zum Community Admin machen','role:ADMIN')}${toolButton('Einzelrechte verwalten','permissions')}${toolButton(t.forum_moderator?'Forum-Moderation entfernen':'Forum-Moderator vergeben','forum-moderator')}${toolButton(groupMod?'Gruppenmoderation entfernen':role(t.role)==='SUPPORTER'?'Gruppenmoderator vergeben':'Supporter + Gruppenmoderation','group-moderator')}</div>`,'head-only'));
-    blocks.push(section('⌖','Regionale Rollen','Nur Hauptadmin – Region auswählen und Rolle verwalten',`<label class="ec-profile-admin-region-picker">Region<select class="ec-admin-region-select">${regionOptions}</select></label><div class="ec-profile-admin-grid">${toolButton(homeRegion&&targetRegionalAdminIds.has(homeRegion.id)?'Regionaladmin entfernen':'Regionaladmin vergeben','regional-admin')}${toolButton(homeRegion&&targetRegionalModIds.has(homeRegion.id)?'Regionale Moderation entfernen':'Regionale Moderation vergeben','regional-moderator')}</div>`,'head-only'));
+function mount() {
+  const page = document.querySelector('.member-profile-page[data-profile-id]');
+  if (!page) return;
+  const targetId = page.dataset.profileId;
+  const actions = page.querySelector('.member-profile-actions');
+  if (!targetId || !actions) return;
+
+  const existing = actions.querySelector('.ec-profile-admin-open');
+  if (!hasAdminSurface(page)) {
+    existing?.remove();
+    return;
   }
 
-  const moderation=[];
-  if(canWarn(ctx))moderation.push(toolButton('Verwarnung senden','warn'));
-  if(canSuspend(ctx))moderation.push(toolButton(isSuspended?'Konto freischalten':'Profil/Konto sperren','suspend',isSuspended?'success':'danger'));
-  if(canReports(ctx))moderation.push(toolButton('Meldungen bearbeiten','reports'));
-  if(canVerificationRequest(ctx)&&!t.is_verified)moderation.push(toolButton('Verifizierung mit Frist anfordern','verification-request'));
-  if(moderation.length)blocks.push(section('⚠','Moderation',ctx.hasBasicAdmin?'Admin-Grundfunktionen für dieses Profil':'Freigegebene Moderationsrechte',`<div class="ec-profile-admin-grid">${moderation.join('')}</div>`));
+  page.querySelectorAll('.member-admin-tools,.feature-unlocks,.head-admin-media-tools,.member-business-tool').forEach((element) => {
+    element.style.setProperty('display', 'none', 'important');
+  });
+  page.querySelectorAll('button').forEach((button) => {
+    if (/punkteliste|punkte vergeben/i.test(String(button.textContent || ''))) {
+      button.style.setProperty('display', 'none', 'important');
+    }
+  });
 
-  const locks=[];
-  if(canForumLock(ctx))locks.push(toolButton('Forum sperren / freigeben','feature:FORUM_POSTING'));
-  if(canMessageLock(ctx))locks.push(toolButton('Nachrichten sperren / freigeben','feature:MESSAGING'));
-  if(canFriendLock(ctx))locks.push(toolButton('Freundschaftsanfragen sperren / freigeben','feature:FRIEND_REQUESTS'));
-  if(locks.length)blocks.push(section('⛔','Funktionssperren','Bei Sperren durch andere Admins wird der Hauptadmin automatisch informiert',`<div class="ec-profile-admin-grid">${locks.join('')}</div>`));
-
-  if(canPoints(ctx))blocks.push(section('★','Punkte',ctx.hasBasicAdmin?'Admin-Grundfunktion':'Zusätzlich freigegebenes Punkterecht',`<div class="ec-profile-admin-summary"><span>Community-Punkte</span><strong>${Number(t.community_points||0).toLocaleString('de-AT')}</strong><span>Kaufpunkte</span><strong>${Number(t.purchase_points||0).toLocaleString('de-AT')}</strong></div><div class="ec-profile-admin-grid">${toolButton('Plus- oder Minuspunkte vergeben','points')}${toolButton('Punkteverlauf anzeigen','point-history')}</div>`));
-
-  if(ctx.isHead){
-    const media=[String(t.avatar_url||'').startsWith('http')&&toolButton('Profilbild entfernen','media:avatar_url','danger'),String(t.profile_background||'').startsWith('http')&&toolButton('Hintergrundfoto entfernen','media:profile_background','danger'),String(t.bio_image_url||'').startsWith('http')&&toolButton('Über-mich-Bild entfernen','media:bio_image_url','danger')].filter(Boolean).join('');
-    blocks.push(section('♛','Hauptadmin-Werkzeuge','Verifizierung, Kontoart, Testkonto und Profilmedien',`<div class="ec-profile-admin-grid">${toolButton(t.is_verified?'Verifizierung entfernen':'Profil verifizieren','verify')}${toolButton(t.account_badge==='BUSINESS'?'Unternehmenskonto entfernen':'Unternehmenskonto vergeben','business')}${toolButton(t.is_test_account?'Testkonto wieder sichtbar machen':'Als Testkonto ausblenden','test-account')}${media}</div>`,'head-only'));
+  if (existing) {
+    existing.onclick = () => openAdminTools(targetId, existing);
+    return;
   }
 
-  let accessNote='';
-  if(ctx.isHead)accessNote='Hauptadmin: vollständiger Zugriff auf alle Profilwerkzeuge.';
-  else if(ctx.isGlobalAdmin)accessNote='Global Admin: Meldungen, Punkte, Verwarnungen, Profil-/Kontosperren und Funktionssperren sind Grundfunktionen.';
-  else if(ctx.isRegionalAdminForTarget)accessNote='Regional Admin: Grundfunktionen für Mitglieder deiner zugewiesenen Region.';
-  else {const granted=[];PERMISSIONS.forEach(([k,l])=>{if(bool(ctx.permissions?.[k]))granted.push(l);});ctx.targetRegionalPermissions.forEach(k=>granted.push(`Regional: ${REGIONAL_LABELS[k]||k}`));if(ctx.viewer.forum_moderator)granted.push('Forum-Moderator');accessNote=`Zusatzrechte: ${granted.join(' · ')||'keine'}`;}
-  return `<div class="ec-profile-admin-overlay" role="dialog" aria-modal="true" aria-label="Admin Tools"><div class="ec-profile-admin-modal"><header class="ec-profile-admin-modal-head"><div><span>ADMIN TOOLS</span><h2>${esc(targetName(t))}</h2><p>${esc(roleLabel(t.role))}${homeRegion?` · ${esc(homeRegion.name)}`:''}</p></div><button type="button" class="ec-profile-admin-close" aria-label="Schließen">×</button></header><div class="ec-profile-admin-access-note">${esc(accessNote)}</div><div class="ec-profile-admin-body">${blocks.join('')||'<p class="ec-profile-admin-empty">Für dieses Profil stehen dir keine Admin-Werkzeuge zur Verfügung.</p>'}</div></div></div>`;
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'primary-button ec-profile-admin-open';
+  button.textContent = '⚙ Admin Tools';
+  button.onclick = () => openAdminTools(targetId, button);
+  actions.prepend(button);
 }
 
-async function toggleFeature(targetId,feature){const {data}=await supabase.from('user_feature_locks').select('is_locked').eq('user_id',targetId).eq('feature_key',feature).maybeSingle();const next=!bool(data?.is_locked);return withPreparedAction(`${feature} ${next?'sperren':'freigeben'}`,targetId,reason=>supabase.rpc('admin_set_feature_lock',{p_target_user:targetId,p_feature_key:feature,p_is_locked:next,p_reason:reason}));}
-async function showPointHistory(ctx,modal){const {data,error}=await supabase.from('point_transactions').select('created_at,amount,kind,category,reason').eq('member_id',ctx.target.id).order('created_at',{ascending:false}).limit(30);if(error)return notify(error.message);const rows=(data||[]).map(x=>`<tr><td>${new Date(x.created_at).toLocaleString('de-AT')}</td><td class="${Number(x.amount)<0?'minus':'plus'}">${Number(x.amount)>0?'+':''}${Number(x.amount)}</td><td>${esc(x.category||x.kind||'Punkte')}</td><td>${esc(x.reason||'Kein Grund gespeichert')}</td></tr>`).join('');const panel=modal.querySelector('.ec-profile-admin-body');panel.innerHTML=`<section class="ec-profile-admin-section"><button class="ec-profile-admin-back" type="button">← Zurück</button><h3>Punkteverlauf</h3><div class="ec-profile-admin-table-wrap"><table><thead><tr><th>Zeitpunkt</th><th>Punkte</th><th>Art</th><th>Grund</th></tr></thead><tbody>${rows||'<tr><td colspan="4">Noch keine Einträge.</td></tr>'}</tbody></table></div></section>`;panel.querySelector('.ec-profile-admin-back').onclick=()=>openTools(ctx.target.id);}
-async function showReports(ctx,modal){const {data,error}=await supabase.rpc('admin_profile_reports',{p_target_user:ctx.target.id});if(error)return notify(error.message);const panel=modal.querySelector('.ec-profile-admin-body');const rows=(data||[]).map(r=>`<article class="ec-profile-report-card ${r.status==='PENDING'?'pending':'resolved'}"><header><div><strong>${esc(r.reporter_name||'Mitglied')}</strong><small>${new Date(r.created_at).toLocaleString('de-AT')}</small></div><span>${r.status==='PENDING'?'OFFEN':r.status==='CONFIRMED'?'BESTÄTIGT':'UNBEGRÜNDET'}</span></header><p>${esc(r.reason||'Keine Begründung')}</p>${r.admin_note?`<div class="ec-profile-report-note"><b>Admin-Notiz:</b> ${esc(r.admin_note)}</div>`:''}${r.status==='PENDING'?`<div class="ec-profile-admin-grid"><button type="button" class="ec-profile-admin-action success" data-report-id="${r.id}" data-report-status="CONFIRMED">Meldung bestätigen</button><button type="button" class="ec-profile-admin-action" data-report-id="${r.id}" data-report-status="UNFOUNDED">Als unbegründet ablehnen</button></div>`:''}</article>`).join('');panel.innerHTML=`<section class="ec-profile-admin-section"><button class="ec-profile-admin-back" type="button">← Zurück</button><h3>Meldungen zu ${esc(targetName(ctx.target))}</h3><p>Offene Meldungen können direkt hier entschieden werden.</p><div class="ec-profile-report-list">${rows||'<p>Zu diesem Profil liegen keine Meldungen vor.</p>'}</div></section>`;panel.querySelector('.ec-profile-admin-back').onclick=()=>openTools(ctx.target.id);panel.querySelectorAll('[data-report-id]').forEach(button=>button.onclick=async()=>{const note=window.prompt(button.dataset.reportStatus==='CONFIRMED'?'Maßnahme / Begründung:':'Begründung für die Ablehnung:','');if(note===null||note.trim().length<3)return notify('Bitte eine Begründung eingeben.');const {error:resolveError}=await supabase.rpc('admin_resolve_report',{p_report_id:button.dataset.reportId,p_status:button.dataset.reportStatus,p_action_note:note.trim()});if(resolveError)return notify(resolveError.message);notify('Meldung wurde bearbeitet.');showReports(ctx,modal);});}
-
-async function savePermissionSet(targetId,values){let result=await supabase.rpc('admin_set_permissions',{target_user:targetId,p_manage_members:!!values.manage_members,p_manage_points:!!values.manage_points,p_manage_messages:!!values.manage_messages,p_manage_media:!!values.manage_media,p_manage_roles:!!values.manage_roles,p_manage_admins:!!values.manage_admins,p_view_profile_visits:!!values.view_profile_visits,p_manage_news:!!values.manage_news,p_manage_groups:!!values.manage_groups,p_manage_events:!!values.manage_events,p_manage_marketplace:!!values.manage_marketplace,p_manage_friend_requests:!!values.manage_friend_requests,p_manage_homepage:!!values.manage_homepage,p_manage_reports:!!values.manage_reports});if(result.error)return result;const responsibilities=PERMISSIONS.filter(([key])=>values[key]).map(([,label])=>label);return supabase.rpc('admin_set_responsibilities',{p_target_user:targetId,p_responsibilities:responsibilities});}
-async function managePermissions(ctx,modal){const {data,error}=await supabase.rpc('admin_get_permissions',{target_user:ctx.target.id});if(error)return notify(error.message);const panel=modal.querySelector('.ec-profile-admin-body');panel.innerHTML=`<section class="ec-profile-admin-section"><button class="ec-profile-admin-back" type="button">← Zurück</button><h3>Zusatzrechte für ${esc(targetName(ctx.target))}</h3><p>Admin-Grundfunktionen bleiben rollenabhängig aktiv. Diese Auswahl steuert zusätzliche Verwaltungsbereiche.</p><div class="ec-profile-permission-list">${PERMISSIONS.map(([key,label])=>`<label><input type="checkbox" data-permission="${key}" ${data?.[key]?'checked':''}><span>${esc(label)}</span></label>`).join('')}</div><button type="button" class="ec-profile-permissions-save">Rechte speichern</button></section>`;panel.querySelector('.ec-profile-admin-back').onclick=()=>openTools(ctx.target.id);panel.querySelector('.ec-profile-permissions-save').onclick=async()=>{const values=Object.fromEntries(PERMISSIONS.map(([key])=>[key,!!panel.querySelector(`[data-permission="${key}"]`)?.checked]));const ok=await withPreparedAction('Berechtigungen ändern',ctx.target.id,()=>savePermissionSet(ctx.target.id,values));if(ok){notify('Berechtigungen und Zuständigkeiten wurden gespeichert.');openTools(ctx.target.id);}};}
-
-async function handleAction(ctx,action,modal){
-  if(action.startsWith('role:')&&ctx.isHead){const next=action.split(':')[1];const ok=await withPreparedAction(next==='MEMBER'?'Rolle entfernen':`Rolle auf ${roleLabel(next)} ändern`,ctx.target.id,()=>supabase.rpc('admin_set_role',{target_user:ctx.target.id,new_role:next}));if(ok){notify('Rolle wurde aktualisiert.');location.reload();}return;}
-  if(action==='permissions'&&ctx.isHead)return managePermissions(ctx,modal);
-  if(action==='forum-moderator'&&ctx.isHead){const enabled=!bool(ctx.target.forum_moderator);const ok=await withPreparedAction(`Forum-Moderation ${enabled?'vergeben':'entfernen'}`,ctx.target.id,()=>supabase.rpc('admin_set_forum_moderator',{p_target_user:ctx.target.id,p_enabled:enabled}));if(ok){notify('Forum-Moderationsrolle wurde aktualisiert.');openTools(ctx.target.id);}return;}
-  if(action==='group-moderator'&&ctx.isHead){const current=bool(ctx.targetPermissions?.manage_groups)||(ctx.target.admin_responsibilities||[]).some(x=>/gruppen verwalten/i.test(String(x)));const enabled=!current;if(enabled&&role(ctx.target.role)!=='SUPPORTER'){const roleOk=await withPreparedAction('Supporter-Rolle für Gruppenmoderation vergeben',ctx.target.id,()=>supabase.rpc('admin_set_role',{target_user:ctx.target.id,new_role:'SUPPORTER'}));if(!roleOk)return;}const {data,error}=await supabase.rpc('admin_get_permissions',{target_user:ctx.target.id});if(error)return notify(error.message);const ok=await withPreparedAction(`Gruppenmoderation ${enabled?'vergeben':'entfernen'}`,ctx.target.id,()=>savePermissionSet(ctx.target.id,{...(data||{}),manage_groups:enabled}));if(ok){notify(enabled?'Gruppenmoderation wurde vergeben.':'Gruppenmoderation wurde entfernt.');openTools(ctx.target.id);}return;}
-  if((action==='regional-admin'||action==='regional-moderator')&&ctx.isHead){const slug=modal.querySelector('.ec-admin-region-select')?.value,region=ctx.regions.find(r=>r.slug===slug);if(!region)return notify('Bitte eine Region auswählen.');if(action==='regional-admin'){const enabled=!ctx.targetRegionalAdmins.some(x=>x.region_id===region.id);const ok=await withPreparedAction(`Regionaladmin ${enabled?'vergeben':'entfernen'} – ${region.name}`,ctx.target.id,()=>supabase.rpc('ec_set_regional_admin',{p_target:ctx.target.id,p_region_slug:region.slug,p_enabled:enabled}));if(ok){notify('Regionale Adminrolle wurde aktualisiert.');openTools(ctx.target.id);}}else{const enabled=!(ctx.targetRegionalMods||[]).some(x=>x.active!==false&&x.region_id===region.id);const permissions=enabled?['FORUM','GROUPS','EVENTS','NEWS','HOMEPAGE','MEMBERS','BUSINESSES','ANNOUNCEMENTS']:[];const ok=await withPreparedAction(`Regionale Moderation ${enabled?'vergeben':'entfernen'} – ${region.name}`,ctx.target.id,()=>supabase.rpc('ec_set_regional_moderator',{p_target:ctx.target.id,p_region_slug:region.slug,p_permissions:permissions,p_enabled:enabled}));if(ok){notify('Regionale Moderationsrolle wurde aktualisiert.');openTools(ctx.target.id);}}return;}
-  if(action==='warn'&&canWarn(ctx)){const text=window.prompt(`Verwarnung für ${targetName(ctx.target)}:`,'Bitte beachte die Community-Regeln.');if(text===null||text.trim().length<10)return notify('Bitte einen Verwarnungstext mit mindestens 10 Zeichen eingeben.');if(bool(ctx.viewer.forum_moderator)&&!ctx.hasBasicAdmin&&!canGlobal(ctx,'manage_reports')&&!canGlobal(ctx,'manage_members')&&!canRegional(ctx,'MEMBERS')){const {error}=await supabase.rpc('forum_moderator_warn_user',{p_target_user:ctx.target.id,p_warning:text.trim()});return notify(error?error.message:'Verwarnung wurde gesendet.');}const {error}=await supabase.rpc('admin_warn_user',{target_user:ctx.target.id,warning_text:text.trim()});return notify(error?error.message:'Verwarnung wurde gesendet.');}
-  if(action==='suspend'&&canSuspend(ctx)){const next=ctx.target.account_status==='SUSPENDED'?'ACTIVE':'SUSPENDED';const ok=await withPreparedAction(next==='SUSPENDED'?'Profil/Konto sperren':'Profil/Konto freischalten',ctx.target.id,reason=>supabase.rpc('admin_set_account_status',{target_user:ctx.target.id,new_status:next,p_reason:reason}));if(ok){notify(next==='SUSPENDED'?'Profil wurde gesperrt.':'Profil wurde freigeschaltet.');openTools(ctx.target.id);}return;}
-  if(action.startsWith('feature:')){const feature=action.split(':')[1],allowed=feature==='FORUM_POSTING'?canForumLock(ctx):feature==='MESSAGING'?canMessageLock(ctx):canFriendLock(ctx);if(!allowed)return;const ok=await toggleFeature(ctx.target.id,feature);if(ok){notify('Funktionsstatus wurde aktualisiert.');openTools(ctx.target.id);}return;}
-  if(action==='reports'&&canReports(ctx))return showReports(ctx,modal);
-  if(action==='verification-request'&&canVerificationRequest(ctx)){const reason=window.prompt(`Warum soll ${targetName(ctx.target)} sein Profil verifizieren?`,'Bitte bestätige zur Sicherheit die Echtheit deines Profils.');if(reason===null||reason.trim().length<3)return;const days=Number(window.prompt('Frist in Tagen (1 bis 30):','7'));if(!Number.isInteger(days)||days<1||days>30)return notify('Bitte eine Frist zwischen 1 und 30 Tagen eingeben.');const {error}=await supabase.rpc('admin_require_profile_verification',{p_target_user:ctx.target.id,p_reason:reason.trim(),p_due_days:days});return notify(error?error.message:'Verifizierung wurde angefordert.');}
-  if(action==='points'&&canPoints(ctx)){const amount=Number(window.prompt('Punkteänderung: positive Zahl für Pluspunkte, negative Zahl für Minuspunkte:',''));if(!Number.isInteger(amount)||amount===0)return notify('Bitte eine ganze Zahl ungleich 0 eingeben.');const reason=await askReason(amount>0?'Pluspunkte vergeben':'Minuspunkte vergeben');if(!reason)return;const prepared=await preparePrivilegedAction(amount>0?'Pluspunkte vergeben':'Minuspunkte vergeben',ctx.target.id,reason);if(prepared?.error)return notify(prepared.error.message);const {error}=await supabase.rpc('award_member_points',{target_user:ctx.target.id,point_delta:amount,reason_text:reason,category_text:'ADMIN_ADJUSTMENT',notify_member:true});if(error)return notify(error.message);notify('Punkte wurden aktualisiert.');return openTools(ctx.target.id);}
-  if(action==='point-history'&&canPoints(ctx))return showPointHistory(ctx,modal);
-  if(action==='verify'&&ctx.isHead){const enabled=!bool(ctx.target.is_verified);const ok=await withPreparedAction(`Profilverifizierung ${enabled?'vergeben':'entfernen'}`,ctx.target.id,()=>supabase.rpc('admin_set_profile_verification',{p_user_id:ctx.target.id,p_verified:enabled}));if(ok){notify('Verifizierung wurde aktualisiert.');openTools(ctx.target.id);}return;}
-  if(action==='test-account'&&ctx.isHead){const enabled=!bool(ctx.target.is_test_account);const ok=await withPreparedAction(`Testkonto ${enabled?'aktivieren':'deaktivieren'}`,ctx.target.id,()=>supabase.rpc('admin_set_test_account',{p_user_id:ctx.target.id,p_is_test:enabled}));if(ok){notify('Testkonto-Status wurde aktualisiert.');openTools(ctx.target.id);}return;}
-  if(action==='business'&&ctx.isHead){const enabled=ctx.target.account_badge!=='BUSINESS';let company=null;if(enabled){company=window.prompt('Firmen- oder Vereinsname:','');if(company===null||company.trim().length<2)return;}const ok=await withPreparedAction(`Unternehmenskonto ${enabled?'vergeben':'entfernen'}`,ctx.target.id,()=>supabase.rpc('admin_set_business_account',{p_user_id:ctx.target.id,p_enabled:enabled,p_company_name:company?.trim()||null,p_company_description:null}));if(ok){notify('Unternehmenskonto wurde aktualisiert.');openTools(ctx.target.id);}return;}
-  if(action.startsWith('media:')&&ctx.isHead){const field=action.split(':')[1],labels={avatar_url:'Profilbild',profile_background:'Hintergrundfoto',bio_image_url:'Über-mich-Bild'},label=labels[field]||'Profilmedium';const ok=await withPreparedAction(`${label} bei Regelverstoß entfernen`,ctx.target.id,()=>supabase.rpc('admin_remove_profile_media',{p_user_id:ctx.target.id,p_field:field}));if(ok){notify(`${label} wurde entfernt.`);openTools(ctx.target.id);}}
+function scheduleMount(delay = 40) {
+  window.clearTimeout(mountTimer);
+  mountTimer = window.setTimeout(mount, delay);
 }
 
-async function openTools(targetId){if(busy)return;busy=true;try{document.querySelector('.ec-profile-admin-overlay')?.remove();const ctx=await loadContext(targetId);if(!ctx)return notify('Für dieses Profil stehen dir keine Admin Tools zur Verfügung.');document.body.insertAdjacentHTML('beforeend',buildModal(ctx));const modal=document.querySelector('.ec-profile-admin-overlay');modal.querySelector('.ec-profile-admin-close').onclick=()=>modal.remove();modal.onclick=e=>{if(e.target===modal)modal.remove();};modal.querySelectorAll('[data-admin-action]').forEach(button=>button.onclick=()=>handleAction(ctx,button.dataset.adminAction,modal));}finally{busy=false;}}
+const root = document.getElementById('root') || document.documentElement;
+new MutationObserver((mutations) => {
+  const relevant = mutations.some((mutation) => [...mutation.addedNodes, ...mutation.removedNodes].some((node) =>
+    node?.nodeType === Node.ELEMENT_NODE &&
+    (node.matches?.('.member-profile-page,.member-profile-actions,.member-admin-tools') || node.querySelector?.('.member-profile-page,.member-profile-actions,.member-admin-tools'))
+  ));
+  if (relevant) scheduleMount();
+}).observe(root, { childList: true, subtree: true });
 
-async function mount(){const page=document.querySelector('.member-profile-page[data-profile-id]');if(!page)return;const targetId=page.dataset.profileId;if(!targetId)return;if(page.dataset.unifiedAdminTools==='1'&&lastProfileId===targetId)return;const ctx=await loadContext(targetId);if(!ctx||!page.isConnected)return;lastProfileId=targetId;page.dataset.unifiedAdminTools='1';page.querySelectorAll('.member-admin-tools,.feature-unlocks,.head-admin-media-tools,.member-business-tool').forEach(el=>el.style.setProperty('display','none','important'));page.querySelectorAll('button').forEach(button=>{const t=String(button.textContent||'').trim().toLowerCase();if(/punkteliste|punkte vergeben/.test(t))button.style.setProperty('display','none','important');});const actions=page.querySelector('.member-profile-actions');if(!actions||actions.querySelector('.ec-profile-admin-open'))return;const button=document.createElement('button');button.type='button';button.className='primary-button ec-profile-admin-open';button.textContent='⚙ Admin Tools';button.onclick=()=>openTools(targetId);actions.prepend(button);}
-let mountTimer;new MutationObserver(()=>{clearTimeout(mountTimer);mountTimer=setTimeout(()=>void mount(),80);}).observe(document.documentElement,{childList:true,subtree:true});window.addEventListener('ec:navigate',()=>setTimeout(()=>void mount(),80));window.addEventListener('focus',()=>setTimeout(()=>void mount(),80));void mount();
+window.addEventListener('ec:navigate', () => scheduleMount());
+window.addEventListener('focus', () => scheduleMount(20));
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => scheduleMount(), { once: true });
+else scheduleMount(0);
