@@ -1,2 +1,9 @@
 /* Legacy clean-profile layout authority disabled.
    App.jsx is now the single owner of member-profile structure. */
+
+/* The personal bio belongs to the dedicated "Das bin ich" section below.
+   Do not duplicate it inside the identity/header card. */
+.member-profile-page .member-profile-hero .member-profile-bio,
+.member-profile-page.public-profile-preview .member-profile-hero .member-profile-bio {
+  display: none !important;
+}
