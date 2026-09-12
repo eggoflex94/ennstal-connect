@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "./supabaseClient";
+import { loadMemberProfile } from "./memberProfileLoader.js";
 
 const DEFAULT_AVATAR = "/community-default-avatar.png";
 const ADMIN_ROLES = new Set(["HEAD_ADMIN", "ADMIN", "GLOBAL_ADMIN", "REGIONAL_ADMIN"]);
@@ -43,6 +44,7 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
   const [regionId, setRegionId] = useState("ALL");
   const [onlineOnly, setOnlineOnly] = useState(false);
   const [regionalAssignments, setRegionalAssignments] = useState([]);
+  const [openingMemberId, setOpeningMemberId] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -121,10 +123,16 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
       .sort((a, b) => rank(a) - rank(b) || displayName(a).localeCompare(displayName(b), "de"));
   }, [members, regionId, onlineOnly, query, regionById, regionalAdminByUser, activeRegion?.id]);
 
-  const openMember = (member) => {
-    if (!member) return;
-    if (onOpen) onOpen(member);
-    else window.dispatchEvent(new CustomEvent("ec:open-profile", { detail: { profileId: member.id, nickname: member.nickname }, cancelable: true }));
+  const openMember = async (member) => {
+    if (!member || openingMemberId) return;
+    setOpeningMemberId(member.id);
+    try {
+      const freshMember = await loadMemberProfile(member);
+      if (onOpen) onOpen(freshMember || member);
+      else window.dispatchEvent(new CustomEvent("ec:open-profile", { detail: { profileId: member.id, nickname: member.nickname }, cancelable: true }));
+    } finally {
+      setOpeningMemberId(null);
+    }
   };
 
   return <section className="native-members-directory">
@@ -155,11 +163,12 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
         const star = roleStarSrc(member);
         const tone = cardTone(member);
         const label = effectiveRoleLabel(member);
-        return <article className={`native-member-card native-member-card--${tone} panel${isSelf ? " is-self" : ""}`} key={member.id}>
-          <button type="button" className="native-member-main" onClick={() => openMember(member)} aria-label={`${displayName(member)} Profil öffnen`}>
+        const opening = openingMemberId === member.id;
+        return <article className={`native-member-card native-member-card--${tone} panel${isSelf ? " is-self" : ""}${opening ? " is-opening" : ""}`} key={member.id}>
+          <button type="button" className="native-member-main" onClick={() => void openMember(member)} aria-label={`${displayName(member)} Profil öffnen`} aria-busy={opening} disabled={Boolean(openingMemberId && !opening)}>
             <span className="native-member-avatar-wrap"><img src={member.avatar_url || DEFAULT_AVATAR} alt="" /><i className={member.is_online ? "online" : "offline"} /></span>
             <span className="native-member-copy">
-              <strong>{displayName(member)}</strong>
+              <strong>{opening ? "Profil wird geladen …" : displayName(member)}</strong>
               <span className="native-member-badges">
                 {star && <span className="native-member-role-badge"><img src={star} alt="" aria-hidden="true"/>{isBusiness(member) && !isAdminMember(member) && !isRegionalAdmin(member) ? "Unternehmer" : label}</span>}
                 {!star && <span className="native-member-member-badge">Mitglied</span>}
