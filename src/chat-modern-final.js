@@ -29,9 +29,30 @@ const roleLabel = (profile) => {
   if (role === "SUPPORTER") return "Supporter";
   return "Mitglied";
 };
-const isAutomated = (message) => ["ROLE", "GROUP_INVITE"].includes(String(message?.message_type || "").toUpperCase()) || /automatisch generierte nachricht|automatisierte nachricht|rolle .* erhalten|rechte .* erhalten|moderationsrechte|regional admin|forum.?moderator|hat dich in die gruppe|punkte erhalten|profilverifizierung|profil-verifizierung/i.test(String(message?.content || ""));
+const isAutomated = (message) => ["ROLE", "GROUP_INVITE"].includes(String(message?.message_type || "").toUpperCase()) || /automatisch generierte nachricht|automatisierte nachricht|rolle .* erhalten|rechte .* erhalten|moderationsrechte|regional admin|forum.?moderator|hat dich in die gruppe|punkte erhalten|profilverifizierung|profil-verifizierung|du hast soeben von/i.test(String(message?.content || ""));
 
 function profileById(id) { return profiles.find((profile) => profile.id === id) || null; }
+function profileByName(name) {
+  const wanted = String(name || "").replace(/^★\s*/, "").trim().toLocaleLowerCase("de-AT");
+  if (!wanted) return null;
+  return profiles.find((profile) => String(profile?.nickname || "").trim().toLocaleLowerCase("de-AT") === wanted)
+    || profiles.find((profile) => [profile?.first_name, profile?.last_name].filter(Boolean).join(" ").trim().toLocaleLowerCase("de-AT") === wanted)
+    || null;
+}
+function automatedActorName(message) {
+  const raw = String(message?.content || "");
+  const matches = [
+    raw.match(/du hast soeben von\s+★?\s*([^\n(]{1,80}?)(?=\s+(?:eine\s+bestätigung|[+-]?\d+\s+punkte|die\s+rolle|das\s+recht|die\s+rechte|die\s+regionalen|moderationsrechte|forum.?moderator|eine\s+nachricht))/i),
+    raw.match(/^★?\s*([^\n:]{1,80}?)\s+hat\b/i),
+    raw.match(/^★?\s*([^\n:]{1,80}?)\s+bittet\b/i),
+    raw.match(/von\s+★?\s*([^\n(]{1,80}?)(?=\s+(?:eine|[+-]?\d+|die|das|den|dem))/i)
+  ];
+  return String(matches.find((match) => match?.[1])?.[1] || "").trim();
+}
+function automatedActorProfile(message, peer) {
+  const actorName = automatedActorName(message);
+  return profileByName(actorName) || profileById(message?.sender_id) || peer || null;
+}
 
 function findMessagesSection() {
   const legacy = document.querySelector(".message-overview, .chat-box");
@@ -96,16 +117,17 @@ function renderOverview(shell) {
 }
 
 function automatedHeader(message, peer) {
-  const sender = profileById(message.sender_id) || peer;
+  const sender = automatedActorProfile(message, peer);
   const invite = String(message?.message_type || "").toUpperCase() === "GROUP_INVITE";
   return `<div class="ec-chat-modern-auto-head"><span class="ec-chat-modern-auto-label">${invite ? "GRUPPENEINLADUNG" : "AUTOMATISCHE NACHRICHT"}</span><span class="ec-chat-modern-auto-actor"><img src="${esc(starFor(sender))}" alt="Rollenstern"><strong>${esc(getName(sender))}</strong></span></div>`;
 }
 
 function automatedMessageContent(message, peer) {
   const raw = String(message?.content || "");
-  const sender = profileById(message?.sender_id) || peer;
+  const sender = automatedActorProfile(message, peer);
   const senderName = getName(sender);
-  const aliases = [sender?.nickname, [sender?.first_name, sender?.last_name].filter(Boolean).join(" "), senderName]
+  const actorFromText = automatedActorName(message);
+  const aliases = [actorFromText, sender?.nickname, [sender?.first_name, sender?.last_name].filter(Boolean).join(" "), senderName]
     .map((value) => String(value || "").trim())
     .filter(Boolean)
     .sort((a, b) => b.length - a.length);
@@ -115,9 +137,10 @@ function automatedMessageContent(message, peer) {
     const index = raw.toLocaleLowerCase("de-AT").indexOf(alias.toLocaleLowerCase("de-AT"));
     if (index < 0) continue;
     const before = raw.slice(0, index);
-    const actor = raw.slice(index, index + alias.length);
+    const actor = raw.slice(index, index + alias.length).replace(/^★\s*/, "");
+    const beforeWithoutLegacyStar = before.replace(/★\s*$/, "");
     const after = raw.slice(index + alias.length);
-    return `<p>${esc(before)}<span class="ec-chat-inline-role-identity">${star}<strong>${esc(actor)}</strong></span>${esc(after)}</p>`;
+    return `<p>${esc(beforeWithoutLegacyStar)}<span class="ec-chat-inline-role-identity">${star}<strong>${esc(actor)}</strong></span>${esc(after)}</p>`;
   }
 
   return `<p><span class="ec-chat-inline-role-identity">${star}<strong>${esc(senderName)}</strong></span> ${esc(raw)}</p>`;
