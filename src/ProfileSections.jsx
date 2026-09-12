@@ -35,20 +35,23 @@ export default function ProfileSections({ member, editable = false, preview = fa
   const [file, setFile] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [loaded, setLoaded] = useState(false);
+  const [extrasLoading, setExtrasLoading] = useState(false);
   const [notice, setNotice] = useState('');
   const [folder, setFolder] = useState('PUBLIC');
 
   useEffect(() => {
     let cancelled = false;
     setItems([]);
-    setLoaded(false);
+    setExtrasLoading(true);
     setDraft(null);
     setFile(null);
     setError('');
     setNotice('');
     setFolder('PUBLIC');
-    if (!supabase || !member?.id) return undefined;
+    if (!supabase || !member?.id) {
+      setExtrasLoading(false);
+      return undefined;
+    }
 
     supabase
       .from('profile_sections')
@@ -59,8 +62,8 @@ export default function ProfileSections({ member, editable = false, preview = fa
       .then(({ data, error: loadError }) => {
         if (cancelled) return;
         setItems(data || []);
-        setLoaded(true);
-        if (loadError) setError('Der persönliche Profilbereich konnte nicht geladen werden. Bitte lade die Seite neu.');
+        setExtrasLoading(false);
+        if (loadError) setError('Zusätzliche Profilinhalte konnten nicht vollständig geladen werden.');
       });
 
     return () => { cancelled = true; };
@@ -185,16 +188,15 @@ export default function ProfileSections({ member, editable = false, preview = fa
       {editable && <header className="profile-section-heading"><div><span className="eyebrow">DEIN PERSÖNLICHER BEREICH</span><h2>Dein Profil gestalten</h2><p>Persönliche Angaben, dein „Das bin ich“-Bereich und Fotos werden hier getrennt und übersichtlich verwaltet.</p></div></header>}
       {error && <p role="alert" className="profile-section-error">{error}</p>}
       {notice && <p role="status" className="profile-section-notice">{notice}</p>}
-      {!loaded && <div className="profile-section-loading" aria-live="polite"><span/>Profilbereich wird geladen …</div>}
 
-      {loaded && <aside className="profile-facts panel"><span className="eyebrow">STECKBRIEF</span><h2>Profilinformationen</h2><dl>
+      <aside className="profile-facts panel"><span className="eyebrow">STECKBRIEF</span><h2>Profilinformationen</h2><dl>
         {legacyFields.map(([title, , value]) => <div key={title}><dt>{title}</dt><dd>{value}</dd></div>)}
         {fields.map(item => <div key={item.id}><dt>{item.title}</dt><dd>{item.body}</dd>{editable && <small>{VISIBILITY[item.visibility]}</small>}{itemActions(item)}</div>)}
-      </dl>{!fields.length && !legacyFields.length && <p>Noch keine Angaben.</p>}{editable && <div className="profile-add-actions"><button type="button" onClick={() => start('FIELD', 'Wohnort')}>Wohnort</button><button type="button" onClick={() => start('FIELD', 'Hobbys')}>Hobbys</button><button type="button" onClick={() => start('FIELD', 'Beruf')}>Beruf</button><button type="button" onClick={() => start('FIELD')}>+ Eigenes Feld</button></div>}</aside>}
+      </dl>{!fields.length && !legacyFields.length && <p>Noch keine Angaben.</p>}{editable && <div className="profile-add-actions"><button type="button" onClick={() => start('FIELD', 'Wohnort')}>Wohnort</button><button type="button" onClick={() => start('FIELD', 'Hobbys')}>Hobbys</button><button type="button" onClick={() => start('FIELD', 'Beruf')}>Beruf</button><button type="button" onClick={() => start('FIELD')}>+ Eigenes Feld</button></div>}</aside>
 
-      {loaded && children}
+      {children}
 
-      {loaded && (legacyBioVisible || blocks.length > 0 || editable) && <section className="profile-story panel"><div className="profile-story-heading"><div><span className="eyebrow">PERSÖNLICH</span><h2>Das bin ich</h2><p>Ein eigener Bereich für deine Geschichte, Bilder und persönliche Gestaltung.</p></div>{editable && <button type="button" className="secondary-button" onClick={() => start('TEXT', 'Über mich')}>+ Textblock</button>}</div>
+      {(legacyBioVisible || blocks.length > 0 || editable) && <section className="profile-story panel"><div className="profile-story-heading"><div><span className="eyebrow">PERSÖNLICH</span><h2>Das bin ich</h2><p>Ein eigener Bereich für deine Geschichte, Bilder und persönliche Gestaltung.</p></div>{editable && <button type="button" className="secondary-button" onClick={() => start('TEXT', 'Über mich')}>+ Textblock</button>}</div>
         <div className="profile-story-stack">
           {legacyBioVisible && <article className="profile-story-block profile-story-legacy style-card" style={{ color: member.bio_color || COLORS[0], background: '#ffffff', fontFamily: FONTS[member.bio_font] || FONTS.modern, fontSize: ({ small: 14, normal: 17, large: 23 })[member.bio_size] || 17, textAlign: 'left' }}><span className="profile-story-kicker">ÜBER MICH</span><p className="profile-story-text">{member.bio}</p>{editable && <small className="profile-story-hint">Dieser bestehende Profiltext kann im Profilformular geändert werden. Für frei gestaltbare Farben und Hintergründe nutze zusätzliche Textblöcke.</small>}</article>}
           {blocks.map(item => {
@@ -202,11 +204,12 @@ export default function ProfileSections({ member, editable = false, preview = fa
             return <article key={item.id} className={`profile-story-block style-${['plain', 'card', 'quote'].includes(a.style) ? a.style : 'card'}`} style={storyStyle(item)}>{item.title && <h3>{item.title}</h3>}{item.kind === 'IMAGE' && <PrivateImage path={item.media_path} alt={item.title}/>}<p className="profile-story-text">{item.body}</p>{editable && <small className="profile-story-visibility">{VISIBILITY[item.visibility]}</small>}{itemActions(item)}</article>;
           })}
           {editable && !legacyBioVisible && !blocks.length && <div className="profile-story-empty"><strong>Hier ist Platz für dich.</strong><span>Erstelle einen modernen Text- oder Bildblock und wähle Farbe, Hintergrund, Schrift und Sichtbarkeit.</span></div>}
+          {extrasLoading && <small className="profile-story-hint">Zusätzliche Profilblöcke werden im Hintergrund geladen …</small>}
         </div>
         {editable && <div className="profile-add-actions profile-story-add"><button type="button" onClick={() => start('TEXT')}>+ Textabschnitt</button><button type="button" onClick={() => start('IMAGE')}>+ Bildabschnitt</button></div>}
       </section>}
 
-      {loaded && (photos.length > 0 || editable) && <section className="profile-folders panel"><span className="eyebrow">FOTOORDNER</span><h2>{editable ? 'Meine persönlichen Profilfotos' : 'Persönliche Profilfotos'}</h2><div className="profile-folder-tabs">{shownFolders.map(key => <button type="button" key={key} className={folder === key ? 'active' : ''} onClick={() => setFolder(key)}>{key === 'PUBLIC' ? 'Öffentlich' : key === 'FRIENDS' ? 'Freunde' : 'Privat'} · {photos.filter(x => x.visibility === key).length}</button>)}{editable && <button type="button" onClick={() => start('PHOTO')}>+ Foto hinzufügen</button>}</div><div className="profile-folder-grid">{photos.filter(x => x.visibility === folder).map(item => <figure key={item.id}><PrivateImage path={item.media_path} alt={item.title}/><figcaption>{item.title}</figcaption>{itemActions(item)}</figure>)}</div>{!photos.some(x => x.visibility === folder) && <p>In diesem Ordner sind noch keine sichtbaren Fotos.</p>}</section>}
+      {(photos.length > 0 || editable) && <section className="profile-folders panel"><span className="eyebrow">FOTOORDNER</span><h2>{editable ? 'Meine persönlichen Profilfotos' : 'Persönliche Profilfotos'}</h2><div className="profile-folder-tabs">{shownFolders.map(key => <button type="button" key={key} className={folder === key ? 'active' : ''} onClick={() => setFolder(key)}>{key === 'PUBLIC' ? 'Öffentlich' : key === 'FRIENDS' ? 'Freunde' : 'Privat'} · {photos.filter(x => x.visibility === key).length}</button>)}{editable && <button type="button" onClick={() => start('PHOTO')}>+ Foto hinzufügen</button>}</div><div className="profile-folder-grid">{photos.filter(x => x.visibility === folder).map(item => <figure key={item.id}><PrivateImage path={item.media_path} alt={item.title}/><figcaption>{item.title}</figcaption>{itemActions(item)}</figure>)}</div>{!photos.some(x => x.visibility === folder) && <p>In diesem Ordner sind noch keine sichtbaren Fotos.</p>}</section>}
 
       {editable && draft && <div className="profile-section-modal" role="dialog" aria-modal="true" aria-label="Profilinhalt bearbeiten"><form onSubmit={save} className="profile-section-form"><header><h2>{draft.kind === 'FIELD' ? 'Steckbrief-Feld' : draft.kind === 'PHOTO' ? 'Foto' : draft.kind === 'IMAGE' ? 'Bildabschnitt' : 'Textabschnitt'}</h2><button type="button" disabled={busy} onClick={() => setDraft(null)} aria-label="Bearbeitung schließen">×</button></header><label>{draft.kind === 'FIELD' ? 'Feldname' : 'Überschrift / Bildbeschreibung'}<input value={draft.title} onChange={e => patch({ title: e.target.value })} maxLength={100} required={draft.kind === 'FIELD'} autoFocus/></label>{draft.kind !== 'PHOTO' && <label>{draft.kind === 'FIELD' ? 'Deine Angabe' : 'Text'}<textarea value={draft.body} onChange={e => patch({ body: e.target.value })} maxLength={10000} rows={draft.kind === 'FIELD' ? 3 : 7} required={draft.kind === 'FIELD' || draft.kind === 'TEXT'}/></label>}
         {['IMAGE', 'PHOTO'].includes(draft.kind) && <label>Bild (bis 5 MB)<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={e => setFile(e.target.files?.[0] || null)}/></label>}
