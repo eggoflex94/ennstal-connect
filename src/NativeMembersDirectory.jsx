@@ -90,35 +90,36 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
     return map;
   }, [members, regionalAssignments]);
 
+  const assignedRegionalIds = (member) => {
+    const ids = new Set(explicitRegionalRegions(member).map((region) => region?.id).filter(Boolean));
+    (regionalAdminByUser.get(member?.id) || []).forEach((id) => ids.add(id));
+    return [...ids];
+  };
+  const hasRegionalAssignment = (member) => assignedRegionalIds(member).length > 0;
   const regionalAdminRegion = (member) => {
-    const embedded = explicitRegionalRegions(member);
-    if (embedded.length) {
-      const active = activeRegion?.id ? embedded.find((region) => region.id === activeRegion.id) : null;
-      const home = member?.home_region_id ? embedded.find((region) => region.id === member.home_region_id) : null;
-      const picked = active || home || embedded[0];
-      return picked?.name ? picked : regionById[picked?.id] || picked;
-    }
-    const ids = regionalAdminByUser.get(member?.id) || [];
-    if (!ids.length) return null;
-    const preferred = activeRegion?.id && ids.includes(activeRegion.id) ? activeRegion.id : member?.home_region_id && ids.includes(member.home_region_id) ? member.home_region_id : ids[0];
-    return regionById[preferred] || { id: preferred };
+    if (!activeRegion?.id) return null;
+    const ids = assignedRegionalIds(member);
+    if (!ids.includes(activeRegion.id)) return null;
+    const embedded = explicitRegionalRegions(member).find((region) => region?.id === activeRegion.id);
+    return embedded?.name ? embedded : regionById[activeRegion.id] || embedded || { id: activeRegion.id };
   };
   const isRegionalAdmin = (member) => Boolean(regionalAdminRegion(member));
+  const isSupporterPresentation = (member) => normalized(member?.role) === "SUPPORTER" || hasRegionalAssignment(member);
   const effectiveRoleLabel = (member) => {
     if (isHeadAdmin(member)) return "Hauptadmin";
     if (isGlobalAdmin(member)) return "Global Admin";
     const region = regionalAdminRegion(member);
     if (region) return `Regional Admin${region.short_name ? ` · ${region.short_name}` : region.name ? ` · ${region.name}` : ""}`;
     if (isBusiness(member)) return "Unternehmer";
-    if (normalized(member?.role) === "SUPPORTER") return "Supporter";
+    if (isSupporterPresentation(member)) return "Supporter";
     return "Mitglied";
   };
-  const roleStarSrc = (member) => isHeadAdmin(member) || isGlobalAdmin(member) || isRegionalAdmin(member) ? "/role-star-red.svg" : isBusiness(member) ? "/role-star-blue.svg" : normalized(member?.role) === "SUPPORTER" ? "/supporter-star.svg" : null;
-  const cardTone = (member) => isHeadAdmin(member) || isGlobalAdmin(member) || isRegionalAdmin(member) ? "admin" : isBusiness(member) ? "business" : normalized(member?.role) === "SUPPORTER" ? "supporter" : "member";
+  const roleStarSrc = (member) => isHeadAdmin(member) || isGlobalAdmin(member) || isRegionalAdmin(member) ? "/role-star-red.svg" : isBusiness(member) ? "/role-star-blue.svg" : isSupporterPresentation(member) ? "/supporter-star.svg" : null;
+  const cardTone = (member) => isHeadAdmin(member) || isGlobalAdmin(member) || isRegionalAdmin(member) ? "admin" : isBusiness(member) ? "business" : isSupporterPresentation(member) ? "supporter" : "member";
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const rank = (member) => isHeadAdmin(member) ? 1 : isGlobalAdmin(member) ? 2 : regionalAdminByUser.has(member.id) || explicitRegionalRegions(member).length ? 3 : isBusiness(member) ? 4 : normalized(member?.role) === "SUPPORTER" ? 5 : 6;
+    const rank = (member) => isHeadAdmin(member) ? 1 : isGlobalAdmin(member) ? 2 : isRegionalAdmin(member) ? 3 : isBusiness(member) ? 4 : isSupporterPresentation(member) ? 5 : 6;
     return members
       .filter((member) => member && member.account_status !== "SUSPENDED" && !member.is_test_account)
       .filter((member) => regionId === "ALL" || member.home_region_id === regionId)
@@ -168,7 +169,7 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
         const tone = cardTone(member);
         const label = effectiveRoleLabel(member);
         const opening = openingMemberId === member.id;
-        return <article className={`native-member-card native-member-card--${tone} panel${isSelf ? " is-self" : ""}${opening ? " is-opening" : ""}`} key={member.id}>
+        return <article className={`native-member-card native-member-card--${tone} panel${isSelf ? " is-self" : ""}${opening ? " is-opening" : ""}`} key={member.id} data-member-id={member.id}>
           <button type="button" className="native-member-main" onClick={() => void openMember(member)} aria-label={`${displayName(member)} Profil öffnen`} aria-busy={opening} disabled={Boolean(openingMemberId && !opening)}>
             <span className="native-member-avatar-wrap"><img src={member.avatar_url || DEFAULT_AVATAR} alt="" /><i className={presence.state !== "offline" ? "online" : "offline"} /></span>
             <span className="native-member-copy">
