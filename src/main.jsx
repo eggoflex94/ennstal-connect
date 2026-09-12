@@ -168,6 +168,9 @@ import "./navigation-cleanup-final.js";
 /* Absolute final chat styling: legacy message CSS must not override this. */
 import "./chat-final-authority.css";
 
+/* Touch devices keep the desktop layout, with larger reliable tap targets. */
+import "./touch-desktop-stability.css";
+
 class AppErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
