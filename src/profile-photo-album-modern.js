@@ -88,19 +88,29 @@ function bindProfileImages(page) {
 
 function renderFolder(page, data) {
   page.querySelector('.ec-profile-photo-folder')?.remove();
+  const photos = Array.isArray(data?.photos) ? data.photos : [];
+  // Public member profiles should not reserve a large empty card when the
+  // member has no visible album photos. The React profile already communicates
+  // the absence of optional content through its normal flow.
+  if (!photos.length) {
+    page.querySelectorAll(':scope > .public-photo-folder').forEach((nativeFolder) => { nativeFolder.hidden = false; });
+    bindProfileImages(page);
+    return;
+  }
+
   const folder = document.createElement('section');
   folder.className = 'ec-profile-photo-folder';
   folder.dataset.photoFolder = '1';
-  const thumbs = data.photos.slice(0, 6).map((photo) => `
+  const thumbs = photos.slice(0, 6).map((photo) => `
     <button type="button" class="ec-profile-photo-thumb" data-photo-id="${photo.id}" aria-label="Foto öffnen">
       <img src="${esc(photo.image_url)}" alt="${esc(photo.caption || 'Profilfoto')}" loading="lazy" decoding="async">
     </button>`).join('');
   folder.innerHTML = `
     <div class="ec-profile-photo-folder-head">
-      <div><span class="ec-profile-photo-folder-icon" aria-hidden="true">▣</span><span><strong>Fotos</strong><small>${data.photos.length} ${data.photos.length === 1 ? 'Foto' : 'Fotos'}</small></span></div>
-      ${data.photos.length ? '<button type="button" class="ec-profile-photo-open-all">Alle ansehen</button>' : ''}
+      <div><span class="ec-profile-photo-folder-icon" aria-hidden="true">▣</span><span><strong>Fotos</strong><small>${photos.length} ${photos.length === 1 ? 'Foto' : 'Fotos'}</small></span></div>
+      <button type="button" class="ec-profile-photo-open-all">Alle ansehen</button>
     </div>
-    ${data.photos.length ? `<div class="ec-profile-photo-preview-grid">${thumbs}</div>` : '<p class="ec-profile-photo-empty">Noch keine für dich sichtbaren Fotos.</p>'}
+    <div class="ec-profile-photo-preview-grid">${thumbs}</div>
   `;
 
   const anchor = page.querySelector('.member-profile-actions') || page.querySelector('.member-profile-hero');
@@ -109,7 +119,7 @@ function renderFolder(page, data) {
 
   page.querySelectorAll(':scope > .public-photo-folder').forEach((nativeFolder) => { nativeFolder.hidden = true; });
   bindProfileImages(page);
-  folder.querySelector('.ec-profile-photo-open-all')?.addEventListener('click', () => openAlbum(page.dataset.profileId, data, data.photos[0]?.id));
+  folder.querySelector('.ec-profile-photo-open-all')?.addEventListener('click', () => openAlbum(page.dataset.profileId, data, photos[0]?.id));
   folder.querySelectorAll('[data-photo-id]').forEach((btn) => btn.addEventListener('click', () => openAlbum(page.dataset.profileId, data, btn.dataset.photoId)));
 }
 
@@ -225,7 +235,7 @@ async function mountFolder(force = false) {
   const ownerId = page.dataset.profileId;
   if (!ownerId) return;
   bindProfileImages(page);
-  if (!force && mountedProfileId === ownerId && page.querySelector('.ec-profile-photo-folder')) return;
+  if (!force && mountedProfileId === ownerId && (page.querySelector('.ec-profile-photo-folder') || page.dataset.ecPhotoAlbumEmpty === '1')) return;
   if (loadingProfileId === ownerId) return;
   const now = Date.now();
   if (!force && now - lastRequestedAt < 350) return;
@@ -236,12 +246,12 @@ async function mountFolder(force = false) {
     const data = await fetchAlbum(ownerId);
     if (!page.isConnected || page.dataset.profileId !== ownerId) return;
     renderFolder(page, data);
+    page.dataset.ecPhotoAlbumEmpty = data.photos?.length ? '0' : '1';
     mountedProfileId = ownerId;
   } catch (error) {
     console.warn('Foto-Ordner konnte nicht geladen werden:', error?.message || error);
-    if (page.isConnected && !page.querySelector('.ec-profile-photo-folder')) {
-      renderFolder(page, { photos: [], likes: [], comments: [], people: new Map(), user: null });
-    }
+    page.dataset.ecPhotoAlbumEmpty = '1';
+    page.querySelector('.ec-profile-photo-folder')?.remove();
   } finally {
     if (loadingProfileId === ownerId) loadingProfileId = null;
   }
@@ -261,7 +271,10 @@ function detectProfilePage() {
   observedPage = page || null;
   mountedProfileId = null;
   loadingProfileId = null;
-  if (page) schedule(0, true);
+  if (page) {
+    delete page.dataset.ecPhotoAlbumEmpty;
+    schedule(0, true);
+  }
 }
 
 function startProfileObserver() {
