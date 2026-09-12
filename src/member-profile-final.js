@@ -42,6 +42,7 @@ async function functionInfo(target){
     return{label:`Regional Admin${names.length?` · ${names.join(', ')}`:''}`,star:'/role-star-red.svg'};
   }
   if(role==='SUPPORTER')return{label:'Supporter',star:'/supporter-star.svg'};
+  if(target.account_badge==='BUSINESS')return{label:'Unternehmenskonto',star:'/role-star-blue.svg'};
   return{label:'Mitglied',star:null};
 }
 function row(label,value){if(!value)return'';return `<div class="ec-mp-row"><span>${esc(label)}</span><strong>${esc(value)}</strong></div>`}
@@ -64,7 +65,7 @@ async function build(root){
     const role=await functionInfo(target);
     const home=regions.find(r=>r.id===target.home_region_id)?.name||'';
 
-    root.querySelectorAll(':scope > .ec-mp-card,:scope > .ec-mp-more,:scope > .ec-mp-actions').forEach(node=>node.remove());
+    root.querySelectorAll(':scope > .ec-mp-card,:scope > .ec-mp-more,:scope > .ec-mp-actions,:scope > .profile-visible-details').forEach(node=>node.remove());
     root.dataset.ecTargetId=target.id;
     root.classList.add('ec-member-profile-final');
 
@@ -78,43 +79,22 @@ async function build(root){
 
     const data=document.createElement('div');data.className='ec-mp-data';
     const realName=[target.first_name,target.last_name].filter(Boolean).join(' ');
-    data.innerHTML=`<div class="ec-mp-data-head"><div><span>MITGLIEDSPROFIL</span><h1>${esc(target.nickname||realName||'Mitglied')}</h1></div>${target.is_verified?'<b class="ec-mp-verified" title="Verifiziert">✓</b>':''}</div><div class="ec-mp-rows">${row('Nickname',target.nickname)}${visible(target,'name',isFriend)?row('Vorname',target.first_name):''}${visible(target,'name',isFriend)?row('Nachname',target.last_name):''}${visible(target,'birth_date',isFriend)?row('Geburtsdatum',date(target.birth_date)):''}${visible(target,'birth_date',isFriend)?row('Alter',age(target.birth_date)):''}${visible(target,'location',isFriend)?row('Wohnort',target.location):''}${row('Heimatregion',home)}</div>`;
+    data.innerHTML=`<div class="ec-mp-data-head"><div><span>MITGLIEDSPROFIL</span><h1>${esc(target.nickname||realName||'Mitglied')}</h1></div>${target.is_verified?'<b class="ec-mp-verified" title="Verifiziert">✓</b>':''}</div><div class="ec-mp-rows">${row('Nickname',target.nickname)}${visible(target,'name',isFriend)?row('Vorname',target.first_name):''}${visible(target,'name',isFriend)?row('Nachname',target.last_name):''}${visible(target,'birth_date',isFriend)?row('Geburtsdatum',date(target.birth_date)):''}${visible(target,'birth_date',isFriend)?row('Alter',age(target.birth_date)):''}${row('Heimatregion',home)}</div>`;
     card.append(left,data);
     root.insertBefore(card,hero);
     hero.hidden=true;
 
     const actions=document.createElement('div');actions.className='ec-mp-actions';
     const sourceActions=root.querySelector('.member-profile-actions');
-    const admin=root.querySelector('.member-admin-tools');
-
-    if(admin){
-      admin.classList.add('ec-mp-admin-panel');admin.hidden=true;
-      const toggle=document.createElement('button');
-      toggle.type='button';
-      toggle.className='ec-mp-admin-toggle';
-      toggle.textContent='Admin Tools';
-      toggle.onclick=()=>{admin.hidden=!admin.hidden;toggle.classList.toggle('is-open',!admin.hidden)};
-      actions.appendChild(toggle);
-    }
-
     if(sourceActions){
       [...sourceActions.querySelectorAll('button')].forEach(button=>{cleanActionText(button);actions.appendChild(button)});
       sourceActions.hidden=true;
     }
+    if(actions.children.length) card.after(actions);
 
-    card.after(actions);
-    if(admin)actions.after(admin);
-
-    // Keep the single, structured "Das bin ich / Über mich" section rendered
-    // by ProfileSections below the profile. This final renderer must not create
-    // a second bio card.
-    const interests=Array.isArray(target.interests)?target.interests.join(', '):target.interests;
-    const info=[];if(interests&&visible(target,'interests',isFriend))info.push(row('Interessen',interests));if(target.website&&visible(target,'website',isFriend))info.push(row('Webseite',target.website));
-    if(info.length){
-      const more=document.createElement('div');more.className='ec-mp-more';
-      more.innerHTML=`<section class="ec-mp-section"><span>WEITERE ANGABEN</span><h2>Profilinformationen</h2><div class="ec-mp-rows compact">${info.join('')}</div></section>`;
-      const anchor=admin||actions;anchor.after(more);
-    }
+    // ProfileSections is the single source for Steckbrief, "Das bin ich",
+    // interests, website and other personal details. Do not duplicate them here.
+    root.querySelectorAll(':scope > .profile-visible-details').forEach(node=>node.remove());
 
     root.dataset.ecMemberProfileFinal='1';
   }finally{
