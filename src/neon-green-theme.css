@@ -16,8 +16,12 @@ html[data-ec-theme='neon'] body,
 html[data-ec-theme='neon'] #root,
 html[data-ec-theme='neon'] .app.layout-theme-neon{background:#050806!important;color:var(--ec-text)}
 html[data-ec-theme='neon'] body{background-image:radial-gradient(circle at 12% 8%,rgba(124,255,0,.08),transparent 28rem),radial-gradient(circle at 88% 18%,rgba(124,255,0,.05),transparent 34rem),linear-gradient(180deg,#050806 0%,#071009 48%,#050806 100%)!important;background-attachment:fixed!important}
-html[data-ec-theme='neon'] .layout-theme-neon :is(.modern-sidebar,.top-nav,.modern-top-nav,.modern-header,.app-header,.content-root,.modern-main,.panel,.card,.dashboard-card,.member-card,.profile-card,.modal,.dialog,.dropdown-menu,.popover,.ec-profile-photo-album,.ec-profile-youtube-panel,.ec-chat-modern-shell,.ec-chat-modern-thread){background-color:rgba(9,16,11,.94)!important;border-color:var(--ec-neon-line)!important}
-html[data-ec-theme='neon'] .layout-theme-neon :is(.panel,.card,.dashboard-card,.member-card,.profile-card,.ec-profile-photo-album,.ec-profile-youtube-panel,.ec-chat-modern-shell){box-shadow:inset 0 1px 0 rgba(182,255,74,.06),0 0 0 1px rgba(124,255,0,.05),var(--ec-neon-glow)!important}
+
+/* Neon belongs to the community shell only. Approved member cards keep their own
+   red/yellow/blue/light-grey role presentation without any theme override. */
+html[data-ec-theme='neon'] .layout-theme-neon :is(.modern-sidebar,.top-nav,.modern-top-nav,.modern-header,.app-header,.content-root,.modern-main,.panel,.card,.dashboard-card,.profile-card,.modal,.dialog,.dropdown-menu,.popover,.ec-profile-photo-album,.ec-profile-youtube-panel,.ec-chat-modern-shell,.ec-chat-modern-thread){background-color:rgba(9,16,11,.94)!important;border-color:var(--ec-neon-line)!important}
+html[data-ec-theme='neon'] .layout-theme-neon :is(.panel,.card,.dashboard-card,.profile-card,.ec-profile-photo-album,.ec-profile-youtube-panel,.ec-chat-modern-shell){box-shadow:inset 0 1px 0 rgba(182,255,74,.06),0 0 0 1px rgba(124,255,0,.05),var(--ec-neon-glow)!important}
+
 html[data-ec-theme='neon'] .layout-theme-neon :is(h1,h2,h3,.section-title,.page-title,.eyebrow,label,strong){color:var(--ec-text)}
 html[data-ec-theme='neon'] .layout-theme-neon :is(.eyebrow,.section-kicker,[data-kicker],a,.text-button){color:var(--ec-neon-bright)!important}
 html[data-ec-theme='neon'] .layout-theme-neon :is(p,small,.muted,.subtitle,.description,.helper-text,.meta){color:var(--ec-muted)}
