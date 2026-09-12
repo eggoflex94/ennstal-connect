@@ -16,7 +16,7 @@ const getName = (profile) => profile?.nickname || [profile?.first_name, profile?
 const peerFor = (message) => message.sender_id === currentUser?.id ? message.receiver_id : message.sender_id;
 const starFor = (profile) => {
   const role = String(profile?.role || "MEMBER").toUpperCase();
-  if (role === "HEAD_ADMIN" || role === "ADMIN") return "/role-star-red.svg";
+  if (["HEAD_ADMIN", "ADMIN", "GLOBAL_ADMIN", "REGIONAL_ADMIN"].includes(role)) return "/role-star-red.svg";
   if (role === "SUPPORTER") return "/supporter-star.svg";
   if (profile?.account_badge === "BUSINESS") return "/role-star-blue.svg";
   return "/role-star-member.svg";
@@ -24,11 +24,12 @@ const starFor = (profile) => {
 const roleLabel = (profile) => {
   const role = String(profile?.role || "MEMBER").toUpperCase();
   if (role === "HEAD_ADMIN") return "Hauptadmin";
-  if (role === "ADMIN") return "Admin";
+  if (role === "ADMIN" || role === "GLOBAL_ADMIN") return "Admin";
+  if (role === "REGIONAL_ADMIN") return "Regional Admin";
   if (role === "SUPPORTER") return "Supporter";
   return "Mitglied";
 };
-const isAutomated = (message) => ["ROLE", "GROUP_INVITE"].includes(String(message?.message_type || "").toUpperCase()) || /automatisch generierte nachricht|rolle .* erhalten|rechte .* erhalten|moderationsrechte|regional admin|forum.?moderator|hat dich in die gruppe/i.test(String(message?.content || ""));
+const isAutomated = (message) => ["ROLE", "GROUP_INVITE"].includes(String(message?.message_type || "").toUpperCase()) || /automatisch generierte nachricht|automatisierte nachricht|rolle .* erhalten|rechte .* erhalten|moderationsrechte|regional admin|forum.?moderator|hat dich in die gruppe|punkte erhalten|profilverifizierung|profil-verifizierung/i.test(String(message?.content || ""));
 
 function profileById(id) { return profiles.find((profile) => profile.id === id) || null; }
 
@@ -100,6 +101,28 @@ function automatedHeader(message, peer) {
   return `<div class="ec-chat-modern-auto-head"><span class="ec-chat-modern-auto-label">${invite ? "GRUPPENEINLADUNG" : "AUTOMATISCHE NACHRICHT"}</span><span class="ec-chat-modern-auto-actor"><img src="${esc(starFor(sender))}" alt="Rollenstern"><strong>${esc(getName(sender))}</strong></span></div>`;
 }
 
+function automatedMessageContent(message, peer) {
+  const raw = String(message?.content || "");
+  const sender = profileById(message?.sender_id) || peer;
+  const senderName = getName(sender);
+  const aliases = [sender?.nickname, [sender?.first_name, sender?.last_name].filter(Boolean).join(" "), senderName]
+    .map((value) => String(value || "").trim())
+    .filter(Boolean)
+    .sort((a, b) => b.length - a.length);
+  const star = `<img class="ec-chat-inline-role-star" src="${esc(starFor(sender))}" alt="" aria-hidden="true">`;
+
+  for (const alias of aliases) {
+    const index = raw.toLocaleLowerCase("de-AT").indexOf(alias.toLocaleLowerCase("de-AT"));
+    if (index < 0) continue;
+    const before = raw.slice(0, index);
+    const actor = raw.slice(index, index + alias.length);
+    const after = raw.slice(index + alias.length);
+    return `<p>${esc(before)}<span class="ec-chat-inline-role-identity">${star}<strong>${esc(actor)}</strong></span>${esc(after)}</p>`;
+  }
+
+  return `<p><span class="ec-chat-inline-role-identity">${star}<strong>${esc(senderName)}</strong></span> ${esc(raw)}</p>`;
+}
+
 function linkifyGroupInvite(text) {
   const raw = String(text || "");
   const match = raw.match(/https:\/\/ennstal-connect\.com\/\?group_invite=[0-9a-f-]+/i);
@@ -127,7 +150,8 @@ async function openThread(peerId) {
     const automatic = isAutomated(message);
     const invite = String(message.message_type || "").toUpperCase() === "GROUP_INVITE";
     bubble.className = `ec-chat-modern-bubble${message.sender_id === currentUser.id ? " mine" : ""}${automatic ? " auto-role" : ""}${invite ? " group-invite" : ""}`;
-    bubble.innerHTML = `${automatic ? automatedHeader(message, peer) : ""}${invite ? linkifyGroupInvite(message.content) : `<p>${esc(message.content || "")}</p>`}<time>${esc(formatStamp(message.created_at, true))}</time><button type="button" class="ec-chat-modern-delete" aria-label="Nachricht löschen">×</button>`;
+    const body = invite ? linkifyGroupInvite(message.content) : automatic ? automatedMessageContent(message, peer) : `<p>${esc(message.content || "")}</p>`;
+    bubble.innerHTML = `${automatic ? automatedHeader(message, peer) : ""}${body}<time>${esc(formatStamp(message.created_at, true))}</time><button type="button" class="ec-chat-modern-delete" aria-label="Nachricht löschen">×</button>`;
     bubble.querySelector(".ec-chat-modern-delete").onclick = async () => {
       if (!confirm("Diese Nachricht für beide Gesprächspartner endgültig löschen?")) return;
       const { error: deleteError } = await supabase.rpc("delete_private_message", { p_message_id: message.id });
