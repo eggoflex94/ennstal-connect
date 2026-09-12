@@ -83,9 +83,7 @@ test("member profile keeps identical desktop structure on touch devices", async 
 
 test("member role stars stay mapped to the correct functions", async () => {
   const code = await source("src/NativeMembersDirectory.jsx");
-  assert.match(code, /isHeadAdmin\(member\) \|\| isGlobalAdmin\(member\) \|\| isRegionalAdmin\(member\) \? "\/role-star-red\.svg"/);
-  assert.match(code, /normalized\(member\?\.role\) === "SUPPORTER" \? "\/supporter-star\.svg"/);
-  assert.doesNotMatch(code, /isRegionalAdmin\(member\)[^\n]*supporter-star\.svg/);
+  assert.match(code, /const roleStarSrc = \(member\) => isHeadAdmin\(member\) \|\| isGlobalAdmin\(member\) \|\| isRegionalAdmin\(member\) \? "\/role-star-red\.svg" : isBusiness\(member\) \? "\/role-star-blue\.svg" : normalized\(member\?\.role\) === "SUPPORTER" \? "\/supporter-star\.svg" : null;/);
 });
 
 test("profile presence remains visually separated", async () => {
