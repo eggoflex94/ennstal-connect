@@ -16,3 +16,101 @@
 .modern-main .panel,
 .modern-main .dashboard-card,
 .modern-main .home-card{backdrop-filter:none}
+
+/* Own profile: one deterministic grid. The preview must never overlap the editor. */
+.profile-page-layout{
+  display:block!important;
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+  overflow:visible!important;
+}
+.profile-page-layout>.my-area-layout,
+.my-area-layout{
+  display:grid!important;
+  grid-template-columns:minmax(240px,320px) minmax(0,1fr)!important;
+  align-items:start!important;
+  gap:24px!important;
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+  margin:0!important;
+  overflow:visible!important;
+}
+.my-area-layout>*{
+  min-width:0!important;
+  max-width:100%!important;
+  box-sizing:border-box!important;
+}
+.my-area-layout .my-profile-card{
+  position:relative!important;
+  inset:auto!important;
+  width:100%!important;
+  min-width:0!important;
+  max-width:320px!important;
+  margin:0!important;
+  transform:none!important;
+  overflow:hidden!important;
+}
+.my-area-layout .profile-form,
+.my-area-layout form.profile-form,
+.my-area-layout .profile-editor,
+.my-area-layout .profile-editor-shell{
+  position:relative!important;
+  inset:auto!important;
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+  margin:0!important;
+  transform:none!important;
+  overflow:visible!important;
+}
+.my-area-layout .profile-editor-section,
+.my-area-layout .profile-editor-grid,
+.my-area-layout .profile-typography-grid{
+  min-width:0!important;
+  max-width:100%!important;
+}
+.my-area-layout .profile-editor-grid{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:14px!important;
+}
+.my-area-layout .profile-editor-field,
+.my-area-layout .profile-upload-field,
+.my-area-layout fieldset{
+  min-width:0!important;
+  max-width:100%!important;
+}
+.my-area-layout input,
+.my-area-layout textarea,
+.my-area-layout select{
+  min-width:0!important;
+  max-width:100%!important;
+}
+
+/* Secondary profile sections always start below the editor/preview pair. */
+.profile-page-layout>section:not(.my-area-layout),
+.profile-page-layout>div:not(.my-area-layout){
+  clear:both!important;
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+}
+
+@media(max-width:1120px){
+  .profile-page-layout>.my-area-layout,
+  .my-area-layout{
+    grid-template-columns:1fr!important;
+  }
+  .my-area-layout .my-profile-card{
+    max-width:100%!important;
+  }
+}
+
+@media(max-width:700px){
+  .my-area-layout .profile-editor-grid,
+  .my-area-layout .profile-typography-grid{
+    grid-template-columns:1fr!important;
+  }
+}
