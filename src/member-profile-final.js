@@ -1,11 +1,11 @@
 import { supabase } from './supabaseClient';
-import './member-directory-polish.css';
 
 let regions=[];
 let viewer=null;
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const age=d=>{if(!d)return'';const b=new Date(d);if(Number.isNaN(b.getTime()))return'';const n=new Date();let a=n.getFullYear()-b.getFullYear();if(n.getMonth()<b.getMonth()||(n.getMonth()===b.getMonth()&&n.getDate()<b.getDate()))a--;return `${a} Jahre`};
 const date=d=>{if(!d)return'';const x=new Date(d);return Number.isNaN(x.getTime())?'':x.toLocaleDateString('de-AT')};
+const norm=v=>String(v||'').replace(/\s+/g,' ').trim().toLowerCase();
 
 async function context(){
   if(viewer&&regions.length)return;
@@ -51,7 +51,35 @@ function cleanActionText(button){
   if(t)button.textContent=t;
   button.classList.add('ec-mp-action');
 }
+function cleanProfileNoise(root){
+  root.querySelectorAll(':scope > .profile-visible-details').forEach(node=>node.remove());
+
+  const stories=[...root.querySelectorAll('.personal-profile-sections > .profile-story')];
+  stories.slice(1).forEach(node=>node.remove());
+  const story=stories[0];
+  if(story){
+    const seen=new Set();
+    const legacy=story.querySelector('.profile-story-legacy .profile-story-text');
+    const legacyText=norm(legacy?.textContent);
+    [...story.querySelectorAll('.profile-story-block')].forEach(block=>{
+      const text=norm(block.querySelector('.profile-story-text')?.textContent);
+      const title=norm(block.querySelector('h3')?.textContent);
+      const isLegacy=block.classList.contains('profile-story-legacy');
+      const duplicatesLegacy=!isLegacy&&legacyText&&text===legacyText;
+      const duplicateText=text&&seen.has(text);
+      const redundantAbout=!isLegacy&&legacyText&&['über mich','das bin ich'].includes(title)&&(!text||text===legacyText);
+      if(duplicatesLegacy||duplicateText||redundantAbout) block.remove();
+      else if(text) seen.add(text);
+    });
+  }
+
+  document.querySelectorAll('.toast,[role="alert"]').forEach(node=>{
+    const text=String(node.textContent||'');
+    if(/Profil gespeichert, aber .*protokolliert/i.test(text)) node.remove();
+  });
+}
 async function build(root){
+  cleanProfileNoise(root);
   if(root.dataset.ecMemberProfileFinal==='1'||root.dataset.ecMemberProfileBuilding==='1')return;
   const hero=root.querySelector('.member-profile-hero');
   if(!hero)return;
@@ -92,15 +120,12 @@ async function build(root){
     }
     if(actions.children.length) card.after(actions);
 
-    // ProfileSections is the single source for Steckbrief, "Das bin ich",
-    // interests, website and other personal details. Do not duplicate them here.
-    root.querySelectorAll(':scope > .profile-visible-details').forEach(node=>node.remove());
-
+    cleanProfileNoise(root);
     root.dataset.ecMemberProfileFinal='1';
   }finally{
     delete root.dataset.ecMemberProfileBuilding;
   }
 }
-function run(){document.querySelectorAll('.member-profile-page:not(.public-profile-preview)').forEach(build)}
+function run(){document.querySelectorAll('.member-profile-page:not(.public-profile-preview)').forEach(root=>{cleanProfileNoise(root);build(root)})}
 let queued=false;new MutationObserver(()=>{if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;run()})}).observe(document.documentElement,{childList:true,subtree:true});
 window.addEventListener('DOMContentLoaded',run);run();
