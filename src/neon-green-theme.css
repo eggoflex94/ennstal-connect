@@ -1,57 +1,209 @@
-/* Final Neon-Green authority. Member cards keep their approved role colors. */
+/* Bright Neon-Green theme authority.
+   Visual-only skin: no layout/function changes. Approved member cards keep their own colors. */
 html[data-ec-theme='neon']{
-  --ec-neon:#7cff00;
-  --ec-neon-bright:#b7ff55;
-  --ec-neon-line:rgba(124,255,0,.46);
-  --ec-neon-glow:0 0 12px rgba(124,255,0,.34),0 0 30px rgba(124,255,0,.14);
-  --ec-neon-bg:#040704;
-  --ec-neon-surface:#09110a;
-  --ec-neon-text:#efffe9;
-  --ec-neon-muted:#a7c39f;
-  background:#040704!important;
+  --ec-neon:#75ff35;
+  --ec-neon-strong:#56ff16;
+  --ec-neon-bright:#c8ff8a;
+  --ec-neon-white:#f7fff3;
+  --ec-neon-line:rgba(117,255,53,.62);
+  --ec-neon-line-soft:rgba(117,255,53,.34);
+  --ec-neon-glow:0 0 10px rgba(86,255,22,.44),0 0 28px rgba(86,255,22,.18);
+  --ec-neon-glow-strong:0 0 10px rgba(86,255,22,.78),0 0 28px rgba(86,255,22,.34),0 0 52px rgba(86,255,22,.16);
+  --ec-neon-bg:#203d34;
+  --ec-neon-bg-deep:#173028;
+  --ec-neon-surface:#29483e;
+  --ec-neon-surface-2:#315447;
+  --ec-neon-text:#f6fff3;
+  --ec-neon-muted:#c8ddc5;
+  background:#203d34!important;
   color-scheme:dark;
 }
+
 html[data-ec-theme='neon'] body,
 html[data-ec-theme='neon'] #root,
 html[data-ec-theme='neon'] .app{
-  background:#040704!important;
+  background:#203d34!important;
   color:var(--ec-neon-text)!important;
 }
+
 html[data-ec-theme='neon'] body{
   min-height:100vh!important;
-  background-image:radial-gradient(circle at 10% 7%,rgba(124,255,0,.10),transparent 29rem),radial-gradient(circle at 88% 16%,rgba(124,255,0,.06),transparent 35rem),linear-gradient(180deg,#040704 0%,#071008 48%,#040704 100%)!important;
+  background-image:
+    radial-gradient(circle at 8% 10%,rgba(117,255,53,.22),transparent 25rem),
+    radial-gradient(circle at 92% 14%,rgba(117,255,53,.14),transparent 34rem),
+    radial-gradient(circle at 54% 86%,rgba(117,255,53,.10),transparent 32rem),
+    linear-gradient(135deg,#2c5246 0%,#203f36 36%,#27493f 66%,#1d382f 100%)!important;
   background-attachment:fixed!important;
 }
-html[data-ec-theme='neon'] .app :is(.dashboard-layout,.content-root,.modern-main){background:transparent!important}
-html[data-ec-theme='neon'] .app :is(.modern-sidebar,.top-nav,.modern-top-nav,.modern-header,.app-header,.ec-top-nav,.ec-brand-masthead,.ec-right-dock,.panel,.card,.dashboard-card,.overview-card,.stat-card,.profile-card,.modal,.dialog,.dropdown-menu,.popover,.content-card,.community-card,.ec-region-status,.ec-region-picker,.ec-region-context,.ec-regional-events-context,.ec-profile-photo-album,.ec-profile-youtube-panel,.ec-chat-modern-shell,.ec-chat-modern-thread):not(.member-card){
-  background:linear-gradient(145deg,rgba(13,24,16,.98),rgba(7,14,9,.98))!important;
+
+html[data-ec-theme='neon'] .app :is(.dashboard-layout,.content-root,.modern-main){
+  background:transparent!important;
+}
+
+/* Brighter glass surfaces, same components and geometry. */
+html[data-ec-theme='neon'] .app :is(
+  .modern-sidebar,.top-nav,.modern-top-nav,.modern-header,.app-header,.ec-top-nav,
+  .ec-brand-masthead,.ec-right-dock,.panel,.card,.dashboard-card,.overview-card,.stat-card,
+  .profile-card,.modal,.dialog,.dropdown-menu,.popover,.content-card,.community-card,
+  .ec-region-status,.ec-region-picker,.ec-region-context,.ec-regional-events-context,
+  .ec-profile-photo-album,.ec-profile-youtube-panel,.ec-chat-modern-shell,.ec-chat-modern-thread
+):not(.member-card){
+  background:linear-gradient(145deg,rgba(54,91,78,.94),rgba(36,67,57,.96))!important;
   border-color:var(--ec-neon-line)!important;
   color:var(--ec-neon-text)!important;
-  box-shadow:inset 0 1px 0 rgba(183,255,85,.05),0 0 0 1px rgba(124,255,0,.04),var(--ec-neon-glow)!important;
+  box-shadow:
+    inset 0 1px 0 rgba(235,255,225,.11),
+    0 0 0 1px rgba(117,255,53,.07),
+    0 8px 24px rgba(7,26,19,.20),
+    var(--ec-neon-glow)!important;
+  backdrop-filter:saturate(120%) brightness(1.06)!important;
 }
-html[data-ec-theme='neon'] .app :is(h1,h2,h3,h4,.section-title,.page-title,label,strong):not(.member-card *){color:var(--ec-neon-text)!important}
-html[data-ec-theme='neon'] .app :is(.eyebrow,.section-kicker,[data-kicker],a,.text-button):not(.member-card *){color:var(--ec-neon-bright)!important}
-html[data-ec-theme='neon'] .app :is(p,small,.muted,.subtitle,.description,.helper-text,.meta):not(.member-card *){color:var(--ec-neon-muted)!important}
-html[data-ec-theme='neon'] .app :is(button,.button,.primary-button,.secondary-button,input[type='button'],input[type='submit']):not(.member-card *){border-color:rgba(124,255,0,.55)!important;box-shadow:0 0 0 1px rgba(124,255,0,.04),0 0 14px rgba(124,255,0,.10)!important}
-html[data-ec-theme='neon'] .app :is(button,.button,.primary-button,.secondary-button):not(.member-card *):hover{border-color:var(--ec-neon)!important;box-shadow:0 0 8px rgba(124,255,0,.48),0 0 24px rgba(124,255,0,.18)!important}
-html[data-ec-theme='neon'] .app :is(.primary-button,button.active,.button.active,[aria-current='page'],[aria-selected='true']):not(.member-card *){background:linear-gradient(135deg,#62dd00,#9cff2f)!important;color:#061006!important;border-color:#baff69!important;text-shadow:none!important}
-html[data-ec-theme='neon'] .app :is(.secondary-button,.text-button):not(.member-card *){background:rgba(124,255,0,.07)!important}
-html[data-ec-theme='neon'] .app :is(input,textarea,select):not(.member-card *){background:#071009!important;color:var(--ec-neon-text)!important;border-color:rgba(124,255,0,.38)!important}
-html[data-ec-theme='neon'] .app :is(input,textarea)::placeholder{color:#789071!important}
+
+/* Major shell/navigation surfaces slightly brighter than content panels. */
+html[data-ec-theme='neon'] .app :is(.modern-sidebar,.top-nav,.modern-top-nav,.modern-header,.app-header,.ec-top-nav,.ec-right-dock):not(.member-card){
+  background:linear-gradient(145deg,rgba(48,82,70,.97),rgba(28,57,48,.98))!important;
+  border-color:rgba(117,255,53,.70)!important;
+}
+
+html[data-ec-theme='neon'] .app :is(h1,h2,h3,h4,.section-title,.page-title,label,strong):not(.member-card *){
+  color:var(--ec-neon-white)!important;
+}
+html[data-ec-theme='neon'] .app :is(.eyebrow,.section-kicker,[data-kicker],a,.text-button):not(.member-card *){
+  color:var(--ec-neon-bright)!important;
+}
+html[data-ec-theme='neon'] .app :is(p,small,.muted,.subtitle,.description,.helper-text,.meta):not(.member-card *){
+  color:var(--ec-neon-muted)!important;
+}
+
+/* Buttons: same actions, brighter neon treatment. */
+html[data-ec-theme='neon'] .app :is(button,.button,.primary-button,.secondary-button,input[type='button'],input[type='submit']):not(.member-card *){
+  border-color:rgba(117,255,53,.72)!important;
+  box-shadow:0 0 0 1px rgba(117,255,53,.08),0 0 16px rgba(86,255,22,.16)!important;
+}
+html[data-ec-theme='neon'] .app :is(button,.button,.primary-button,.secondary-button):not(.member-card *):hover{
+  border-color:var(--ec-neon-bright)!important;
+  box-shadow:0 0 10px rgba(86,255,22,.68),0 0 30px rgba(86,255,22,.26)!important;
+}
+html[data-ec-theme='neon'] .app :is(.primary-button,button.active,.button.active,[aria-current='page'],[aria-selected='true']):not(.member-card *){
+  background:linear-gradient(135deg,#4cff0d 0%,#94ff4a 55%,#c6ff86 100%)!important;
+  color:#123111!important;
+  border-color:#dcffad!important;
+  text-shadow:none!important;
+  box-shadow:var(--ec-neon-glow-strong)!important;
+}
+html[data-ec-theme='neon'] .app :is(.secondary-button,.text-button):not(.member-card *){
+  background:rgba(117,255,53,.12)!important;
+}
+
+/* Inputs remain fully functional; only visual treatment changes. */
+html[data-ec-theme='neon'] .app :is(input,textarea,select):not(.member-card *){
+  background:rgba(25,55,46,.93)!important;
+  color:var(--ec-neon-text)!important;
+  border-color:rgba(117,255,53,.56)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05)!important;
+}
+html[data-ec-theme='neon'] .app :is(input,textarea)::placeholder{
+  color:#b0c9ad!important;
+}
 html[data-ec-theme='neon'] .app :is(input,textarea,select):focus,
-html[data-ec-theme='neon'] .app :is(button,a):not(.member-card *):focus-visible{outline:2px solid var(--ec-neon)!important;outline-offset:2px!important;box-shadow:0 0 0 4px rgba(124,255,0,.12),0 0 20px rgba(124,255,0,.28)!important}
-html[data-ec-theme='neon'] .app :is(.modern-nav button,.ec-top-nav button,.nav-item):not(.member-card *){color:#dcffd2!important}
-html[data-ec-theme='neon'] .app :is(.modern-nav button,.ec-top-nav button,.nav-item):not(.member-card *):hover{background:rgba(124,255,0,.09)!important;color:var(--ec-neon-bright)!important}
-html[data-ec-theme='neon'] .app :is(.modern-nav button.active,.ec-top-nav button.active,.modern-nav button[aria-current='page'],.ec-top-nav button[aria-current='page']){background:linear-gradient(135deg,#5bd000,#8fff24)!important;color:#061006!important;border-color:#baff69!important;box-shadow:0 0 10px rgba(124,255,0,.42),0 0 24px rgba(124,255,0,.16)!important}
-html[data-ec-theme='neon'] .app :is(img[src*='ennstal-connect-logo'],img[src*='ennstal-connect-community-logo'],img[src*='ennstal-connect-brand'],.ec-brand-image,.brand-logo img,.logo img){filter:brightness(0) saturate(100%) invert(83%) sepia(87%) saturate(1488%) hue-rotate(35deg) brightness(107%) contrast(108%) drop-shadow(0 0 8px rgba(124,255,0,.88)) drop-shadow(0 0 20px rgba(124,255,0,.46))!important}
-html[data-ec-theme='neon'] .app :is(.brand,.brand-name,.logo-text,.app-name,.ec-brand-claim b){color:var(--ec-neon-bright)!important;text-shadow:0 0 8px rgba(124,255,0,.75),0 0 24px rgba(124,255,0,.32)!important}
-html[data-ec-theme='neon'] .app :is(.ec-photo-card,.ec-profile-youtube-card,.profile-story-block,.profile-folders figure,.member-profile-page .ec-mp-card,.ec-regional-event-row,.group-card):not(.member-card){background:linear-gradient(145deg,rgba(13,24,16,.99),rgba(7,15,9,.99))!important;border-color:rgba(124,255,0,.32)!important;box-shadow:0 0 18px rgba(124,255,0,.09)!important}
-html[data-ec-theme='neon'] .app :is(.ec-chat-modern-bubble,.chat-bubble,.message-bubble){background:#0d1710!important;border-color:rgba(124,255,0,.24)!important;color:var(--ec-neon-text)!important}
-html[data-ec-theme='neon'] .app :is(.ec-chat-modern-bubble.mine,.ec-chat-modern-bubble.is-mine,.chat-bubble.is-mine,.message-bubble.is-mine){background:linear-gradient(135deg,rgba(72,154,0,.32),rgba(18,48,13,.97))!important;border-color:rgba(124,255,0,.50)!important}
+html[data-ec-theme='neon'] .app :is(button,a):not(.member-card *):focus-visible{
+  outline:2px solid var(--ec-neon-bright)!important;
+  outline-offset:2px!important;
+  box-shadow:0 0 0 4px rgba(117,255,53,.16),0 0 24px rgba(86,255,22,.40)!important;
+}
+
+/* Navigation. */
+html[data-ec-theme='neon'] .app :is(.modern-nav button,.ec-top-nav button,.nav-item):not(.member-card *){
+  color:#f1ffec!important;
+}
+html[data-ec-theme='neon'] .app :is(.modern-nav button,.ec-top-nav button,.nav-item):not(.member-card *):hover{
+  background:rgba(117,255,53,.14)!important;
+  color:var(--ec-neon-bright)!important;
+  box-shadow:0 0 18px rgba(86,255,22,.16)!important;
+}
+html[data-ec-theme='neon'] .app :is(.modern-nav button.active,.ec-top-nav button.active,.modern-nav button[aria-current='page'],.ec-top-nav button[aria-current='page']){
+  background:linear-gradient(135deg,rgba(64,219,35,.72),rgba(102,255,52,.42))!important;
+  color:#f7fff3!important;
+  border-color:#bdff80!important;
+  box-shadow:0 0 10px rgba(86,255,22,.72),0 0 28px rgba(86,255,22,.30)!important;
+}
+
+/* Existing Ennstal Connect logo: same logo/markup, neon-green in this theme only. */
+html[data-ec-theme='neon'] .app :is(
+  img[src*='ennstal-connect-logo'],
+  img[src*='ennstal-connect-community-logo'],
+  img[src*='ennstal-connect-brand'],
+  img[src*='ennstal-connect-wordmark'],
+  .ec-brand-image,
+  .brand-logo img,
+  .logo img
+){
+  filter:
+    brightness(0)
+    saturate(100%)
+    invert(82%)
+    sepia(92%)
+    saturate(1620%)
+    hue-rotate(38deg)
+    brightness(118%)
+    contrast(112%)
+    drop-shadow(0 0 5px rgba(117,255,53,.98))
+    drop-shadow(0 0 14px rgba(86,255,22,.76))
+    drop-shadow(0 0 28px rgba(86,255,22,.38))!important;
+}
+html[data-ec-theme='neon'] .app :is(.brand,.brand-name,.logo-text,.app-name,.ec-brand-claim b){
+  color:#91ff50!important;
+  text-shadow:0 0 7px rgba(117,255,53,.95),0 0 18px rgba(86,255,22,.62),0 0 34px rgba(86,255,22,.28)!important;
+}
+html[data-ec-theme='neon'] .app :is(.ec-brand-claim,.brand small,.logo small){
+  color:#c9ff9b!important;
+}
+
+/* Content modules. */
+html[data-ec-theme='neon'] .app :is(
+  .ec-photo-card,.ec-profile-youtube-card,.profile-story-block,.profile-folders figure,
+  .member-profile-page .ec-mp-card,.ec-regional-event-row,.group-card
+):not(.member-card){
+  background:linear-gradient(145deg,rgba(56,94,80,.96),rgba(38,70,59,.97))!important;
+  border-color:rgba(117,255,53,.50)!important;
+  box-shadow:0 0 20px rgba(86,255,22,.14)!important;
+}
+
+/* Chat stays readable in the brighter theme. */
+html[data-ec-theme='neon'] .app :is(.ec-chat-modern-bubble,.chat-bubble,.message-bubble){
+  background:rgba(44,79,67,.96)!important;
+  border-color:rgba(117,255,53,.38)!important;
+  color:var(--ec-neon-text)!important;
+}
+html[data-ec-theme='neon'] .app :is(.ec-chat-modern-bubble.mine,.ec-chat-modern-bubble.is-mine,.chat-bubble.is-mine,.message-bubble.is-mine){
+  background:linear-gradient(135deg,rgba(79,165,47,.52),rgba(43,87,61,.98))!important;
+  border-color:rgba(117,255,53,.70)!important;
+}
+
+/* Approved member cards are deliberately excluded from the neon recoloring. */
 html[data-ec-theme='neon'] .app article.member-card[data-role-theme],
-html[data-ec-theme='neon'] .app article.member-card[data-role-theme] *{filter:none}
-html[data-ec-theme='neon'] .app *{scrollbar-color:rgba(124,255,0,.55) #071009}
-html[data-ec-theme='neon'] .app *::-webkit-scrollbar-thumb{background:rgba(124,255,0,.52);border-radius:999px;border:2px solid #071009}
-html[data-ec-theme='neon'] .app *::-webkit-scrollbar-track{background:#071009}
-html[data-ec-theme='neon'] .app ::selection{background:rgba(124,255,0,.36);color:#fff}
-@media(max-width:720px){html[data-ec-theme='neon'] body{background-attachment:scroll!important}}
+html[data-ec-theme='neon'] .app article.member-card[data-role-theme] *{
+  filter:none;
+}
+
+/* Scrollbars and selection. */
+html[data-ec-theme='neon'] .app *{
+  scrollbar-color:rgba(117,255,53,.72) #24473b;
+}
+html[data-ec-theme='neon'] .app *::-webkit-scrollbar-thumb{
+  background:linear-gradient(180deg,#9cff5b,#53e61b);
+  border-radius:999px;
+  border:2px solid #24473b;
+  box-shadow:0 0 8px rgba(86,255,22,.45);
+}
+html[data-ec-theme='neon'] .app *::-webkit-scrollbar-track{
+  background:#24473b;
+}
+html[data-ec-theme='neon'] .app ::selection{
+  background:rgba(117,255,53,.46);
+  color:#fff;
+}
+
+@media(max-width:720px){
+  html[data-ec-theme='neon'] body{background-attachment:scroll!important}
+}
