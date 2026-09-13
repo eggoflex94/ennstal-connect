@@ -1,4 +1,5 @@
 @import "./neon-green-final-authority.css";
+@import "./neon-header-final-authority.css";
 
 /* Final profile layout authority for desktop and mobile.
    Keeps the existing React structure but removes the forced desktop-width behavior
