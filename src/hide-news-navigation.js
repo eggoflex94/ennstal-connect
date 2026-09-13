@@ -1,0 +1,2 @@
+function hideNews(){document.querySelectorAll('aside nav button').forEach((button)=>{if(button.textContent?.includes('Neuigkeiten'))button.style.display='none';});}
+window.addEventListener('ec:navigate',hideNews);if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',hideNews,{once:true});else hideNews();
