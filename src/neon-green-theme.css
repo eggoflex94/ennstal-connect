@@ -1,38 +1,38 @@
-/* Bright Neon-Green theme authority.
-   Visual-only skin: no layout/function changes. Approved member cards keep their own colors. */
+/* Neon Green layout authority.
+   Visual skin only: improve contrast/readability and keep existing behaviour intact. */
 html[data-ec-theme='neon']{
-  --ec-neon:#75ff35;
-  --ec-neon-strong:#56ff16;
-  --ec-neon-bright:#c8ff8a;
-  --ec-neon-white:#f7fff3;
-  --ec-neon-line:rgba(117,255,53,.62);
-  --ec-neon-line-soft:rgba(117,255,53,.34);
-  --ec-neon-glow:0 0 10px rgba(86,255,22,.44),0 0 28px rgba(86,255,22,.18);
-  --ec-neon-glow-strong:0 0 10px rgba(86,255,22,.78),0 0 28px rgba(86,255,22,.34),0 0 52px rgba(86,255,22,.16);
-  --ec-neon-bg:#203d34;
-  --ec-neon-bg-deep:#173028;
-  --ec-neon-surface:#29483e;
-  --ec-neon-surface-2:#315447;
-  --ec-neon-text:#f6fff3;
-  --ec-neon-muted:#c8ddc5;
-  background:#203d34!important;
+  --ec-neon:#78ff23;
+  --ec-neon-strong:#59f900;
+  --ec-neon-bright:#b9ff7a;
+  --ec-neon-white:#fbfff8;
+  --ec-neon-ink:#07150d;
+  --ec-neon-bg:#062e22;
+  --ec-neon-bg-deep:#031f17;
+  --ec-neon-surface:#08392b;
+  --ec-neon-surface-2:#0b4634;
+  --ec-neon-text:#f8fff5;
+  --ec-neon-muted:#d7e8d2;
+  --ec-neon-line:rgba(120,255,35,.82);
+  --ec-neon-line-soft:rgba(120,255,35,.38);
+  --ec-neon-glow:0 0 14px rgba(89,249,0,.18);
+  --ec-neon-glow-strong:0 0 12px rgba(89,249,0,.46),0 0 30px rgba(89,249,0,.20);
+  background:var(--ec-neon-bg)!important;
   color-scheme:dark;
 }
 
 html[data-ec-theme='neon'] body,
 html[data-ec-theme='neon'] #root,
 html[data-ec-theme='neon'] .app{
-  background:#203d34!important;
+  background:var(--ec-neon-bg)!important;
   color:var(--ec-neon-text)!important;
 }
 
 html[data-ec-theme='neon'] body{
   min-height:100vh!important;
   background-image:
-    radial-gradient(circle at 8% 10%,rgba(117,255,53,.22),transparent 25rem),
-    radial-gradient(circle at 92% 14%,rgba(117,255,53,.14),transparent 34rem),
-    radial-gradient(circle at 54% 86%,rgba(117,255,53,.10),transparent 32rem),
-    linear-gradient(135deg,#2c5246 0%,#203f36 36%,#27493f 66%,#1d382f 100%)!important;
+    radial-gradient(circle at 15% 8%,rgba(120,255,35,.12),transparent 24rem),
+    radial-gradient(circle at 92% 18%,rgba(120,255,35,.08),transparent 32rem),
+    linear-gradient(145deg,#073629 0%,#052a20 46%,#031f17 100%)!important;
   background-attachment:fixed!important;
 }
 
@@ -40,123 +40,172 @@ html[data-ec-theme='neon'] .app :is(.dashboard-layout,.content-root,.modern-main
   background:transparent!important;
 }
 
-/* Brighter glass surfaces, same components and geometry. */
+/* Main content surfaces: dark enough for high-contrast white text. */
 html[data-ec-theme='neon'] .app :is(
-  .modern-sidebar,.top-nav,.modern-top-nav,.modern-header,.app-header,.ec-top-nav,
-  .ec-brand-masthead,.ec-right-dock,.panel,.card,.dashboard-card,.overview-card,.stat-card,
+  .modern-sidebar,.ec-right-dock,.panel,.card,.dashboard-card,.overview-card,.stat-card,
   .profile-card,.modal,.dialog,.dropdown-menu,.popover,.content-card,.community-card,
-  .ec-region-status,.ec-region-picker,.ec-region-context,.ec-regional-events-context,
-  .ec-profile-photo-album,.ec-profile-youtube-panel,.ec-chat-modern-shell,.ec-chat-modern-thread
+  .ec-region-context,.ec-regional-events-context,.ec-profile-photo-album,
+  .ec-profile-youtube-panel,.ec-chat-modern-shell,.ec-chat-modern-thread,
+  .activity-composer,.home-activity-card,.home-event-card,.home-overview-card,
+  .friend-activity-card,.events-panel,.profile-visits-panel,.community-news-panel
 ):not(.member-card){
-  background:linear-gradient(145deg,rgba(54,91,78,.94),rgba(36,67,57,.96))!important;
-  border-color:var(--ec-neon-line)!important;
+  background:linear-gradient(145deg,rgba(8,58,43,.98),rgba(4,38,29,.99))!important;
+  border:1px solid var(--ec-neon-line)!important;
   color:var(--ec-neon-text)!important;
-  box-shadow:
-    inset 0 1px 0 rgba(235,255,225,.11),
-    0 0 0 1px rgba(117,255,53,.07),
-    0 8px 24px rgba(7,26,19,.20),
-    var(--ec-neon-glow)!important;
-  backdrop-filter:saturate(120%) brightness(1.06)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 8px 24px rgba(0,0,0,.24),var(--ec-neon-glow)!important;
+  backdrop-filter:none!important;
 }
 
-/* Major shell/navigation surfaces slightly brighter than content panels. */
-html[data-ec-theme='neon'] .app :is(.modern-sidebar,.top-nav,.modern-top-nav,.modern-header,.app-header,.ec-top-nav,.ec-right-dock):not(.member-card){
-  background:linear-gradient(145deg,rgba(48,82,70,.97),rgba(28,57,48,.98))!important;
-  border-color:rgba(117,255,53,.70)!important;
+/* Absolute header authority: the full top area is neon green. */
+html[data-ec-theme='neon'] .app :is(
+  .top-nav,.modern-top-nav,.modern-header,.app-header,.ec-top-nav,
+  .ec-brand-masthead,.top-header,.main-header,.site-header,.desktop-header,
+  .navigation-header,.header-shell
+){
+  background:linear-gradient(100deg,#59f900 0%,#83ff29 52%,#a7ff58 100%)!important;
+  border-color:#bfff88!important;
+  color:var(--ec-neon-ink)!important;
+  box-shadow:0 2px 0 rgba(2,30,13,.72),0 8px 24px rgba(44,255,0,.16)!important;
+  backdrop-filter:none!important;
 }
 
-html[data-ec-theme='neon'] .app :is(h1,h2,h3,h4,.section-title,.page-title,label,strong):not(.member-card *){
-  color:var(--ec-neon-white)!important;
+/* Header text/icons are dark on neon for maximum readability. */
+html[data-ec-theme='neon'] .app :is(
+  .top-nav,.modern-top-nav,.modern-header,.app-header,.ec-top-nav,
+  .ec-brand-masthead,.top-header,.main-header,.site-header,.desktop-header,
+  .navigation-header,.header-shell
+) :is(a,button,span,strong,b,small,p,label,svg){
+  color:#07150d!important;
+  text-shadow:none!important;
 }
-html[data-ec-theme='neon'] .app :is(.eyebrow,.section-kicker,[data-kicker],a,.text-button):not(.member-card *){
-  color:var(--ec-neon-bright)!important;
+
+html[data-ec-theme='neon'] .app :is(
+  .top-nav,.modern-top-nav,.modern-header,.app-header,.ec-top-nav,
+  .ec-brand-masthead,.top-header,.main-header,.site-header,.desktop-header,
+  .navigation-header,.header-shell
+) :is(svg,path){
+  stroke:currentColor;
+}
+
+/* Active navigation remains clearly distinct without losing the neon header. */
+html[data-ec-theme='neon'] .app :is(.modern-nav button,.ec-top-nav button,.nav-item):not(.member-card *){
+  color:#07150d!important;
+  border-color:transparent!important;
+  font-weight:800!important;
+  text-shadow:none!important;
+}
+html[data-ec-theme='neon'] .app :is(.modern-nav button,.ec-top-nav button,.nav-item):not(.member-card *):hover{
+  background:rgba(3,34,18,.12)!important;
+  color:#03150b!important;
+  box-shadow:none!important;
+}
+html[data-ec-theme='neon'] .app :is(.modern-nav button.active,.ec-top-nav button.active,.modern-nav button[aria-current='page'],.ec-top-nav button[aria-current='page']){
+  background:#082d20!important;
+  color:#92ff45!important;
+  border-color:#082d20!important;
+  box-shadow:0 3px 10px rgba(0,0,0,.20)!important;
+}
+
+/* Branding: dark logo plate + neon logo treatment keeps the logo visible on the neon header. */
+html[data-ec-theme='neon'] .app :is(.brand-logo,.logo,.ec-brand-logo,.ec-brand-mark){
+  background:#05251a!important;
+  border:1px solid rgba(5,37,26,.92)!important;
+  border-radius:10px!important;
+  box-shadow:0 4px 12px rgba(0,0,0,.18)!important;
+}
+html[data-ec-theme='neon'] .app :is(
+  img[src*='ennstal-connect-logo'],img[src*='ennstal-connect-community-logo'],
+  img[src*='ennstal-connect-brand'],img[src*='ennstal-connect-wordmark'],
+  .ec-brand-image,.brand-logo img,.logo img
+){
+  filter:brightness(0) saturate(100%) invert(83%) sepia(99%) saturate(1421%) hue-rotate(35deg) brightness(113%) contrast(112%) drop-shadow(0 0 4px rgba(120,255,35,.50))!important;
+}
+html[data-ec-theme='neon'] .app :is(.brand,.brand-name,.logo-text,.app-name,.ec-brand-claim b){
+  color:#07150d!important;
+  text-shadow:none!important;
+  font-weight:900!important;
+}
+html[data-ec-theme='neon'] .app :is(.ec-brand-claim,.brand small,.logo small){
+  color:#163b1e!important;
+  font-weight:700!important;
+}
+
+/* Region/location chip in the header. */
+html[data-ec-theme='neon'] .app :is(.ec-region-status,.ec-region-picker,.region-switcher,.region-selector){
+  background:rgba(236,255,220,.30)!important;
+  border:1px solid rgba(5,48,24,.34)!important;
+  color:#07150d!important;
+  box-shadow:none!important;
+}
+html[data-ec-theme='neon'] .app :is(.ec-region-status,.ec-region-picker,.region-switcher,.region-selector) *{
+  color:#07150d!important;
+}
+
+/* Typography: eliminate washed-out white/green text. */
+html[data-ec-theme='neon'] .app :is(h1,h2,h3,h4,h5,.section-title,.page-title,label,strong):not(.member-card *){
+  color:#fbfff8!important;
+  opacity:1!important;
+  text-shadow:none!important;
+}
+html[data-ec-theme='neon'] .app :is(.eyebrow,.section-kicker,[data-kicker],.text-button):not(.member-card *){
+  color:#9dff5c!important;
+  opacity:1!important;
+  font-weight:800!important;
 }
 html[data-ec-theme='neon'] .app :is(p,small,.muted,.subtitle,.description,.helper-text,.meta):not(.member-card *){
-  color:var(--ec-neon-muted)!important;
+  color:#dcebd7!important;
+  opacity:1!important;
+}
+html[data-ec-theme='neon'] .app a:not(.member-card *){
+  color:#b9ff7a!important;
 }
 
-/* Buttons: same actions, brighter neon treatment. */
-html[data-ec-theme='neon'] .app :is(button,.button,.primary-button,.secondary-button,input[type='button'],input[type='submit']):not(.member-card *){
-  border-color:rgba(117,255,53,.72)!important;
-  box-shadow:0 0 0 1px rgba(117,255,53,.08),0 0 16px rgba(86,255,22,.16)!important;
+/* White cards (events/ads/quick actions) must use dark readable text. */
+html[data-ec-theme='neon'] .app :is(
+  .event-card,.event-highlight,.event-feature,.featured-event,.ad-card,.advert-card,
+  .quick-action,.overview-action,.dashboard-shortcut,.profile-visit-item
+)[style*='white'],
+html[data-ec-theme='neon'] .app :is(.home-event-feature,.home-ad-card,.home-quick-link){
+  color:#102017!important;
 }
-html[data-ec-theme='neon'] .app :is(button,.button,.primary-button,.secondary-button):not(.member-card *):hover{
-  border-color:var(--ec-neon-bright)!important;
-  box-shadow:0 0 10px rgba(86,255,22,.68),0 0 30px rgba(86,255,22,.26)!important;
+html[data-ec-theme='neon'] .app :is(.home-event-feature,.home-ad-card,.home-quick-link) :is(h1,h2,h3,h4,strong,p,small,span,a){
+  color:#102017!important;
+  text-shadow:none!important;
+}
+
+/* Inputs and selectors. */
+html[data-ec-theme='neon'] .app :is(input,textarea,select):not(.member-card *){
+  background:#052d21!important;
+  color:#f8fff5!important;
+  border:1px solid rgba(120,255,35,.65)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04)!important;
+}
+html[data-ec-theme='neon'] .app :is(input,textarea)::placeholder{
+  color:#c2d6bd!important;
+  opacity:1!important;
+}
+html[data-ec-theme='neon'] .app :is(input,textarea,select):focus,
+html[data-ec-theme='neon'] .app :is(button,a):not(.member-card *):focus-visible{
+  outline:2px solid #a9ff68!important;
+  outline-offset:2px!important;
+  box-shadow:0 0 0 4px rgba(120,255,35,.17)!important;
+}
+
+/* Buttons stay readable in both dark panels and the bright header. */
+html[data-ec-theme='neon'] .app :is(button,.button,.primary-button,.secondary-button,input[type='button'],input[type='submit']):not(.member-card *){
+  border-color:rgba(120,255,35,.70)!important;
+  font-weight:800!important;
 }
 html[data-ec-theme='neon'] .app :is(.primary-button,button.active,.button.active,[aria-current='page'],[aria-selected='true']):not(.member-card *){
-  background:linear-gradient(135deg,#4cff0d 0%,#94ff4a 55%,#c6ff86 100%)!important;
-  color:#123111!important;
-  border-color:#dcffad!important;
+  background:linear-gradient(135deg,#66ff13,#a4ff55)!important;
+  color:#09200f!important;
+  border-color:#bdff89!important;
   text-shadow:none!important;
   box-shadow:var(--ec-neon-glow-strong)!important;
 }
 html[data-ec-theme='neon'] .app :is(.secondary-button,.text-button):not(.member-card *){
-  background:rgba(117,255,53,.12)!important;
-}
-
-/* Inputs remain fully functional; only visual treatment changes. */
-html[data-ec-theme='neon'] .app :is(input,textarea,select):not(.member-card *){
-  background:rgba(25,55,46,.93)!important;
-  color:var(--ec-neon-text)!important;
-  border-color:rgba(117,255,53,.56)!important;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.05)!important;
-}
-html[data-ec-theme='neon'] .app :is(input,textarea)::placeholder{
-  color:#b0c9ad!important;
-}
-html[data-ec-theme='neon'] .app :is(input,textarea,select):focus,
-html[data-ec-theme='neon'] .app :is(button,a):not(.member-card *):focus-visible{
-  outline:2px solid var(--ec-neon-bright)!important;
-  outline-offset:2px!important;
-  box-shadow:0 0 0 4px rgba(117,255,53,.16),0 0 24px rgba(86,255,22,.40)!important;
-}
-
-/* Navigation. */
-html[data-ec-theme='neon'] .app :is(.modern-nav button,.ec-top-nav button,.nav-item):not(.member-card *){
-  color:#f1ffec!important;
-}
-html[data-ec-theme='neon'] .app :is(.modern-nav button,.ec-top-nav button,.nav-item):not(.member-card *):hover{
-  background:rgba(117,255,53,.14)!important;
-  color:var(--ec-neon-bright)!important;
-  box-shadow:0 0 18px rgba(86,255,22,.16)!important;
-}
-html[data-ec-theme='neon'] .app :is(.modern-nav button.active,.ec-top-nav button.active,.modern-nav button[aria-current='page'],.ec-top-nav button[aria-current='page']){
-  background:linear-gradient(135deg,rgba(64,219,35,.72),rgba(102,255,52,.42))!important;
-  color:#f7fff3!important;
-  border-color:#bdff80!important;
-  box-shadow:0 0 10px rgba(86,255,22,.72),0 0 28px rgba(86,255,22,.30)!important;
-}
-
-/* Existing Ennstal Connect logo: same logo/markup, neon-green in this theme only. */
-html[data-ec-theme='neon'] .app :is(
-  img[src*='ennstal-connect-logo'],
-  img[src*='ennstal-connect-community-logo'],
-  img[src*='ennstal-connect-brand'],
-  img[src*='ennstal-connect-wordmark'],
-  .ec-brand-image,
-  .brand-logo img,
-  .logo img
-){
-  filter:
-    brightness(0)
-    saturate(100%)
-    invert(82%)
-    sepia(92%)
-    saturate(1620%)
-    hue-rotate(38deg)
-    brightness(118%)
-    contrast(112%)
-    drop-shadow(0 0 5px rgba(117,255,53,.98))
-    drop-shadow(0 0 14px rgba(86,255,22,.76))
-    drop-shadow(0 0 28px rgba(86,255,22,.38))!important;
-}
-html[data-ec-theme='neon'] .app :is(.brand,.brand-name,.logo-text,.app-name,.ec-brand-claim b){
-  color:#91ff50!important;
-  text-shadow:0 0 7px rgba(117,255,53,.95),0 0 18px rgba(86,255,22,.62),0 0 34px rgba(86,255,22,.28)!important;
-}
-html[data-ec-theme='neon'] .app :is(.ec-brand-claim,.brand small,.logo small){
-  color:#c9ff9b!important;
+  background:rgba(120,255,35,.10)!important;
+  color:#dfffca!important;
 }
 
 /* Content modules. */
@@ -164,46 +213,45 @@ html[data-ec-theme='neon'] .app :is(
   .ec-photo-card,.ec-profile-youtube-card,.profile-story-block,.profile-folders figure,
   .member-profile-page .ec-mp-card,.ec-regional-event-row,.group-card
 ):not(.member-card){
-  background:linear-gradient(145deg,rgba(56,94,80,.96),rgba(38,70,59,.97))!important;
-  border-color:rgba(117,255,53,.50)!important;
-  box-shadow:0 0 20px rgba(86,255,22,.14)!important;
+  background:linear-gradient(145deg,#0a4534,#063126)!important;
+  border-color:rgba(120,255,35,.58)!important;
+  box-shadow:0 8px 20px rgba(0,0,0,.18)!important;
 }
 
-/* Chat stays readable in the brighter theme. */
+/* Chat. */
 html[data-ec-theme='neon'] .app :is(.ec-chat-modern-bubble,.chat-bubble,.message-bubble){
-  background:rgba(44,79,67,.96)!important;
-  border-color:rgba(117,255,53,.38)!important;
-  color:var(--ec-neon-text)!important;
+  background:#0a4937!important;
+  border-color:rgba(120,255,35,.42)!important;
+  color:#f8fff5!important;
 }
 html[data-ec-theme='neon'] .app :is(.ec-chat-modern-bubble.mine,.ec-chat-modern-bubble.is-mine,.chat-bubble.is-mine,.message-bubble.is-mine){
-  background:linear-gradient(135deg,rgba(79,165,47,.52),rgba(43,87,61,.98))!important;
-  border-color:rgba(117,255,53,.70)!important;
+  background:linear-gradient(135deg,#16623f,#0a3d2e)!important;
+  border-color:rgba(120,255,35,.76)!important;
 }
 
-/* Approved member cards are deliberately excluded from the neon recoloring. */
+/* Approved member cards keep their role styling. */
 html[data-ec-theme='neon'] .app article.member-card[data-role-theme],
 html[data-ec-theme='neon'] .app article.member-card[data-role-theme] *{
   filter:none;
 }
 
 /* Scrollbars and selection. */
-html[data-ec-theme='neon'] .app *{
-  scrollbar-color:rgba(117,255,53,.72) #24473b;
-}
+html[data-ec-theme='neon'] .app *{scrollbar-color:rgba(120,255,35,.78) #063226}
 html[data-ec-theme='neon'] .app *::-webkit-scrollbar-thumb{
-  background:linear-gradient(180deg,#9cff5b,#53e61b);
+  background:linear-gradient(180deg,#a7ff64,#59f900);
   border-radius:999px;
-  border:2px solid #24473b;
-  box-shadow:0 0 8px rgba(86,255,22,.45);
+  border:2px solid #063226;
 }
-html[data-ec-theme='neon'] .app *::-webkit-scrollbar-track{
-  background:#24473b;
-}
-html[data-ec-theme='neon'] .app ::selection{
-  background:rgba(117,255,53,.46);
-  color:#fff;
-}
+html[data-ec-theme='neon'] .app *::-webkit-scrollbar-track{background:#063226}
+html[data-ec-theme='neon'] .app ::selection{background:rgba(120,255,35,.48);color:#fff}
 
-@media(max-width:720px){
+/* Smaller displays: keep desktop geometry but prevent washed-out content and header crowding. */
+@media(max-width:900px){
   html[data-ec-theme='neon'] body{background-attachment:scroll!important}
+  html[data-ec-theme='neon'] .app :is(.top-nav,.modern-top-nav,.modern-header,.app-header,.ec-top-nav,.ec-brand-masthead){
+    background:linear-gradient(100deg,#59f900 0%,#9cff4d 100%)!important;
+  }
+  html[data-ec-theme='neon'] .app :is(.panel,.card,.dashboard-card,.overview-card,.stat-card):not(.member-card){
+    box-shadow:0 4px 14px rgba(0,0,0,.18)!important;
+  }
 }
