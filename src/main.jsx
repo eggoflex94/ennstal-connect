@@ -177,6 +177,9 @@ import "./touch-desktop-stability.css";
 import "./member-card-mockup-final.css";
 import "./member-card-exact-authority.css";
 
+/* Final profile geometry authority for desktop and mobile. */
+import "./profile-responsive-authority.css";
+
 class AppErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
