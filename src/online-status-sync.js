@@ -8,9 +8,16 @@ let lastLoadedAt = 0;
 let memberCacheById = new Map();
 let memberCacheByNickname = new Map();
 let refreshTimer = null;
+let currentUserId = "";
 
 const parseRows = (rows) => (rows || []).map((row) => typeof row === "string" ? JSON.parse(row) : row);
 const isOnline = (member) => Boolean(member?.is_online && member?.last_active_at && Date.now() - new Date(member.last_active_at).getTime() < FIVE_MINUTES);
+
+function statusMarkup(member) {
+  const online = isOnline(member);
+  const onlineLabel = String(member.presence_device || "").toUpperCase() === "MOBILE" ? "Mobil online" : "Online";
+  return `<div class="ec-member-presence-line"><span class="ec-member-presence-dot" aria-hidden="true"></span><span class="ec-member-presence-label">${online ? onlineLabel : "Offline"}</span></div>`;
+}
 
 function updateCard(card, member) {
   if (!card || !member) return;
@@ -25,8 +32,6 @@ function updateCard(card, member) {
   }
 
   const online = isOnline(member);
-  const onlineLabel = String(member.presence_device || "").toUpperCase() === "MOBILE" ? "Mobil online" : "Online";
-
   if (!avatarPresence && avatarWrap) {
     avatarPresence = document.createElement("span");
     avatarPresence.className = "ec-avatar-presence";
@@ -41,7 +46,37 @@ function updateCard(card, member) {
     card.appendChild(status);
   }
   status.className = `member-status ${online ? "online" : "offline"}`;
-  status.innerHTML = `<div class="ec-member-presence-line"><span class="ec-member-presence-dot" aria-hidden="true"></span><span class="ec-member-presence-label">${online ? onlineLabel : "Offline"}</span></div>`;
+  status.innerHTML = statusMarkup(member);
+}
+
+function updateOwnProfilePreview(member) {
+  const card = document.querySelector(".my-area-layout > .my-profile-card");
+  if (!card || !member) return;
+  let status = card.querySelector(":scope > .member-status");
+  let avatarPresence = card.querySelector(":scope > .ec-avatar-presence");
+
+  if (member.hide_online_status) {
+    status?.remove();
+    avatarPresence?.remove();
+    return;
+  }
+
+  const online = isOnline(member);
+  if (!avatarPresence) {
+    avatarPresence = document.createElement("span");
+    avatarPresence.className = "ec-avatar-presence";
+    avatarPresence.setAttribute("aria-hidden", "true");
+    card.appendChild(avatarPresence);
+  }
+  avatarPresence.classList.toggle("online", online);
+  avatarPresence.classList.toggle("offline", !online);
+
+  if (!status) {
+    status = document.createElement("div");
+    card.appendChild(status);
+  }
+  status.className = `member-status ${online ? "online" : "offline"}`;
+  status.innerHTML = statusMarkup(member);
 }
 
 function applyCachedStatus() {
@@ -51,6 +86,7 @@ function applyCachedStatus() {
     const member = (memberId && memberCacheById.get(memberId)) || (nickname && memberCacheByNickname.get(nickname)) || null;
     if (member) updateCard(card, member);
   });
+  if (currentUserId) updateOwnProfilePreview(memberCacheById.get(currentUserId));
 }
 
 async function refreshOnlineStatus(force = false) {
@@ -67,6 +103,7 @@ async function refreshOnlineStatus(force = false) {
   try {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) return;
+    currentUserId = session.user.id;
     const { data, error } = await supabase.rpc("community_member_directory");
     if (error) {
       console.warn("Online-Status konnte nicht aktualisiert werden:", error.message);
