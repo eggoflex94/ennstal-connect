@@ -29,9 +29,11 @@ html[data-ec-theme='neon'] .ec-brand-logo{
   box-shadow:none!important;
 }
 
-html[data-ec-theme='neon'] .ec-brand-image,
-html[data-ec-theme='neon'] img[src*='ennstal-connect-wordmark.svg']{
-  filter:brightness(0) saturate(100%) invert(58%) sepia(98%) saturate(1630%) hue-rotate(70deg) brightness(100%) contrast(108%) drop-shadow(0 0 4px rgba(76,239,28,.35))!important;
+/* Use the dedicated Neon logo asset instead of recoloring the complete image.
+   This keeps the dark badge and white star intact while the wordmark stays neon green. */
+html[data-ec-theme='neon'] .ec-brand-image{
+  content:url('/ennstal-connect-wordmark-neon.svg')!important;
+  filter:drop-shadow(0 0 4px rgba(76,239,28,.30)) drop-shadow(0 0 10px rgba(76,239,28,.12))!important;
 }
 
 html[data-ec-theme='neon'] .ec-brand-claim,
