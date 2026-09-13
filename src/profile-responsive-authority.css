@@ -1,0 +1,238 @@
+/* Final profile layout authority for desktop and mobile.
+   Keeps the existing React structure but removes the forced desktop-width behavior
+   that made profiles cramped and zoomed out on phones. */
+
+html, body, #root { min-width: 0 !important; }
+
+.member-profile-page,
+.profile-view,
+.integrated-profile-view {
+  width: 100% !important;
+  max-width: 1180px !important;
+  margin-inline: auto !important;
+  min-width: 0 !important;
+}
+
+.member-profile-page > .member-profile-hero,
+.integrated-profile-hero.profile-original-layout {
+  display: grid !important;
+  grid-template-columns: minmax(220px, 270px) minmax(0, 1fr) !important;
+  align-items: start !important;
+  gap: 28px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  padding: 24px !important;
+  border-radius: 22px !important;
+  overflow: hidden !important;
+}
+
+.member-profile-page > .member-profile-hero > img,
+.integrated-avatar-wrap {
+  width: min(100%, 250px) !important;
+  max-width: 250px !important;
+  height: auto !important;
+  aspect-ratio: 1 / 1 !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin-inline: auto !important;
+}
+
+.member-profile-page > .member-profile-hero > img {
+  object-fit: cover !important;
+  border-radius: 18px !important;
+}
+
+.ec-restored-profile-main,
+.profile-original-main,
+.member-profile-page > .member-profile-hero > div {
+  min-width: 0 !important;
+  width: 100% !important;
+}
+
+.ec-restored-profile-main h1,
+.profile-original-heading h1,
+.member-profile-page > .member-profile-hero h1 {
+  font-size: clamp(30px, 4vw, 46px) !important;
+  line-height: 1.04 !important;
+  overflow-wrap: anywhere !important;
+}
+
+.ec-restored-profile-data,
+.profile-identity-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+}
+
+.ec-restored-profile-row,
+.profile-identity-card {
+  min-width: 0 !important;
+}
+
+.member-profile-actions,
+.integrated-profile-actions.profile-original-actions,
+.profile-original-actions {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 10px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.member-profile-actions button,
+.integrated-profile-actions.profile-original-actions button,
+.profile-original-actions button {
+  flex: 0 1 auto !important;
+  min-width: 130px !important;
+  min-height: 44px !important;
+}
+
+.integrated-profile-details,
+.profile-sections,
+.member-profile-sections {
+  min-width: 0 !important;
+  width: 100% !important;
+}
+
+.integrated-profile-details {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+}
+
+.member-profile-page .panel,
+.member-profile-page .community-card,
+.member-profile-page .profile-section,
+.integrated-profile-form,
+.integrated-admin-tools,
+.profile-detail-card {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow-wrap: anywhere !important;
+}
+
+/* The personal dock must never squeeze the profile below a useful desktop width. */
+@media (min-width: 1181px) {
+  .ec-regional-ui .modern-main {
+    grid-template-columns: minmax(0, 1fr) minmax(250px, 300px) !important;
+  }
+
+  .ec-regional-ui .modern-main > .content-root {
+    min-width: 0 !important;
+    max-width: 1360px !important;
+  }
+}
+
+@media (max-width: 1100px) {
+  .member-profile-page > .member-profile-hero,
+  .integrated-profile-hero.profile-original-layout {
+    grid-template-columns: minmax(190px, 230px) minmax(0, 1fr) !important;
+    gap: 20px !important;
+    padding: 20px !important;
+  }
+
+  .integrated-profile-details {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 900px) {
+  html, body, #root {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow-x: hidden !important;
+  }
+
+  .ec-regional-ui .modern-main {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
+  .ec-right-dock.ec-stable-personal-dock.ec-document-flow-dock {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-top: 18px !important;
+  }
+
+  .member-profile-page > .member-profile-hero,
+  .integrated-profile-hero.profile-original-layout {
+    grid-template-columns: 1fr !important;
+    gap: 18px !important;
+    padding: 18px !important;
+  }
+
+  .member-profile-page > .member-profile-hero > img,
+  .integrated-avatar-wrap {
+    width: min(220px, 72vw) !important;
+    max-width: 220px !important;
+  }
+
+  .ec-restored-profile-function,
+  .profile-original-left,
+  .profile-function-card {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .ec-restored-profile-data,
+  .profile-identity-grid,
+  .integrated-profile-details,
+  .integrated-profile-form .profile-form-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .member-profile-actions button,
+  .integrated-profile-actions.profile-original-actions button,
+  .profile-original-actions button {
+    flex: 1 1 180px !important;
+    min-width: 0 !important;
+  }
+}
+
+@media (max-width: 560px) {
+  .ec-regional-ui .modern-main,
+  .modern-main {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+
+  .member-profile-page > .member-profile-hero,
+  .integrated-profile-hero.profile-original-layout {
+    padding: 14px !important;
+    border-radius: 16px !important;
+  }
+
+  .ec-restored-profile-main h1,
+  .profile-original-heading h1,
+  .member-profile-page > .member-profile-hero h1 {
+    font-size: clamp(28px, 10vw, 38px) !important;
+  }
+
+  .member-profile-actions,
+  .integrated-profile-actions.profile-original-actions,
+  .profile-original-actions {
+    gap: 8px !important;
+  }
+
+  .member-profile-actions button,
+  .integrated-profile-actions.profile-original-actions button,
+  .profile-original-actions button {
+    flex: 1 1 100% !important;
+    width: 100% !important;
+  }
+}
+
+@media (pointer: coarse) {
+  html, body, #root {
+    min-width: 0 !important;
+  }
+
+  .member-profile-page > .member-profile-hero,
+  .integrated-profile-hero.profile-original-layout {
+    min-width: 0 !important;
+  }
+}
