@@ -11,7 +11,7 @@ function run(){
     const align=document.createElement('select');align.innerHTML='<option value="ec-home-center">Mitte</option><option value="ec-home-left">Links</option><option value="ec-home-right">Rechts</option>';
     const add=(label,control)=>{const wrap=document.createElement('label');wrap.className='ec-home-style-field';const text=document.createElement('span');text.textContent=label;wrap.append(text,control);form.insertBefore(wrap,button);};
     add('Breite',width);add('Position',align);
-    const sync=()=>{const base=style.dataset.base||style.value||'standard';style.dataset.base=base.split(' ')[0];const value=style.dataset.base+' '+width.value+' '+align.value;let option=style.querySelector('[data-layout]');if(!option){option=document.createElement('option');option.dataset.layout='1';style.appendChild(option);}option.value=value;option.textContent='Benutzerdefiniert';style.value=value;};
+    const sync=()=>{const current=style.value||'standard';const base=current.split(' ').filter((part)=>!part.startsWith('ec-home-w-')&&!['ec-home-left','ec-home-center','ec-home-right'].includes(part)).join(' ');const value=base+' '+width.value+' '+align.value;let option=style.querySelector('[data-layout]');if(!option){option=document.createElement('option');option.dataset.layout='1';style.appendChild(option);}option.value=value;option.textContent='Benutzerdefiniert';style.value=value;};
     width.onchange=sync;align.onchange=sync;sync();
   });
 }
