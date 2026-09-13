@@ -11,6 +11,7 @@ import './profile-preview-parity.js';
 import './community-growth-hub.js';
 import './profile-editor-member-card-exact.css';
 import './active-member-badges.css';
+import './activity-flame-card-restore.css';
 import './homepage-post-typography.css';
 import './homepage-supabase-bridge.js';
 import './homepage-final.css';
