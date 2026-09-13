@@ -7,7 +7,7 @@ const age=d=>{if(!d)return'';const b=new Date(d);if(Number.isNaN(b.getTime()))re
 const date=d=>{if(!d)return'';const x=new Date(d);return Number.isNaN(x.getTime())?'':x.toLocaleDateString('de-AT')};
 const norm=v=>String(v||'').replace(/\s+/g,' ').trim().toLowerCase();
 const viennaDate=(offsetDays=0)=>new Date(Date.now()+offsetDays*86400000).toLocaleDateString('en-CA',{timeZone:'Europe/Vienna'});
-function activeInfo(target){const streak=Math.max(0,Number(target?.active_streak)||0);const last=String(target?.last_daily_reward_date||'').slice(0,10);return{active:streak>0&&(last===viennaDate(0)||last===viennaDate(-1)),streak,days:Math.max(0,Number(target?.active_days_count)||0)};}
+function activeInfo(target){const streak=Math.max(0,Number(target?.active_streak)||0);const last=String(target?.last_daily_reward_date||'').slice(0,10);const show=target?.show_activity_flame!==false;return{active:streak>0&&(last===viennaDate(0)||last===viennaDate(-1)),streak,days:Math.max(0,Number(target?.active_days_count)||0),show};}
 
 async function context(){
   if(viewer&&regions.length)return;
@@ -99,25 +99,42 @@ async function build(root){
     const avatar=hero.querySelector('img');
     const role=await functionInfo(target);
     const activity=activeInfo(target);
+    const ownProfile=viewer?.id===target.id;
     const home=regions.find(r=>r.id===target.home_region_id)?.name||'';
     root.querySelectorAll(':scope > .ec-mp-card,:scope > .ec-mp-more,:scope > .ec-mp-actions,:scope > .profile-visible-details').forEach(node=>node.remove());
     root.dataset.ecTargetId=target.id;
+    root.dataset.ecActivityFlameVisible=activity.show&&activity.active?'1':'0';
     root.classList.add('ec-member-profile-final');
-    root.classList.toggle('ec-active-member-profile',activity.active);
+    root.classList.toggle('ec-active-member-profile',activity.show&&activity.active);
     const card=document.createElement('section');card.className='ec-mp-card';
     const left=document.createElement('div');left.className='ec-mp-left';
     const photo=document.createElement('div');photo.className='ec-mp-photo';if(avatar)photo.appendChild(avatar);left.appendChild(photo);
     const functionBox=document.createElement('div');functionBox.className='ec-mp-function';
     const roleMarkup=role.star?`<span class="ec-mp-function-role"><img class="ec-mp-role-star" src="${role.star}" alt="" aria-hidden="true"><strong>${esc(role.label)}</strong></span>`:`<span class="ec-mp-function-role"><strong>${esc(role.label)}</strong></span>`;
-    const activeMarkup=activity.active?`<span class="ec-mp-active-badge" title="Tägliche Aktivitätsserie">🔥 Aktives Mitglied · ${activity.streak} Tag${activity.streak===1?'':'e'}</span>`:'';
-    functionBox.innerHTML=`<span>Funktion</span>${roleMarkup}${activeMarkup}`;
+    const activeMarkup=activity.show&&activity.active?`<span class="ec-mp-active-badge" title="Tägliche Aktivitätsserie">🔥 ${activity.streak} Tag${activity.streak===1?'':'e'} aktiv</span>`:'';
+    const settingMarkup=ownProfile?`<label class="ec-activity-flame-setting"><input type="checkbox" data-activity-flame-toggle ${activity.show?'checked':''}><span>Aktivitätsflamme im Profil anzeigen</span></label>`:'';
+    functionBox.innerHTML=`<span>Funktion</span>${roleMarkup}${activeMarkup}${settingMarkup}`;
     left.appendChild(functionBox);
     const data=document.createElement('div');data.className='ec-mp-data';
     const realName=[target.first_name,target.last_name].filter(Boolean).join(' ');
-    data.innerHTML=`<div class="ec-mp-data-head"><div><span>MITGLIEDSPROFIL</span><h1>${esc(target.nickname||realName||'Mitglied')}</h1></div>${target.is_verified?'<b class="ec-mp-verified" title="Verifiziert">✓</b>':''}</div><div class="ec-mp-rows">${row('Nickname',target.nickname)}${visible(target,'name',isFriend)?row('Vorname',target.first_name):''}${visible(target,'name',isFriend)?row('Nachname',target.last_name):''}${visible(target,'birth_date',isFriend)?row('Geburtsdatum',date(target.birth_date)):''}${visible(target,'birth_date',isFriend)?row('Alter',age(target.birth_date)):''}${row('Heimatregion',home)}${activity.streak?row('Aktiv-Serie',`${activity.streak} Tag${activity.streak===1?'':'e'} 🔥`):''}${activity.days?row('Aktive Tage gesamt',String(activity.days)):''}</div>`;
+    const activityRows=activity.show?`${activity.streak?row('Aktiv-Serie',`${activity.streak} Tag${activity.streak===1?'':'e'} 🔥`):''}${activity.days?row('Aktive Tage gesamt',String(activity.days)):''}`:'';
+    data.innerHTML=`<div class="ec-mp-data-head"><div><span>MITGLIEDSPROFIL</span><h1>${esc(target.nickname||realName||'Mitglied')}</h1></div>${target.is_verified?'<b class="ec-mp-verified" title="Verifiziert">✓</b>':''}</div><div class="ec-mp-rows">${row('Nickname',target.nickname)}${visible(target,'name',isFriend)?row('Vorname',target.first_name):''}${visible(target,'name',isFriend)?row('Nachname',target.last_name):''}${visible(target,'birth_date',isFriend)?row('Geburtsdatum',date(target.birth_date)):''}${visible(target,'birth_date',isFriend)?row('Alter',age(target.birth_date)):''}${row('Heimatregion',home)}${activityRows}</div>`;
     card.append(left,data);
     root.insertBefore(card,hero);
     hero.hidden=true;
+    if(ownProfile){
+      const toggle=functionBox.querySelector('[data-activity-flame-toggle]');
+      if(toggle)toggle.addEventListener('change',async()=>{
+        toggle.disabled=true;
+        const value=toggle.checked;
+        const {error}=await supabase.from('profiles').update({show_activity_flame:value}).eq('id',target.id);
+        if(error){toggle.checked=!value;alert(error.message||'Einstellung konnte nicht gespeichert werden.');toggle.disabled=false;return;}
+        viewer={...viewer,show_activity_flame:value};
+        delete root.dataset.ecMemberProfileFinal;
+        root.querySelector(':scope > .ec-mp-card')?.remove();
+        await build(root);
+      });
+    }
     const actions=document.createElement('div');actions.className='ec-mp-actions';
     const sourceActions=root.querySelector('.member-profile-actions');
     if(sourceActions){
