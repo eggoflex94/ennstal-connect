@@ -17,7 +17,6 @@ import './hide-news-final.js';
 import './homepage-create-final.js';
 import './homepage-global-final.js';
 import './homepage-layout-final.js';
-import './homepage-edit-repair.js';
 
 // The visible member profile is intentionally owned by the agreed final
 // profile authority above. Add only scoped profile modules here.
