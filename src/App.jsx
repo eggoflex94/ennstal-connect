@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRefreshScheduler } from "./refreshScheduler.js";
+import { loadSections } from "./sectionLoader.js";
 import QRCode from "qrcode";
 import { preparePrivilegedAction, supabase, supabaseUnavailableMessage } from "./supabaseClient";
 import ProfileSections from "./ProfileSections.jsx";
@@ -141,6 +142,7 @@ export default function App() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState("home");
   const [notice, setNotice] = useState("");
+  const [sectionStatus, setSectionStatus] = useState({ pending: [], failed: [] });
   const [incomingMessage, setIncomingMessage] = useState(null);
   const [messageText, setMessageText] = useState("");
   const [adminTarget, setAdminTarget] = useState("");
@@ -160,6 +162,7 @@ export default function App() {
   membersRef.current = members;
   const resetSession = () => {
     initializedProfileUser.current = null;
+    setSectionStatus({ pending: [], failed: [] });
     setUser(null); setProfile(null); setMembers([]); setFriendships([]);
     setMessages([]); setAdminMembers([]); setAdminLog([]); setMemberEmails({});
     setReports([]); setBlockedUsers([]); setFeatureLocks([]); setProfileVisits([]);
@@ -303,6 +306,7 @@ export default function App() {
   const loadAll = async () => {
     const version = ++loadVersion.current;
     const isCurrent = () => version === loadVersion.current;
+    setSectionStatus({ pending: ["Anmeldung und Profil"], failed: [] });
     if (!supabase) {
       resetSession();
       return;
@@ -324,85 +328,78 @@ export default function App() {
         if (isCurrent()) initializedProfileUser.current = currentUser.id;
       }
       if (!isCurrent()) return;
-      // A suspended account must never reach the member area, even when a
-      // previously issued browser session still exists.
-      const { data: accessProfile } = await supabase.from("profiles")
-        .select("account_status,suspension_reason")
-        .eq("id", currentUser.id)
-        .maybeSingle();
-      if (!isCurrent()) return;
-      if (accessProfile?.account_status === "SUSPENDED") {
-        await supabase.auth.signOut();
-        setUser(null); setProfile(null); setMembers([]); setFriendships([]);
-        const reason = String(accessProfile.suspension_reason || "Kein Grund wurde hinterlegt.").trim();
-        showNotice(`Dein Konto ist gesperrt. Grund: ${reason}`);
-        return;
-      }
-      const safe = async (query, fallback = []) => {
+      const read = async (query, fallback = []) => {
         const { data, error } = await query;
-        if (error) { console.warn(error.message); return fallback; }
+        if (error) throw error;
         return data ?? fallback;
       };
-      const safeMemberDirectory = async () => {
-        const { data, error } = await supabase.rpc("community_member_directory");
-        if (error) {
-          console.warn(error.message);
-          return safe(supabase.from("profiles").select("*").eq("account_status", "ACTIVE"));
-        }
-        return (data || []).map((row) => typeof row === "string" ? JSON.parse(row) : row);
-      };
-      const [p, ms, fs, msgs, hs, rs, bs, ns, es, gs, visits, posts, replies, locks, activities, poll, badges, featured, requests] = await Promise.all([
-        supabase.from("profiles").select("*").eq("id", currentUser.id).maybeSingle().then(({ data, error }) => {
-          if (error) throw error;
-          if (!data) throw new Error("Dein Profil konnte nicht geladen werden. Bitte versuche es erneut.");
-          return data;
-        }),
-        safeMemberDirectory(),
-        safe(supabase.from("friendships").select("*").or(`requester_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`)),
-        safe(supabase.from("messages").select("*").or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`).order("created_at", { ascending: false })),
-        safe(activeRegionId ? supabase.from("homepage_sections").select("*").eq("is_visible", true).eq("region_id", activeRegionId).order("sort_order", { ascending: true }) : supabase.from("homepage_sections").select("*").eq("is_visible", true).order("sort_order", { ascending: true })),
-        safe(supabase.from("user_reports").select("*").order("created_at", { ascending: false })),
-        safe(supabase.from("user_blocks").select("*").eq("blocker_id", currentUser.id)),
-        safe(activeRegionId ? supabase.from("news").select("*").eq("region_id", activeRegionId).order("created_at", { ascending: false }) : supabase.from("news").select("*").order("created_at", { ascending: false })),
-        safe(supabase.from("events").select("*").order("created_at", { ascending: false })),
-        safe(activeRegionId ? supabase.rpc("ec_region_group_directory", { p_region: activeRegionId }) : supabase.rpc("community_group_directory")),
-        safe(supabase.from("profile_visits").select("*").eq("profile_id", currentUser.id).order("visited_at", { ascending: false })),
-        safe(activeRegionId ? supabase.from("forum_posts").select("*").eq("region_id", activeRegionId).order("created_at", { ascending: false }) : supabase.from("forum_posts").select("*").order("created_at", { ascending: false })),
-        safe(supabase.from("forum_replies").select("*").order("created_at", { ascending: true })),
-        safe(supabase.from("user_feature_locks").select("*").eq("user_id", currentUser.id)),
-        safe(supabase.from("profile_activity").select("*").eq("profile_id", currentUser.id).order("created_at", { ascending: false }).limit(20)),
-        safe(activeRegionId ? supabase.rpc("ec_region_weekly_poll_current", { p_region: activeRegionId }) : supabase.rpc("weekly_poll_current"), null),
-        safe(supabase.rpc("my_welcome_badges")),
-        safe(activeRegionId ? supabase.rpc("ec_region_featured_community_group", { p_region: activeRegionId }) : supabase.rpc("featured_community_group"), null),
-        safe(activeRegionId ? supabase.from("community_requests").select("*").eq("status", "ACTIVE").eq("region_id", activeRegionId).order("created_at", { ascending: false }).limit(8) : supabase.from("community_requests").select("*").eq("status", "ACTIVE").order("created_at", { ascending: false }).limit(8))
+      // Access-sensitive state is ready before publishing directory content.
+      const [p, bs, locks, ruleAcceptance] = await Promise.all([
+        read(supabase.from("profiles").select("*").eq("id", currentUser.id).maybeSingle(), null),
+        read(supabase.from("user_blocks").select("*").eq("blocker_id", currentUser.id)),
+        read(supabase.from("user_feature_locks").select("*").eq("user_id", currentUser.id)),
+        read(supabase.from("community_rule_acceptances").select("rules_version,accepted_at").eq("user_id", currentUser.id).eq("rules_version", COMMUNITY_RULES_VERSION).maybeSingle(), null)
       ]);
       if (!isCurrent()) return;
-      const groupData = (gs || []).map((entry) => typeof entry === "string" ? JSON.parse(entry) : entry);
-      const { data: ruleAcceptance, error: ruleAcceptanceError } = await supabase.from("community_rule_acceptances").select("rules_version,accepted_at").eq("user_id", currentUser.id).eq("rules_version", COMMUNITY_RULES_VERSION).maybeSingle();
-      if (ruleAcceptanceError) console.warn(ruleAcceptanceError.message);
-      if (!isCurrent()) return;
-      setRulesAccepted(Boolean(ruleAcceptance));
-      setProfile(p); setMembers(ms); setFriendships(fs); setMessages(msgs); setHomepageSections(hs); setReports(rs); setBlockedUsers(bs); setNews(ns); setEvents(es); setGroups(groupData); setProfileVisits(visits); setForumPosts(posts); setForumReplies(replies); setFeatureLocks(locks); setProfileActivities(activities); setWeeklyPoll(Array.isArray(poll) ? poll[0] || null : poll); setWelcomeBadges(Array.isArray(badges) && badges.length ? badges : instantWelcomeBadges(p, groupData, posts, currentUser.id)); setFeaturedGroup(Array.isArray(featured) ? featured[0] || null : featured); setCommunityRequests(requests || []);
-      if (isAdmin(p?.role)) {
-        const [emailResult, memberResult, logResult] = await Promise.all([
-          supabase.rpc("admin_member_directory"),
-          supabase.rpc("admin_full_member_directory"),
-          isHeadAdmin(p?.role) ? supabase.rpc("get_admin_log", { p_limit: 500 }) : Promise.resolve({ data: [], error: null })
-        ]);
+      if (!p) throw new Error("Dein Profil konnte nicht geladen werden. Bitte versuche es erneut.");
+      if (p.account_status === "SUSPENDED") {
+        await supabase.auth.signOut();
         if (!isCurrent()) return;
-        if (!emailResult.error) setMemberEmails(Object.fromEntries((emailResult.data || []).map((entry) => [entry.id, entry.email])));
-        if (!memberResult.error) setAdminMembers((memberResult.data || []).map((summary) => ({ ...(ms.find((member) => member.id === summary.id) || {}), ...summary })));
-        else { console.warn(memberResult.error.message); setAdminMembers(ms); }
-        if (!logResult.error) setAdminLog(logResult.data || []);
-        else { console.warn(logResult.error.message); setAdminLog([]); }
+        resetSession();
+        showNotice("Dein Konto ist gesperrt. Grund: " + (p.suspension_reason || "Kein Grund wurde hinterlegt."));
+        return;
+      }
+      setProfile(p); setBlockedUsers(bs); setFeatureLocks(locks); setRulesAccepted(Boolean(ruleAcceptance));
+      const readMemberDirectory = async () => {
+        const { data, error } = await supabase.rpc("community_member_directory");
+        if (error) throw error;
+        return (data || []).map(row => typeof row === "string" ? JSON.parse(row) : row);
+      };
+      let loadedGroups = groups, loadedPosts = forumPosts, useLocalBadges = false;
+      const updateLocalBadges = () => { if (useLocalBadges) setWelcomeBadges(instantWelcomeBadges(p, loadedGroups, loadedPosts, currentUser.id)); };
+      const tasks = [
+        { name: "Mitglieder", load: () => readMemberDirectory(), commit: setMembers },
+        { name: "Freundschaften", load: () => read(supabase.from("friendships").select("*").or(`requester_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`)), commit: setFriendships },
+        { name: "Nachrichten", load: () => read(supabase.from("messages").select("*").or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`).order("created_at", { ascending: false })), commit: setMessages },
+        { name: "Startseite", load: () => read(activeRegionId ? supabase.from("homepage_sections").select("*").eq("is_visible", true).eq("region_id", activeRegionId).order("sort_order", { ascending: true }) : supabase.from("homepage_sections").select("*").eq("is_visible", true).order("sort_order", { ascending: true })), commit: setHomepageSections },
+        { name: "Meldungen", load: () => isAdmin(p.role) ? read(supabase.from("user_reports").select("*").order("created_at", { ascending: false })) : Promise.resolve([]), commit: setReports },
+        { name: "Neuigkeiten", load: () => read(activeRegionId ? supabase.from("news").select("*").eq("region_id", activeRegionId).order("created_at", { ascending: false }) : supabase.from("news").select("*").order("created_at", { ascending: false })), commit: setNews },
+        { name: "Veranstaltungen", load: () => read(supabase.from("events").select("*").order("created_at", { ascending: false })), commit: setEvents },
+        { name: "Gruppen", load: () => read(activeRegionId ? supabase.rpc("ec_region_group_directory", { p_region: activeRegionId }) : supabase.rpc("community_group_directory")), commit: data => { loadedGroups = (data || []).map(row => typeof row === "string" ? JSON.parse(row) : row); setGroups(loadedGroups); updateLocalBadges(); } },
+        { name: "Profilbesuche", load: () => read(supabase.from("profile_visits").select("*").eq("profile_id", currentUser.id).order("visited_at", { ascending: false })), commit: setProfileVisits },
+        { name: "Forum", load: () => read(activeRegionId ? supabase.from("forum_posts").select("*").eq("region_id", activeRegionId).order("created_at", { ascending: false }) : supabase.from("forum_posts").select("*").order("created_at", { ascending: false })), commit: data => { loadedPosts = data; setForumPosts(data); updateLocalBadges(); } },
+        { name: "Forumsantworten", load: () => read(supabase.from("forum_replies").select("*").order("created_at", { ascending: true })), commit: setForumReplies },
+        { name: "Profilaktivitäten", load: () => read(supabase.from("profile_activity").select("*").eq("profile_id", currentUser.id).order("created_at", { ascending: false }).limit(20)), commit: setProfileActivities },
+        { name: "Wochenfrage", load: () => read(activeRegionId ? supabase.rpc("ec_region_weekly_poll_current", { p_region: activeRegionId }) : supabase.rpc("weekly_poll_current"), null), commit: data => setWeeklyPoll(Array.isArray(data) ? data[0] || null : data) },
+        { name: "Willkommensabzeichen", load: () => read(supabase.rpc("my_welcome_badges")), commit: data => { useLocalBadges = !Array.isArray(data) || !data.length; if (useLocalBadges) updateLocalBadges(); else setWelcomeBadges(data); } },
+        { name: "Gruppe der Woche", load: () => read(activeRegionId ? supabase.rpc("ec_region_featured_community_group", { p_region: activeRegionId }) : supabase.rpc("featured_community_group"), null), commit: data => setFeaturedGroup(Array.isArray(data) ? data[0] || null : data) },
+        { name: "Community-Aufrufe", load: () => read(activeRegionId ? supabase.from("community_requests").select("*").eq("status", "ACTIVE").eq("region_id", activeRegionId).order("created_at", { ascending: false }).limit(8) : supabase.from("community_requests").select("*").eq("status", "ACTIVE").order("created_at", { ascending: false }).limit(8)), commit: setCommunityRequests },
+      ];
+      if (isAdmin(p.role)) {
+        tasks.push(
+          { name: "Admin-Mitglieder", load: () => read(supabase.rpc("admin_full_member_directory")), commit: data => setAdminMembers(data.map(summary => ({ ...(membersRef.current.find(member => member.id === summary.id) || {}), ...summary }))) },
+          { name: "Admin-Kontaktdaten", load: () => read(supabase.rpc("admin_member_directory")), commit: data => setMemberEmails(Object.fromEntries(data.map(entry => [entry.id, entry.email]))) },
+          { name: "Admin-Logbuch", load: () => isHeadAdmin(p.role) ? read(supabase.rpc("get_admin_log", { p_limit: 500 })) : Promise.resolve([]), commit: setAdminLog }
+        );
       } else { setMemberEmails({}); setAdminMembers([]); setAdminLog([]); }
-    } catch (e) { if (isCurrent()) { console.error(e); showNotice(e?.message || "Fehler beim Laden"); } }
+      setSectionStatus({ pending: tasks.map(task => task.name), failed: [] });
+      await loadSections(tasks, {
+        isCurrent,
+        onError: (name, error) => {
+          console.warn(name + " konnte nicht geladen werden:", error?.message || error);
+          setSectionStatus(status => ({ ...status, failed: [...status.failed, name] }));
+        },
+        onSettled: name => setSectionStatus(status => ({ ...status, pending: status.pending.filter(item => item !== name) }))
+      });
+    } catch (e) { if (isCurrent()) { setSectionStatus({ pending: [], failed: ["Anmeldung und Profil"] }); console.error(e); showNotice(e?.message || "Fehler beim Laden"); } }
   };
   loadAllRef.current = loadAll;
 
   useEffect(() => {
     loadVersion.current++;
     if (!activeRegionId) return undefined;
+    setHomepageSections([]); setNews([]); setGroups([]); setForumPosts([]);
+    setWeeklyPoll(null); setFeaturedGroup(null); setCommunityRequests([]);
     const timer = setTimeout(() => void loadAllRef.current(), 150);
     return () => clearTimeout(timer);
   }, [activeRegionId]);
@@ -1124,7 +1121,7 @@ export default function App() {
         </nav>
         <button className="sidebar-logout" onClick={logout}>⇥ <span>Abmelden</span></button>
       </aside>
-      <main className="modern-main"><div className="content-root">{notice && <div className="toast">{notice}</div>}{incomingMessage && <aside className="incoming-message-popup" role="status"><strong>✉ Neue Nachricht von {incomingMessage.senderName}</strong><p>{incomingMessage.content || "Du hast eine neue private Nachricht erhalten."}</p><div><button className="primary-button" onClick={() => { const sender = members.find((member) => member.id === incomingMessage.senderId); setIncomingMessage(null); if (sender) openChat(sender); else setPage("messages"); }}>Nachricht öffnen</button><button className="secondary-button" onClick={() => setIncomingMessage(null)}>Später</button></div></aside>}
+      <main className="modern-main"><div className="content-root">{(sectionStatus.pending.length > 0 || sectionStatus.failed.length > 0) && <aside className="panel" role="status" aria-live="polite">{sectionStatus.pending.length > 0 && <p>Weitere Inhalte werden geladen …</p>}{sectionStatus.failed.length > 0 && <><p>Noch nicht aktualisiert: {sectionStatus.failed.join(", ")}. Bereits geladene Inhalte bleiben verfügbar.</p><button type="button" className="secondary-button" disabled={sectionStatus.pending.length > 0} onClick={() => void loadAllRef.current()}>Erneut laden</button></>}</aside>}{notice && <div className="toast">{notice}</div>}{incomingMessage && <aside className="incoming-message-popup" role="status"><strong>✉ Neue Nachricht von {incomingMessage.senderName}</strong><p>{incomingMessage.content || "Du hast eine neue private Nachricht erhalten."}</p><div><button className="primary-button" onClick={() => { const sender = members.find((member) => member.id === incomingMessage.senderId); setIncomingMessage(null); if (sender) openChat(sender); else setPage("messages"); }}>Nachricht öffnen</button><button className="secondary-button" onClick={() => setIncomingMessage(null)}>Später</button></div></aside>}
         {page === "home" && (
           <Home profile={profile} user={user} activeRegion={activeRegion} isHeadAdmin={isHeadAdmin} homepageSections={regionFilter(homepageSections)} canEdit={isHeadAdmin(profile?.role)} createHomepageSection={createHomepageSection} editHomepageSection={editHomepageSection} deleteHomepageSection={deleteHomepageSection} uploadHomepageImage={uploadHomepageImage} weeklyPoll={weeklyPoll?.region_id && weeklyPoll.region_id !== activeRegionId ? null : weeklyPoll} welcomeBadges={welcomeBadges} groups={regionFilter(groups)} featuredGroup={featuredGroup?.region_id && featuredGroup.region_id !== activeRegionId ? null : featuredGroup} communityRequests={regionFilter(communityRequests)} onVote={voteWeeklyPoll} onCreatePoll={createWeeklyPoll} onFeatureGroup={featureCommunityGroup} onCreateRequest={createCommunityRequest} onCloseRequest={closeCommunityRequest} onOpenGroup={(group) => { setSelectedGroup(group); setPage("groups"); }}/>
         )}
