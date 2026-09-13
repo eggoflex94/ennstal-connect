@@ -1,0 +1,65 @@
+/* Keep "Wie sehen andere mein Profil?" on the same visual language as the real member profile. */
+.public-profile-preview.ec-profile-preview-parity {
+  width: 100%;
+}
+
+.public-profile-preview.ec-profile-preview-parity > .eyebrow,
+.public-profile-preview.ec-profile-preview-parity > .eyebrow + p {
+  display: none !important;
+}
+
+.ec-profile-preview-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  border: 1px solid rgba(22, 101, 52, .22);
+  border-radius: 14px;
+  background: rgba(255,255,255,.92);
+  color: #284b35;
+  font-size: .9rem;
+  font-weight: 700;
+}
+
+.ec-profile-preview-banner strong {
+  color: inherit !important;
+}
+
+.public-profile-preview.ec-profile-preview-parity > .member-profile-hero {
+  /* Same geometry as the real foreign-member view; no preview-only card layout. */
+  width: 100% !important;
+  max-width: none !important;
+}
+
+.public-profile-preview.ec-profile-preview-parity .member-profile-hero > .profile-bio-image {
+  max-width: 100%;
+  height: auto;
+}
+
+.public-profile-preview.ec-profile-preview-parity .ec-preview-member-actions {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 10px !important;
+  width: 100% !important;
+  margin-top: 12px;
+}
+
+.public-profile-preview.ec-profile-preview-parity .ec-preview-member-actions button {
+  min-height: 44px !important;
+  pointer-events: none;
+  cursor: default;
+}
+
+.public-profile-preview.ec-profile-preview-parity .ec-preview-member-actions button[disabled] {
+  opacity: 1 !important;
+}
+
+@media (max-width: 560px) {
+  .public-profile-preview.ec-profile-preview-parity .ec-preview-member-actions button {
+    flex: 1 1 100% !important;
+    width: 100% !important;
+  }
+}
