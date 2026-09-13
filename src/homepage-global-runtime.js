@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+window.__ecHomeSupabase=supabase;
 
 const FONT_FROM_CLASS={
   'ec-home-font-serif':'serif',
