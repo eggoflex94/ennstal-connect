@@ -1,0 +1,4 @@
+.ec-card-badge-rail{display:flex!important;flex-direction:column!important;align-items:flex-start!important;gap:6px!important}
+.ec-card-badge-active{display:inline-flex!important}
+.ec-active-member-label{display:none!important}
+.member-card.ec-active-member{outline:none!important}
