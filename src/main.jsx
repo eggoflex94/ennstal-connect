@@ -157,6 +157,8 @@ import "./message-emoji-picker.js";
 /* Shared admin hub and colored icon-only dock. */
 import "./admin-central-hub.css";
 import "./admin-central-hub.js";
+import "./admin-reload-watch.css";
+import "./admin-reload-watch.js";
 import "./dock-icon-color-authority.js";
 
 /* Native upload authority. */
