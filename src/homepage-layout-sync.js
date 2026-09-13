@@ -24,6 +24,7 @@ async function syncHomepageLayout(){
   if(!rows?.length)return;
 
   let topHost=home.querySelector(':scope > .ec-homepage-top-sections');
+  const heading=home.querySelector(':scope > .page-heading');
   for(const frame of frames){
     const title=frame.querySelector('h2')?.textContent?.trim()||'';
     const text=frame.querySelector('p')?.textContent?.trim()||'';
@@ -34,23 +35,19 @@ async function syncHomepageLayout(){
       if(!topHost){
         topHost=document.createElement('div');
         topHost.className='homepage-sections ec-homepage-top-sections';
-        const heading=home.querySelector(':scope > .page-heading');
         if(heading)heading.after(topHost);else home.prepend(topHost);
       }
-      topHost.appendChild(frame);
+      if(frame.parentElement!==topHost)topHost.appendChild(frame);
     }
   }
-  if(topHost&&!topHost.children.length)topHost.remove();
 }
 
+let syncTimer=null;
 function scheduleLayoutSync(){
-  void syncHomepageLayout();
-  setTimeout(()=>void syncHomepageLayout(),180);
-  setTimeout(()=>void syncHomepageLayout(),600);
-  setTimeout(()=>void syncHomepageLayout(),1200);
+  clearTimeout(syncTimer);
+  syncTimer=setTimeout(()=>void syncHomepageLayout(),120);
 }
 
 window.addEventListener('ec:navigate',scheduleLayoutSync);
 window.addEventListener('ec:region-change',scheduleLayoutSync);
-window.addEventListener('focus',scheduleLayoutSync);
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',scheduleLayoutSync,{once:true});else scheduleLayoutSync();
