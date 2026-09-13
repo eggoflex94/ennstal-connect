@@ -23,6 +23,18 @@ function presenceOnline(member) {
   return Number.isFinite(last) && Date.now() - last < 5 * 60 * 1000;
 }
 
+function viennaDate(offsetDays = 0) {
+  const now = new Date(Date.now() + offsetDays * 24 * 60 * 60 * 1000);
+  return now.toLocaleDateString("en-CA", { timeZone: "Europe/Vienna" });
+}
+
+function activeInfo(member) {
+  const streak = Math.max(0, Number(member?.active_streak) || 0);
+  const last = String(member?.last_daily_reward_date || "").slice(0, 10);
+  const active = streak > 0 && (last === viennaDate(0) || last === viennaDate(-1));
+  return { active, streak };
+}
+
 export default function NativeMembersDirectory({ members = [], regions = [], activeRegion, profile, friendships = [], onOpen }) {
   const [query, setQuery] = useState("");
   const [regionId, setRegionId] = useState("ALL");
@@ -91,7 +103,6 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const originalOrder = new Map(members.map((member, index) => [member?.id, index]));
     const groupRank = (member) => {
       if (isGlobalAdmin(member) || isRegionalAdmin(member)) return 1;
       if (normalized(member?.role) === "SUPPORTER") return 2;
@@ -106,27 +117,31 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
         if (!q) return true;
         const region = regionById[member.home_region_id]?.name || "";
         const roleWord = isGlobalAdmin(member) || isRegionalAdmin(member) ? "admin" : normalized(member?.role) === "SUPPORTER" ? "supporter" : isBusiness(member) ? "unternehmer" : "mitglied";
-        return [member.nickname, member.first_name, member.last_name, region, roleWord].filter(Boolean).join(" ").toLowerCase().includes(q);
+        const activityWord = activeInfo(member).active ? "aktiv" : "";
+        return [member.nickname, member.first_name, member.last_name, region, roleWord, activityWord].filter(Boolean).join(" ").toLowerCase().includes(q);
       })
       .sort((a, b) => {
         const aRank = groupRank(a);
         const bRank = groupRank(b);
         if (aRank !== bRank) return aRank - bRank;
-        if (aRank === 4) return displayName(a).localeCompare(displayName(b), "de", { sensitivity: "base" });
-        return (originalOrder.get(a.id) ?? 0) - (originalOrder.get(b.id) ?? 0);
+        const aActive = activeInfo(a);
+        const bActive = activeInfo(b);
+        if (aActive.active !== bActive.active) return aActive.active ? -1 : 1;
+        if (aActive.streak !== bActive.streak) return bActive.streak - aActive.streak;
+        return displayName(a).localeCompare(displayName(b), "de", { sensitivity: "base" });
       });
   }, [members, regionId, onlineOnly, query, regionById, regionalAdminByUser, activeRegion?.id]);
 
   return <section className="native-members-directory">
     <div className="page-heading native-members-heading">
-      <div><span className="eyebrow">COMMUNITY</span><h1>Mitglieder</h1><p>Finde Mitglieder in allen Regionen oder grenze die Suche gezielt ein.</p></div>
+      <div><span className="eyebrow">COMMUNITY</span><h1>Mitglieder</h1><p>Nach Rollen sortiert; aktive Mitglieder stehen innerhalb ihrer Rolle zuerst.</p></div>
       <strong>{visible.length} Treffer</strong>
     </div>
 
     {loadingMemberId && <small className="native-member-loading" aria-live="polite">Profil wird geladen …</small>}
 
     <div className="native-member-search panel">
-      <input className="search-input" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name, Rolle oder Region suchen …" />
+      <input className="search-input" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name, Rolle, Aktivität oder Region suchen …" />
       <select value={regionId} onChange={(event) => setRegionId(event.target.value)} aria-label="Region auswählen">
         <option value="ALL">Alle Regionen</option>
         {regions.map((region) => <option value={region.id} key={region.id}>{region.name}</option>)}
