@@ -9,6 +9,7 @@ import './profile-regional-role-context.js';
 import './neon-green-theme.css';
 import './profile-preview-parity.js';
 import './community-growth-hub.js';
+import './profile-editor-member-card-exact.css';
 
 // The visible member profile is intentionally owned by the agreed final
 // profile authority above. Add only scoped profile modules here.
