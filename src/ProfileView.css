@@ -24,3 +24,67 @@
 
 /* Keep the same desktop profile structure on phones. */
 @media(pointer:coarse){.profile-view,.integrated-profile-view{max-width:1180px}.integrated-profile-hero.profile-original-layout{grid-template-columns:280px minmax(0,1fr)}.profile-identity-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.integrated-profile-actions.profile-original-actions{display:flex}}
+
+/* Neon Green: keep the function card dark and make every role label clearly readable. */
+html[data-ec-theme='neon'] .profile-function-card{
+  display:grid!important;
+  gap:10px!important;
+  padding:16px 18px!important;
+  background:linear-gradient(145deg,#11283a 0%,#17364b 100%)!important;
+  border:1.5px solid rgba(105,255,61,.46)!important;
+  border-radius:18px!important;
+  color:#fff!important;
+  box-shadow:0 7px 18px rgba(9,34,27,.16),0 0 18px rgba(83,245,35,.12)!important;
+}
+html[data-ec-theme='neon'] .profile-function-card .profile-function-eyebrow{
+  color:#d8e4ee!important;
+  font-size:12px!important;
+  font-weight:900!important;
+  letter-spacing:.13em!important;
+  line-height:1.2!important;
+  opacity:1!important;
+  text-shadow:none!important;
+}
+html[data-ec-theme='neon'] .profile-function-card .profile-role-badge,
+html[data-ec-theme='neon'] .profile-function-card .profile-role-badge.head-admin,
+html[data-ec-theme='neon'] .profile-function-card .profile-role-badge.admin,
+html[data-ec-theme='neon'] .profile-function-card .profile-role-badge.supporter,
+html[data-ec-theme='neon'] .profile-function-card .profile-role-badge.business,
+html[data-ec-theme='neon'] .profile-function-card .profile-role-badge.member{
+  display:inline-flex!important;
+  align-items:center!important;
+  gap:10px!important;
+  width:100%!important;
+  min-width:0!important;
+  color:#fff!important;
+  -webkit-text-fill-color:#fff!important;
+  font-size:16px!important;
+  font-weight:900!important;
+  line-height:1.3!important;
+  opacity:1!important;
+  text-shadow:0 1px 4px rgba(0,0,0,.22)!important;
+}
+html[data-ec-theme='neon'] .profile-function-card .profile-role-badge>span{
+  color:#fff!important;
+  -webkit-text-fill-color:#fff!important;
+  opacity:1!important;
+  overflow-wrap:anywhere!important;
+}
+html[data-ec-theme='neon'] .profile-function-card .profile-role-star{
+  display:block!important;
+  width:27px!important;
+  height:27px!important;
+  min-width:27px!important;
+  flex:0 0 27px!important;
+  object-fit:contain!important;
+  filter:none!important;
+}
+html[data-ec-theme='neon'] .profile-function-card>small{
+  color:#c9f7d0!important;
+  -webkit-text-fill-color:#c9f7d0!important;
+  font-size:12px!important;
+  line-height:1.4!important;
+  font-weight:650!important;
+  opacity:1!important;
+  text-shadow:none!important;
+}
