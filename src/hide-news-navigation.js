@@ -1,2 +1,16 @@
-function hideNews(){document.querySelectorAll('aside nav button').forEach((button)=>{if(button.textContent?.includes('Neuigkeiten'))button.style.display='none';});}
-window.addEventListener('ec:navigate',hideNews);if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',hideNews,{once:true});else hideNews();
+function hideNews(){
+  document.querySelectorAll('nav button, nav a').forEach((item)=>{
+    const label=String(item.textContent||'').trim();
+    if(label.includes('Neuigkeiten'))item.style.display='none';
+  });
+}
+function scheduleHideNews(){
+  hideNews();
+  setTimeout(hideNews,150);
+  setTimeout(hideNews,500);
+  setTimeout(hideNews,1200);
+}
+window.addEventListener('ec:navigate',scheduleHideNews);
+window.addEventListener('ec:region-change',scheduleHideNews);
+window.addEventListener('focus',scheduleHideNews);
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',scheduleHideNews,{once:true});else scheduleHideNews();
