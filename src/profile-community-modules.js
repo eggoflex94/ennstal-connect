@@ -12,7 +12,11 @@ import './community-growth-hub.js';
 import './profile-editor-member-card-exact.css';
 import './homepage-post-typography.css';
 import './homepage-supabase-bridge.js';
-import './homepage-final-authority.js';
+import './homepage-final.css';
+import './hide-news-final.js';
+import './homepage-create-final.js';
+import './homepage-global-final.js';
+import './homepage-layout-final.js';
 
 // The visible member profile is intentionally owned by the agreed final
 // profile authority above. Add only scoped profile modules here.
