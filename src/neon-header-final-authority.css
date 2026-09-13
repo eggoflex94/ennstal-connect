@@ -1,7 +1,8 @@
 /* Absolute final authority for the top Ennstal Connect shell in Neon Green.
-   Visual only: structure, buttons, navigation and region controls keep their existing behaviour. */
+   The regional shell is mounted directly under document.body, outside .app.
+   Visual only: structure, buttons, navigation and region controls keep their behaviour. */
 
-html[data-ec-theme='neon'] .app .ec-regional-shell{
+html[data-ec-theme='neon'] .ec-regional-shell{
   --ng-header-bg:#f4fff0;
   --ng-header-bg-2:#e4ffd9;
   --ng-header-line:#6dff35;
@@ -13,10 +14,8 @@ html[data-ec-theme='neon'] .app .ec-regional-shell{
   --ng-header-glow:0 0 0 1px rgba(94,240,42,.18),0 0 18px rgba(84,246,31,.18);
 }
 
-/* First row: current logo + claim + active region. */
-html[data-ec-theme='neon'] .app .ec-brand-masthead{
-  background:
-    linear-gradient(105deg,rgba(255,255,255,.98) 0%,rgba(244,255,240,.98) 42%,rgba(224,255,211,.98) 100%)!important;
+html[data-ec-theme='neon'] .ec-brand-masthead{
+  background:linear-gradient(105deg,rgba(255,255,255,.98) 0%,rgba(244,255,240,.98) 42%,rgba(224,255,211,.98) 100%)!important;
   border:0!important;
   border-bottom:1.5px solid rgba(80,234,32,.62)!important;
   border-radius:0!important;
@@ -24,57 +23,44 @@ html[data-ec-theme='neon'] .app .ec-brand-masthead{
   box-shadow:0 5px 20px rgba(36,115,45,.08),0 0 18px rgba(78,244,27,.10)!important;
 }
 
-html[data-ec-theme='neon'] .app .ec-brand-logo{
+html[data-ec-theme='neon'] .ec-brand-logo{
   background:transparent!important;
   border:0!important;
   box-shadow:none!important;
 }
 
-/* Keep the existing star logo and wordmark, but recolor it into the approved Neon Green palette. */
-html[data-ec-theme='neon'] .app .ec-brand-image,
-html[data-ec-theme='neon'] .app img[src*='ennstal-connect-wordmark.svg']{
-  filter:
-    brightness(0)
-    saturate(100%)
-    invert(58%)
-    sepia(98%)
-    saturate(1630%)
-    hue-rotate(70deg)
-    brightness(100%)
-    contrast(108%)
-    drop-shadow(0 0 4px rgba(76,239,28,.35))!important;
+html[data-ec-theme='neon'] .ec-brand-image,
+html[data-ec-theme='neon'] img[src*='ennstal-connect-wordmark.svg']{
+  filter:brightness(0) saturate(100%) invert(58%) sepia(98%) saturate(1630%) hue-rotate(70deg) brightness(100%) contrast(108%) drop-shadow(0 0 4px rgba(76,239,28,.35))!important;
 }
 
-html[data-ec-theme='neon'] .app .ec-brand-claim,
-html[data-ec-theme='neon'] .app .ec-brand-claim b{
+html[data-ec-theme='neon'] .ec-brand-claim,
+html[data-ec-theme='neon'] .ec-brand-claim b{
   color:#183d25!important;
   text-shadow:none!important;
 }
-html[data-ec-theme='neon'] .app .ec-brand-claim{font-weight:650!important}
-html[data-ec-theme='neon'] .app .ec-brand-claim b{font-weight:900!important}
+html[data-ec-theme='neon'] .ec-brand-claim{font-weight:650!important}
+html[data-ec-theme='neon'] .ec-brand-claim b{font-weight:900!important}
 
-html[data-ec-theme='neon'] .app .ec-region-status{
+html[data-ec-theme='neon'] .ec-region-status{
   background:linear-gradient(180deg,#fbfff9 0%,#edffe7 100%)!important;
   border:1.5px solid #70ee43!important;
   border-radius:16px!important;
   color:var(--ng-header-ink)!important;
   box-shadow:var(--ng-header-glow)!important;
 }
-html[data-ec-theme='neon'] .app .ec-region-status>span{
+html[data-ec-theme='neon'] .ec-region-status>span{
   color:#278a37!important;
   font-weight:900!important;
   letter-spacing:.12em!important;
 }
-html[data-ec-theme='neon'] .app .ec-region-status>strong{
+html[data-ec-theme='neon'] .ec-region-status>strong{
   color:#173721!important;
   font-weight:900!important;
 }
-html[data-ec-theme='neon'] .app .ec-region-status small{
-  color:#587160!important;
-}
+html[data-ec-theme='neon'] .ec-region-status small{color:#587160!important}
 
-/* Second row: navigation and region selector form one bright neon toolbar. */
-html[data-ec-theme='neon'] .app .ec-top-nav{
+html[data-ec-theme='neon'] .ec-top-nav{
   background:linear-gradient(180deg,#f7fff4 0%,#eaffdf 100%)!important;
   border:0!important;
   border-bottom:2px solid #64ef32!important;
@@ -83,8 +69,8 @@ html[data-ec-theme='neon'] .app .ec-top-nav{
   box-shadow:0 5px 18px rgba(34,113,41,.09),0 0 15px rgba(81,244,30,.09)!important;
 }
 
-html[data-ec-theme='neon'] .app .ec-top-nav>button,
-html[data-ec-theme='neon'] .app .ec-top-nav .ec-dock-toggle{
+html[data-ec-theme='neon'] .ec-top-nav>button,
+html[data-ec-theme='neon'] .ec-top-nav .ec-dock-toggle{
   background:transparent!important;
   border:1px solid transparent!important;
   color:#153820!important;
@@ -92,45 +78,38 @@ html[data-ec-theme='neon'] .app .ec-top-nav .ec-dock-toggle{
   text-shadow:none!important;
   font-weight:850!important;
 }
-html[data-ec-theme='neon'] .app .ec-top-nav>button b,
-html[data-ec-theme='neon'] .app .ec-top-nav>button span,
-html[data-ec-theme='neon'] .app .ec-top-nav .ec-dock-toggle{
-  color:inherit!important;
-}
+html[data-ec-theme='neon'] .ec-top-nav>button b,
+html[data-ec-theme='neon'] .ec-top-nav>button span,
+html[data-ec-theme='neon'] .ec-top-nav .ec-dock-toggle{color:inherit!important}
 
-html[data-ec-theme='neon'] .app .ec-top-nav>button:hover,
-html[data-ec-theme='neon'] .app .ec-top-nav .ec-dock-toggle:hover{
+html[data-ec-theme='neon'] .ec-top-nav>button:hover,
+html[data-ec-theme='neon'] .ec-top-nav .ec-dock-toggle:hover{
   background:#ddffd0!important;
   border-color:#99f777!important;
   color:#13852b!important;
 }
 
-html[data-ec-theme='neon'] .app .ec-top-nav>button.active,
-html[data-ec-theme='neon'] .app .ec-top-nav>button[aria-current='page']{
+html[data-ec-theme='neon'] .ec-top-nav>button.active,
+html[data-ec-theme='neon'] .ec-top-nav>button[aria-current='page']{
   background:linear-gradient(135deg,#28ce08 0%,#55ec1d 55%,#82ff45 100%)!important;
   border-color:#94ff63!important;
   color:#fff!important;
   box-shadow:0 0 0 1px rgba(45,193,19,.18),0 4px 12px rgba(40,168,23,.20),0 0 18px rgba(77,245,27,.24)!important;
 }
-html[data-ec-theme='neon'] .app .ec-top-nav>button.active b,
-html[data-ec-theme='neon'] .app .ec-top-nav>button.active span,
-html[data-ec-theme='neon'] .app .ec-top-nav>button[aria-current='page'] b,
-html[data-ec-theme='neon'] .app .ec-top-nav>button[aria-current='page'] span{
-  color:#fff!important;
-}
+html[data-ec-theme='neon'] .ec-top-nav>button.active b,
+html[data-ec-theme='neon'] .ec-top-nav>button.active span,
+html[data-ec-theme='neon'] .ec-top-nav>button[aria-current='page'] b,
+html[data-ec-theme='neon'] .ec-top-nav>button[aria-current='page'] span{color:#fff!important}
 
-/* Region dropdown belongs visually to the same toolbar. */
-html[data-ec-theme='neon'] .app .ec-region-picker{
+html[data-ec-theme='neon'] .ec-region-picker{
   background:linear-gradient(180deg,#fbfff9 0%,#efffea 100%)!important;
   border:1.5px solid #70ee43!important;
   border-radius:15px!important;
   color:#153820!important;
   box-shadow:var(--ng-header-glow)!important;
 }
-html[data-ec-theme='neon'] .app .ec-region-picker b{
-  color:#21b338!important;
-}
-html[data-ec-theme='neon'] .app .ec-region-picker select{
+html[data-ec-theme='neon'] .ec-region-picker b{color:#21b338!important}
+html[data-ec-theme='neon'] .ec-region-picker select{
   background:transparent!important;
   border:0!important;
   color:#153820!important;
@@ -138,22 +117,19 @@ html[data-ec-theme='neon'] .app .ec-region-picker select{
   box-shadow:none!important;
   outline:0!important;
 }
-html[data-ec-theme='neon'] .app .ec-region-picker select option{
+html[data-ec-theme='neon'] .ec-region-picker select option{
   background:#f7fff4!important;
   color:#153820!important;
 }
 
-/* Prevent legacy orange/blue header colors from leaking into Neon Green. */
-html[data-ec-theme='neon'] .app .ec-brand-masthead :is(a,button,span,strong,b,small,p,label),
-html[data-ec-theme='neon'] .app .ec-top-nav :is(a,button,span,strong,b,label){
-  text-shadow:none!important;
-}
+html[data-ec-theme='neon'] .ec-brand-masthead :is(a,button,span,strong,b,small,p,label),
+html[data-ec-theme='neon'] .ec-top-nav :is(a,button,span,strong,b,label){text-shadow:none!important}
 
 @media(max-width:900px){
-  html[data-ec-theme='neon'] .app .ec-brand-masthead{
+  html[data-ec-theme='neon'] .ec-brand-masthead{
     background:linear-gradient(105deg,#fbfff9 0%,#e8ffdf 100%)!important;
   }
-  html[data-ec-theme='neon'] .app .ec-top-nav{
+  html[data-ec-theme='neon'] .ec-top-nav{
     background:linear-gradient(180deg,#f7fff4 0%,#e5ffd9 100%)!important;
   }
 }
