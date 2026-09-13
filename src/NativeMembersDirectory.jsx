@@ -91,7 +91,8 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const rank = (member) => isGlobalAdmin(member) || isRegionalAdmin(member) ? 1 : normalized(member?.role) === "SUPPORTER" ? 2 : isBusiness(member) ? 3 : 4;
+    const roleRank = (member) => isGlobalAdmin(member) || isRegionalAdmin(member) ? 1 : normalized(member?.role) === "SUPPORTER" ? 2 : 3;
+    const isRoleMember = (member) => roleRank(member) < 3;
     return members
       .filter((member) => member && member.account_status !== "SUSPENDED" && !member.is_test_account)
       .filter((member) => regionId === "ALL" || member.home_region_id === regionId)
@@ -102,7 +103,12 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
         const roleWord = isGlobalAdmin(member) || isRegionalAdmin(member) ? "admin" : normalized(member?.role) === "SUPPORTER" ? "supporter" : isBusiness(member) ? "unternehmer" : "mitglied";
         return [member.nickname, member.first_name, member.last_name, region, roleWord].filter(Boolean).join(" ").toLowerCase().includes(q);
       })
-      .sort((a, b) => rank(a) - rank(b) || displayName(a).localeCompare(displayName(b), "de"));
+      .sort((a, b) => {
+        const aRole = isRoleMember(a);
+        const bRole = isRoleMember(b);
+        if (aRole || bRole) return roleRank(a) - roleRank(b);
+        return displayName(a).localeCompare(displayName(b), "de", { sensitivity: "base" });
+      });
   }, [members, regionId, onlineOnly, query, regionById, regionalAdminByUser, activeRegion?.id]);
 
   return <section className="native-members-directory">
