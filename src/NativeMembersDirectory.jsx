@@ -91,8 +91,13 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const roleRank = (member) => isGlobalAdmin(member) || isRegionalAdmin(member) ? 1 : normalized(member?.role) === "SUPPORTER" ? 2 : 3;
-    const isRoleMember = (member) => roleRank(member) < 3;
+    const originalOrder = new Map(members.map((member, index) => [member?.id, index]));
+    const groupRank = (member) => {
+      if (isGlobalAdmin(member) || isRegionalAdmin(member)) return 1;
+      if (normalized(member?.role) === "SUPPORTER") return 2;
+      if (isBusiness(member)) return 3;
+      return 4;
+    };
     return members
       .filter((member) => member && member.account_status !== "SUSPENDED" && !member.is_test_account)
       .filter((member) => regionId === "ALL" || member.home_region_id === regionId)
@@ -104,10 +109,11 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
         return [member.nickname, member.first_name, member.last_name, region, roleWord].filter(Boolean).join(" ").toLowerCase().includes(q);
       })
       .sort((a, b) => {
-        const aRole = isRoleMember(a);
-        const bRole = isRoleMember(b);
-        if (aRole || bRole) return roleRank(a) - roleRank(b);
-        return displayName(a).localeCompare(displayName(b), "de", { sensitivity: "base" });
+        const aRank = groupRank(a);
+        const bRank = groupRank(b);
+        if (aRank !== bRank) return aRank - bRank;
+        if (aRank === 4) return displayName(a).localeCompare(displayName(b), "de", { sensitivity: "base" });
+        return (originalOrder.get(a.id) ?? 0) - (originalOrder.get(b.id) ?? 0);
       });
   }, [members, regionId, onlineOnly, query, regionById, regionalAdminByUser, activeRegion?.id]);
 
