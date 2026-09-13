@@ -20,6 +20,7 @@ import './homepage-global-view.js';
 import './homepage-supabase-bridge.js';
 import './homepage-frame-buttons.js';
 import './homepage-frame-actions.js';
+import './homepage-layout-sync.js';
 
 // The visible member profile is intentionally owned by the agreed final
 // profile authority above. Add only scoped profile modules here.
