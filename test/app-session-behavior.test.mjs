@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import vm from 'node:vm';
 import { transform } from 'esbuild';
+import { loadSections } from '../src/sectionLoader.js';
 import { createRefreshScheduler } from '../src/refreshScheduler.js';
 
 const source = await fs.readFile(new URL('../src/App.jsx', import.meta.url), 'utf8');
@@ -14,7 +15,7 @@ const deferred = () => {
   return { promise, resolve };
 };
 
-function mountApp(getSession) {
+function mountApp(getSession, responseForTable) {
   const state = {}, refs = [], effects = [];
   let stateIndex = 0, authListener;
   const React = {
@@ -37,7 +38,7 @@ function mountApp(getSession) {
     from(table) {
       let id;
       const query = new Proxy({}, { get(_target, key) {
-        if (key === 'then') return (resolve, reject) => Promise.resolve({
+        if (key === 'then') return (resolve, reject) => Promise.resolve(responseForTable?.(table, id) ?? {
           data: table === 'profiles' ? { id, role: 'MEMBER', account_status: 'ACTIVE' } : [], error: null
         }).then(resolve, reject);
         return (...args) => { if (key === 'eq' && args[0] === 'id') id = args[1]; return query; };
@@ -52,6 +53,7 @@ function mountApp(getSession) {
     require(name) {
       if (name === 'react') return React;
       if (name.includes('supabaseClient')) return { supabase, supabaseUnavailableMessage: 'offline' };
+      if (name.includes('sectionLoader')) return { loadSections };
       if (name.includes('refreshScheduler')) return { createRefreshScheduler };
       return { default() {} };
     }
@@ -92,4 +94,27 @@ test('sign-out clears private state immediately and invalidates an in-flight loa
   assert.equal(app.state.user, null);
   assert.equal(app.state.profile, null);
   cleanup();
+});
+
+test('profile and other sections appear while one data request is still pending', async () => {
+  const slow = deferred();
+  const app = mountApp(async () => ({ data: { session: { user: { id: 'member' } } } }), table => table === 'messages' ? slow.promise : undefined);
+  const loading = app.load();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(app.state.profile.id, 'member');
+  assert.ok(app.state.sectionStatus.pending.includes('Nachrichten'));
+  assert.ok(!app.state.sectionStatus.pending.includes('Forum'));
+  slow.resolve({ data: [{ id: 'message' }], error: null });
+  await loading;
+  assert.equal(app.state.messages[0].id, 'message');
+  assert.equal(app.state.sectionStatus.pending.length, 0);
+});
+
+test('failed background reload preserves existing messages and exposes a retry state', async () => {
+  const app = mountApp(async () => ({ data: { session: { user: { id: 'member' } } } }), table => table === 'messages' ? { data: null, error: { message: 'offline' } } : undefined);
+  app.state.messages = [{ id: 'existing' }];
+  await app.load();
+  assert.equal(app.state.messages[0].id, 'existing');
+  assert.ok(app.state.sectionStatus.failed.includes('Nachrichten'));
+  assert.equal(app.state.sectionStatus.pending.length, 0);
 });
