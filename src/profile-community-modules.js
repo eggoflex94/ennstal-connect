@@ -17,6 +17,7 @@ import './homepage-height-controls.js';
 import './homepage-post-typography.css';
 import './homepage-global-runtime.js';
 import './homepage-global-view.js';
+import './homepage-supabase-bridge.js';
 import './homepage-frame-buttons.js';
 import './homepage-frame-actions.js';
 
