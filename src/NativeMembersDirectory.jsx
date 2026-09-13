@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "./supabaseClient";
+import { loadMemberProfile } from "./memberProfileLoader.js";
 import MemberCardView from "./MemberCardView.jsx";
 
 const normalized = (value) => String(value || "").trim().toUpperCase();
 const displayName = (member) => member?.nickname || [member?.first_name, member?.last_name].filter(Boolean).join(" ") || "Mitglied";
 const isBusiness = (member) => member?.account_badge === "BUSINESS";
+const isHeadAdmin = (member) => normalized(member?.role) === "HEAD_ADMIN";
 const isGlobalAdmin = (member) => ["HEAD_ADMIN", "ADMIN", "GLOBAL_ADMIN"].includes(normalized(member?.role));
 
 function explicitRegionalRegions(member) {
@@ -26,6 +28,7 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
   const [regionId, setRegionId] = useState("ALL");
   const [onlineOnly, setOnlineOnly] = useState(false);
   const [regionalAssignments, setRegionalAssignments] = useState([]);
+  const [loadingMemberId, setLoadingMemberId] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -73,6 +76,19 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
     return assigned.has(activeRegion.id);
   };
 
+  const roleStarSrc = (member) => isHeadAdmin(member) || isGlobalAdmin(member) || isRegionalAdmin(member) ? "/role-star-red.svg" : isBusiness(member) ? "/role-star-blue.svg" : normalized(member?.role) === "SUPPORTER" ? "/supporter-star.svg" : null;
+
+  const openFreshMember = async (member) => {
+    if (!member?.id || loadingMemberId) return;
+    setLoadingMemberId(member.id);
+    try {
+      const freshMember = await loadMemberProfile(member);
+      onOpen?.(freshMember || member);
+    } finally {
+      setLoadingMemberId(null);
+    }
+  };
+
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
     const rank = (member) => isGlobalAdmin(member) || isRegionalAdmin(member) ? 1 : normalized(member?.role) === "SUPPORTER" ? 2 : isBusiness(member) ? 3 : 4;
@@ -95,6 +111,8 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
       <strong>{visible.length} Treffer</strong>
     </div>
 
+    {loadingMemberId && <small className="native-member-loading" aria-live="polite">Profil wird geladen …</small>}
+
     <div className="native-member-search panel">
       <input className="search-input" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name, Rolle oder Region suchen …" />
       <select value={regionId} onChange={(event) => setRegionId(event.target.value)} aria-label="Region auswählen">
@@ -111,14 +129,14 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
     <div className="member-grid native-member-grid">
       {visible.map((member) => {
         const cardMember = isRegionalAdmin(member) && !isGlobalAdmin(member)
-          ? { ...member, directory_admin: true }
-          : member;
+          ? { ...member, directory_admin: true, directory_role_star: roleStarSrc(member) }
+          : { ...member, directory_role_star: roleStarSrc(member) };
         return <MemberCardView
           key={member.id}
           member={cardMember}
           profile={profile}
           friendships={friendships}
-          onOpen={onOpen}
+          onOpen={openFreshMember}
         />;
       })}
       {!visible.length && <div className="empty-card">Keine Mitglieder für diese Auswahl gefunden.</div>}
