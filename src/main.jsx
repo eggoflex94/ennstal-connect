@@ -159,6 +159,8 @@ import "./admin-central-hub.css";
 import "./admin-central-hub.js";
 import "./admin-reload-watch.css";
 import "./admin-reload-watch.js";
+import "./admin-system-watch.css";
+import "./admin-system-watch.js";
 import "./dock-icon-color-authority.js";
 
 /* Native upload authority. */
