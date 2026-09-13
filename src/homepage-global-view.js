@@ -1,3 +1,5 @@
+import './temporary-supporter-admin.js';
+
 import('./supabaseClient.js').then(({supabase})=>{
   async function render(){
     const home=document.querySelector('.home-page');
