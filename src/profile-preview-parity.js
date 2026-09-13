@@ -35,13 +35,13 @@ function row(label, value) {
   return `<div class="ec-mp-row"><span>${esc(label)}</span><strong>${esc(value)}</strong></div>`;
 }
 
-function roleInfo(profile, regionName) {
+function roleInfo(profile) {
   const role = String(profile?.role || "MEMBER").toUpperCase();
   if (role === "HEAD_ADMIN") return { label: "Hauptadmin", star: "/role-star-red.svg" };
   if (role === "ADMIN") return { label: "Global Admin", star: "/role-star-red.svg" };
   if (role === "SUPPORTER") return { label: "Supporter", star: "/supporter-star.svg" };
   if (profile?.account_badge === "BUSINESS") return { label: "Unternehmenskonto", star: "/role-star-blue.svg" };
-  return { label: regionName ? "Mitglied" : "Mitglied", star: "" };
+  return { label: "Mitglied", star: "" };
 }
 
 function ensurePreviewBanner(page) {
@@ -55,8 +55,7 @@ function ensurePreviewBanner(page) {
   else page.prepend(banner);
 }
 
-function buildPreviewActions(page, profile) {
-  page.querySelector(":scope > .ec-mp-actions").remove?.();
+function buildPreviewActions(profile) {
   const actions = document.createElement("div");
   actions.className = "ec-mp-actions ec-preview-member-actions";
   const role = String(profile?.role || "MEMBER").toUpperCase();
@@ -92,7 +91,7 @@ async function buildExactPreview(page) {
     if (!page.isConnected || page.dataset.profileId !== profileId) return;
 
     const regionName = await loadRegionName(profile);
-    const role = roleInfo(profile, regionName);
+    const role = roleInfo(profile);
     const avatar = hero.querySelector("img");
 
     page.classList.add("ec-profile-preview-parity", "ec-member-profile-final");
@@ -124,7 +123,9 @@ async function buildExactPreview(page) {
     hero.insertAdjacentElement("beforebegin", card);
     hero.hidden = true;
 
-    const actions = buildPreviewActions(page, profile);
+    const sourceActions = page.querySelector(":scope > .member-profile-actions");
+    if (sourceActions) sourceActions.hidden = true;
+    const actions = buildPreviewActions(profile);
     card.insertAdjacentElement("afterend", actions);
 
     page.querySelectorAll(":scope > .eyebrow, :scope > .eyebrow + p").forEach((node) => { node.hidden = true; });
