@@ -15,6 +15,7 @@ import './homepage-layout-controls.js';
 import './homepage-style-controls.js';
 import './homepage-height-controls.js';
 import './homepage-post-typography.css';
+import './homepage-global-runtime.js';
 
 // The visible member profile is intentionally owned by the agreed final
 // profile authority above. Add only scoped profile modules here.
