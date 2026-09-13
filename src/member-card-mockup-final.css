@@ -1,10 +1,12 @@
 /* Final authority for the approved Ennstal Connect member cards.
-   Visual contract: admin red, supporter gold, business blue, standard member light grey.
-   Standard members deliberately have no role star. */
+   Same visual layout as approved: role badge top-left, nickname top, centered avatar,
+   name/age below, compact presence pill at bottom. Standard members stay light-grey
+   and deliberately have no role star. */
 .member-grid,.members-grid,.members-list{
-  grid-template-columns:repeat(auto-fit,minmax(280px,1fr))!important;
-  gap:26px!important;
-  align-items:stretch!important;
+  grid-template-columns:repeat(auto-fit,minmax(230px,250px))!important;
+  gap:18px!important;
+  align-items:start!important;
+  justify-content:start!important;
 }
 
 article.member-card[data-role-theme]{
@@ -14,24 +16,24 @@ article.member-card[data-role-theme]{
   --ec-card-bg:linear-gradient(145deg,#f4f5f6 0%,#e5e8eb 52%,#d5d9de 100%);
   position:relative!important;
   display:grid!important;
-  grid-template-rows:66px 236px 98px 60px!important;
+  grid-template-rows:48px 170px 82px 45px!important;
   justify-items:center!important;
   align-content:start!important;
-  width:100%!important;
-  max-width:340px!important;
-  min-width:280px!important;
-  height:530px!important;
-  min-height:530px!important;
-  margin:0 auto!important;
-  padding:22px 24px 20px!important;
-  border:4px solid var(--ec-card-border)!important;
-  border-radius:34px!important;
+  width:250px!important;
+  max-width:250px!important;
+  min-width:230px!important;
+  height:395px!important;
+  min-height:395px!important;
+  margin:0!important;
+  padding:16px 17px 14px!important;
+  border:3px solid var(--ec-card-border)!important;
+  border-radius:26px!important;
   box-sizing:border-box!important;
   overflow:hidden!important;
   isolation:isolate!important;
   background:var(--ec-card-bg)!important;
   color:var(--ec-card-text)!important;
-  box-shadow:0 18px 42px rgba(20,37,52,.18)!important;
+  box-shadow:0 12px 28px rgba(20,37,52,.16)!important;
   cursor:pointer!important;
   transform:none!important;
 }
@@ -48,9 +50,7 @@ article.member-card[data-role-theme]>.ec-role-surface::after{
   content:""!important;
   position:absolute!important;
   inset:0!important;
-  background:
-    radial-gradient(circle at 24% 13%,rgba(255,255,255,.13),transparent 34%),
-    linear-gradient(180deg,rgba(255,255,255,.025),rgba(0,0,0,.15))!important;
+  background:radial-gradient(circle at 24% 13%,rgba(255,255,255,.13),transparent 34%),linear-gradient(180deg,rgba(255,255,255,.025),rgba(0,0,0,.15))!important;
   pointer-events:none!important;
 }
 
@@ -73,7 +73,7 @@ article.member-card[data-role-theme="member"]{
   --ec-card-text:#26313b;
   --ec-card-muted:#6d7780;
   --ec-card-bg:linear-gradient(145deg,#f5f6f7 0%,#e8eaed 50%,#d7dbe0 100%);
-  box-shadow:0 16px 36px rgba(59,70,80,.14)!important;
+  box-shadow:0 10px 24px rgba(59,70,80,.13)!important;
 }
 
 article.member-card[data-role-theme]>.member-nickname{
@@ -83,38 +83,36 @@ article.member-card[data-role-theme]>.member-nickname{
   z-index:3!important;
   display:block!important;
   width:100%!important;
-  margin:8px 0 0!important;
-  padding:0 56px!important;
+  margin:5px 0 0!important;
+  padding:0 42px!important;
   box-sizing:border-box!important;
   overflow:hidden!important;
   text-overflow:ellipsis!important;
   white-space:nowrap!important;
   text-align:center!important;
-  font-size:2rem!important;
+  font-size:1.5rem!important;
   line-height:1.08!important;
   font-weight:900!important;
   letter-spacing:-.025em!important;
   color:var(--ec-card-text)!important;
   -webkit-text-fill-color:var(--ec-card-text)!important;
-  text-shadow:0 2px 4px rgba(0,0,0,.24)!important;
+  text-shadow:0 2px 4px rgba(0,0,0,.22)!important;
   filter:none!important;
   transform:none!important;
 }
-article.member-card[data-role-theme="member"]>.member-nickname{
-  text-shadow:none!important;
-}
+article.member-card[data-role-theme="member"]>.member-nickname{ text-shadow:none!important; }
 
-/* Role star first, friend icon directly below it. */
+/* Star top-left, friend badge directly below it. */
 article.member-card[data-role-theme]>.ec-card-badge-rail{
   position:absolute!important;
-  top:27px!important;
-  left:27px!important;
+  top:18px!important;
+  left:18px!important;
   z-index:10!important;
   display:flex!important;
   flex-direction:column!important;
   align-items:center!important;
-  gap:10px!important;
-  width:48px!important;
+  gap:7px!important;
+  width:38px!important;
   height:auto!important;
   margin:0!important;
   padding:0!important;
@@ -129,48 +127,39 @@ article.member-card[data-role-theme]>.ec-card-badge-rail>.ec-card-badge-icon{
   align-items:center!important;
   justify-content:center!important;
   flex:0 0 auto!important;
-  width:46px!important;
-  height:46px!important;
-  min-width:46px!important;
-  min-height:46px!important;
+  width:38px!important;
+  height:38px!important;
+  min-width:38px!important;
+  min-height:38px!important;
   margin:0!important;
   padding:0!important;
   border:1px solid rgba(255,255,255,.24)!important;
-  border-radius:13px!important;
+  border-radius:10px!important;
   background:rgba(255,255,255,.10)!important;
-  box-shadow:inset 0 0 0 1px rgba(255,255,255,.05),0 4px 12px rgba(0,0,0,.15)!important;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.05),0 3px 9px rgba(0,0,0,.14)!important;
   overflow:hidden!important;
 }
 article.member-card[data-role-theme]>.ec-card-badge-rail .ec-card-badge-img{
   display:block!important;
-  width:30px!important;
-  height:30px!important;
-  min-width:30px!important;
-  min-height:30px!important;
+  width:24px!important;
+  height:24px!important;
+  min-width:24px!important;
+  min-height:24px!important;
   margin:0!important;
   padding:0!important;
   object-fit:contain!important;
   filter:none!important;
 }
-article.member-card[data-role-theme]>.ec-card-badge-rail .ec-card-badge-role-img{
+article.member-card[data-role-theme]>.ec-card-badge-rail .ec-card-badge-role-img{width:26px!important;height:26px!important}
+article.member-card[data-role-theme]>.ec-card-badge-rail .ec-card-badge-friend{
   width:32px!important;
   height:32px!important;
+  min-width:32px!important;
+  min-height:32px!important;
+  border-radius:9px!important;
 }
-article.member-card[data-role-theme]>.ec-card-badge-rail .ec-card-badge-friend{
-  width:40px!important;
-  height:40px!important;
-  min-width:40px!important;
-  min-height:40px!important;
-  border-radius:12px!important;
-}
-article.member-card[data-role-theme]>.ec-card-badge-rail .ec-card-badge-friend-img{
-  width:26px!important;
-  height:26px!important;
-}
-/* Standard members have no role star. Keep the friend icon in the second-slot position. */
-article.member-card[data-role-theme="member"]>.ec-card-badge-rail .ec-card-badge-friend{
-  margin-top:56px!important;
-}
+article.member-card[data-role-theme]>.ec-card-badge-rail .ec-card-badge-friend-img{width:21px!important;height:21px!important}
+article.member-card[data-role-theme="member"]>.ec-card-badge-rail .ec-card-badge-friend{margin-top:45px!important}
 
 article.member-card[data-role-theme]>.ec-member-avatar-wrap{
   grid-row:2!important;
@@ -178,46 +167,44 @@ article.member-card[data-role-theme]>.ec-member-avatar-wrap{
   position:relative!important;
   z-index:2!important;
   display:block!important;
-  width:190px!important;
-  height:190px!important;
-  margin:18px auto 0!important;
+  width:140px!important;
+  height:140px!important;
+  margin:9px auto 0!important;
   padding:0!important;
 }
 article.member-card[data-role-theme]>.ec-member-avatar-wrap>.member-avatar{
   position:static!important;
   display:block!important;
-  width:190px!important;
-  height:190px!important;
-  min-width:190px!important;
-  max-width:190px!important;
-  min-height:190px!important;
-  max-height:190px!important;
+  width:140px!important;
+  height:140px!important;
+  min-width:140px!important;
+  max-width:140px!important;
+  min-height:140px!important;
+  max-height:140px!important;
   margin:0!important;
   padding:0!important;
-  border:4px solid #fff!important;
+  border:3px solid #fff!important;
   border-radius:50%!important;
   box-sizing:border-box!important;
   object-fit:cover!important;
   object-position:center!important;
-  box-shadow:0 4px 15px rgba(0,0,0,.20)!important;
+  box-shadow:0 3px 11px rgba(0,0,0,.20)!important;
   transform:none!important;
 }
 article.member-card[data-role-theme] .ec-avatar-presence{
   position:absolute!important;
-  right:0!important;
-  bottom:17px!important;
+  right:-1px!important;
+  bottom:10px!important;
   display:block!important;
-  width:34px!important;
-  height:34px!important;
-  border:5px solid #fff!important;
+  width:24px!important;
+  height:24px!important;
+  border:4px solid #fff!important;
   border-radius:50%!important;
   box-sizing:content-box!important;
   background:#a6adb5!important;
-  box-shadow:0 2px 8px rgba(0,0,0,.18)!important;
+  box-shadow:0 2px 6px rgba(0,0,0,.18)!important;
 }
-article.member-card[data-role-theme] .ec-avatar-presence.online{
-  background:#12c86a!important;
-}
+article.member-card[data-role-theme] .ec-avatar-presence.online{background:#12c86a!important}
 
 article.member-card[data-role-theme]>.ec-member-meta,
 article.member-card[data-role-theme]>.member-meta{
@@ -238,30 +225,33 @@ article.member-card[data-role-theme] .member-name{
   display:flex!important;
   flex-direction:column!important;
   align-items:center!important;
+  justify-content:flex-start!important;
   width:100%!important;
   margin:0!important;
-  padding:0!important;
-  gap:10px!important;
+  padding:0 4px!important;
+  gap:7px!important;
   color:var(--ec-card-text)!important;
   text-align:center!important;
-  text-shadow:0 2px 4px rgba(0,0,0,.22)!important;
+  text-shadow:0 2px 4px rgba(0,0,0,.20)!important;
   transform:none!important;
 }
-article.member-card[data-role-theme="member"] .member-name{
-  text-shadow:none!important;
-}
+article.member-card[data-role-theme="member"] .member-name{text-shadow:none!important}
 article.member-card[data-role-theme] .ec-member-realname{
-  display:block!important;
+  display:-webkit-box!important;
   width:100%!important;
+  max-height:2.35em!important;
   margin:0!important;
-  font-size:1.32rem!important;
-  line-height:1.15!important;
+  overflow:hidden!important;
+  -webkit-box-orient:vertical!important;
+  -webkit-line-clamp:2!important;
+  font-size:1.08rem!important;
+  line-height:1.16!important;
   font-weight:800!important;
 }
 article.member-card[data-role-theme] .ec-member-age{
   display:block!important;
   margin:0!important;
-  font-size:1.22rem!important;
+  font-size:.97rem!important;
   line-height:1.15!important;
   font-weight:500!important;
   color:var(--ec-card-muted)!important;
@@ -276,10 +266,13 @@ article.member-card[data-role-theme]>.member-status{
   align-items:center!important;
   justify-content:center!important;
   width:auto!important;
-  min-width:168px!important;
-  min-height:50px!important;
+  min-width:136px!important;
+  max-width:180px!important;
+  min-height:40px!important;
+  height:40px!important;
   margin:0 auto!important;
-  padding:0 22px!important;
+  padding:0 15px!important;
+  overflow:hidden!important;
   border:2px solid rgba(255,255,255,.22)!important;
   border-radius:999px!important;
   box-sizing:border-box!important;
@@ -287,39 +280,46 @@ article.member-card[data-role-theme]>.member-status{
   color:var(--ec-card-text)!important;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.06)!important;
   transform:none!important;
+  font-size:0!important;
+  white-space:nowrap!important;
 }
 article.member-card[data-role-theme="member"]>.member-status{
   border-color:rgba(38,49,59,.18)!important;
   background:rgba(255,255,255,.24)!important;
 }
+article.member-card[data-role-theme]>.member-status> :not(.ec-member-presence-line){display:none!important}
 article.member-card[data-role-theme] .ec-member-presence-line{
   display:flex!important;
   align-items:center!important;
   justify-content:center!important;
-  gap:12px!important;
+  gap:8px!important;
+  width:100%!important;
   margin:0!important;
   padding:0!important;
+  white-space:nowrap!important;
 }
 article.member-card[data-role-theme] .ec-member-presence-dot{
   display:block!important;
-  width:18px!important;
-  height:18px!important;
-  min-width:18px!important;
-  min-height:18px!important;
+  width:12px!important;
+  height:12px!important;
+  min-width:12px!important;
+  min-height:12px!important;
   border-radius:50%!important;
   background:#9aa3ac!important;
   box-shadow:none!important;
 }
 article.member-card[data-role-theme]>.member-status.online .ec-member-presence-dot{
   background:#0bdc78!important;
-  box-shadow:0 0 10px rgba(11,220,120,.32)!important;
+  box-shadow:0 0 8px rgba(11,220,120,.30)!important;
 }
 article.member-card[data-role-theme] .ec-member-presence-label{
-  font-size:1.15rem!important;
+  display:block!important;
+  font-size:.9rem!important;
   line-height:1!important;
-  font-weight:900!important;
+  font-weight:800!important;
   color:var(--ec-card-text)!important;
   text-shadow:none!important;
+  white-space:nowrap!important;
 }
 
 /* Nothing from legacy role/card layers may re-appear. */
@@ -338,24 +338,26 @@ article.member-card[data-role-theme="member"] .ec-card-badge-role{
 }
 
 @media(max-width:900px){
+  .member-grid,.members-grid,.members-list{grid-template-columns:repeat(auto-fit,minmax(220px,235px))!important;gap:16px!important}
   article.member-card[data-role-theme]{
-    max-width:320px!important;
-    min-width:250px!important;
-    height:500px!important;
-    min-height:500px!important;
-    grid-template-rows:60px 220px 92px 58px!important;
-    padding:20px 22px 18px!important;
-    border-radius:31px!important;
+    width:235px!important;
+    max-width:235px!important;
+    min-width:220px!important;
+    height:375px!important;
+    min-height:375px!important;
+    grid-template-rows:45px 160px 78px 42px!important;
+    padding:15px 16px 13px!important;
+    border-radius:24px!important;
   }
-  article.member-card[data-role-theme]>.member-nickname{font-size:1.8rem!important;padding:0 50px!important}
-  article.member-card[data-role-theme]>.ec-member-avatar-wrap{width:176px!important;height:176px!important;margin-top:18px!important}
-  article.member-card[data-role-theme]>.ec-member-avatar-wrap>.member-avatar{width:176px!important;height:176px!important;min-width:176px!important;max-width:176px!important;min-height:176px!important;max-height:176px!important}
-  article.member-card[data-role-theme] .ec-avatar-presence{width:31px!important;height:31px!important;bottom:15px!important}
-  article.member-card[data-role-theme] .ec-member-realname{font-size:1.22rem!important}
-  article.member-card[data-role-theme] .ec-member-age{font-size:1.12rem!important}
+  article.member-card[data-role-theme]>.member-nickname{font-size:1.38rem!important;padding:0 40px!important}
+  article.member-card[data-role-theme]>.ec-member-avatar-wrap{width:132px!important;height:132px!important;margin-top:8px!important}
+  article.member-card[data-role-theme]>.ec-member-avatar-wrap>.member-avatar{width:132px!important;height:132px!important;min-width:132px!important;max-width:132px!important;min-height:132px!important;max-height:132px!important}
+  article.member-card[data-role-theme] .ec-avatar-presence{width:22px!important;height:22px!important;bottom:9px!important}
+  article.member-card[data-role-theme] .ec-member-realname{font-size:1.02rem!important}
+  article.member-card[data-role-theme] .ec-member-age{font-size:.92rem!important}
 }
 
 @media(max-width:620px){
-  .member-grid,.members-grid,.members-list{grid-template-columns:1fr!important}
-  article.member-card[data-role-theme]{max-width:320px!important;min-width:0!important;width:min(100%,320px)!important}
+  .member-grid,.members-grid,.members-list{grid-template-columns:1fr!important;justify-items:center!important}
+  article.member-card[data-role-theme]{width:235px!important;max-width:235px!important;min-width:0!important;margin:0 auto!important}
 }
