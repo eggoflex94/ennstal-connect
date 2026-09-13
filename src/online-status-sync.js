@@ -1,10 +1,12 @@
 import { supabase } from "./supabaseClient";
 
 const FIVE_MINUTES = 5 * 60 * 1000;
+const CACHE_TTL_MS = 20_000;
 let refreshRunning = false;
 let refreshQueued = false;
 let lastLoadedAt = 0;
-let memberCache = new Map();
+let memberCacheById = new Map();
+let memberCacheByNickname = new Map();
 let refreshTimer = null;
 
 const parseRows = (rows) => (rows || []).map((row) => typeof row === "string" ? JSON.parse(row) : row);
@@ -12,40 +14,48 @@ const isOnline = (member) => Boolean(member?.is_online && member?.last_active_at
 
 function updateCard(card, member) {
   if (!card || !member) return;
-  let status = card.querySelector(".member-status");
+  let status = card.querySelector(":scope > .member-status");
+  const avatarWrap = card.querySelector(".ec-member-avatar-wrap");
+  let avatarPresence = avatarWrap?.querySelector(".ec-avatar-presence");
+
   if (member.hide_online_status) {
     status?.remove();
+    avatarPresence?.remove();
     return;
   }
+
+  const online = isOnline(member);
+  const onlineLabel = String(member.presence_device || "").toUpperCase() === "MOBILE" ? "Mobil online" : "Online";
+
+  if (!avatarPresence && avatarWrap) {
+    avatarPresence = document.createElement("span");
+    avatarPresence.className = "ec-avatar-presence";
+    avatarPresence.setAttribute("aria-hidden", "true");
+    avatarWrap.appendChild(avatarPresence);
+  }
+  avatarPresence?.classList.toggle("online", online);
+  avatarPresence?.classList.toggle("offline", !online);
+
   if (!status) {
     status = document.createElement("div");
-    const messageButton = card.querySelector(".member-message");
-    if (messageButton) card.insertBefore(status, messageButton);
-    else card.appendChild(status);
+    card.appendChild(status);
   }
-  const online = isOnline(member);
   status.className = `member-status ${online ? "online" : "offline"}`;
-  const dot = document.createElement("span");
-  const onlineLabel = String(member.presence_device || '').toUpperCase() === "MOBILE" ? "Mobil online" : "Online";
-  status.replaceChildren(dot, document.createTextNode(online ? onlineLabel : "Offline"));
-  if (!online && member.last_active_at) {
-    const lastActive = document.createElement("small");
-    lastActive.textContent = `zuletzt aktiv ${new Date(member.last_active_at).toLocaleString("de-AT", { dateStyle: "short", timeStyle: "short" })}`;
-    status.appendChild(lastActive);
-  }
+  status.innerHTML = `<div class="ec-member-presence-line"><span class="ec-member-presence-dot" aria-hidden="true"></span><span class="ec-member-presence-label">${online ? onlineLabel : "Offline"}</span></div>`;
 }
 
 function applyCachedStatus() {
   document.querySelectorAll(".member-card").forEach((card) => {
-    const nickname = card.querySelector(".member-nickname")?.textContent?.trim();
-    const member = nickname ? memberCache.get(nickname) : null;
+    const memberId = card.dataset.memberId || "";
+    const nickname = card.querySelector(".member-nickname")?.textContent?.trim() || "";
+    const member = (memberId && memberCacheById.get(memberId)) || (nickname && memberCacheByNickname.get(nickname)) || null;
     if (member) updateCard(card, member);
   });
 }
 
 async function refreshOnlineStatus(force = false) {
   if (!supabase) return;
-  if (!force && memberCache.size && Date.now() - lastLoadedAt < 120000) {
+  if (!force && memberCacheById.size && Date.now() - lastLoadedAt < CACHE_TTL_MS) {
     applyCachedStatus();
     return;
   }
@@ -62,9 +72,12 @@ async function refreshOnlineStatus(force = false) {
       console.warn("Online-Status konnte nicht aktualisiert werden:", error.message);
       return;
     }
-    memberCache = new Map(parseRows(data).filter((member) => member?.nickname).map((member) => [String(member.nickname).trim(), member]));
+    const members = parseRows(data);
+    memberCacheById = new Map(members.filter((member) => member?.id).map((member) => [String(member.id), member]));
+    memberCacheByNickname = new Map(members.filter((member) => member?.nickname).map((member) => [String(member.nickname).trim(), member]));
     lastLoadedAt = Date.now();
     applyCachedStatus();
+    window.dispatchEvent(new CustomEvent("ec:presence-refreshed", { detail: { members } }));
   } finally {
     refreshRunning = false;
     if (refreshQueued) {
@@ -81,13 +94,14 @@ function scheduleRefresh(force = false, delay = 30) {
 
 window.addEventListener("ec:navigate", () => scheduleRefresh(false, 60));
 window.addEventListener("ec:region-change", () => scheduleRefresh(true, 80));
-window.addEventListener("focus", () => scheduleRefresh(Date.now() - lastLoadedAt > 120000, 30));
-document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") scheduleRefresh(Date.now() - lastLoadedAt > 120000, 30); });
-window.setInterval(applyCachedStatus, 60_000);
+window.addEventListener("focus", () => scheduleRefresh(true, 30));
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") scheduleRefresh(true, 30); });
+new MutationObserver(() => { if (memberCacheById.size) applyCachedStatus(); }).observe(document.documentElement, { childList: true, subtree: true });
+window.setInterval(() => scheduleRefresh(true, 0), 20_000);
 
 if (supabase) {
   const channel = supabase.channel("ec-member-online-status-sync")
-    .on("postgres_changes", { event: "UPDATE", schema: "public", table: "profiles" }, () => scheduleRefresh(true, 120))
+    .on("postgres_changes", { event: "UPDATE", schema: "public", table: "profiles" }, () => scheduleRefresh(true, 80))
     .subscribe();
   window.addEventListener("pagehide", () => supabase.removeChannel(channel), { once: true });
 }
