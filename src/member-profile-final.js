@@ -6,6 +6,8 @@ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const age=d=>{if(!d)return'';const b=new Date(d);if(Number.isNaN(b.getTime()))return'';const n=new Date();let a=n.getFullYear()-b.getFullYear();if(n.getMonth()<b.getMonth()||(n.getMonth()===b.getMonth()&&n.getDate()<b.getDate()))a--;return `${a} Jahre`};
 const date=d=>{if(!d)return'';const x=new Date(d);return Number.isNaN(x.getTime())?'':x.toLocaleDateString('de-AT')};
 const norm=v=>String(v||'').replace(/\s+/g,' ').trim().toLowerCase();
+const viennaDate=(offsetDays=0)=>new Date(Date.now()+offsetDays*86400000).toLocaleDateString('en-CA',{timeZone:'Europe/Vienna'});
+function activeInfo(target){const streak=Math.max(0,Number(target?.active_streak)||0);const last=String(target?.last_daily_reward_date||'').slice(0,10);return{active:streak>0&&(last===viennaDate(0)||last===viennaDate(-1)),streak,days:Math.max(0,Number(target?.active_days_count)||0)};}
 
 async function context(){
   if(viewer&&regions.length)return;
@@ -96,20 +98,23 @@ async function build(root){
     const isFriend=await friendship(target.id);
     const avatar=hero.querySelector('img');
     const role=await functionInfo(target);
+    const activity=activeInfo(target);
     const home=regions.find(r=>r.id===target.home_region_id)?.name||'';
     root.querySelectorAll(':scope > .ec-mp-card,:scope > .ec-mp-more,:scope > .ec-mp-actions,:scope > .profile-visible-details').forEach(node=>node.remove());
     root.dataset.ecTargetId=target.id;
     root.classList.add('ec-member-profile-final');
+    root.classList.toggle('ec-active-member-profile',activity.active);
     const card=document.createElement('section');card.className='ec-mp-card';
     const left=document.createElement('div');left.className='ec-mp-left';
     const photo=document.createElement('div');photo.className='ec-mp-photo';if(avatar)photo.appendChild(avatar);left.appendChild(photo);
     const functionBox=document.createElement('div');functionBox.className='ec-mp-function';
     const roleMarkup=role.star?`<span class="ec-mp-function-role"><img class="ec-mp-role-star" src="${role.star}" alt="" aria-hidden="true"><strong>${esc(role.label)}</strong></span>`:`<span class="ec-mp-function-role"><strong>${esc(role.label)}</strong></span>`;
-    functionBox.innerHTML=`<span>Funktion</span>${roleMarkup}`;
+    const activeMarkup=activity.active?`<span class="ec-mp-active-badge" title="Tägliche Aktivitätsserie">🔥 Aktives Mitglied · ${activity.streak} Tag${activity.streak===1?'':'e'}</span>`:'';
+    functionBox.innerHTML=`<span>Funktion</span>${roleMarkup}${activeMarkup}`;
     left.appendChild(functionBox);
     const data=document.createElement('div');data.className='ec-mp-data';
     const realName=[target.first_name,target.last_name].filter(Boolean).join(' ');
-    data.innerHTML=`<div class="ec-mp-data-head"><div><span>MITGLIEDSPROFIL</span><h1>${esc(target.nickname||realName||'Mitglied')}</h1></div>${target.is_verified?'<b class="ec-mp-verified" title="Verifiziert">✓</b>':''}</div><div class="ec-mp-rows">${row('Nickname',target.nickname)}${visible(target,'name',isFriend)?row('Vorname',target.first_name):''}${visible(target,'name',isFriend)?row('Nachname',target.last_name):''}${visible(target,'birth_date',isFriend)?row('Geburtsdatum',date(target.birth_date)):''}${visible(target,'birth_date',isFriend)?row('Alter',age(target.birth_date)):''}${row('Heimatregion',home)}</div>`;
+    data.innerHTML=`<div class="ec-mp-data-head"><div><span>MITGLIEDSPROFIL</span><h1>${esc(target.nickname||realName||'Mitglied')}</h1></div>${target.is_verified?'<b class="ec-mp-verified" title="Verifiziert">✓</b>':''}</div><div class="ec-mp-rows">${row('Nickname',target.nickname)}${visible(target,'name',isFriend)?row('Vorname',target.first_name):''}${visible(target,'name',isFriend)?row('Nachname',target.last_name):''}${visible(target,'birth_date',isFriend)?row('Geburtsdatum',date(target.birth_date)):''}${visible(target,'birth_date',isFriend)?row('Alter',age(target.birth_date)):''}${row('Heimatregion',home)}${activity.streak?row('Aktiv-Serie',`${activity.streak} Tag${activity.streak===1?'':'e'} 🔥`):''}${activity.days?row('Aktive Tage gesamt',String(activity.days)):''}</div>`;
     card.append(left,data);
     root.insertBefore(card,hero);
     hero.hidden=true;
