@@ -14,20 +14,15 @@ const interestsOf = (value) => {
 const normalize = (value) => clean(value).toLocaleLowerCase('de-AT');
 const displayName = (member) => clean(member?.nickname || member?.first_name || 'Mitglied');
 
-function currentRegionFromPicker() {
+function currentRegionSlug() {
   const picker = document.querySelector('.ec-region-picker select');
-  const selected = picker?.selectedOptions?.[0];
-  const id = selected?.value || '';
-  const name = clean(selected?.textContent);
-  return id && name ? { id, name } : null;
+  return clean(picker?.value || localStorage.getItem('ec-active-region'));
 }
 
 async function resolveRegion() {
-  const pickerRegion = currentRegionFromPicker();
-  if (pickerRegion) return pickerRegion;
   if (activeRegion?.id) return activeRegion;
   if (!supabase) return null;
-  const slug = localStorage.getItem('ec-active-region');
+  const slug = currentRegionSlug();
   if (!slug) return null;
   const { data } = await supabase.from('regions').select('id,name,slug').eq('slug', slug).maybeSingle();
   return data || null;
@@ -104,7 +99,14 @@ function renderPanel(region, suggestions) {
   const head = document.createElement('div');
   head.className = 'ec-member-suggestions-head';
   const intro = document.createElement('div');
-  intro.innerHTML = `<span class="eyebrow">FÜR DICH</span><h2>Menschen, die du kennenlernen könntest</h2><p>Aus ${clean(region.name)} – bevorzugt nach gemeinsamen Interessen.</p>`;
+  const eyebrow = document.createElement('span');
+  eyebrow.className = 'eyebrow';
+  eyebrow.textContent = 'FÜR DICH';
+  const title = document.createElement('h2');
+  title.textContent = 'Menschen, die du kennenlernen könntest';
+  const subtitle = document.createElement('p');
+  subtitle.textContent = `Aus ${clean(region.name)} – bevorzugt nach gemeinsamen Interessen.`;
+  intro.append(eyebrow, title, subtitle);
   const all = document.createElement('button');
   all.type = 'button';
   all.className = 'ec-member-suggestions-all';
