@@ -3,15 +3,19 @@ import { supabase } from './supabaseClient';
 let activeRegion = null;
 let requestVersion = 0;
 let refreshTimer = null;
+let lastLoadedRegionId = null;
+let lastLoadedAt = 0;
+const FRESH_FOR_MS = 20_000;
 
-function scheduleRefresh(delay = 150) {
+function scheduleRefresh(delay = 150, force = false) {
   window.clearTimeout(refreshTimer);
-  refreshTimer = window.setTimeout(() => void refreshForum(), delay);
+  refreshTimer = window.setTimeout(() => void refreshForum(force), delay);
 }
 
-async function refreshForum() {
+async function refreshForum(force = false) {
   const region = activeRegion;
   if (!supabase || !region?.id || !document.querySelector('.home-page')) return;
+  if (!force && lastLoadedRegionId === region.id && Date.now() - lastLoadedAt < FRESH_FOR_MS) return;
   const version = ++requestVersion;
   const result = await supabase
     .from('forum_posts')
@@ -21,6 +25,8 @@ async function refreshForum() {
     .order('created_at', { ascending: false })
     .limit(1);
   if (result.error || version !== requestVersion || activeRegion?.id !== region.id) return;
+  lastLoadedRegionId = region.id;
+  lastLoadedAt = Date.now();
   const item = result.data?.[0];
   const card = document.querySelector('#ec-home-activation [data-ec-activation="forum"]');
   if (!card) return;
@@ -38,6 +44,6 @@ async function refreshForum() {
 window.addEventListener('ec:region-change', (event) => {
   activeRegion = event.detail || null;
   requestVersion += 1;
-  scheduleRefresh();
+  scheduleRefresh(150, true);
 });
 window.addEventListener('ec:navigate', () => scheduleRefresh(220));

@@ -3,10 +3,13 @@ import { supabase } from './supabaseClient';
 let activeRegion = null;
 let refreshTimer = null;
 let requestVersion = 0;
+let lastLoadedRegionId = null;
+let lastLoadedAt = 0;
+const FRESH_FOR_MS = 20_000;
 
-function scheduleRefresh() {
+function scheduleRefresh(delay = 150, force = false) {
   window.clearTimeout(refreshTimer);
-  refreshTimer = window.setTimeout(refreshLiveCards, 150);
+  refreshTimer = window.setTimeout(() => void refreshLiveCards(force), delay);
 }
 
 function setCard(kind, title, detail, footer) {
@@ -20,10 +23,11 @@ function setCard(kind, title, detail, footer) {
   if (meta) meta.textContent = footer;
 }
 
-async function refreshLiveCards() {
+async function refreshLiveCards(force = false) {
   if (!supabase || !activeRegion?.id || !document.querySelector('.home-page')) return;
-  const version = ++requestVersion;
   const region = activeRegion;
+  if (!force && lastLoadedRegionId === region.id && Date.now() - lastLoadedAt < FRESH_FOR_MS) return;
+  const version = ++requestVersion;
   const now = new Date().toISOString();
   const { data, error } = await supabase
     .from('community_events')
@@ -34,6 +38,8 @@ async function refreshLiveCards() {
     .order('event_at', { ascending: true })
     .limit(1);
   if (error || version !== requestVersion || activeRegion?.id !== region.id) return;
+  lastLoadedRegionId = region.id;
+  lastLoadedAt = Date.now();
   const event = data?.[0];
   if (event) {
     const day = new Date(event.event_at).toLocaleDateString('de-AT', { day: '2-digit', month: '2-digit' });
@@ -46,6 +52,6 @@ async function refreshLiveCards() {
 window.addEventListener('ec:region-change', (event) => {
   activeRegion = event.detail || null;
   requestVersion += 1;
-  scheduleRefresh();
+  scheduleRefresh(150, true);
 });
-window.addEventListener('ec:navigate', scheduleRefresh);
+window.addEventListener('ec:navigate', () => scheduleRefresh(220));
