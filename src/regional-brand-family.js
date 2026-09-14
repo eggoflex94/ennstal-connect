@@ -34,18 +34,24 @@ function buildLockup(slug) {
 
 function syncHeader(slug = activeSlug) {
   const host = document.querySelector('.ec-brand-logo');
-  if (!host) return;
-  host.querySelectorAll('.ec-brand-family-lockup').forEach((node) => node.remove());
-  const image = host.querySelector('.ec-brand-image');
-  if (image) image.style.display = 'none';
-  host.append(buildLockup(slug));
+  if (!host) return false;
+  const key = normalize(slug);
+  const existing = host.querySelector('.ec-brand-family-lockup');
+  if (existing?.dataset.region !== key) {
+    host.querySelectorAll('.ec-brand-family-lockup').forEach((node) => node.remove());
+    const image = host.querySelector('.ec-brand-image');
+    if (image) image.style.display = 'none';
+    host.append(buildLockup(key));
+  }
   const claim = document.querySelector('.ec-brand-masthead .ec-brand-claim');
-  if (claim) {
+  if (claim && claim.dataset.brandRegion !== key) {
+    claim.dataset.brandRegion = key;
     claim.replaceChildren(
       make('span', 'ec-brand-family-umbrella', 'ENNSTAL CONNECT COMMUNITY'),
-      make('span', 'ec-brand-family-slogan', brands[normalize(slug)].slogan)
+      make('span', 'ec-brand-family-slogan', brands[key].slogan)
     );
   }
+  return true;
 }
 
 function selectedAuthSlug() {
@@ -55,7 +61,7 @@ function selectedAuthSlug() {
 
 function syncAuth() {
   const intro = document.querySelector('.auth-page .ec-auth-intro');
-  if (!intro) return;
+  if (!intro) return false;
   const original = intro.querySelector('.ec-auth-logo');
   if (original) original.classList.add('ec-brand-original-hidden');
   let shell = intro.querySelector('.ec-auth-brand-shell');
@@ -64,30 +70,36 @@ function syncAuth() {
     original ? original.after(shell) : intro.prepend(shell);
   }
   const slug = selectedAuthSlug();
-  const brand = brands[slug];
-  const claim = make('div', 'ec-auth-brand-claim');
-  claim.append(make('small', '', 'ENNSTAL CONNECT COMMUNITY'), make('strong', '', brand.slogan));
-  shell.replaceChildren(buildLockup(slug), claim);
+  if (shell.dataset.brandRegion !== slug) {
+    shell.dataset.brandRegion = slug;
+    const brand = brands[slug];
+    const claim = make('div', 'ec-auth-brand-claim');
+    claim.append(make('small', '', 'ENNSTAL CONNECT COMMUNITY'), make('strong', '', brand.slogan));
+    shell.replaceChildren(buildLockup(slug), claim);
+  }
   const select = document.querySelector('.auth-page select[name="home_region_slug"]');
   if (select && !select.dataset.brandBound) {
     select.dataset.brandBound = '1';
     select.addEventListener('change', syncAuth);
   }
+  return true;
 }
 
 function syncAll() {
-  syncHeader(activeSlug);
-  syncAuth();
+  return { header: syncHeader(activeSlug), auth: syncAuth() };
+}
+
+function retrySync(left = 16) {
+  const result = syncAll();
+  if ((result.header || result.auth) || left <= 0) return;
+  setTimeout(() => retrySync(left - 1), 120);
 }
 
 window.addEventListener('ec:region-change', (event) => {
   activeSlug = normalize(event.detail?.slug || 'ennstal');
   syncHeader(activeSlug);
 });
-window.addEventListener('ec:navigate', () => setTimeout(syncAll, 50));
+window.addEventListener('ec:navigate', () => setTimeout(() => retrySync(4), 50));
 
-document.addEventListener('DOMContentLoaded', syncAll, { once: true });
-if (document.readyState !== 'loading') syncAll();
-
-const observer = new MutationObserver(() => setTimeout(syncAll, 40));
-observer.observe(document.documentElement, { childList: true, subtree: true });
+document.addEventListener('DOMContentLoaded', () => retrySync(), { once: true });
+if (document.readyState !== 'loading') retrySync();
