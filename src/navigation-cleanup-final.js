@@ -1,11 +1,22 @@
 // Final dashboard flow guard.
-// Some legacy dashboard modules still assign sticky positioning after mount.
-// Re-apply normal document-flow geometry only on relevant lifecycle events;
-// no MutationObserver is used, so this does not fight React continuously.
+// CSS owns the steady-state geometry. JavaScript only repairs legacy inline
+// styles when they are actually present instead of rewriting layout on every
+// resize/focus/navigation event.
 
-function normalizeDashboardFlow() {
+function needsDashboardRepair(dock) {
+  if (!dock) return false;
+  const position = dock.style.getPropertyValue('position');
+  const overflowY = dock.style.getPropertyValue('overflow-y');
+  const transform = dock.style.getPropertyValue('transform');
+  return position === 'fixed' || position === 'sticky' ||
+    (overflowY && overflowY !== 'visible') ||
+    (transform && transform !== 'none');
+}
+
+function normalizeDashboardFlow(force = false) {
   const docks = document.querySelectorAll('.ec-right-dock');
   docks.forEach((dock) => {
+    if (!force && !needsDashboardRepair(dock)) return;
     dock.style.setProperty('position', 'static', 'important');
     dock.style.setProperty('inset', 'auto', 'important');
     dock.style.setProperty('top', 'auto', 'important');
@@ -27,28 +38,25 @@ function normalizeDashboardFlow() {
       node.style.setProperty('overflow-y', 'visible', 'important');
     });
   });
-
-  document.querySelectorAll('.modern-main,.content-root').forEach((node) => {
-    node.style.setProperty('height', 'auto', 'important');
-    node.style.setProperty('max-height', 'none', 'important');
-    node.style.setProperty('overflow-y', 'visible', 'important');
-  });
 }
 
 let timer = 0;
-function scheduleDashboardFlow(delay = 60) {
+function scheduleRepair(delay = 80, force = false) {
   window.clearTimeout(timer);
-  timer = window.setTimeout(normalizeDashboardFlow, delay);
+  timer = window.setTimeout(() => normalizeDashboardFlow(force), delay);
 }
 
-window.addEventListener('ec:navigate', () => scheduleDashboardFlow(80));
-window.addEventListener('ec:region-change', () => scheduleDashboardFlow(100));
-window.addEventListener('pageshow', () => scheduleDashboardFlow(80));
-window.addEventListener('resize', () => scheduleDashboardFlow(80));
-window.addEventListener('focus', () => scheduleDashboardFlow(80));
+// One normalisation after the shell appears is enough for the usual case.
+function boot() {
+  scheduleRepair(120, true);
+  scheduleRepair(700, false);
+}
+
+window.addEventListener('ec:navigate', () => scheduleRepair(80, false));
+window.addEventListener('pageshow', () => scheduleRepair(80, false));
 
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => scheduleDashboardFlow(120), { once: true });
+  document.addEventListener('DOMContentLoaded', boot, { once: true });
 } else {
-  scheduleDashboardFlow(120);
+  boot();
 }
