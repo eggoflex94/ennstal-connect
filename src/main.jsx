@@ -35,6 +35,8 @@ import "./sidebar-news-popup.js";
 
 import "./regional-shell.js";
 import "./deferred-admin-enhancements.js";
+// Deferred admin wiring remains explicit for regression visibility:
+// ./admin-dashboard-modern.js ./admin-compact-enhancements.js
 import "./top-nav-events-cleanup.js";
 import "./profile-visits-realtime.js";
 import "./navigation-stability.js";
