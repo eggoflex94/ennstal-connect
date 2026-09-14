@@ -1,1 +1,1 @@
-['/src/home-multi-region-clarity-base.js','/src/home-live-region-data.js','/src/home-live-request.js','/src/home-live-forum.js'].forEach((src)=>{const script=document.createElement('script');script.type='module';script.src=src;document.head.appendChild(script);});
+['/src/home-multi-region-clarity-base.js','/src/home-live-region-data.js','/src/home-live-request.js','/src/home-live-forum.js','/src/home-member-suggestions.js'].forEach((src)=>{const script=document.createElement('script');script.type='module';script.src=src;document.head.appendChild(script);});
