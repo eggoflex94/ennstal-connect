@@ -1,0 +1,170 @@
+.ec-multi-region-home-intro {
+  display: grid;
+  gap: 18px;
+  margin: 0 0 24px;
+}
+
+.ec-multi-region-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(240px, .75fr);
+  gap: 18px;
+  align-items: stretch;
+  padding: 24px;
+  border: 1px solid rgba(255, 255, 255, .09);
+  border-radius: 24px;
+  background: linear-gradient(135deg, rgba(23, 38, 53, .98), rgba(33, 53, 70, .94));
+  box-shadow: 0 18px 50px rgba(10, 20, 29, .12);
+  color: #fff;
+}
+
+.ec-multi-region-copy {
+  min-width: 0;
+}
+
+.ec-multi-region-kicker {
+  display: inline-block;
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .11em;
+  opacity: .72;
+}
+
+.ec-multi-region-copy h2 {
+  margin: 0;
+  max-width: 760px;
+  font-size: clamp(24px, 3vw, 38px);
+  line-height: 1.08;
+}
+
+.ec-multi-region-copy p {
+  max-width: 760px;
+  margin: 12px 0 0;
+  font-size: 16px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, .82);
+}
+
+.ec-multi-region-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.ec-multi-region-actions .secondary-button {
+  border-color: rgba(255, 255, 255, .22);
+  color: #fff;
+  background: rgba(255, 255, 255, .08);
+}
+
+.ec-multi-region-current {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 150px;
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, .13);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, .08);
+}
+
+.ec-multi-region-current span,
+.ec-multi-region-current small {
+  color: rgba(255, 255, 255, .7);
+}
+
+.ec-multi-region-current strong {
+  display: block;
+  margin: 5px 0 9px;
+  font-size: 23px;
+  line-height: 1.15;
+}
+
+.ec-multi-region-current small {
+  line-height: 1.45;
+}
+
+.ec-multi-region-benefits {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.ec-multi-region-benefit {
+  min-width: 0;
+  min-height: 150px;
+  padding: 18px;
+  border: 1px solid var(--border, rgba(23, 38, 53, .1));
+  border-radius: 20px;
+  text-align: left;
+  background: var(--surface, #fff);
+  color: inherit;
+  cursor: pointer;
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+
+.ec-multi-region-benefit:hover,
+.ec-multi-region-benefit:focus-visible {
+  transform: translateY(-2px);
+  border-color: rgba(236, 120, 37, .45);
+  box-shadow: 0 12px 32px rgba(10, 20, 29, .1);
+}
+
+.ec-multi-region-benefit > span {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 24px;
+}
+
+.ec-multi-region-benefit strong,
+.ec-multi-region-benefit small {
+  display: block;
+}
+
+.ec-multi-region-benefit strong {
+  margin-bottom: 6px;
+  font-size: 15px;
+}
+
+.ec-multi-region-benefit small {
+  line-height: 1.45;
+  color: var(--muted, #66737f);
+}
+
+@media (max-width: 980px) {
+  .ec-multi-region-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .ec-multi-region-current {
+    min-height: auto;
+  }
+
+  .ec-multi-region-benefits {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .ec-multi-region-hero {
+    padding: 18px;
+    border-radius: 20px;
+  }
+
+  .ec-multi-region-benefits {
+    grid-template-columns: 1fr;
+  }
+
+  .ec-multi-region-benefit {
+    min-height: auto;
+  }
+
+  .ec-multi-region-actions {
+    display: grid;
+  }
+
+  .ec-multi-region-actions > button {
+    width: 100%;
+  }
+}
