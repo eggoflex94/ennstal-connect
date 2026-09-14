@@ -6,7 +6,7 @@ import { createNetworkFetch } from '../src/networkFetch.js';
 
 test('auth refresh is deferred, burst events share one request and cleanup cancels work', async () => {
   let calls = 0;
-  const schedule = createRefreshScheduler(() => { calls++; }, assert.fail, 0);
+  const schedule = createRefreshScheduler(() => { calls++; }, assert.fail, 0, 0);
   schedule(); schedule(); schedule();
   assert.equal(calls, 0, 'must not call Supabase within its auth callback');
   await wait(20);
@@ -23,7 +23,7 @@ test('events during a request produce one trailing refresh without overlap', asy
   const schedule = createRefreshScheduler(async () => {
     calls++;
     if (calls === 1) await pending;
-  }, assert.fail, 0);
+  }, assert.fail, 0, 0);
   schedule();
   await wait(20);
   schedule(); schedule(); schedule();
@@ -35,12 +35,26 @@ test('events during a request produce one trailing refresh without overlap', asy
   schedule.dispose();
 });
 
+test('default cooldown coalesces isolated realtime bursts after a refresh', async () => {
+  let calls = 0;
+  const schedule = createRefreshScheduler(() => { calls++; }, assert.fail, 0, 60);
+  schedule();
+  await wait(20);
+  assert.equal(calls, 1);
+  schedule(); schedule(); schedule();
+  await wait(20);
+  assert.equal(calls, 1, 'cooldown should hold back the trailing full refresh');
+  await wait(70);
+  assert.equal(calls, 2);
+  schedule.dispose();
+});
+
 test('a failed refresh does not wedge subsequent updates', async () => {
   let calls = 0;
   const errors = [];
   const schedule = createRefreshScheduler(() => {
     if (++calls === 1) throw new Error('offline');
-  }, error => errors.push(error.message), 0);
+  }, error => errors.push(error.message), 0, 0);
   schedule(); await wait(20);
   schedule(); await wait(20);
   assert.equal(calls, 2);
