@@ -31,11 +31,10 @@ import "./notification-center.js";
 import "./member-onboarding.js";
 import "./admin-workspace.css";
 import "./admin-workspace.js";
-import "./admin-dashboard-modern.js";
-import "./admin-compact-enhancements.js";
 import "./sidebar-news-popup.js";
 
 import "./regional-shell.js";
+import "./deferred-admin-enhancements.js";
 import "./top-nav-events-cleanup.js";
 import "./profile-visits-realtime.js";
 import "./navigation-stability.js";
@@ -90,7 +89,6 @@ import "./mobile-interaction-authority.css";
 import "./global-community-news-popup.css";
 import "./global-community-news-popup.js";
 import "./admin-community-popup-manager.css";
-import "./admin-community-popup-manager.js";
 import "./personal-dashboard-final-fix.css";
 import "./personal-dashboard-final-fix.js";
 
@@ -114,10 +112,8 @@ import "./community-runtime-stability.css";
 import "./community-runtime-stability.js";
 import "./profile-design-preview-role.css";
 import "./admin-central-modern.css";
-import "./admin-central-permissions.js";
 import "./layout-overlap-authority.css";
 import "./admin-central-final.css";
-import "./business-account-admin-fix.js";
 import "./layout-runtime-sync.js";
 import "./role-responsibility-final.css";
 import "./layout-integrity-final.css";
@@ -141,12 +137,8 @@ import "./automated-message-modern.js";
 import "./profile-visits-layout.css";
 import "./head-admin-menu.js";
 import "./head-admin-activity-folders.css";
-import "./head-admin-activity-folders.js";
 import "./profile-admin-tools-unified.css";
 import "./admin-head-access-reliability.js";
-import "./profile-admin-tools-unified.js";
-import "./profile-admin-role-actions.js";
-import "./regional-admin-tools-bridge.js";
 import "./ui-requested-fixes.js";
 import "./home-modern-final.css";
 import "./home-modern-final.js";
@@ -156,11 +148,8 @@ import "./message-emoji-picker.js";
 
 /* Shared admin hub and colored icon-only dock. */
 import "./admin-central-hub.css";
-import "./admin-central-hub.js";
 import "./admin-reload-watch.css";
-import "./admin-reload-watch.js";
 import "./admin-system-watch.css";
-import "./admin-system-watch.js";
 import "./dock-icon-color-authority.js";
 
 /* Native upload authority. */
