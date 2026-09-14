@@ -1,9 +1,12 @@
 import { supabase } from './supabaseClient';
 
 const PANEL_ID = 'ec-member-suggestions';
+const FRESH_FOR_MS = 15_000;
 let activeRegion = null;
 let refreshTimer = null;
 let requestVersion = 0;
+let lastRegionId = null;
+let lastCompletedAt = 0;
 
 const clean = (value) => String(value ?? '').trim();
 const interestsOf = (value) => {
@@ -54,6 +57,8 @@ function memberCard(member, shared) {
     const image = document.createElement('img');
     image.src = member.avatar_url;
     image.alt = '';
+    image.loading = 'lazy';
+    image.decoding = 'async';
     button.appendChild(image);
   } else {
     const fallback = document.createElement('span');
@@ -126,21 +131,25 @@ function renderPanel(region, suggestions) {
   return true;
 }
 
-async function refreshSuggestions() {
+async function refreshSuggestions(force = false) {
   const version = ++requestVersion;
   if (!supabase || !document.querySelector('.home-page')) return;
   const region = await resolveRegion();
   if (!region?.id || version !== requestVersion) return;
 
-  const { data: { user } } = await supabase.auth.getUser();
+  if (!force && region.id === lastRegionId && Date.now() - lastCompletedAt < FRESH_FOR_MS && document.getElementById(PANEL_ID)) return;
+
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
   if (!user?.id || version !== requestVersion) return;
 
   const [profileResult, directoryResult, friendshipsResult] = await Promise.all([
-    supabase.from('profiles').select('interests,home_region_id').eq('id', user.id).maybeSingle(),
+    supabase.from('profiles').select('interests').eq('id', user.id).maybeSingle(),
     supabase.rpc('community_member_directory'),
     supabase.from('friendships').select('requester_id,receiver_id,status').or(`requester_id.eq.${user.id},receiver_id.eq.${user.id}`),
   ]);
-  if (version !== requestVersion) return;
+  if (version !== requestVersion || activeRegion?.id && activeRegion.id !== region.id) return;
+  if (profileResult.error || directoryResult.error || friendshipsResult.error) return;
 
   const ownInterests = interestsOf(profileResult.data?.interests);
   const connectedIds = new Set([user.id]);
@@ -159,6 +168,8 @@ async function refreshSuggestions() {
     return { member, shared, score: shared.length };
   }).sort((a, b) => b.score - a.score || displayName(a.member).localeCompare(displayName(b.member), 'de-AT'));
 
+  lastRegionId = region.id;
+  lastCompletedAt = Date.now();
   if (!ranked.length) {
     document.getElementById(PANEL_ID)?.remove();
     return;
@@ -166,19 +177,20 @@ async function refreshSuggestions() {
   renderPanel(region, ranked.slice(0, 3));
 }
 
-function scheduleRefresh(delay = 180) {
+function scheduleRefresh(delay = 180, force = false) {
   window.clearTimeout(refreshTimer);
-  refreshTimer = window.setTimeout(() => void refreshSuggestions(), delay);
+  refreshTimer = window.setTimeout(() => void refreshSuggestions(force), delay);
 }
 
 window.addEventListener('ec:region-change', (event) => {
   activeRegion = event.detail || null;
-  scheduleRefresh();
+  requestVersion += 1;
+  lastCompletedAt = 0;
+  scheduleRefresh(180, true);
 });
-window.addEventListener('ec:navigate', () => scheduleRefresh(220));
-window.addEventListener('popstate', () => scheduleRefresh(220));
+window.addEventListener('ec:navigate', () => scheduleRefresh(220, false));
+window.addEventListener('popstate', () => scheduleRefresh(220, false));
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => scheduleRefresh(300), { once: true });
 else scheduleRefresh(300);
-window.setTimeout(() => scheduleRefresh(0), 900);
-window.setTimeout(() => scheduleRefresh(0), 1800);
+window.setTimeout(() => scheduleRefresh(0), 1000);
