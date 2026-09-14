@@ -4,11 +4,28 @@
 // longer window, while ordinary image uploads fail fast with a useful error.
 //
 // Identical Supabase REST reads are also deduplicated while in flight and kept
-// in a tiny short-lived cache. This prevents parallel UI modules from asking
-// for the same data repeatedly during one render/refresh burst. Any write
-// immediately clears that cache so read-after-write stays fresh.
+// in a tiny short-lived cache. A small explicit whitelist extends this to RPCs
+// that are guaranteed to be read-only. Mutating RPCs are never cached/retried.
+// Any real write immediately clears the cache so read-after-write stays fresh.
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const isTransientNetworkError = (error) => /failed to fetch|networkerror|network request failed|load failed|fetch failed|timeout|aborted/i.test(String(error?.message || error || ''));
+
+const READ_ONLY_RPCS = new Set([
+  'community_member_directory',
+  'community_group_directory',
+  'ec_region_group_directory',
+  'weekly_poll_current',
+  'ec_region_weekly_poll_current',
+  'featured_community_group',
+  'ec_region_featured_community_group',
+  'my_welcome_badges',
+  'admin_full_member_directory',
+  'admin_member_directory',
+  'get_admin_log',
+  'admin_get_permissions',
+  'admin_verification_review_queue',
+  'community_group_owner_change_queue',
+]);
 
 function requestUrl(input) {
   if (typeof input === 'string') return input;
@@ -21,21 +38,34 @@ function requestHeader(input, init, name) {
   return headers.get(name) || '';
 }
 
+function rpcName(url) {
+  const match = String(url).match(/\/rest\/v1\/rpc\/([^/?#]+)/i);
+  return match ? decodeURIComponent(match[1]) : '';
+}
+
+function requestBodyKey(init) {
+  if (typeof init?.body === 'string') return init.body;
+  if (init?.body == null) return '';
+  return '[body]';
+}
+
 export function createNetworkFetch(fetchImpl, timeoutMs = 6_000, readCacheMs = 900) {
   const inFlightReads = new Map();
   const recentReads = new Map();
 
   return async (input, init = {}) => {
     const method = String(init.method || input?.method || 'GET').toUpperCase();
-    const canRetry = method === 'GET' || method === 'HEAD';
-    const attempts = canRetry ? 2 : 1;
     const url = requestUrl(input);
-    const isSupabaseRestRead = canRetry && /\/rest\/v1\//i.test(url);
+    const rpc = rpcName(url);
+    const safeRpcRead = method === 'POST' && READ_ONLY_RPCS.has(rpc);
+    const safeRead = method === 'GET' || method === 'HEAD' || safeRpcRead;
+    const attempts = safeRead ? 2 : 1;
+    const isSupabaseRestRead = safeRead && /\/rest\/v1\//i.test(url);
     const readKey = isSupabaseRestRead
-      ? `${method}|${url}|${requestHeader(input, init, 'authorization')}|${requestHeader(input, init, 'accept-profile')}`
+      ? `${method}|${url}|${requestBodyKey(init)}|${requestHeader(input, init, 'authorization')}|${requestHeader(input, init, 'accept-profile')}`
       : '';
 
-    if (!canRetry) recentReads.clear();
+    if (!safeRead) recentReads.clear();
 
     if (readKey) {
       const cached = recentReads.get(readKey);
@@ -45,8 +75,8 @@ export function createNetworkFetch(fetchImpl, timeoutMs = 6_000, readCacheMs = 9
       if (pending) return (await pending).clone();
     }
 
-    const isStorageWrite = !canRetry && /\/storage\/v1\/(?:object|upload\/resumable)/i.test(url);
-    const isResumableStorageWrite = !canRetry && /\/storage\/v1\/upload\/resumable/i.test(url);
+    const isStorageWrite = !safeRead && /\/storage\/v1\/(?:object|upload\/resumable)/i.test(url);
+    const isResumableStorageWrite = !safeRead && /\/storage\/v1\/upload\/resumable/i.test(url);
     const effectiveTimeoutMs = isResumableStorageWrite
       ? Math.max(timeoutMs, 180_000)
       : isStorageWrite
@@ -70,7 +100,7 @@ export function createNetworkFetch(fetchImpl, timeoutMs = 6_000, readCacheMs = 9
           return await fetchImpl(input, { ...init, signal: controller.signal });
         } catch (error) {
           lastError = error;
-          if (!canRetry || callerSignal?.aborted || !isTransientNetworkError(error) || attempt === attempts - 1) throw error;
+          if (!safeRead || callerSignal?.aborted || !isTransientNetworkError(error) || attempt === attempts - 1) throw error;
           await wait(300);
         } finally {
           clearTimeout(timer);
