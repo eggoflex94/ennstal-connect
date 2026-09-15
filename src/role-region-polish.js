@@ -38,8 +38,10 @@ const permissionTasks = (profile, regionId) => {
 const roleTheme = (profile, regionId = null) => {
   const base = role(profile);
   if (base === 'HEAD_ADMIN' || base === 'ADMIN' || (regionId && isRegionalAdminIn(profile, regionId))) return 'admin';
-  if (base === 'SUPPORTER' || moderationFor(profile, regionId).length || isRegionalAdminAnywhere(profile)) return 'supporter';
+  if (base === 'SUPPORTER') return 'supporter';
+  // Regional content permissions must not replace a business account's identity.
   if (isBusiness(profile)) return 'business';
+  if (moderationFor(profile, regionId).length || isRegionalAdminAnywhere(profile)) return 'supporter';
   return 'member';
 };
 const starFor = (profile, regionId = null) => { const theme = roleTheme(profile, regionId); if (theme === 'admin') return ADMIN_STAR; if (theme === 'supporter') return SUPPORTER_STAR; if (theme === 'business') return BUSINESS_STAR; return ''; };
