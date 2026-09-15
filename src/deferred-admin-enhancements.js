@@ -8,6 +8,12 @@ const ADMIN_PAGES = new Set([
   'adminTools',
   'legal'
 ]);
+const PROFILE_ADMIN_PAGES = new Set([
+  'profile',
+  'profile-preview',
+  'member-profile',
+  'members'
+]);
 
 let adminPromise = null;
 let profileAdminPromise = null;
@@ -51,20 +57,39 @@ export function loadDeferredProfileAdminEnhancements() {
 }
 
 function onNavigate(event) {
-  const page = event?.detail?.page;
+  const page = String(event?.detail?.page || '');
   if (ADMIN_PAGES.has(page)) void loadDeferredAdminEnhancements();
-  if (page === 'profile' || page === 'profile-preview') void loadDeferredProfileAdminEnhancements();
+  if (PROFILE_ADMIN_PAGES.has(page)) void loadDeferredProfileAdminEnhancements();
 }
 
 window.addEventListener('ec:navigate', onNavigate);
 window.addEventListener('ec:open-profile', () => void loadDeferredProfileAdminEnhancements());
 
-// Some admin pages can be restored from application state without a fresh
-// navigation event. Observe only until an admin surface appears, then stop.
-const observer = new MutationObserver(() => {
+function syncDeferredAdminForDom() {
   if (document.querySelector('.admin-page, .ec-admin-workspace, .ec-legal-evidence-admin')) {
-    observer.disconnect();
     void loadDeferredAdminEnhancements();
   }
+  // Member profiles can be opened directly from React state without emitting
+  // ec:open-profile. Detect the actual profile surface as a reliable fallback
+  // so Head Admin / Admin tools are always mounted when the page appears.
+  if (document.querySelector('.member-profile-page[data-profile-id]')) {
+    void loadDeferredProfileAdminEnhancements();
+  }
+}
+
+// Keep this observer lightweight: it only checks whether one of the two admin
+// surfaces exists. The imported modules own their own scoped mounting logic.
+const observer = new MutationObserver((mutations) => {
+  const relevant = mutations.some((mutation) => [...mutation.addedNodes].some((node) =>
+    node?.nodeType === Node.ELEMENT_NODE && (
+      node.matches?.('.admin-page,.ec-admin-workspace,.ec-legal-evidence-admin,.member-profile-page[data-profile-id]') ||
+      node.querySelector?.('.admin-page,.ec-admin-workspace,.ec-legal-evidence-admin,.member-profile-page[data-profile-id]')
+    )
+  ));
+  if (relevant) syncDeferredAdminForDom();
 });
 observer.observe(document.documentElement, { childList: true, subtree: true });
+
+// Covers an already-rendered admin/profile surface when this module itself is
+// evaluated after React has mounted.
+syncDeferredAdminForDom();
