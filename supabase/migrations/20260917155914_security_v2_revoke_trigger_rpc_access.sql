@@ -1,0 +1,15 @@
+revoke execute on function public.ec_generic_audit_trigger() from public, anon, authenticated;
+revoke execute on function public.ec_notify_admin_forum_on_role_change() from public, anon, authenticated;
+revoke execute on function public.ec_notify_admin_forum_reply() from public, anon, authenticated;
+revoke execute on function public.ec_notify_regional_admin_forum_on_assignment() from public, anon, authenticated;
+revoke execute on function public.ec_publish_profile_update() from public, anon, authenticated;
+revoke execute on function public.ec_rate_limit_forum_posts() from public, anon, authenticated;
+revoke execute on function public.ec_rate_limit_forum_replies() from public, anon, authenticated;
+revoke execute on function public.ec_rate_limit_friend_requests() from public, anon, authenticated;
+revoke execute on function public.ec_rate_limit_messages() from public, anon, authenticated;
+revoke execute on function public.ec_rate_limit_reports() from public, anon, authenticated;
+revoke execute on function public.handle_new_user() from public, anon, authenticated;
+revoke execute on function public.log_profile_activity() from public, anon, authenticated;
+revoke execute on function public.reset_role_scoped_permissions() from public, anon, authenticated;
+revoke execute on function public.update_updated_at_column() from public, anon, authenticated;
+revoke execute on function public.update_user_suspension() from public, anon, authenticated;
