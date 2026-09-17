@@ -20,9 +20,67 @@ function dedupeHomeSocial(home) {
   socialBlocks.forEach((node) => { if (node !== keep) node.remove(); });
 }
 
+function currentRegionName(home) {
+  const eyebrow = home.querySelector(':scope > .page-heading .eyebrow')?.textContent || '';
+  return eyebrow.replace(/^REGION\s+/i, '').trim() || 'deiner Region';
+}
+
+function ensureHomeHero(home) {
+  const heading = home.querySelector(':scope > .page-heading');
+  if (!heading) return;
+
+  const copy = heading.querySelector(':scope > div');
+  const title = copy?.querySelector('h1');
+  const intro = copy?.querySelector('p');
+  const regionName = currentRegionName(home);
+
+  if (title) title.textContent = 'Ennstal Heute';
+  if (intro) intro.textContent = `Was heute in ${regionName} passiert – Aktivitäten, Gruppen und Veranstaltungen auf einen Blick.`;
+
+  let actions = copy?.querySelector('.ec-home-hero-actions');
+  if (!actions && copy) {
+    actions = document.createElement('div');
+    actions.className = 'ec-home-hero-actions';
+    actions.innerHTML = '<button type="button" class="primary-button" data-home-action="activity">Aktivitäten entdecken</button><button type="button" class="secondary-button" data-home-action="groups">Gruppen entdecken</button>';
+    copy.appendChild(actions);
+    actions.querySelector('[data-home-action="activity"]')?.addEventListener('click', () => {
+      const target = home.querySelector(':scope > .ec-home-social, :scope > .engagement-grid');
+      target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    actions.querySelector('[data-home-action="groups"]')?.addEventListener('click', () => {
+      const candidates = [...document.querySelectorAll('button')];
+      candidates.find((button) => /^\s*(?:●|•|.)?\s*Gruppen\s*$/i.test(button.textContent || '') || (button.textContent || '').trim() === 'Gruppen')?.click();
+    });
+  }
+}
+
+function softenLoadStatus() {
+  const status = document.querySelector('.content-root > aside[role="status"]');
+  if (!status || !/Noch nicht aktualisiert:/i.test(status.textContent || '')) return;
+  status.classList.add('ec-home-load-status');
+  const message = [...status.querySelectorAll('p')].find((node) => /Noch nicht aktualisiert:/i.test(node.textContent || ''));
+  if (message) message.textContent = 'Ein Teil der regionalen Inhalte wird gerade aktualisiert. Bereits geladene Inhalte bleiben verfügbar.';
+}
+
+function reorderHome(home) {
+  const heading = home.querySelector(':scope > .page-heading');
+  const social = home.querySelector(':scope > .ec-home-social');
+  const engagement = home.querySelector(':scope > .engagement-grid');
+  const ad = home.querySelector(':scope > .ec-home-ad-shell');
+
+  if (heading && social) heading.insertAdjacentElement('afterend', social);
+  if (social && engagement) social.insertAdjacentElement('afterend', engagement);
+  else if (heading && engagement) heading.insertAdjacentElement('afterend', engagement);
+
+  const anchor = engagement || social;
+  if (ad && anchor) anchor.insertAdjacentElement('afterend', ad);
+}
+
 function tidyHome(home) {
   home.classList.add('ec-home-modern-final');
   dedupeHomeSocial(home);
+  ensureHomeHero(home);
+  softenLoadStatus();
 
   const heading = home.querySelector(':scope > .page-heading');
   if (heading) heading.classList.add('ec-home-compact-heading');
@@ -35,6 +93,8 @@ function tidyHome(home) {
 
   const editor = home.querySelector(':scope > .homepage-editor-toggle');
   if (editor) editor.classList.add('ec-home-editor-compact');
+
+  reorderHome(home);
 }
 
 async function resolveRegionId() {
@@ -70,9 +130,13 @@ function renderBanner(home, ads) {
     shell = document.createElement('aside');
     shell.className = 'ec-home-ad-shell';
     shell.setAttribute('aria-label', 'Regionale Werbung');
-    const heading = home.querySelector(':scope > .page-heading');
-    if (heading) heading.insertAdjacentElement('afterend', shell);
-    else home.prepend(shell);
+    const anchor = home.querySelector(':scope > .engagement-grid') || home.querySelector(':scope > .ec-home-social');
+    if (anchor) anchor.insertAdjacentElement('afterend', shell);
+    else {
+      const heading = home.querySelector(':scope > .page-heading');
+      if (heading) heading.insertAdjacentElement('afterend', shell);
+      else home.prepend(shell);
+    }
   }
 
   bannerIndex %= ads.length;
@@ -95,7 +159,7 @@ function renderBanner(home, ads) {
 
 async function syncBanner(home) {
   const regionId = await resolveRegionId();
-  let query = supabase.from('community_ads').select('id,title,body,image_url,link_url,region_id,is_active,created_at').eq('is_active', true).order('created_at', { ascending: false });
+  const query = supabase.from('community_ads').select('id,title,body,image_url,link_url,region_id,is_active,created_at').eq('is_active', true).order('created_at', { ascending: false });
   const { data, error } = await query;
   if (error) {
     console.error('Startseiten-Werbung konnte nicht geladen werden:', error);
@@ -103,6 +167,7 @@ async function syncBanner(home) {
   }
   const ads = (data || []).filter((ad) => !ad.region_id || !regionId || ad.region_id === regionId);
   renderBanner(home, ads);
+  reorderHome(home);
 }
 
 async function apply() {
@@ -129,7 +194,7 @@ new MutationObserver(() => {
   const home = document.querySelector('.home-page');
   if (!home) return;
   const socialCount = home.querySelectorAll(':scope > .ec-home-social').length;
-  if (socialCount > 1 || !home.classList.contains('ec-home-modern-final') || !home.querySelector(':scope > .ec-home-ad-shell')) schedule(60);
+  if (socialCount > 1 || !home.classList.contains('ec-home-modern-final') || !home.querySelector(':scope > .ec-home-ad-shell') || !home.querySelector('.ec-home-hero-actions')) schedule(60);
 }).observe(document.documentElement, { childList: true, subtree: true });
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => schedule(), { once: true });
