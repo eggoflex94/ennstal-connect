@@ -38,6 +38,39 @@ function syncIntroRegionCopy(page) {
   });
 }
 
+function ensureMemberBenefits(page) {
+  const intro = page.querySelector('.ec-auth-intro');
+  if (!intro || intro.querySelector('.ec-auth-member-benefits')) return;
+
+  const block = document.createElement('section');
+  block.className = 'ec-auth-member-benefits';
+  block.innerHTML = `
+    <span class="eyebrow">DEIN MEHRWERT ALS MITGLIED</span>
+    <h2>Mehr aus deiner Region herausholen.</h2>
+    <p class="ec-auth-benefits-lead">Die öffentlichen Inhalte zeigen dir, was Ennstal Connect ist. Nach der kostenlosen Anmeldung kannst du selbst Teil der Community werden.</p>
+    <div class="ec-auth-benefit-grid">
+      <article><b>💬</b><strong>Nachrichten schreiben</strong><span>Direkt und privat mit Menschen aus deiner Region Kontakt aufnehmen.</span></article>
+      <article><b>👥</b><strong>Regionale Mitglieder entdecken</strong><span>Menschen, Interessen und neue Kontakte in deiner Nähe finden.</span></article>
+      <article><b>●</b><strong>Gruppen beitreten</strong><span>Vereine, Freizeit, Hobbys und lokale Themen gemeinsam erleben.</span></article>
+      <article><b>▣</b><strong>Events merken</strong><span>Veranstaltungen entdecken, teilnehmen und nichts Wichtiges verpassen.</span></article>
+      <article><b>✓</b><strong>Mitreden & abstimmen</strong><span>Bei regionalen Umfragen, Forum und Community-Themen mitmachen.</span></article>
+      <article><b>＋</b><strong>Selbst etwas starten</strong><span>Beiträge, Aktivitäten und – je nach Freigabe – Events oder Gruppen erstellen.</span></article>
+    </div>
+    <button type="button" class="ec-auth-benefits-cta">Kostenlos Mitglied werden</button>
+    <small>Profile und private Inhalte bleiben geschützt und sind erst nach der Anmeldung sichtbar.</small>`;
+
+  const regions = intro.querySelector('.ec-auth-regions');
+  if (regions) regions.insertAdjacentElement('afterend', block);
+  else intro.appendChild(block);
+
+  block.querySelector('.ec-auth-benefits-cta')?.addEventListener('click', () => {
+    const registerSwitch = [...page.querySelectorAll('.ec-auth-box button')].find((button) => /registrieren/i.test(button.textContent || ''));
+    registerSwitch?.click();
+    page.querySelector('.ec-auth-box')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setTimeout(() => page.querySelector('.ec-auth-box input[name="nickname"]')?.focus(), 180);
+  });
+}
+
 async function syncRegistrationRegions() {
   const select = document.querySelector('.auth-page select[name="home_region_slug"]');
   if (!select) return false;
@@ -86,13 +119,9 @@ function prepareAuthPage() {
   if (!page) return false;
   page.classList.add('ec-auth-page-clean');
 
-  // Older versions injected several large promotional sections after React had
-  // already rendered the login page. That caused layout jumps, duplicate
-  // content and focus/navigation instability. React now remains the sole owner
-  // of the visible auth structure; this helper only synchronizes region data
-  // and retires the last legacy region label until the React copy is removed.
   page.querySelectorAll('.ec-auth-community-intro, .ec-auth-current-news, .ec-auth-reward-news').forEach((node) => node.remove());
   syncIntroRegionCopy(page);
+  ensureMemberBenefits(page);
   void syncRegistrationRegions();
   return true;
 }
