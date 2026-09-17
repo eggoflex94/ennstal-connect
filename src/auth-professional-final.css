@@ -98,6 +98,95 @@
   line-height: 1.5;
 }
 
+.auth-page .ec-auth-member-benefits {
+  margin-top: 22px;
+  padding: 22px;
+  border: 1px solid rgba(199, 214, 225, .95);
+  border-radius: 22px;
+  background: rgba(255,255,255,.88);
+  box-shadow: 0 14px 36px rgba(31,49,67,.07);
+}
+
+.auth-page .ec-auth-member-benefits > .eyebrow {
+  color: #168153;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .12em;
+}
+
+.auth-page .ec-auth-member-benefits h2 {
+  margin: 7px 0 7px;
+  color: #17344c;
+  font-size: clamp(22px, 2.4vw, 30px);
+}
+
+.auth-page .ec-auth-benefits-lead {
+  margin: 0 0 16px;
+  color: #65798a;
+  line-height: 1.55;
+  font-size: 14px;
+}
+
+.auth-page .ec-auth-benefit-grid {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 10px;
+}
+
+.auth-page .ec-auth-benefit-grid article {
+  display: grid;
+  grid-template-columns: 34px minmax(0,1fr);
+  column-gap: 10px;
+  row-gap: 3px;
+  padding: 13px;
+  border: 1px solid #dce7ef;
+  border-radius: 15px;
+  background: #fbfdff;
+}
+
+.auth-page .ec-auth-benefit-grid b {
+  grid-row: 1 / span 2;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: #eef7f4;
+  font-size: 16px;
+}
+
+.auth-page .ec-auth-benefit-grid strong {
+  color: #17344c;
+  font-size: 13px;
+}
+
+.auth-page .ec-auth-benefit-grid span {
+  color: #6f8190;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.auth-page .ec-auth-benefits-cta {
+  width: 100%;
+  min-height: 50px;
+  margin-top: 14px;
+  border: 0;
+  border-radius: 13px;
+  background: linear-gradient(135deg,#0f6b8f,#168153);
+  color: #fff;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 12px 28px rgba(15,107,143,.18);
+}
+
+.auth-page .ec-auth-member-benefits > small {
+  display: block;
+  margin-top: 10px;
+  color: #7a8b99;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
 .auth-page .ec-auth-community-intro,
 .auth-page .ec-auth-current-news,
 .auth-page .ec-auth-reward-news,
@@ -289,7 +378,8 @@
 @media (max-width: 560px) {
   .auth-page .ec-auth-regions,
   .auth-page .ec-auth-intro-grid,
-  .auth-page .ec-auth-news-grid {
+  .auth-page .ec-auth-news-grid,
+  .auth-page .ec-auth-benefit-grid {
     grid-template-columns: 1fr;
   }
 
@@ -301,7 +391,8 @@
   .auth-page .ec-auth-community-intro,
   .auth-page .ec-auth-current-news,
   .auth-page .ec-auth-reward-news,
-  .auth-page .public-auth-updates {
+  .auth-page .public-auth-updates,
+  .auth-page .ec-auth-member-benefits {
     padding: 16px;
     border-radius: 16px;
   }
