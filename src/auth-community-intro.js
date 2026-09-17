@@ -38,32 +38,47 @@ function syncIntroRegionCopy(page) {
   });
 }
 
+function make(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
 function ensureMemberBenefits(page) {
   const intro = page.querySelector('.ec-auth-intro');
   if (!intro || intro.querySelector('.ec-auth-member-benefits')) return;
 
-  const block = document.createElement('section');
-  block.className = 'ec-auth-member-benefits';
-  block.innerHTML = `
-    <span class="eyebrow">DEIN MEHRWERT ALS MITGLIED</span>
-    <h2>Mehr aus deiner Region herausholen.</h2>
-    <p class="ec-auth-benefits-lead">Die öffentlichen Inhalte zeigen dir, was Ennstal Connect ist. Nach der kostenlosen Anmeldung kannst du selbst Teil der Community werden.</p>
-    <div class="ec-auth-benefit-grid">
-      <article><b>💬</b><strong>Nachrichten schreiben</strong><span>Direkt und privat mit Menschen aus deiner Region Kontakt aufnehmen.</span></article>
-      <article><b>👥</b><strong>Regionale Mitglieder entdecken</strong><span>Menschen, Interessen und neue Kontakte in deiner Nähe finden.</span></article>
-      <article><b>●</b><strong>Gruppen beitreten</strong><span>Vereine, Freizeit, Hobbys und lokale Themen gemeinsam erleben.</span></article>
-      <article><b>▣</b><strong>Events merken</strong><span>Veranstaltungen entdecken, teilnehmen und nichts Wichtiges verpassen.</span></article>
-      <article><b>✓</b><strong>Mitreden & abstimmen</strong><span>Bei regionalen Umfragen, Forum und Community-Themen mitmachen.</span></article>
-      <article><b>＋</b><strong>Selbst etwas starten</strong><span>Beiträge, Aktivitäten und – je nach Freigabe – Events oder Gruppen erstellen.</span></article>
-    </div>
-    <button type="button" class="ec-auth-benefits-cta">Kostenlos Mitglied werden</button>
-    <small>Profile und private Inhalte bleiben geschützt und sind erst nach der Anmeldung sichtbar.</small>`;
+  const block = make('section', 'ec-auth-member-benefits');
+  block.appendChild(make('span', 'eyebrow', 'DEIN MEHRWERT ALS MITGLIED'));
+  block.appendChild(make('h2', '', 'Mehr aus deiner Region herausholen.'));
+  block.appendChild(make('p', 'ec-auth-benefits-lead', 'Die öffentlichen Inhalte zeigen dir, was Ennstal Connect ist. Nach der kostenlosen Anmeldung kannst du selbst Teil der Community werden.'));
+
+  const grid = make('div', 'ec-auth-benefit-grid');
+  [
+    ['💬', 'Nachrichten schreiben', 'Direkt und privat mit Menschen aus deiner Region Kontakt aufnehmen.'],
+    ['👥', 'Regionale Mitglieder entdecken', 'Menschen, Interessen und neue Kontakte in deiner Nähe finden.'],
+    ['●', 'Gruppen beitreten', 'Vereine, Freizeit, Hobbys und lokale Themen gemeinsam erleben.'],
+    ['▣', 'Events merken', 'Veranstaltungen entdecken, teilnehmen und nichts Wichtiges verpassen.'],
+    ['✓', 'Mitreden & abstimmen', 'Bei regionalen Umfragen, Forum und Community-Themen mitmachen.'],
+    ['＋', 'Selbst etwas starten', 'Beiträge, Aktivitäten und – je nach Freigabe – Events oder Gruppen erstellen.']
+  ].forEach(([icon, title, text]) => {
+    const article = make('article');
+    article.append(make('b', '', icon), make('strong', '', title), make('span', '', text));
+    grid.appendChild(article);
+  });
+  block.appendChild(grid);
+
+  const cta = make('button', 'ec-auth-benefits-cta', 'Kostenlos Mitglied werden');
+  cta.type = 'button';
+  block.appendChild(cta);
+  block.appendChild(make('small', '', 'Profile und private Inhalte bleiben geschützt und sind erst nach der Anmeldung sichtbar.'));
 
   const regions = intro.querySelector('.ec-auth-regions');
   if (regions) regions.insertAdjacentElement('afterend', block);
   else intro.appendChild(block);
 
-  block.querySelector('.ec-auth-benefits-cta')?.addEventListener('click', () => {
+  cta.addEventListener('click', () => {
     const registerSwitch = [...page.querySelectorAll('.ec-auth-box button')].find((button) => /registrieren/i.test(button.textContent || ''));
     registerSwitch?.click();
     page.querySelector('.ec-auth-box')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
