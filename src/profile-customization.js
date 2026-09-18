@@ -24,7 +24,7 @@ function enhanceHeadAdminOperatorLabel() {
 
 function enhanceOwnProfileCustomization() {
   const form = document.querySelector(".profile-form");
-  const card = document.querySelector(".my-profile-card");
+  const card = document.querySelector(".profile-member-card-preview .member-card, .my-profile-card");
   if (!form || !card || form.dataset.fullCustomization === "true") return false;
 
   const accent = form.querySelector('[name="profile_accent"]');
