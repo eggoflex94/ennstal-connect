@@ -61,7 +61,7 @@ export default function MemberCardView({ member, profile, friendships, onOpen, i
   const activeInfo = activeMemberInfo(member);
   const fullName = [member.first_name, member.last_name].filter(Boolean).join(" ").trim() || getName(member);
   const age = getAge(member.birth_date);
-  const statusLabel = online ? "Online" : "Offline";
+  const statusLabel = online ? (String(member?.presence_device || "").toUpperCase() === "MOBILE" ? "Mobil online" : "Online") : "Offline";
 
   const openFresh = async () => {
     if (!interactive || opening) return;
