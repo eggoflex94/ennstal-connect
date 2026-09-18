@@ -329,9 +329,13 @@ export default function ProfileView({
 
       <div className="profile-original-main">
         <header className="profile-original-heading">
-          <span>MITGLIEDSPROFIL</span>
-          <h1>{displayName(member)}</h1>
-          {member.is_verified && <b className="profile-verified-badge">✓ Verifiziert</b>}
+          <div className="profile-original-heading-main">
+            <span>MITGLIEDSPROFIL</span>
+            <h1>{displayName(member)}</h1>
+          </div>
+          <b className={`profile-verified-badge ${member.is_verified ? "verified" : "unverified"}`}>
+            {member.is_verified ? "✓ Verifiziert" : "Nicht verifiziert"}
+          </b>
         </header>
 
         <div className="profile-identity-grid">
