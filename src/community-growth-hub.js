@@ -13,7 +13,7 @@ async function context(){
   const {data:{user}}=await supabase.auth.getUser();
   if(!user?.id)return null;
   const [{data:profile},{data:regions}]=await Promise.all([
-    supabase.from('profiles').select('id,home_region_id,account_badge,company_name,company_description,company_website,company_opening_hours').eq('id',user.id).maybeSingle(),
+    supabase.from('profiles').select('id,home_region_id,account_badge,company_name,company_description,company_website,company_opening_hours,business_jobs_enabled').eq('id',user.id).maybeSingle(),
     supabase.from('regions').select('id,slug,name').eq('is_active',true)
   ]);
   const slug=document.documentElement.dataset.ecRegion||document.querySelector('.ec-region-picker select')?.value||localStorage.getItem('ec-active-region')||'';
@@ -158,7 +158,9 @@ async function renderOwnBusinessTools(){
   const {data:listings}=await supabase.from('business_listings').select('*').eq('owner_id',ctx.user.id).order('created_at',{ascending:false});
   const shell=document.createElement('section');
   shell.className='panel ec-own-business-tools';
-  shell.innerHTML=`<span class="eyebrow">UNTERNEHMENSKONTO</span><h2>Unternehmensprofil & Veröffentlichungen</h2><p>Pflege Öffnungszeiten und Webseite und veröffentliche Angebote, Jobs, Lehrstellen oder eigene Veranstaltungen.</p><form class="ec-business-profile-form"><label>Beschreibung<textarea name="description" rows="4">${esc(ctx.profile.company_description||'')}</textarea></label><label>Webseite<input name="website" type="url" placeholder="https://…" value="${esc(ctx.profile.company_website||'')}"></label><label>Öffnungszeiten<input name="opening_hours" placeholder="z. B. Mo–Fr 08:00–17:00" value="${esc(ctx.profile.company_opening_hours||'')}"></label><button class="primary-button">Unternehmensprofil speichern</button></form><hr><form class="ec-business-listing-form"><h3>Neuen Eintrag veröffentlichen</h3><select name="listing_type"><option value="OFFER">Angebot</option><option value="JOB">Job</option><option value="APPRENTICESHIP">Lehrstelle</option><option value="EVENT">Unternehmens-Event</option></select><input name="title" placeholder="Titel" required minlength="3"><textarea name="body" placeholder="Beschreibung" required minlength="3"></textarea><input name="link_url" type="url" placeholder="Link (optional)"><input name="valid_until" type="datetime-local"><button class="primary-button">Veröffentlichen</button></form><div class="ec-own-business-listings"><h3>Deine Einträge</h3>${(listings||[]).length?(listings||[]).map((item)=>`<article><span>${esc(LISTING_LABELS[item.listing_type]||item.listing_type)}</span><strong>${esc(item.title)}</strong><p>${esc(item.body)}</p><button type="button" data-delete-business-listing="${esc(item.id)}">Löschen</button></article>`).join(''):'<p>Noch keine Einträge veröffentlicht.</p>'}</div>`;
+  const jobsEnabled=ctx.profile.business_jobs_enabled===true;
+  const jobStatus=jobsEnabled?'<p class="ec-business-job-status is-enabled">Stellenanzeigen sind für dein Unternehmenskonto freigeschaltet.</p>':'<p class="ec-business-job-status is-locked">Jobs und Lehrstellen müssen zuerst vom Ennstal-Connect-Team freigeschaltet werden. Angebote und Unternehmens-Events kannst du weiterhin veröffentlichen.</p>';
+  shell.innerHTML=`<span class="eyebrow">UNTERNEHMENSKONTO</span><h2>Unternehmensprofil & Veröffentlichungen</h2><p>Pflege Öffnungszeiten und Webseite und veröffentliche regionale Inhalte.</p>${jobStatus}<form class="ec-business-profile-form"><label>Beschreibung<textarea name="description" rows="4">${esc(ctx.profile.company_description||'')}</textarea></label><label>Webseite<input name="website" type="url" placeholder="https://…" value="${esc(ctx.profile.company_website||'')}"></label><label>Öffnungszeiten<input name="opening_hours" placeholder="z. B. Mo–Fr 08:00–17:00" value="${esc(ctx.profile.company_opening_hours||'')}"></label><button class="primary-button">Unternehmensprofil speichern</button></form><hr><form class="ec-business-listing-form"><h3>Neuen Eintrag veröffentlichen</h3><select name="listing_type"><option value="OFFER">Angebot</option><option value="JOB" ${jobsEnabled?'':'disabled'}>Job${jobsEnabled?'':' – Freischaltung erforderlich'}</option><option value="APPRENTICESHIP" ${jobsEnabled?'':'disabled'}>Lehrstelle${jobsEnabled?'':' – Freischaltung erforderlich'}</option><option value="EVENT">Unternehmens-Event</option></select><input name="title" placeholder="Titel" required minlength="3"><textarea name="body" placeholder="Beschreibung" required minlength="3"></textarea><input name="link_url" type="url" placeholder="Link (optional)"><input name="valid_until" type="datetime-local"><button class="primary-button">Veröffentlichen</button></form><div class="ec-own-business-listings"><h3>Deine Einträge</h3>${(listings||[]).length?(listings||[]).map((item)=>`<article><span>${esc(LISTING_LABELS[item.listing_type]||item.listing_type)}</span><strong>${esc(item.title)}</strong><p>${esc(item.body)}</p><button type="button" data-delete-business-listing="${esc(item.id)}">Löschen</button></article>`).join(''):'<p>Noch keine Einträge veröffentlicht.</p>'}</div>`;
   const layout=document.querySelector('.my-area-layout');
   if(layout)layout.insertAdjacentElement('afterend',shell);else own.insertAdjacentElement('afterend',shell);
 
@@ -175,7 +177,9 @@ async function renderOwnBusinessTools(){
     event.preventDefault();
     const form=new FormData(event.currentTarget);
     const valid=String(form.get('valid_until')||'');
-    const payload={owner_id:ctx.user.id,region_id:ctx.region?.id||ctx.profile.home_region_id||null,listing_type:String(form.get('listing_type')||'OFFER'),title:String(form.get('title')||'').trim(),body:String(form.get('body')||'').trim(),link_url:String(form.get('link_url')||'').trim()||null,valid_until:valid?new Date(valid).toISOString():null,is_active:true};
+    const listingType=String(form.get('listing_type')||'OFFER');
+    if(['JOB','APPRENTICESHIP'].includes(listingType)&&ctx.profile.business_jobs_enabled!==true)return notice('Dein Unternehmenskonto ist für Stellenanzeigen noch nicht freigeschaltet.');
+    const payload={owner_id:ctx.user.id,region_id:ctx.region?.id||ctx.profile.home_region_id||null,listing_type:listingType,title:String(form.get('title')||'').trim(),body:String(form.get('body')||'').trim(),link_url:String(form.get('link_url')||'').trim()||null,valid_until:valid?new Date(valid).toISOString():null,is_active:true};
     const {error}=await supabase.from('business_listings').insert(payload);
     if(error)return notice(error.message);
     notice('Eintrag veröffentlicht.');
@@ -200,6 +204,7 @@ function schedule(delay=80){clearTimeout(timer);timer=setTimeout(()=>void apply(
 window.addEventListener('ec:navigate',()=>schedule(100));
 window.addEventListener('ec:region-change',()=>schedule(120));
 window.addEventListener('ec:business-account-changed',()=>schedule(60));
+window.addEventListener('ec:business-jobs-changed',()=>schedule(60));
 window.addEventListener('focus',()=>schedule(80));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)schedule(80)});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>schedule(20),{once:true});else schedule(20);
