@@ -49,6 +49,7 @@ end;
 $$;
 
 revoke all on function public.admin_set_business_jobs_enabled(uuid, boolean) from public;
+revoke execute on function public.admin_set_business_jobs_enabled(uuid, boolean) from anon;
 grant execute on function public.admin_set_business_jobs_enabled(uuid, boolean) to authenticated;
 
 drop policy if exists business_listings_create on public.business_listings;
