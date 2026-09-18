@@ -5,6 +5,7 @@ import './profile-target-compat.js';
 import './profile-photo-album.js';
 import './profile-shared-items.js';
 import './business-profile-extended.js';
+import './member-poke.js';
 import './profile-photo-album-file-guard.js';
 import './profile-regional-role-context.js';
 import './neon-green-theme.css';
