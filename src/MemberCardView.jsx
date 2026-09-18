@@ -51,7 +51,7 @@ function rolePresentation(member) {
   return { key: "member", theme: "member", label: "Mitglied", star: null };
 }
 
-export default function MemberCardView({ member, profile, friendships, onOpen }) {
+export default function MemberCardView({ member, profile, friendships, onOpen, interactive = true }) {
   const [opening, setOpening] = useState(false);
   const presentation = rolePresentation(member);
   const baseRole = String(member?.role || "MEMBER").toUpperCase();
@@ -64,7 +64,7 @@ export default function MemberCardView({ member, profile, friendships, onOpen })
   const statusLabel = online ? "Online" : "Offline";
 
   const openFresh = async () => {
-    if (opening) return;
+    if (!interactive || opening) return;
     setOpening(true);
     try {
       const freshMember = await loadMemberProfile(member);
@@ -82,18 +82,18 @@ export default function MemberCardView({ member, profile, friendships, onOpen })
       data-home-region-id={member.home_region_id || ""}
       data-role-theme={presentation.theme}
       data-active-streak={activeInfo.streak}
-      onClick={() => void openFresh()}
-      onKeyDown={(event) => {
+      onClick={interactive ? () => void openFresh() : undefined}
+      onKeyDown={interactive ? (event) => {
         if (event.target !== event.currentTarget) return;
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
           void openFresh();
         }
-      }}
-      role="button"
-      tabIndex={0}
-      aria-busy={opening}
-      aria-label={`Profil von ${getName(member)} öffnen`}
+      } : undefined}
+      role={interactive ? "button" : "group"}
+      tabIndex={interactive ? 0 : undefined}
+      aria-busy={interactive ? opening : undefined}
+      aria-label={interactive ? `Profil von ${getName(member)} öffnen` : `Vorschau der Mitgliederkarte von ${getName(member)}`}
     >
       <span className={`ec-role-surface ec-role-surface-${presentation.theme}`} aria-hidden="true" />
 
