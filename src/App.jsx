@@ -961,7 +961,15 @@ export default function App() {
     if (!file || !user) return; if (!file.type.startsWith("image/")) return showNotice("Bitte ein Bild auswählen."); if (file.size > 5 * 1024 * 1024) return showNotice("Maximal 5 MB.");
     const ext = file.name.split(".").pop()?.toLowerCase() || "jpg"; const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
     const { error } = await supabase.storage.from("profile-avatars").upload(path, file, { upsert: false, contentType: file.type }); if (error) return showNotice(error.message);
-    const { data } = supabase.storage.from("profile-avatars").getPublicUrl(path); const { error: updateError } = await supabase.from("profiles").update({ avatar_url: data.publicUrl }).eq("id", user.id); if (updateError) return showNotice(updateError.message); await logProfileActivity("Profilbild geändert"); await loadAll();
+    const { data } = supabase.storage.from("profile-avatars").getPublicUrl(path);
+    const publicUrl = data.publicUrl;
+    const { error: updateError } = await supabase.from("profiles").update({ avatar_url: publicUrl }).eq("id", user.id); if (updateError) return showNotice(updateError.message);
+    const { data: albumPhoto, error: albumError } = await supabase.from("member_photos").select("*").eq("owner_id", user.id).eq("image_url", publicUrl).maybeSingle();
+    if (albumError) console.warn("Profilbild konnte im Fotoalbum nicht geprüft werden:", albumError);
+    if (albumPhoto) setMemberPhotos((current) => [albumPhoto, ...current.filter((entry) => entry.id !== albumPhoto.id)]);
+    await logProfileActivity("Profilbild geändert");
+    showNotice("Profilbild geändert und ins Fotoalbum übernommen.");
+    await loadAll();
   }
   async function uploadProfileBackground(file) {
     if (!file || !user) return; if (!file.type.startsWith("image/")) return showNotice("Bitte ein Bild auswählen."); if (file.size > 5 * 1024 * 1024) return showNotice("Maximal 5 MB.");
