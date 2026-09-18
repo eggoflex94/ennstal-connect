@@ -1,3 +1,5 @@
+import './profile-admin-tools-runtime.js';
+
 let mountTimer = null;
 let observer = null;
 let observedRoot = null;
@@ -32,7 +34,6 @@ async function openAdminTools(targetId, button) {
   button.disabled = true;
   button.textContent = '⚙ Admin Tools werden geladen …';
   try {
-    await import('./profile-admin-tools-runtime.js');
     if (typeof window.ecOpenUnifiedProfileAdminTools !== 'function') {
       throw new Error('Admin Tools konnten nicht initialisiert werden.');
     }
