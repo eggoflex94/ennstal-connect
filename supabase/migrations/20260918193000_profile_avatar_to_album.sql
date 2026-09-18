@@ -38,3 +38,18 @@ after update of avatar_url on public.profiles
 for each row
 when (old.avatar_url is distinct from new.avatar_url)
 execute function public.ec_add_profile_avatar_to_album();
+
+
+-- Backfill current profile pictures so existing avatars are also social album photos.
+insert into public.member_photos(owner_id,image_url,caption,visibility)
+select p.id,p.avatar_url,'Profilbild','PUBLIC'
+from public.profiles p
+where p.avatar_url is not null
+  and p.avatar_url <> ''
+  and p.avatar_url like 'http%'
+  and not exists (
+    select 1
+    from public.member_photos mp
+    where mp.owner_id=p.id
+      and mp.image_url=p.avatar_url
+  );
