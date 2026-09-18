@@ -24,6 +24,27 @@ function notice(text,ok=false){
   setTimeout(()=>node.remove(),5000);
 }
 
+async function setJobsEnabled(profileId,enabled){
+  if(busy||!isHeadAdmin()||!profileId)return;
+  if(!window.confirm(enabled?'Stellenanzeigen für dieses Unternehmenskonto freischalten?':'Stellenanzeigen für dieses Unternehmenskonto wieder sperren?'))return;
+
+  busy=true;
+  try{
+    const {error}=await supabase.rpc('admin_set_business_jobs_enabled',{
+      p_user_id:profileId,
+      p_enabled:enabled
+    });
+    if(error)throw error;
+    notice(enabled?'Stellenanzeigen wurden freigeschaltet.':'Stellenanzeigen wurden gesperrt.',true);
+    window.dispatchEvent(new CustomEvent('ec:business-jobs-changed',{detail:{profileId,enabled}}));
+    window.dispatchEvent(new CustomEvent('ec:layout-refresh-requested'));
+    setTimeout(()=>void ensureTool(),80);
+  }catch(error){
+    console.error('Stellenanzeigen-Freigabe konnte nicht geändert werden:',error);
+    notice(`Stellenanzeigen konnten nicht ${enabled?'freigeschaltet':'gesperrt'} werden: ${error?.message||error}`);
+  }finally{busy=false}
+}
+
 async function setBusiness(profileId,enabled){
   if(busy||!isHeadAdmin()||!profileId)return;
   let company=null;
@@ -67,7 +88,7 @@ async function ensureTool(){
   const tools=page.querySelector('.member-admin-tools>div');
   if(!tools)return;
 
-  const {data:member}=await supabase.from('profiles').select('id,account_badge').eq('id',profileId).maybeSingle();
+  const {data:member}=await supabase.from('profiles').select('id,account_badge,business_jobs_enabled').eq('id',profileId).maybeSingle();
   if(!member)return;
   const business=String(member.account_badge||'').toUpperCase()==='BUSINESS';
 
@@ -83,6 +104,23 @@ async function ensureTool(){
   button.classList.toggle('danger-button',business);
   button.classList.toggle('secondary-button',!business);
   button.onclick=(event)=>{event.preventDefault();event.stopPropagation();void setBusiness(profileId,!business)};
+
+  let jobsButton=tools.querySelector('.ec-business-jobs-tool');
+  if(!business){
+    jobsButton?.remove();
+    return;
+  }
+  if(!jobsButton){
+    jobsButton=document.createElement('button');
+    jobsButton.type='button';
+    jobsButton.className='secondary-button ec-business-jobs-tool';
+    tools.appendChild(jobsButton);
+  }
+  const jobsEnabled=member.business_jobs_enabled===true;
+  jobsButton.textContent=jobsEnabled?'Stellenanzeigen sperren':'Stellenanzeigen freischalten';
+  jobsButton.classList.toggle('danger-button',jobsEnabled);
+  jobsButton.classList.toggle('secondary-button',!jobsEnabled);
+  jobsButton.onclick=(event)=>{event.preventDefault();event.stopPropagation();void setJobsEnabled(profileId,!jobsEnabled)};
 }
 
 function boot(){
@@ -91,6 +129,7 @@ function boot(){
   observer.observe(document.documentElement,{childList:true,subtree:true});
   window.addEventListener('ec:open-profile',()=>setTimeout(()=>void ensureTool(),120));
   window.addEventListener('ec:business-account-changed',()=>setTimeout(()=>void ensureTool(),80));
+  window.addEventListener('ec:business-jobs-changed',()=>setTimeout(()=>void ensureTool(),80));
 }
 
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
