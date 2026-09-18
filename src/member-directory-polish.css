@@ -176,3 +176,61 @@
   .native-members-directory .native-member-main{min-height:150px!important}
   .native-members-directory .native-member-card{min-height:270px!important}
 }
+
+
+.native-members-directory .native-members-count{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:3px;
+}
+.native-members-directory .native-members-count small{
+  color:#748494;
+  font-size:.75rem;
+  font-weight:800;
+}
+.native-members-directory .native-members-pagination{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  margin:22px 0 4px;
+}
+.native-members-directory .native-members-pagination>button,
+.native-members-directory .native-members-page-numbers>button{
+  min-width:40px;
+  min-height:40px;
+  padding:8px 12px;
+  border:1px solid #d7e0e8;
+  border-radius:11px;
+  background:#fff;
+  color:#26394f;
+  font:inherit;
+  font-weight:850;
+  cursor:pointer;
+}
+.native-members-directory .native-members-pagination>button:hover:not(:disabled),
+.native-members-directory .native-members-page-numbers>button:hover{
+  border-color:#ff6b25;
+  background:#fff7ed;
+}
+.native-members-directory .native-members-pagination>button:disabled{
+  opacity:.42;
+  cursor:not-allowed;
+}
+.native-members-directory .native-members-page-numbers{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  gap:6px;
+}
+.native-members-directory .native-members-page-numbers>button.active{
+  border-color:#ff6b25;
+  background:#ff6b25;
+  color:#fff;
+}
+@media(max-width:620px){
+  .native-members-directory .native-members-pagination{
+    flex-wrap:wrap;
+  }
+}
