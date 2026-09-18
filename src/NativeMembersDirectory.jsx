@@ -3,6 +3,7 @@ import { supabase } from "./supabaseClient";
 import { loadMemberProfile } from "./memberProfileLoader.js";
 import MemberCardView from "./MemberCardView.jsx";
 
+const PAGE_SIZE = 30;
 const normalized = (value) => String(value || "").trim().toUpperCase();
 const displayName = (member) => member?.nickname || [member?.first_name, member?.last_name].filter(Boolean).join(" ") || "Mitglied";
 const isBusiness = (member) => member?.account_badge === "BUSINESS";
@@ -41,6 +42,7 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
   const [onlineOnly, setOnlineOnly] = useState(false);
   const [regionalAssignments, setRegionalAssignments] = useState([]);
   const [loadingMemberId, setLoadingMemberId] = useState(null);
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     let cancelled = false;
@@ -132,10 +134,32 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
       });
   }, [members, regionId, onlineOnly, query, regionById, regionalAdminByUser, activeRegion?.id]);
 
+  const pageCount = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
+  const pagedVisible = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return visible.slice(start, start + PAGE_SIZE);
+  }, [visible, page]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [query, regionId, onlineOnly, activeRegion?.id]);
+
+  useEffect(() => {
+    if (page > pageCount) setPage(pageCount);
+  }, [page, pageCount]);
+
+  const changePage = (nextPage) => {
+    const safePage = Math.min(pageCount, Math.max(1, nextPage));
+    setPage(safePage);
+    window.requestAnimationFrame(() => {
+      document.querySelector(".native-members-directory")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
+
   return <section className="native-members-directory">
     <div className="page-heading native-members-heading">
       <div><span className="eyebrow">COMMUNITY</span><h1>Mitglieder</h1><p>Nach Rollen sortiert; aktive Mitglieder stehen innerhalb ihrer Rolle zuerst.</p></div>
-      <strong>{visible.length} Treffer</strong>
+      <div className="native-members-count"><strong>{visible.length} Treffer</strong>{visible.length > PAGE_SIZE && <small>Seite {page} von {pageCount}</small>}</div>
     </div>
 
     {loadingMemberId && <small className="native-member-loading" aria-live="polite">Profil wird geladen …</small>}
@@ -154,7 +178,7 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
     </div>
 
     <div className="member-grid native-member-grid">
-      {visible.map((member) => {
+      {pagedVisible.map((member) => {
         const cardMember = isRegionalAdmin(member) && !isGlobalAdmin(member)
           ? { ...member, directory_admin: true, directory_role_star: roleStarSrc(member) }
           : { ...member, directory_role_star: roleStarSrc(member) };
@@ -168,5 +192,23 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
       })}
       {!visible.length && <div className="empty-card">Keine Mitglieder für diese Auswahl gefunden.</div>}
     </div>
+
+    {pageCount > 1 && <nav className="native-members-pagination" aria-label="Mitgliederseiten">
+      <button type="button" onClick={() => changePage(page - 1)} disabled={page === 1}>← Zurück</button>
+      <div className="native-members-page-numbers">
+        {Array.from({ length: pageCount }, (_, index) => index + 1).map((pageNumber) =>
+          <button
+            type="button"
+            key={pageNumber}
+            className={pageNumber === page ? "active" : ""}
+            aria-current={pageNumber === page ? "page" : undefined}
+            onClick={() => changePage(pageNumber)}
+          >
+            {pageNumber}
+          </button>
+        )}
+      </div>
+      <button type="button" onClick={() => changePage(page + 1)} disabled={page === pageCount}>Weiter →</button>
+    </nav>}
   </section>;
 }
