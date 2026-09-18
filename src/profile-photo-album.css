@@ -14,3 +14,9 @@
 
 @media (max-width:700px){.ec-profile-photo-album{margin-top:16px;padding:14px;border-radius:16px}.ec-photo-album-head{flex-direction:column}.ec-photo-album-head button{width:100%}.ec-photo-grid{grid-template-columns:repeat(2,190px);gap:12px;justify-content:center}.ec-photo-upload-form{grid-template-columns:1fr;padding:12px}.ec-photo-upload-actions{grid-column:auto;display:grid;grid-template-columns:1fr 1fr}.ec-photo-actions{align-items:stretch}.ec-photo-actions button{flex:1 1 100%;min-height:42px}.ec-photo-comment-count{flex:1 1 100%;min-height:32px}.ec-photo-comment-form{grid-template-columns:1fr}.ec-photo-comment-form button{width:100%}.ec-photo-lightbox{padding:12px}.ec-photo-lightbox img{max-width:94vw;max-height:82vh}}
 @media (max-width:410px){.ec-photo-grid{grid-template-columns:190px;justify-content:center}.ec-photo-upload-actions{grid-template-columns:1fr}.ec-photo-actions button,.ec-photo-comment-count{flex-basis:100%}}
+
+
+.ec-photo-head-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.ec-photo-folder-section{margin-top:18px}.ec-photo-folder-section>h3{margin:0 0 10px;font-size:15px}.ec-photo-folder-section+.ec-photo-folder-section{padding-top:16px;border-top:1px solid rgba(100,116,139,.16)}
+@media (max-width:700px){.ec-photo-head-actions{width:100%;display:grid;grid-template-columns:1fr 1fr}.ec-photo-head-actions button{width:100%}}
+@media (max-width:410px){.ec-photo-head-actions{grid-template-columns:1fr}}
