@@ -91,7 +91,8 @@ export default function MemberCardView({ member, profile, friendships, onOpen, i
         }
       } : undefined}
       role={interactive ? "button" : "group"}
-      tabIndex={interactive ? 0 : undefined}
+      tabIndex={0}
+      aria-disabled={!interactive || undefined}
       aria-busy={interactive ? opening : undefined}
       aria-label={interactive ? `Profil von ${getName(member)} öffnen` : `Vorschau der Mitgliederkarte von ${getName(member)}`}
     >
