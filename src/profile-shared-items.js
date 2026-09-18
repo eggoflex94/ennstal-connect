@@ -100,7 +100,15 @@ function schedule(delay=80){clearTimeout(timer);timer=setTimeout(()=>void render
 window.addEventListener('ec:navigate',()=>schedule(80));
 window.addEventListener('ec:profile-shares-changed',()=>schedule(20));
 window.addEventListener('ec:open-profile',()=>schedule(100));
-const observer=new MutationObserver(()=>schedule(120));
+const observer=new MutationObserver((mutations)=>{
+  const relevant=mutations.some((mutation)=>[...mutation.addedNodes,...mutation.removedNodes].some((node)=>
+    node?.nodeType===Node.ELEMENT_NODE&&(
+      node.matches?.('.member-profile-page,.profile-page-layout')||
+      node.querySelector?.('.member-profile-page,.profile-page-layout')
+    )
+  ));
+  if(relevant)schedule(120);
+});
 observer.observe(document.documentElement,{childList:true,subtree:true});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>schedule(20),{once:true});else schedule(20);
 
