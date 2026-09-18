@@ -64,12 +64,14 @@ async function photoUrl(path) {
 async function loadAlbum(profileId, canModerate) {
   const { data: photos, error } = await supabase
     .from('member_photos')
-    .select('id,owner_id,image_url,caption,visibility,created_at')
+    .select('id,owner_id,image_url,caption,visibility,folder_id,created_at')
     .eq('owner_id', profileId)
     .order('created_at', { ascending: false });
   if (error) throw error;
   const ids = (photos || []).map((photo) => photo.id);
-  if (!ids.length) return { photos: [], likes: [], comments: [], profiles: [], reports: [] };
+  const { data: folders, error: foldersError } = await supabase.from('profile_photo_folders').select('id,owner_id,title,created_at').eq('owner_id', profileId).order('created_at', { ascending: true });
+  if (foldersError) throw foldersError;
+  if (!ids.length) return { photos: [], likes: [], comments: [], profiles: [], reports: [], folders: folders || [] };
 
   const requests = [
     supabase.from('member_photo_likes').select('photo_id,user_id,created_at').in('photo_id', ids),
@@ -91,7 +93,8 @@ async function loadAlbum(profileId, canModerate) {
     likes: likesResult.data || [],
     comments: commentsResult.data || [],
     profiles,
-    reports: reportsResult?.error ? [] : (reportsResult?.data || [])
+    reports: reportsResult?.error ? [] : (reportsResult?.data || []),
+    folders: folders || []
   };
 }
 
@@ -148,7 +151,7 @@ async function renderAlbum(page, profileId) {
   album.innerHTML = '<div class="ec-photo-album-loading">Fotoalbum wird geladen …</div>';
 
   try {
-    const { photos, likes, comments, profiles, reports } = await loadAlbum(profileId, canModerate);
+    const { photos, likes, comments, profiles, reports, folders } = await loadAlbum(profileId, canModerate);
     const profileMap = new Map(profiles.map((profile) => [profile.id, profile]));
     const cards = await Promise.all(photos.map(async (photo) => {
       const url = await photoUrl(photo.image_url);
@@ -169,7 +172,7 @@ async function renderAlbum(page, profileId) {
             <button type="button" class="ec-photo-like${liked ? ' active' : ''}" data-photo-like="${esc(photo.id)}" aria-pressed="${liked ? 'true' : 'false'}">${liked ? '♥ Gefällt dir' : '♡ Gefällt mir'} <span>${photoLikes.length}</span></button>
             <span class="ec-photo-comment-count">💬 ${photoComments.length}</span>
             ${!mine ? `<button type="button" class="ec-photo-report" data-photo-report="${esc(photo.id)}">Melden</button>` : ''}
-            ${mine ? `<button type="button" class="ec-photo-delete" data-photo-delete="${esc(photo.id)}" data-photo-path="${esc(photo.image_url)}">Entfernen</button>` : ''}
+            ${mine ? `<button type="button" class="ec-photo-share" data-photo-share="${esc(photo.id)}">Auf Profil teilen</button><button type="button" class="ec-photo-delete" data-photo-delete="${esc(photo.id)}" data-photo-path="${esc(photo.image_url)}">Entfernen</button>` : ''}
             ${canModerate && reported ? `<button type="button" class="ec-photo-admin-remove" data-photo-admin-remove="${esc(photo.id)}">Als Admin entfernen</button>` : ''}
           </div>
           ${canModerate && reported ? `<div class="ec-photo-report-reasons"><strong>Offene Meldung${photoReports.length > 1 ? 'en' : ''}</strong>${photoReports.map((report) => `<p>${esc(report.reason)}</p>`).join('')}</div>` : ''}
@@ -179,14 +182,24 @@ async function renderAlbum(page, profileId) {
       </article>`;
     }));
 
-    album.innerHTML = `<header class="ec-photo-album-head"><div><span class="eyebrow">FOTOALBUM</span><h2>${mine ? 'Mein Fotoalbum' : 'Fotoalbum'}</h2><p>Profilfotos mit Likes, Kommentaren und Meldefunktion.</p></div>${mine ? '<button type="button" class="secondary-button ec-photo-upload-open">+ Foto hinzufügen</button>' : ''}</header>
+    const folderMap = new Map((folders || []).map((folder) => [folder.id, folder.title]));
+    const groupedCards = new Map();
+    groupedCards.set('', []);
+    (folders || []).forEach((folder) => groupedCards.set(folder.id, []));
+    cards.forEach((card, index) => {
+      const folderId = photos[index]?.folder_id || '';
+      if (!groupedCards.has(folderId)) groupedCards.set(folderId, []);
+      groupedCards.get(folderId).push(card);
+    });
+    const folderSections = [...groupedCards.entries()].filter(([, items]) => items.length).map(([folderId, items]) => `<section class="ec-photo-folder-section"><h3>${esc(folderId ? (folderMap.get(folderId) || 'Fotoordner') : 'Allgemein')}</h3><div class="ec-photo-grid">${items.join('')}</div></section>`).join('');
+    album.innerHTML = `<header class="ec-photo-album-head"><div><span class="eyebrow">FOTOALBUM</span><h2>${mine ? 'Mein Fotoalbum' : 'Fotoalbum'}</h2><p>Kleine Fotoansichten – antippen für Großansicht, Likes und Kommentare.</p></div>${mine ? '<div class="ec-photo-head-actions"><button type="button" class="secondary-button ec-photo-folder-create">+ Ordner</button><button type="button" class="secondary-button ec-photo-upload-open">+ Foto hinzufügen</button></div>' : ''}</header>
       ${mine ? `<form class="ec-photo-upload-form" hidden>
         <label>Foto<input type="file" name="photo" accept="image/jpeg,image/png,image/webp,image/gif" required></label>
         <label>Beschreibung<input type="text" name="caption" maxlength="160" placeholder="Optional"></label>
-        <label>Sichtbarkeit<select name="visibility"><option value="PUBLIC">Öffentlich</option><option value="FRIENDS">Nur Freunde</option></select></label>
+        <label>Ordner<select name="folder_id"><option value="">Allgemein</option>${(folders||[]).map((folder)=>`<option value="${esc(folder.id)}">${esc(folder.title)}</option>`).join('')}</select></label><label>Sichtbarkeit<select name="visibility"><option value="PUBLIC">Öffentlich</option><option value="FRIENDS">Nur Freunde</option></select></label>
         <div class="ec-photo-upload-actions"><button type="submit">Hochladen</button><button type="button" class="ec-photo-upload-cancel">Abbrechen</button></div>
       </form>` : ''}
-      <div class="ec-photo-grid">${cards.join('') || '<p class="ec-photo-empty">Noch keine Fotos im Album.</p>'}</div>`;
+      ${folderSections || '<p class="ec-photo-empty">Noch keine Fotos im Album.</p>'}`;
 
     bindAlbum(album, page, profileId, photos);
     subscribeAlbum(profileId, photos.map((photo) => photo.id));
@@ -223,7 +236,8 @@ function bindAlbum(album, page, profileId, photos) {
       if (me !== profileId) throw new Error('Bitte melde dich erneut an.');
       const { error: uploadError } = await supabase.storage.from(BUCKET).upload(path, file, { contentType: file.type, upsert: false });
       if (uploadError) throw uploadError;
-      const { error: insertError } = await supabase.from('member_photos').insert({ owner_id: profileId, image_url: path, caption: String(form.elements.caption?.value || '').trim(), visibility: form.elements.visibility?.value || 'PUBLIC' });
+      const folderId = String(form.elements.folder_id?.value || '').trim() || null;
+      const { error: insertError } = await supabase.from('member_photos').insert({ owner_id: profileId, image_url: path, caption: String(form.elements.caption?.value || '').trim(), visibility: form.elements.visibility?.value || 'PUBLIC', folder_id: folderId });
       if (insertError) {
         await supabase.storage.from(BUCKET).remove([path]);
         throw insertError;
@@ -236,6 +250,28 @@ function bindAlbum(album, page, profileId, photos) {
       submit.disabled = false;
     }
   });
+
+  album.querySelector('.ec-photo-folder-create')?.addEventListener('click', async () => {
+    const title = window.prompt('Name für den neuen Fotoordner:', '');
+    if (title === null || !title.trim()) return;
+    const me = await viewerId(true);
+    if (me !== profileId) return window.alert('Bitte melde dich erneut an.');
+    const { error } = await supabase.from('profile_photo_folders').insert({ owner_id: profileId, title: title.trim() });
+    if (error) return window.alert(error.message);
+    await renderAlbum(page, profileId);
+  });
+
+  album.querySelectorAll('[data-photo-share]').forEach((button) => button.addEventListener('click', async () => {
+    const me = await viewerId(true);
+    if (me !== profileId) return window.alert('Du kannst nur eigene Fotos auf deinem Profil teilen.');
+    const { error } = await supabase.from('profile_shared_items').upsert(
+      { profile_id: me, item_type: 'PHOTO', item_id: button.dataset.photoShare },
+      { onConflict: 'profile_id,item_type,item_id' }
+    );
+    if (error) return window.alert(error.message);
+    window.dispatchEvent(new CustomEvent('ec:profile-shares-changed'));
+    window.alert('Foto wurde auf deinem Profil geteilt.');
+  }));
 
   album.querySelectorAll('[data-photo-like]').forEach((button) => button.addEventListener('click', async () => {
     const photoId = button.dataset.photoLike;
