@@ -41,3 +41,13 @@ test("profile photo editor adds adaptive zoom instead of clamping pan", async ()
   assert.match(editor, /baseScale \* adaptiveScale/);
   assert.match(editor, /\(y \/ PAN_LIMIT\) \* size \* 0\.34/);
 });
+
+
+test("profile photo editor gives extra upward range", async () => {
+  const editor = await source("src/ProfilePhotoEditor.jsx");
+  assert.match(editor, /PAN_Y_UP_LIMIT = 260/);
+  assert.match(editor, /PAN_Y_DOWN_LIMIT = 160/);
+  assert.match(editor, /min=\{-PAN_Y_UP_LIMIT\} max=\{PAN_Y_DOWN_LIMIT\}/);
+  assert.match(editor, /\* 300/);
+  assert.match(editor, /size \* 0\.56/);
+});
