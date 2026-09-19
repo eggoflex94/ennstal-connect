@@ -96,7 +96,7 @@ async function build(root){
     await context();
     const target=await targetFor(root);if(!target)return;
     const isFriend=await friendship(target.id);
-    const avatar=hero.querySelector('img');
+    const avatar=hero.querySelector(':scope > img:not(.profile-bio-image)');
     const role=await functionInfo(target);
     const activity=activeInfo(target);
     const ownProfile=viewer?.id===target.id;
