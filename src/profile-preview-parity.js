@@ -128,7 +128,7 @@ async function buildExactPreview(page) {
 
     const regionName = await loadRegionName(profile);
     const role = roleInfo(profile);
-    const avatar = hero.querySelector("img");
+    const avatar = hero.querySelector(":scope > img:not(.profile-bio-image)");
 
     page.classList.add("ec-profile-preview-parity", "ec-member-profile-final");
     ensurePreviewBanner(page);
