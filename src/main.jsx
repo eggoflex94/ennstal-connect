@@ -160,6 +160,7 @@ import "./friendship-icon-fit.css";
 
 /* Absolute final navigation authority: loaded after every older desktop/mobile layer. */
 import "./navigation-cleanup-final.css";
+import "./topbar-theme-final.css";
 import "./navigation-cleanup-final.js";
 
 /* Absolute final chat styling: legacy message CSS must not override this. */
