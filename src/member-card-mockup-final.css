@@ -203,7 +203,7 @@ article.member-card[data-role-theme]>.ec-member-avatar-wrap>.member-avatar{
   margin:0!important;
   padding:0!important;
   border:3px solid var(--ec-card-border)!important;
-  border-radius:50%!important;
+  border-radius:18px!important;
   box-sizing:border-box!important;
   object-fit:cover!important;
   object-position:center!important;
