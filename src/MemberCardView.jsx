@@ -53,6 +53,7 @@ export default function MemberCardView({ member, profile, friendships, onOpen, i
       data-base-role={baseRole}
       data-home-region-id={member.home_region_id || ""}
       data-role-theme={presentation.theme}
+      data-community-photographer={member?.is_community_photographer ? "true" : "false"}
       onClick={interactive ? openProfile : undefined}
       onKeyDown={interactive ? (event) => {
         if (event.target !== event.currentTarget) return;
