@@ -35,7 +35,7 @@ async function openDocument(path){
 
 function documentList(documents,mine){
   if(!(documents||[]).length)return '<p class="ec-business-doc-empty">Noch keine Speisekarten oder Dokumente vorhanden.</p>';
-  return (documents||[]).map((doc)=>`<article class="ec-business-doc-row"><div><span>${doc.document_type==='MENU'?'SPEISEKARTE':doc.document_type==='PRICE_LIST'?'PREISLISTE':'DOKUMENT'}</span><strong>${esc(doc.title)}</strong></div><div><button type="button" data-business-doc-open="${esc(doc.file_path)}">Öffnen</button>${mine?`<button type="button" data-business-doc-delete="${esc(doc.id)}" data-business-doc-path="${esc(doc.file_path)}">Löschen</button>`:''}</div></article>`).join('');
+  return (documents||[]).map((doc)=>`<article class="ec-business-doc-row"><div><span>${doc.document_type==='MENU'?'SPEISEKARTE':doc.document_type==='PRICE_LIST'?'PREISLISTE':'DOKUMENT'}</span><strong>${esc(doc.title)}</strong>${!mine?`<small class="ec-business-doc-audience">${doc.visibility==='PUBLIC'?'Öffentlich':'Nur Mitglieder'}</small>`:''}</div><div><button type="button" data-business-doc-open="${esc(doc.file_path)}">Öffnen</button>${mine?`<button type="button" data-business-doc-delete="${esc(doc.id)}" data-business-doc-path="${esc(doc.file_path)}">Löschen</button>`:''}</div></article>`).join('');
 }
 
 function bindDocumentButtons(root,ownerId,mine){
@@ -136,7 +136,7 @@ async function renderPublic(){
   if(!id)return;
   const [{data:member},{data:documents}]=await Promise.all([
     supabase.from('profiles').select('id,account_badge,company_category,company_address,company_phone,company_email').eq('id',id).maybeSingle(),
-    supabase.from('business_profile_documents').select('id,title,document_type,file_path,mime_type,created_at').eq('owner_id',id).order('created_at',{ascending:false})
+    supabase.from('business_profile_documents').select('id,title,document_type,file_path,mime_type,visibility,created_at').eq('owner_id',id).order('created_at',{ascending:false})
   ]);
   if(!member||String(member.account_badge||'').toUpperCase()!=='BUSINESS')return;
   const hasInfo=member.company_category||member.company_address||member.company_phone||member.company_email||(documents||[]).length;
@@ -159,7 +159,7 @@ async function renderPublic(){
 
 async function render(){
   if(!supabase)return;
-  await Promise.allSettled([renderOwn(),renderPublic()]);
+  await renderPublic();
 }
 
 function schedule(delay=80){clearTimeout(timer);timer=setTimeout(()=>void render(),delay)}
