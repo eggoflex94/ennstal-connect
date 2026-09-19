@@ -175,6 +175,8 @@ import "./member-card-exact-authority.css";
 
 /* Final profile geometry authority for desktop and mobile. */
 import "./profile-responsive-authority.css";
+import "./profile-layout-organizer.css";
+import "./profile-layout-organizer.js";
 
 class AppErrorBoundary extends React.Component {
   constructor(props) {
