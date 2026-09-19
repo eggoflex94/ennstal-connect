@@ -27,8 +27,6 @@ function enhanceOwnProfileCustomization() {
   const card = document.querySelector(".profile-member-card-preview .member-card, .my-profile-card");
   if (!form || !card || form.dataset.fullCustomization === "true") return false;
 
-  const accent = form.querySelector('[name="profile_accent"]');
-  const backgroundColor = form.querySelector('[name="profile_background_color"]');
   const backgroundImage = form.querySelector('[name="profile_background_image"]');
   const bioColor = form.querySelector('[name="bio_color"]');
   const bioFont = form.querySelector('[name="bio_font"]');
@@ -40,25 +38,16 @@ function enhanceOwnProfileCustomization() {
   panel.innerHTML = `
     <span class="eyebrow">KOMPLETTE PROFILGESTALTUNG</span>
     <h3>Dein Profil, dein Design</h3>
-    <p>Profilbild, Hintergrund, Akzentfarbe, Layout, Schrift, Textfarbe und Sichtbarkeit kannst du selbst gestalten. Änderungen an Farben und Schrift siehst du sofort in der Vorschau.</p>
+    <p>Profilbild, Titelbild, Layout, Schrift, Textfarbe und Sichtbarkeit kannst du selbst gestalten. Änderungen an Schrift und Darstellung siehst du sofort in der Vorschau.</p>
     <div class="profile-customization-actions">
       <button type="button" class="secondary-button" data-remove-background>Hintergrundbild entfernen</button>
-      <button type="button" class="secondary-button" data-reset-design>Standardfarben</button>
+      <button type="button" class="secondary-button" data-reset-design>Schrift zurücksetzen</button>
     </div>
   `;
   form.querySelector(".primary-button")?.before(panel);
 
   const applyPreview = () => {
     if (!card.isConnected) return;
-    if (accent?.value) {
-      card.style.setProperty("--profile-accent", accent.value);
-      card.style.borderColor = accent.value;
-      card.style.boxShadow = `0 18px 42px color-mix(in srgb, ${accent.value} 28%, transparent)`;
-    }
-    if (backgroundColor?.value && !backgroundImage?.value) {
-      card.style.backgroundImage = "none";
-      card.style.backgroundColor = backgroundColor.value;
-    }
     if (bio && bioColor?.value) bio.style.color = bioColor.value;
     if (bio && bioFont?.value) {
       bio.classList.remove("modern", "serif", "handwritten");
@@ -70,7 +59,7 @@ function enhanceOwnProfileCustomization() {
     }
   };
 
-  [accent, backgroundColor, bioColor, bioFont, bioSize].filter(Boolean).forEach((control) => {
+  [bioColor, bioFont, bioSize].filter(Boolean).forEach((control) => {
     control.addEventListener("input", applyPreview);
     control.addEventListener("change", applyPreview);
   });
@@ -78,12 +67,9 @@ function enhanceOwnProfileCustomization() {
   panel.querySelector("[data-remove-background]")?.addEventListener("click", () => {
     if (backgroundImage) backgroundImage.value = "";
     card.style.backgroundImage = "none";
-    if (backgroundColor?.value) card.style.backgroundColor = backgroundColor.value;
   });
 
   panel.querySelector("[data-reset-design]")?.addEventListener("click", () => {
-    if (accent) accent.value = "#ff6b25";
-    if (backgroundColor) backgroundColor.value = "#1b1f26";
     if (bioColor) bioColor.value = "#f1f5f9";
     if (bioFont) bioFont.value = "modern";
     if (bioSize) bioSize.value = "normal";
