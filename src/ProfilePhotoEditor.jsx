@@ -3,6 +3,7 @@ import "./ProfilePhotoEditor.css";
 
 const SIZE = 900;
 const PREVIEW_SIZE = 720;
+const PAN_LIMIT = 120;
 
 function loadImage(file) {
   return new Promise((resolve, reject) => {
@@ -101,7 +102,7 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
     );
   }, [source, zoom, x, y, rotation]);
 
-  const clampPan = (value) => Math.max(-55, Math.min(55, value));
+  const clampPan = (value) => Math.max(-PAN_LIMIT, Math.min(PAN_LIMIT, value));
 
   const startDrag = (event) => {
     if (!source || busy) return;
@@ -122,8 +123,8 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
     const rect = event.currentTarget.getBoundingClientRect();
     const width = Math.max(1, rect.width);
     const height = Math.max(1, rect.height);
-    const nextX = drag.startX + ((event.clientX - drag.startClientX) / width) * 115;
-    const nextY = drag.startY + ((event.clientY - drag.startClientY) / height) * 115;
+    const nextX = drag.startX + ((event.clientX - drag.startClientX) / width) * 120;
+    const nextY = drag.startY + ((event.clientY - drag.startClientY) / height) * 150;
     setX(clampPan(nextX));
     setY(clampPan(nextY));
   };
@@ -204,12 +205,12 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
           </label>
           <label>
             <span>Links / rechts</span>
-            <input type="range" min="-55" max="55" step="1" value={x} onChange={e => setX(Number(e.target.value))}/>
+            <input type="range" min={-PAN_LIMIT} max={PAN_LIMIT} step="1" value={x} onChange={e => setX(Number(e.target.value))}/>
             <b>{x}</b>
           </label>
           <label>
             <span>Oben / unten</span>
-            <input type="range" min="-55" max="55" step="1" value={y} onChange={e => setY(Number(e.target.value))}/>
+            <input type="range" min={-PAN_LIMIT} max={PAN_LIMIT} step="1" value={y} onChange={e => setY(Number(e.target.value))}/>
             <b>{y}</b>
           </label>
           <div className="ec-photo-editor-rotate">
