@@ -992,6 +992,7 @@ export default function App() {
         p_kind: "AVATAR"
       });
       if (reconcileError) console.warn("Profilbild-Album konnte nicht zusammengeführt werden:", reconcileError);
+      else await loadAll();
     }
     setProfilePhotoEditFile(null);
     setProfilePhotoEditingExisting(false);
