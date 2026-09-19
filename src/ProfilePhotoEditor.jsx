@@ -3,7 +3,9 @@ import "./ProfilePhotoEditor.css";
 
 const SIZE = 900;
 const PREVIEW_SIZE = 720;
-const PAN_LIMIT = 120;
+const PAN_X_LIMIT = 120;
+const PAN_Y_UP_LIMIT = 260;
+const PAN_Y_DOWN_LIMIT = 160;
 
 function loadImage(file) {
   return new Promise((resolve, reject) => {
@@ -38,8 +40,9 @@ function drawEditedImage(canvas, source, { zoom, x, y, rotation }, size) {
   // If the user drags farther than the current crop permits, add only the
   // minimum extra zoom needed to keep the crop filled instead of clamping.
   const coverScale = Math.max(size / rotatedWidth, size / rotatedHeight);
-  const requestedX = (x / PAN_LIMIT) * size * 0.30;
-  const requestedY = (y / PAN_LIMIT) * size * 0.34;
+  const requestedX = (x / PAN_X_LIMIT) * size * 0.30;
+  const yLimit = y < 0 ? PAN_Y_UP_LIMIT : PAN_Y_DOWN_LIMIT;
+  const requestedY = (y / yLimit) * size * 0.56;
 
   const baseScale = coverScale * zoom;
   const baseDrawW = source.naturalWidth * baseScale;
@@ -118,7 +121,8 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
     );
   }, [source, zoom, x, y, rotation]);
 
-  const clampPan = (value) => Math.max(-PAN_LIMIT, Math.min(PAN_LIMIT, value));
+  const clampPanX = (value) => Math.max(-PAN_X_LIMIT, Math.min(PAN_X_LIMIT, value));
+  const clampPanY = (value) => Math.max(-PAN_Y_UP_LIMIT, Math.min(PAN_Y_DOWN_LIMIT, value));
 
   const startDrag = (event) => {
     if (!source || busy) return;
@@ -140,9 +144,9 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
     const width = Math.max(1, rect.width);
     const height = Math.max(1, rect.height);
     const nextX = drag.startX + ((event.clientX - drag.startClientX) / width) * 120;
-    const nextY = drag.startY + ((event.clientY - drag.startClientY) / height) * 150;
-    setX(clampPan(nextX));
-    setY(clampPan(nextY));
+    const nextY = drag.startY + ((event.clientY - drag.startClientY) / height) * 300;
+    setX(clampPanX(nextX));
+    setY(clampPanY(nextY));
   };
 
   const endDrag = (event) => {
@@ -190,7 +194,7 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
         <div>
           <span className="eyebrow">PROFILBILD</span>
           <h2>Foto anpassen</h2>
-          <p>Ziehe das Bild direkt mit Finger oder Maus. Wenn du es weiter nach oben oder unten ziehst, zoomt der Ausschnitt automatisch nur so weit nach, dass kein leerer Rand entsteht.</p>
+          <p>Ziehe das Bild direkt mit Finger oder Maus. Nach oben steht jetzt deutlich mehr Spielraum zur Verfügung; der Ausschnitt zoomt automatisch nur so weit nach, dass kein leerer Rand entsteht.</p>
         </div>
         <button type="button" className="ec-photo-editor-close" onClick={onCancel} aria-label="Schließen">×</button>
       </header>
@@ -221,12 +225,12 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
           </label>
           <label>
             <span>Links / rechts</span>
-            <input type="range" min={-PAN_LIMIT} max={PAN_LIMIT} step="1" value={x} onChange={e => setX(Number(e.target.value))}/>
+            <input type="range" min={-PAN_X_LIMIT} max={PAN_X_LIMIT} step="1" value={x} onChange={e => setX(Number(e.target.value))}/>
             <b>{x}</b>
           </label>
           <label>
             <span>Oben / unten</span>
-            <input type="range" min={-PAN_LIMIT} max={PAN_LIMIT} step="1" value={y} onChange={e => setY(Number(e.target.value))}/>
+            <input type="range" min={-PAN_Y_UP_LIMIT} max={PAN_Y_DOWN_LIMIT} step="1" value={y} onChange={e => setY(Number(e.target.value))}/>
             <b>{y}</b>
           </label>
           <div className="ec-photo-editor-rotate">

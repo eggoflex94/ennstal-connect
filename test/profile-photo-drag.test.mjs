@@ -26,10 +26,11 @@ test("profile photo drag blocks page scrolling on touch devices", async () => {
 
 test("profile photo editor allows extended vertical positioning", async () => {
   const editor = await source("src/ProfilePhotoEditor.jsx");
-  assert.match(editor, /const PAN_LIMIT = 120/);
-  assert.match(editor, /min=\{-PAN_LIMIT\} max=\{PAN_LIMIT\}/);
-  assert.match(editor, /Math\.max\(-PAN_LIMIT, Math\.min\(PAN_LIMIT, value\)\)/);
-  assert.match(editor, /\* 150/);
+  assert.match(editor, /const PAN_X_LIMIT = 120/);
+  assert.match(editor, /const PAN_Y_UP_LIMIT = 260/);
+  assert.match(editor, /const PAN_Y_DOWN_LIMIT = 160/);
+  assert.match(editor, /min=\{-PAN_Y_UP_LIMIT\} max=\{PAN_Y_DOWN_LIMIT\}/);
+  assert.match(editor, /clampPanY/);
 });
 
 
@@ -39,5 +40,16 @@ test("profile photo editor adds adaptive zoom instead of clamping pan", async ()
   assert.match(editor, /requiredRenderedH/);
   assert.match(editor, /adaptiveScale/);
   assert.match(editor, /baseScale \* adaptiveScale/);
-  assert.match(editor, /\(y \/ PAN_LIMIT\) \* size \* 0\.34/);
+  assert.match(editor, /const yLimit = y < 0 \? PAN_Y_UP_LIMIT : PAN_Y_DOWN_LIMIT/);
+  assert.match(editor, /\(y \/ yLimit\) \* size \* 0\.56/);
+});
+
+
+test("profile photo editor gives extra upward range", async () => {
+  const editor = await source("src/ProfilePhotoEditor.jsx");
+  assert.match(editor, /PAN_Y_UP_LIMIT = 260/);
+  assert.match(editor, /PAN_Y_DOWN_LIMIT = 160/);
+  assert.match(editor, /min=\{-PAN_Y_UP_LIMIT\} max=\{PAN_Y_DOWN_LIMIT\}/);
+  assert.match(editor, /\* 300/);
+  assert.match(editor, /size \* 0\.56/);
 });
