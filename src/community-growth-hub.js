@@ -22,7 +22,7 @@ async function context(){
 }
 
 function eventCard(event){
-  return `<button type="button" class="ec-growth-item ec-clickable" data-growth-nav="events"><span class="ec-growth-tag">TERMIN</span><strong>${esc(event.title)}</strong><span>${esc(fmt(event.event_at))}${event.location?` · ${esc(event.location)}`:''}</span></button>`;
+  return `<button type="button" class="ec-growth-item ec-clickable ${event.is_featured?'is-featured':''}" data-growth-nav="events">${event.is_featured?'<span class="ec-growth-featured">★ Hervorgehoben</span>':''}<span class="ec-growth-tag">TERMIN</span><strong>${esc(event.title)}</strong><span>${esc(fmt(event.event_at))}${event.location?` · ${esc(event.location)}`:''}</span></button>`;
 }
 function requestCard(request){
   return `<button type="button" class="ec-growth-item ec-clickable" data-growth-nav="home"><span class="ec-growth-tag">${esc(REQUEST_LABELS[request.category]||'Community')}</span><strong>${esc(request.title)}</strong><span>${esc(String(request.content||'').slice(0,120))}</span></button>`;
@@ -74,7 +74,7 @@ async function renderHome(){
   if(!ctx?.region||version!==requestVersion)return;
   const now=new Date().toISOString();
   const [{data:events},{data:requests},{data:businesses},{data:listings},{data:newMembers},{data:groups},{data:memberships},{data:friendships}]=await Promise.all([
-    supabase.from('community_events').select('id,title,event_at,location,status,region_id').eq('region_id',ctx.region.id).gte('event_at',now).order('event_at',{ascending:true}).limit(6),
+    supabase.from('community_events').select('id,title,event_at,location,status,region_id,is_featured').eq('region_id',ctx.region.id).gte('event_at',now).order('event_at',{ascending:true}).limit(6),
     supabase.from('community_requests').select('id,title,content,category,region_id,status,created_at').eq('region_id',ctx.region.id).order('created_at',{ascending:false}).limit(8),
     supabase.from('profiles').select('id,nickname,first_name,last_name,company_name,company_description,account_badge,home_region_id').eq('account_badge','BUSINESS').limit(16),
     supabase.from('business_listings').select('id,owner_id,region_id,listing_type,title,body,link_url,valid_until,is_active,created_at').eq('is_active',true).or(`region_id.eq.${ctx.region.id},region_id.is.null`).order('created_at',{ascending:false}).limit(10),
@@ -84,7 +84,7 @@ async function renderHome(){
     supabase.from('friendships').select('requester_id,receiver_id,status').eq('status','ACCEPTED')
   ]);
   if(version!==requestVersion)return;
-  const activeEvents=(events||[]).filter((event)=>String(event.status||'').toUpperCase()!=='CANCELLED').slice(0,3);
+  const activeEvents=(events||[]).filter((event)=>String(event.status||'').toUpperCase()!=='CANCELLED').sort((a,b)=>Number(Boolean(b.is_featured))-Number(Boolean(a.is_featured))||new Date(a.event_at)-new Date(b.event_at)).slice(0,3);
   const activeRequests=(requests||[]).filter((request)=>!request.status||!['CLOSED','DONE','ARCHIVED'].includes(String(request.status).toUpperCase())).slice(0,3);
   const regionalBusinesses=(businesses||[]).filter((member)=>!member.home_region_id||member.home_region_id===ctx.region.id).slice(0,3);
   const currentListings=(listings||[]).filter((item)=>!item.valid_until||new Date(item.valid_until).getTime()>=Date.now()).slice(0,3);
@@ -157,7 +157,7 @@ async function renderOwnBusinessTools(){
   if(!ctx?.profile||String(ctx.profile.account_badge||'').toUpperCase()!=='BUSINESS')return;
   const [{data:listings},{data:ownEvents}]=await Promise.all([
     supabase.from('business_listings').select('*').eq('owner_id',ctx.user.id).order('created_at',{ascending:false}),
-    supabase.from('community_events').select('id,title,event_at,location,status,region_id,created_by').eq('created_by',ctx.user.id).order('event_at',{ascending:false}).limit(12)
+    supabase.from('community_events').select('id,title,event_at,location,status,region_id,created_by,is_featured').eq('created_by',ctx.user.id).order('event_at',{ascending:false}).limit(12)
   ]);
   const shell=document.createElement('section');
   shell.className='panel ec-own-business-tools';
