@@ -154,7 +154,7 @@ function eventCard(event, reminder = false) {
   return `<article class="ec-home-event${colorClass}" data-event-id="${esc(event.id)}">
     <div class="ec-home-event-media">
       ${event.image_url ? `<img src="${esc(event.image_url)}" alt="">` : `<div class="ec-home-event-date"><strong>${esc(day)}</strong><span>${esc(month)}</span></div>`}
-      ${event.is_featured ? '<span class="ec-home-event-featured">★ Hervorgehoben</span>' : ''}
+      ${event.is_ai_generated ? '<span class="ai-content-badge">✦ KI-Inhalt</span>' : ''}${event.is_featured ? '<span class="ec-home-event-featured">★ Hervorgehoben</span>' : ''}
     </div>
     <div class="ec-home-event-body ${fontClass}" style="--event-color:${esc(event.font_color || '#17324a')}">
       <small>${reminder ? 'ERINNERUNG' : 'BALD IN DEINER REGION'}</small>
