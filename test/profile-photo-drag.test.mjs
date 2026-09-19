@@ -11,8 +11,9 @@ test("profile photo editor supports direct drag positioning", async () => {
   assert.match(editor, /onPointerUp=\{endDrag\}/);
   assert.match(editor, /setPointerCapture/);
   assert.match(editor, /releasePointerCapture/);
-  assert.match(editor, /setX\(clampPan/);
-  assert.match(editor, /setY\(clampPan/);
+  assert.match(editor, /applyPan\(nextX, nextY\)/);
+  assert.match(editor, /setX\(clampedX\)/);
+  assert.match(editor, /setY\(clampedY\)/);
 });
 
 test("profile photo drag blocks page scrolling on touch devices", async () => {
