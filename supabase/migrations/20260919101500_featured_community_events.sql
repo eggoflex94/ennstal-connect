@@ -6,6 +6,14 @@ alter table public.community_events
   add column if not exists featured_at timestamptz;
 alter table public.community_events
   add column if not exists featured_by uuid references public.profiles(id) on delete set null;
+alter table public.community_events
+  add column if not exists featured_color text not null default 'gold';
+
+alter table public.community_events
+  drop constraint if exists community_events_featured_color_check;
+alter table public.community_events
+  add constraint community_events_featured_color_check
+  check (featured_color in ('gold','blue','green','red','purple','orange'));
 
 create index if not exists community_events_featured_region_time_idx
   on public.community_events(region_id,is_featured desc,event_at asc);
@@ -88,7 +96,8 @@ for each row execute function public.ec_guard_business_event_update();
 
 create or replace function public.set_community_event_featured(
   p_event_id uuid,
-  p_featured boolean
+  p_featured boolean,
+  p_color text default 'gold'
 )
 returns void
 language plpgsql
@@ -100,8 +109,12 @@ declare
   v_event public.community_events%rowtype;
   v_role text;
   v_badge text;
+  v_color text := lower(coalesce(nullif(trim(p_color),''),'gold'));
 begin
   if v_user is null then raise exception 'Nicht eingeloggt.'; end if;
+  if v_color not in ('gold','blue','green','red','purple','orange') then
+    raise exception 'Ungültige Hervorhebungsfarbe.';
+  end if;
 
   select * into v_event
   from public.community_events
@@ -123,13 +136,16 @@ begin
   update public.community_events
   set is_featured=p_featured,
       featured_at=case when p_featured then now() else null end,
-      featured_by=case when p_featured then v_user else null end
+      featured_by=case when p_featured then v_user else null end,
+      featured_color=case when p_featured then v_color else featured_color end
   where id=p_event_id;
 end;
 $;
 
-revoke all on function public.set_community_event_featured(uuid,boolean) from public;
-revoke all on function public.set_community_event_featured(uuid,boolean) from anon;
-grant execute on function public.set_community_event_featured(uuid,boolean) to authenticated;
+revoke all on function public.set_community_event_featured(uuid,boolean,text) from public;
+revoke all on function public.set_community_event_featured(uuid,boolean,text) from anon;
+grant execute on function public.set_community_event_featured(uuid,boolean,text) to authenticated;
+
+drop function if exists public.set_community_event_featured(uuid,boolean);
 
 notify pgrst,'reload schema';
