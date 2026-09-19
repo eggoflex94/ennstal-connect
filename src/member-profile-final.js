@@ -171,7 +171,7 @@ async function build(root){
       ? `<span class="ec-mp-function-role ec-mp-function-photographer"><img class="ec-mp-function-camera" src="/community-photographer-camera.svg" alt="" aria-hidden="true"><span class="ec-mp-function-copy"><strong>Community-Fotograf</strong><small>${esc(photographerScope)}</small></span></span>`
       : '';
     const settingMarkup=ownProfile?`<label class="ec-activity-flame-setting"><input type="checkbox" data-activity-flame-toggle ${activity.show?'checked':''}><span>Aktivitätsflamme im Profil anzeigen</span></label>`:'';
-    functionBox.innerHTML=`<span>Funktion</span>${roleMarkup}${photographerMarkup}${settingMarkup}`;
+    functionBox.innerHTML=`${roleMarkup}${photographerMarkup}${settingMarkup}`;
     left.appendChild(functionBox);
     const data=document.createElement('div');data.className='ec-mp-data';
     const realName=[target.first_name,target.last_name].filter(Boolean).join(' ');

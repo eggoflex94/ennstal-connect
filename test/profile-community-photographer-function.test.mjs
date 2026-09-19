@@ -50,3 +50,10 @@ test("profile function resolves photographer status from active assignments", as
   assert.match(runtime, /photographer\.global/);
   assert.match(runtime, /photographer\.regionIds/);
 });
+
+
+test("profile function box has no redundant Function heading", async () => {
+  const runtime = await source("src/member-profile-final.js");
+  assert.ok(!runtime.includes("functionBox.innerHTML=`<span>Funktion</span>"));
+  assert.ok(runtime.includes("functionBox.innerHTML=`${roleMarkup}${photographerMarkup}${settingMarkup}`"));
+});
