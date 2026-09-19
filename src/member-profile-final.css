@@ -108,3 +108,56 @@
 .ec-member-profile-final .ec-mp-actions{
   margin-top:14px!important;
 }
+
+
+/* Styled "Über mich" block inside the large member card */
+.ec-member-profile-final .ec-mp-about{
+  margin-top:14px!important;
+  padding:16px 18px!important;
+  border:1px solid rgba(227,233,237,.95)!important;
+  border-radius:16px!important;
+  background:rgba(255,255,255,.92)!important;
+  box-shadow:0 8px 24px rgba(15,43,64,.06)!important;
+}
+.ec-member-profile-final .ec-mp-about>span{
+  display:block!important;
+  margin-bottom:8px!important;
+  color:#667786!important;
+  font-size:.72rem!important;
+  font-weight:900!important;
+  letter-spacing:.10em!important;
+  text-transform:uppercase!important;
+}
+.ec-member-profile-final .ec-mp-about .member-profile-bio{
+  display:block!important;
+  margin:0!important;
+  white-space:pre-line!important;
+  line-height:1.58!important;
+}
+.ec-member-profile-final .ec-mp-about .member-profile-bio.modern{font-family:Inter,system-ui,sans-serif!important}
+.ec-member-profile-final .ec-mp-about .member-profile-bio.serif{font-family:Georgia,"Times New Roman",serif!important}
+.ec-member-profile-final .ec-mp-about .member-profile-bio.handwritten{font-family:"Segoe Print","Bradley Hand",cursive!important}
+.ec-member-profile-final .ec-mp-about .member-profile-bio.small{font-size:.92rem!important}
+.ec-member-profile-final .ec-mp-about .member-profile-bio.normal{font-size:1.05rem!important}
+.ec-member-profile-final .ec-mp-about .member-profile-bio.large{font-size:1.28rem!important}
+.ec-member-profile-final .ec-mp-about>img{
+  display:block!important;
+  width:min(360px,100%)!important;
+  max-height:320px!important;
+  object-fit:cover!important;
+  margin-top:14px!important;
+  border-radius:14px!important;
+  box-shadow:0 8px 20px rgba(15,43,64,.10)!important;
+}
+.ec-member-profile-final .ec-mp-card.has-profile-cover .ec-mp-about{
+  background:rgba(9,26,38,.68)!important;
+  border-color:rgba(255,255,255,.18)!important;
+  backdrop-filter:blur(10px)!important;
+  -webkit-backdrop-filter:blur(10px)!important;
+}
+.ec-member-profile-final .ec-mp-card.has-profile-cover .ec-mp-about>span{
+  color:rgba(255,255,255,.72)!important;
+}
+@media(max-width:600px){
+  .ec-member-profile-final .ec-mp-about{padding:14px!important}
+}
