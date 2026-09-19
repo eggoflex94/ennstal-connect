@@ -156,7 +156,7 @@ function buildEventRow(event, rsvpStatus) {
 
   const body = document.createElement('div');
   body.className = 'ec-regional-event-body';
-  body.innerHTML = `<div class="ec-regional-event-top">${event.is_featured ? '<span class="ec-regional-event-featured">★ Hervorgehoben</span>' : ''}<span class="ec-regional-event-state">${esc(state.label)}</span><time>${esc(formatDate(event.event_at))}</time></div><strong>${esc(event.title)}</strong>${event.location ? `<span class="ec-regional-event-location">⌖ ${esc(event.location)}</span>` : ''}${event.description ? `<p>${esc(event.description)}</p>` : ''}${state.key === 'cancelled' && event.cancellation_reason ? `<small class="ec-regional-event-cancel-reason">${esc(event.cancellation_reason)}</small>` : ''}`;
+  body.innerHTML = `<div class="ec-regional-event-top">${event.is_ai_generated ? '<span class="ai-content-badge">✦ KI-Inhalt</span>' : ''}${event.is_featured ? '<span class="ec-regional-event-featured">★ Hervorgehoben</span>' : ''}<span class="ec-regional-event-state">${esc(state.label)}</span><time>${esc(formatDate(event.event_at))}</time></div><strong>${esc(event.title)}</strong>${event.location ? `<span class="ec-regional-event-location">⌖ ${esc(event.location)}</span>` : ''}${event.description ? `<p>${esc(event.description)}</p>` : ''}${state.key === 'cancelled' && event.cancellation_reason ? `<small class="ec-regional-event-cancel-reason">${esc(event.cancellation_reason)}</small>` : ''}`;
   article.appendChild(body);
 
   const actions = document.createElement('div');
@@ -265,7 +265,7 @@ async function refresh() {
     if (!region || version !== requestVersion) return;
     document.documentElement.dataset.ecRegion = region.slug;
     const { data: events, error } = await supabase.from('community_events')
-      .select('id,title,description,event_at,location,image_url,status,cancellation_reason,cancelled_at,region_id,created_by,is_featured,featured_color')
+      .select('id,title,description,event_at,location,image_url,status,cancellation_reason,cancelled_at,region_id,created_by,is_featured,featured_color,is_ai_generated')
       .eq('region_id', region.id)
       .order('event_at', { ascending: true });
     if (error) throw error;
