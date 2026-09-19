@@ -145,3 +145,56 @@ $function$;
 
 revoke insert on table public.messages from anon;
 revoke insert on table public.messages from authenticated;
+
+
+create or replace function public.send_private_message_media(target_user uuid, message_text text, p_media_path text)
+returns void
+language plpgsql
+security definer
+set search_path to 'public'
+as $function$
+declare
+  v_uid uuid := auth.uid();
+  v_text text := btrim(coalesce(message_text,''));
+  v_media text := nullif(btrim(coalesce(p_media_path,'')),'');
+  v_target_disabled boolean := false;
+  v_auto_reply text;
+begin
+  if v_uid is null then raise exception 'Nicht angemeldet.'; end if;
+  if target_user = v_uid then raise exception 'Du kannst dir selbst keine Nachricht senden.'; end if;
+  if v_text='' and v_media is null then raise exception 'Nachricht oder Bild erforderlich.'; end if;
+  if v_media is not null and split_part(v_media,'/',1) <> v_uid::text then raise exception 'Ungültiger Bildpfad.'; end if;
+
+  if exists (
+    select 1 from public.user_feature_locks
+    where user_id=v_uid and feature_key='MESSAGING' and is_locked=true
+  ) then
+    raise exception 'Deine Nachrichtenfunktion ist derzeit vorübergehend gesperrt.';
+  end if;
+
+  select coalesce(direct_messages_disabled, false), nullif(btrim(coalesce(direct_message_auto_reply, '')), '')
+    into v_target_disabled, v_auto_reply
+  from public.profiles
+  where id = target_user
+    and account_status = 'ACTIVE';
+
+  if not found then
+    raise exception 'Dieses Konto ist derzeit nicht erreichbar.';
+  end if;
+
+  if v_target_disabled then
+    insert into public.messages(sender_id, receiver_id, content, is_read, message_type)
+    values (
+      target_user,
+      v_uid,
+      coalesce(v_auto_reply, 'Dieser Account empfängt keine Direktnachrichten. Bitte nutze den vorgesehenen Support- oder Kontaktbereich.'),
+      false,
+      'AUTO_REPLY'
+    );
+    return;
+  end if;
+
+  insert into public.messages(sender_id,receiver_id,content,is_read,message_type,media_path)
+  values(v_uid,target_user,v_text,false,case when v_media is not null then 'IMAGE' else 'PRIVATE' end,v_media);
+end;
+$function$;
