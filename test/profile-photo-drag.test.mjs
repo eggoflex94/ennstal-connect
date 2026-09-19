@@ -22,3 +22,12 @@ test("profile photo drag blocks page scrolling on touch devices", async () => {
   assert.match(css, /cursor:grab/);
   assert.match(css, /cursor:grabbing/);
 });
+
+
+test("profile photo editor allows extended vertical positioning", async () => {
+  const editor = await source("src/ProfilePhotoEditor.jsx");
+  assert.match(editor, /const PAN_LIMIT = 120/);
+  assert.match(editor, /min=\{-PAN_LIMIT\} max=\{PAN_LIMIT\}/);
+  assert.match(editor, /Math\.max\(-PAN_LIMIT, Math\.min\(PAN_LIMIT, value\)\)/);
+  assert.match(editor, /\* 150/);
+});
