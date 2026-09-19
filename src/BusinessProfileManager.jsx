@@ -21,7 +21,7 @@ export default function BusinessProfileManager({ profile, user }) {
   const load = async () => {
     if (!isBusiness || !ownerId) return;
     const [docsResult, foldersResult] = await Promise.all([
-      supabase.from("business_profile_documents").select("id,title,document_type,file_path,mime_type,created_at").eq("owner_id", ownerId).order("created_at", { ascending:false }),
+      supabase.from("business_profile_documents").select("id,title,document_type,file_path,mime_type,visibility,created_at").eq("owner_id", ownerId).order("created_at", { ascending:false }),
       supabase.from("profile_photo_folders").select("id,title,created_at").eq("owner_id", ownerId).order("created_at", { ascending:true }),
     ]);
     if (!docsResult.error) setDocuments(docsResult.data || []);
@@ -49,6 +49,7 @@ export default function BusinessProfileManager({ profile, user }) {
     const file = form.elements.file?.files?.[0];
     const title = escName(data.get("title"));
     const documentType = String(data.get("document_type") || "DOCUMENT");
+    const visibility = String(data.get("visibility") || "MEMBERS");
     if (!file || !title) return show("Bitte Titel und Datei auswählen.");
     if (!DOC_TYPES.has(file.type) || file.size > 10 * 1024 * 1024) return show("Erlaubt sind PDF, JPG, PNG oder WebP bis 10 MB.");
 
@@ -64,6 +65,7 @@ export default function BusinessProfileManager({ profile, user }) {
         document_type: documentType,
         file_path: path,
         mime_type: file.type,
+        visibility,
       });
       if (insertError) {
         await supabase.storage.from(DOC_BUCKET).remove([path]);
@@ -85,6 +87,24 @@ export default function BusinessProfileManager({ profile, user }) {
     const url = URL.createObjectURL(data);
     window.open(url, "_blank", "noopener,noreferrer");
     window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+  };
+
+  const updateDocumentVisibility = async (doc, visibility) => {
+    if (!["PUBLIC","MEMBERS","HIDDEN"].includes(visibility)) return;
+    setBusy(true);
+    try {
+      const { error } = await supabase.from("business_profile_documents")
+        .update({ visibility })
+        .eq("id", doc.id)
+        .eq("owner_id", ownerId);
+      if (error) throw error;
+      setDocuments((current) => current.map((item) => item.id === doc.id ? { ...item, visibility } : item));
+      show("Sichtbarkeit gespeichert.");
+    } catch (error) {
+      show(error?.message || "Sichtbarkeit konnte nicht gespeichert werden.");
+    } finally {
+      setBusy(false);
+    }
   };
 
   const deleteDocument = async (doc) => {
@@ -179,13 +199,26 @@ export default function BusinessProfileManager({ profile, user }) {
         <form onSubmit={uploadDocument} className="ec-business-manager-form">
           <label>Art<select name="document_type" defaultValue="MENU"><option value="MENU">Speisekarte</option><option value="PRICE_LIST">Preisliste</option><option value="DOCUMENT">Dokument</option></select></label>
           <label>Titel<input name="title" maxLength="120" placeholder="z. B. Speisekarte Herbst 2026" required /></label>
+          <label>Sichtbarkeit<select name="visibility" defaultValue="MEMBERS"><option value="PUBLIC">Öffentlich</option><option value="MEMBERS">Nur Mitglieder</option><option value="HIDDEN">Nicht anzeigen</option></select></label>
           <label className="ec-business-manager-wide">Datei<input name="file" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" required /></label>
           <button className="primary-button ec-business-manager-wide" disabled={busy}>Hochladen</button>
         </form>
         <div className="ec-business-manager-list">
           {documents.map((doc) => <article key={doc.id}>
-            <div><small>{doc.document_type === "MENU" ? "SPEISEKARTE" : doc.document_type === "PRICE_LIST" ? "PREISLISTE" : "DOKUMENT"}</small><strong>{doc.title}</strong></div>
-            <div><button type="button" onClick={() => openDocument(doc)}>Öffnen</button><button type="button" onClick={() => deleteDocument(doc)}>Löschen</button></div>
+            <div>
+              <small>{doc.document_type === "MENU" ? "SPEISEKARTE" : doc.document_type === "PRICE_LIST" ? "PREISLISTE" : "DOKUMENT"}</small>
+              <strong>{doc.title}</strong>
+              <span className="ec-business-doc-visibility">{doc.visibility === "PUBLIC" ? "🌍 Öffentlich" : doc.visibility === "HIDDEN" ? "🙈 Nicht anzeigen" : "👥 Nur Mitglieder"}</span>
+            </div>
+            <div className="ec-business-doc-actions">
+              <select aria-label="Sichtbarkeit" value={doc.visibility || "MEMBERS"} onChange={(event) => updateDocumentVisibility(doc, event.target.value)} disabled={busy}>
+                <option value="PUBLIC">Öffentlich</option>
+                <option value="MEMBERS">Nur Mitglieder</option>
+                <option value="HIDDEN">Nicht anzeigen</option>
+              </select>
+              <button type="button" onClick={() => openDocument(doc)}>Öffnen</button>
+              <button type="button" onClick={() => deleteDocument(doc)}>Löschen</button>
+            </div>
           </article>)}
           {!documents.length && <p>Noch keine Speisekarten oder Dokumente hochgeladen.</p>}
         </div>
