@@ -23,7 +23,9 @@ const automatedPatterns = [
   /moderationsrechte/i,
   /regional admin/i,
   /forum.?moderator/i,
-  /punkte erhalten/i
+  /punkte erhalten/i,
+  /offiziell(?:e|er) account.*direktnachrichten/i,
+  /nicht für direktnachrichten verwendet/i
 ];
 
 function normalize(value){ return String(value || "").trim(); }
