@@ -20,6 +20,41 @@ function loadImage(file) {
   });
 }
 
+function panOffsets(x, y, size) {
+  const xLimit = PAN_X_LIMIT || 1;
+  const yLimit = y < 0 ? PAN_Y_UP_LIMIT : PAN_Y_DOWN_LIMIT;
+  return {
+    x: (x / xLimit) * size * 0.34,
+    y: (y / Math.max(1, yLimit)) * size * 0.46
+  };
+}
+
+function cropGeometry(source, rotation, size) {
+  const normalizedRotation = ((rotation % 360) + 360) % 360;
+  const quarterTurn = normalizedRotation === 90 || normalizedRotation === 270;
+  const rotatedWidth = quarterTurn ? source.naturalHeight : source.naturalWidth;
+  const rotatedHeight = quarterTurn ? source.naturalWidth : source.naturalHeight;
+  const coverScale = Math.max(size / rotatedWidth, size / rotatedHeight);
+  return { quarterTurn, coverScale };
+}
+
+function minimumZoomForPan(source, rotation, x, y, size) {
+  if (!source) return 1;
+  const { quarterTurn, coverScale } = cropGeometry(source, rotation, size);
+  const baseDrawW = source.naturalWidth * coverScale;
+  const baseDrawH = source.naturalHeight * coverScale;
+  const baseRenderedW = quarterTurn ? baseDrawH : baseDrawW;
+  const baseRenderedH = quarterTurn ? baseDrawW : baseDrawH;
+  const requested = panOffsets(x, y, size);
+  const requiredRenderedW = size + Math.abs(requested.x) * 2;
+  const requiredRenderedH = size + Math.abs(requested.y) * 2;
+  return Math.max(
+    1,
+    requiredRenderedW / Math.max(1, baseRenderedW),
+    requiredRenderedH / Math.max(1, baseRenderedH)
+  );
+}
+
 function drawEditedImage(canvas, source, { zoom, x, y, rotation }, size) {
   if (!canvas || !source) return;
   canvas.width = size;
@@ -31,42 +66,17 @@ function drawEditedImage(canvas, source, { zoom, x, y, rotation }, size) {
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, size, size);
 
-  const normalizedRotation = ((rotation % 360) + 360) % 360;
-  const quarterTurn = normalizedRotation === 90 || normalizedRotation === 270;
-  const rotatedWidth = quarterTurn ? source.naturalHeight : source.naturalWidth;
-  const rotatedHeight = quarterTurn ? source.naturalWidth : source.naturalHeight;
-
-  // Cover the square first, then apply the user's zoom and pan.
-  // If the user drags farther than the current crop permits, add only the
-  // minimum extra zoom needed to keep the crop filled instead of clamping.
-  const coverScale = Math.max(size / rotatedWidth, size / rotatedHeight);
-  const requestedX = (x / PAN_X_LIMIT) * size * 0.30;
-  const yLimit = y < 0 ? PAN_Y_UP_LIMIT : PAN_Y_DOWN_LIMIT;
-  const requestedY = (y / yLimit) * size * 0.56;
-
-  const baseScale = coverScale * zoom;
-  const baseDrawW = source.naturalWidth * baseScale;
-  const baseDrawH = source.naturalHeight * baseScale;
-  const baseRenderedW = quarterTurn ? baseDrawH : baseDrawW;
-  const baseRenderedH = quarterTurn ? baseDrawW : baseDrawH;
-
-  const requiredRenderedW = size + Math.abs(requestedX) * 2;
-  const requiredRenderedH = size + Math.abs(requestedY) * 2;
-  const adaptiveScale = Math.max(
-    1,
-    requiredRenderedW / Math.max(1, baseRenderedW),
-    requiredRenderedH / Math.max(1, baseRenderedH)
-  );
-
-  const scale = baseScale * adaptiveScale;
+  const { quarterTurn, coverScale } = cropGeometry(source, rotation, size);
+  const scale = coverScale * zoom;
   const drawW = source.naturalWidth * scale;
   const drawH = source.naturalHeight * scale;
   const renderedW = quarterTurn ? drawH : drawW;
   const renderedH = quarterTurn ? drawW : drawH;
   const maxOffsetX = Math.max(0, (renderedW - size) / 2);
   const maxOffsetY = Math.max(0, (renderedH - size) / 2);
-  const offsetX = Math.max(-maxOffsetX, Math.min(maxOffsetX, requestedX));
-  const offsetY = Math.max(-maxOffsetY, Math.min(maxOffsetY, requestedY));
+  const requested = panOffsets(x, y, size);
+  const offsetX = Math.max(-maxOffsetX, Math.min(maxOffsetX, requested.x));
+  const offsetY = Math.max(-maxOffsetY, Math.min(maxOffsetY, requested.y));
   const radians = rotation * Math.PI / 180;
 
   ctx.save();
@@ -124,6 +134,15 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
   const clampPanX = (value) => Math.max(-PAN_X_LIMIT, Math.min(PAN_X_LIMIT, value));
   const clampPanY = (value) => Math.max(-PAN_Y_UP_LIMIT, Math.min(PAN_Y_DOWN_LIMIT, value));
 
+  const applyPan = (nextX, nextY) => {
+    const clampedX = clampPanX(nextX);
+    const clampedY = clampPanY(nextY);
+    const requiredZoom = minimumZoomForPan(source, rotation, clampedX, clampedY, PREVIEW_SIZE);
+    setZoom((current) => Math.max(current, requiredZoom));
+    setX(clampedX);
+    setY(clampedY);
+  };
+
   const startDrag = (event) => {
     if (!source || busy) return;
     event.currentTarget.setPointerCapture?.(event.pointerId);
@@ -145,8 +164,7 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
     const height = Math.max(1, rect.height);
     const nextX = drag.startX + ((event.clientX - drag.startClientX) / width) * 120;
     const nextY = drag.startY + ((event.clientY - drag.startClientY) / height) * 300;
-    setX(clampPanX(nextX));
-    setY(clampPanY(nextY));
+    applyPan(nextX, nextY);
   };
 
   const endDrag = (event) => {
@@ -194,7 +212,7 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
         <div>
           <span className="eyebrow">PROFILBILD</span>
           <h2>Foto anpassen</h2>
-          <p>Ziehe das Bild direkt mit Finger oder Maus. Nach oben steht jetzt deutlich mehr Spielraum zur Verfügung; der Ausschnitt zoomt automatisch nur so weit nach, dass kein leerer Rand entsteht.</p>
+          <p>Ziehe das Bild direkt mit Finger oder Maus. Der nötige Zusatz-Zoom wird einmal übernommen und bleibt bestehen, damit das Foto deiner Bewegung wirklich folgt.</p>
         </div>
         <button type="button" className="ec-photo-editor-close" onClick={onCancel} aria-label="Schließen">×</button>
       </header>
@@ -220,17 +238,21 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
         <div className="ec-photo-editor-controls">
           <label>
             <span>Zoom</span>
-            <input type="range" min="1" max="2.8" step="0.01" value={zoom} onChange={e => setZoom(Number(e.target.value))}/>
+            <input type="range" min="1" max="2.8" step="0.01" value={zoom} onChange={e => {
+              const requested = Number(e.target.value);
+              const minimum = minimumZoomForPan(source, rotation, x, y, PREVIEW_SIZE);
+              setZoom(Math.max(requested, minimum));
+            }}/>
             <b>{Math.round(zoom * 100)}%</b>
           </label>
           <label>
             <span>Links / rechts</span>
-            <input type="range" min={-PAN_X_LIMIT} max={PAN_X_LIMIT} step="1" value={x} onChange={e => setX(Number(e.target.value))}/>
+            <input type="range" min={-PAN_X_LIMIT} max={PAN_X_LIMIT} step="1" value={x} onChange={e => applyPan(Number(e.target.value), y)}/>
             <b>{x}</b>
           </label>
           <label>
             <span>Oben / unten</span>
-            <input type="range" min={-PAN_Y_UP_LIMIT} max={PAN_Y_DOWN_LIMIT} step="1" value={y} onChange={e => setY(Number(e.target.value))}/>
+            <input type="range" min={-PAN_Y_UP_LIMIT} max={PAN_Y_DOWN_LIMIT} step="1" value={y} onChange={e => applyPan(x, Number(e.target.value))}/>
             <b>{y}</b>
           </label>
           <div className="ec-photo-editor-rotate">
