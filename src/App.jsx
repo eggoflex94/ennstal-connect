@@ -1394,7 +1394,6 @@ function NewAuth({ login, register }) {
   const [mode, setMode] = useState("login");
   return <div className="auth-welcome ec-auth-welcome">
     <section className="auth-intro ec-auth-intro">
-      <img className="ec-auth-logo" src="/ennstal-connect-wordmark.svg" alt="Ennstal Connect"/>
       <span className="eyebrow">REGIONAL. ECHT. GEMEINSAM.</span>
       <h1>Deine Community in der Region.</h1>
       <p>Menschen kennenlernen, regionale Neuigkeiten lesen und sich in Gruppen, Forum und Veranstaltungen austauschen.</p>
