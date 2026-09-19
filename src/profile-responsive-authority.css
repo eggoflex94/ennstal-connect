@@ -334,3 +334,14 @@ html, body, #root { min-width: 0 !important; }
 .profile-cover-inline-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
 .profile-cover-inline-actions .text-button{min-height:36px!important;padding:6px 9px!important}
 .profile-cover-inline-actions .profile-cover-remove{color:#b42318!important}
+
+
+/* Final cleanup: obsolete profile color controls must never reappear. */
+.profile-form [name="profile_accent"],
+.profile-form [name="profile_background_color"],
+.profile-form label:has([name="profile_accent"]),
+.profile-form label:has([name="profile_background_color"]),
+.profile-editor [name="profile_accent"],
+.profile-editor [name="profile_background_color"]{
+  display:none!important;
+}
