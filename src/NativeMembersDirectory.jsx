@@ -24,18 +24,6 @@ function presenceOnline(member) {
   return Number.isFinite(last) && Date.now() - last < 5 * 60 * 1000;
 }
 
-function viennaDate(offsetDays = 0) {
-  const now = new Date(Date.now() + offsetDays * 24 * 60 * 60 * 1000);
-  return now.toLocaleDateString("en-CA", { timeZone: "Europe/Vienna" });
-}
-
-function activeInfo(member) {
-  const streak = Math.max(0, Number(member?.active_streak) || 0);
-  const last = String(member?.last_daily_reward_date || "").slice(0, 10);
-  const active = streak > 0 && (last === viennaDate(0) || last === viennaDate(-1));
-  return { active, streak };
-}
-
 export default function NativeMembersDirectory({ members = [], regions = [], activeRegion, profile, friendships = [], onOpen }) {
   const [query, setQuery] = useState("");
   const [regionId, setRegionId] = useState("ALL");
@@ -119,17 +107,12 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
         if (!q) return true;
         const region = regionById[member.home_region_id]?.name || "";
         const roleWord = isGlobalAdmin(member) || isRegionalAdmin(member) ? "admin" : normalized(member?.role) === "SUPPORTER" ? "supporter" : isBusiness(member) ? "unternehmer" : "mitglied";
-        const activityWord = activeInfo(member).active ? "aktiv" : "";
-        return [member.nickname, member.first_name, member.last_name, region, roleWord, activityWord].filter(Boolean).join(" ").toLowerCase().includes(q);
+        return [member.nickname, member.first_name, member.last_name, region, roleWord].filter(Boolean).join(" ").toLowerCase().includes(q);
       })
       .sort((a, b) => {
         const aRank = groupRank(a);
         const bRank = groupRank(b);
         if (aRank !== bRank) return aRank - bRank;
-        const aActive = activeInfo(a);
-        const bActive = activeInfo(b);
-        if (aActive.active !== bActive.active) return aActive.active ? -1 : 1;
-        if (aActive.streak !== bActive.streak) return bActive.streak - aActive.streak;
         return displayName(a).localeCompare(displayName(b), "de", { sensitivity: "base" });
       });
   }, [members, regionId, onlineOnly, query, regionById, regionalAdminByUser, activeRegion?.id]);
@@ -158,14 +141,14 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
 
   return <section className="native-members-directory">
     <div className="page-heading native-members-heading">
-      <div><span className="eyebrow">COMMUNITY</span><h1>Mitglieder</h1><p>Nach Rollen sortiert; aktive Mitglieder stehen innerhalb ihrer Rolle zuerst.</p></div>
+      <div><span className="eyebrow">COMMUNITY</span><h1>Mitglieder</h1><p>Nach Rollen und Namen sortiert.</p></div>
       <div className="native-members-count"><strong>{visible.length} Treffer</strong>{visible.length > PAGE_SIZE && <small>Seite {page} von {pageCount}</small>}</div>
     </div>
 
     {loadingMemberId && <small className="native-member-loading" aria-live="polite">Profil wird geladen …</small>}
 
     <div className="native-member-search panel">
-      <input className="search-input" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name, Rolle, Aktivität oder Region suchen …" />
+      <input className="search-input" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name, Rolle oder Region suchen …" />
       <select value={regionId} onChange={(event) => setRegionId(event.target.value)} aria-label="Region auswählen">
         <option value="ALL">Alle Regionen</option>
         {regions.map((region) => <option value={region.id} key={region.id}>{region.name}</option>)}
