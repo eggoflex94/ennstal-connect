@@ -111,3 +111,38 @@
     flex: 0 1 auto !important;
   }
 }
+
+
+/* Featured community events */
+.community-event-row.is-featured,
+.ec-growth-item.is-featured,
+.ec-own-business-events article.is-featured{
+  position:relative;
+  border:1px solid rgba(245,158,11,.55);
+  box-shadow:0 10px 26px rgba(245,158,11,.12);
+}
+.community-event-featured-badge,
+.ec-growth-featured,
+.ec-business-event-featured-badge{
+  display:inline-flex;
+  align-items:center;
+  width:max-content;
+  margin-bottom:5px;
+  padding:3px 8px;
+  border-radius:999px;
+  background:rgba(245,158,11,.14);
+  color:#92400e;
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.04em;
+}
+.community-event-feature-toggle,
+.ec-own-business-events [data-feature-business-event]{
+  margin-top:8px;
+  min-height:36px;
+  border:1px solid rgba(100,116,139,.24);
+  border-radius:10px;
+  background:transparent;
+  padding:7px 10px;
+  cursor:pointer;
+}
