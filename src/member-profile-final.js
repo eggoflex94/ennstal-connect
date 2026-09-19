@@ -133,7 +133,12 @@ async function build(root){
     const data=document.createElement('div');data.className='ec-mp-data';
     const realName=[target.first_name,target.last_name].filter(Boolean).join(' ');
     const activityRows=activity.show?`${activity.streak?row('Aktiv-Serie',`${activity.streak} Tag${activity.streak===1?'':'e'} 🔥`):''}${activity.days?row('Aktive Tage gesamt',String(activity.days)):''}`:'';
-    data.innerHTML=`<div class="ec-mp-data-head"><div><span>MITGLIEDSPROFIL</span><h1>${esc(target.nickname||realName||'Mitglied')}</h1></div>${target.is_verified?'<b class="ec-mp-verified" title="Verifiziert">✓</b>':''}</div><div class="ec-mp-rows">${row('Nickname',target.nickname)}${visible(target,'name',isFriend)?row('Vorname',target.first_name):''}${visible(target,'name',isFriend)?row('Nachname',target.last_name):''}${visible(target,'birth_date',isFriend)?row('Geburtsdatum',date(target.birth_date)):''}${visible(target,'birth_date',isFriend)?row('Alter',age(target.birth_date)):''}${row('Heimatregion',home)}${activityRows}</div>`;
+    const bioVisible=visible(target,'bio',isFriend)&&String(target.bio||'').trim();
+    const bioFont=['modern','serif','handwritten'].includes(String(target.bio_font||''))?target.bio_font:'modern';
+    const bioSize=['small','normal','large'].includes(String(target.bio_size||''))?target.bio_size:'normal';
+    const bioColor=String(target.bio_color||'#1e3045');
+    const bioMarkup=bioVisible?`<section class="ec-mp-about"><span>ÜBER MICH</span><p class="member-profile-bio ${esc(bioFont)} ${esc(bioSize)}" style="color:${esc(bioColor)}">${esc(target.bio)}</p>${target.bio_image_url?`<img src="${esc(target.bio_image_url)}" alt="Bild zum Über-mich-Bereich">`:''}</section>`:'';
+    data.innerHTML=`<div class="ec-mp-data-head"><div><span>MITGLIEDSPROFIL</span><h1>${esc(target.nickname||realName||'Mitglied')}</h1></div>${target.is_verified?'<b class="ec-mp-verified" title="Verifiziert">✓</b>':''}</div><div class="ec-mp-rows">${row('Nickname',target.nickname)}${visible(target,'name',isFriend)?row('Vorname',target.first_name):''}${visible(target,'name',isFriend)?row('Nachname',target.last_name):''}${visible(target,'birth_date',isFriend)?row('Geburtsdatum',date(target.birth_date)):''}${visible(target,'birth_date',isFriend)?row('Alter',age(target.birth_date)):''}${row('Heimatregion',home)}${activityRows}</div>${bioMarkup}`;
     card.append(left,data);
     root.insertBefore(card,hero);
     hero.hidden=true;
