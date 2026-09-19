@@ -144,9 +144,14 @@ async function buildExactPreview(page) {
       coverImage.src = profile.profile_background;
       coverImage.alt = "";
       coverImage.loading = "eager";
-      coverImage.style.objectPosition = `${Number(profile.profile_background_position_x ?? 50)}% ${Number(profile.profile_background_position_y ?? 50)}%`;
-      coverImage.style.transform = `scale(${Number(profile.profile_background_zoom ?? 1)})`;
-      coverImage.style.transformOrigin = `${Number(profile.profile_background_position_x ?? 50)}% ${Number(profile.profile_background_position_y ?? 50)}%`;
+      const coverX = Number(profile.profile_background_position_x ?? 50);
+      const coverY = Number(profile.profile_background_position_y ?? 50);
+      const coverZoom = Number(profile.profile_background_zoom ?? 1);
+      const coverPanX = (coverX - 50) * 0.16;
+      const coverPanY = (coverY - 50) * 0.16;
+      coverImage.style.objectPosition = "50% 50%";
+      coverImage.style.transform = `translate(${coverPanX}%, ${coverPanY}%) scale(${coverZoom})`;
+      coverImage.style.transformOrigin = "50% 50%";
       const coverShade = document.createElement("span");
       coverShade.className = "ec-mp-cover-shade";
       coverShade.style.setProperty("--ec-cover-overlay", String(Number(profile.profile_background_overlay ?? 0.18)));
