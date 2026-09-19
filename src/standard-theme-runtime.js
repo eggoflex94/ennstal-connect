@@ -28,6 +28,7 @@ let progressLoadedAt = 0;
 let progressPromise = null;
 let savedLayout = 'standard';
 let savedLayoutLoadedAt = 0;
+let businessUnlocked = false;
 let appObserver = null;
 let observedApp = null;
 let shellObserver = null;
@@ -39,8 +40,8 @@ const withTimeout = (promise, ms = 7000) => Promise.race([
 ]);
 
 function layoutOptions(state) {
-  const redOpen = Boolean(state?.red_unlocked);
-  const blueOpen = Boolean(state?.blue_unlocked);
+  const redOpen = businessUnlocked || Boolean(state?.red_unlocked);
+  const blueOpen = businessUnlocked || Boolean(state?.blue_unlocked);
   return [
     ['standard', 'Standard – Ennstal Connect', true],
     ['theme-red', redOpen ? 'Connect Rot – Hellrot' : '🔒 Connect Rot – ab 30 Aktivitätspunkten', redOpen],
@@ -74,6 +75,7 @@ function normalizeLayoutSelect(select) {
 }
 
 function rewardText(state) {
+  if (businessUnlocked) return 'Unternehmerkonto: alle Profil-Layouts sind automatisch freigeschaltet.';
   if (!state) return 'Aktivitätsfortschritt derzeit nicht verfügbar.';
   const score = Number(state.score || 0);
   if (!state.red_unlocked) return `Noch ${Math.max(0, 30 - score)} Punkte bis Connect Rot.`;
@@ -155,8 +157,9 @@ async function loadSavedLayout(force = false) {
   try {
     const { data: { session } } = await withTimeout(supabase.auth.getSession(), 5000);
     if (!session?.user) return savedLayout;
-    const { data, error } = await withTimeout(supabase.from('profiles').select('profile_layout').eq('id', session.user.id).maybeSingle(), 7000);
+    const { data, error } = await withTimeout(supabase.from('profiles').select('profile_layout,account_badge').eq('id', session.user.id).maybeSingle(), 7000);
     if (!error && data?.profile_layout) savedLayout = String(data.profile_layout);
+    businessUnlocked = String(data?.account_badge || '').toUpperCase() === 'BUSINESS';
     savedLayoutLoadedAt = Date.now();
   } catch (error) {
     console.warn('Gespeichertes Layout konnte nicht geladen werden:', error?.message || error);
