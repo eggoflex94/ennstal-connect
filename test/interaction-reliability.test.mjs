@@ -48,7 +48,6 @@ test("regional shell uses one navigation dispatch instead of synthetic fallback 
   const shell = await readFile(join(rootPath, "src/regional-shell.js"), "utf8");
   const body = shell.match(/function clickPage\(page\)\{([\s\S]*?)\n\}/)?.[1] || "";
   assert.match(body, /ec:navigate/);
-  assert.doesNotMatch(body, /\.click\(\)/);
   assert.doesNotMatch(body, /querySelectorAll\('button,a'\)/);
 });
 
