@@ -829,11 +829,13 @@ export default function App() {
   async function updateMemberRole(m, newRole) {
     if (!isHeadAdmin(profile?.role)) return showNotice("Nur der Global Admin darf Rollen ändern.");
     if (!m?.id || m.id === user.id || m.role === "HEAD_ADMIN") return showNotice("Der Global Admin kann nicht verändert werden.");
-    const { error } = await supabase.rpc("admin_set_role", { target_user: m.id, new_role: newRole });
+    const normalizedRole = String(newRole || "").trim().toUpperCase();
+    if (!["MEMBER", "SUPPORTER", "ADMIN"].includes(normalizedRole)) return showNotice("Bitte eine gültige Rolle auswählen.");
+    const { error } = await supabase.rpc("admin_set_role", { target_user: m.id, new_role: normalizedRole });
     if (error) return showNotice(error.message);
     const { data: changed, error: verifyError } = await supabase.from("profiles").select("id,role").eq("id", m.id).maybeSingle();
-    if (verifyError || !changed || changed.role !== newRole) return showNotice("Die Rolle wurde nicht bestätigt. Bitte führe den Datenbank-Fix aus und versuche es erneut.");
-    showNotice(`${getName(m)} ist jetzt ${roleLabel(newRole)}.`); await loadAll();
+    if (verifyError || !changed || changed.role !== normalizedRole) return showNotice("Die Rolle wurde nicht bestätigt. Bitte führe den Datenbank-Fix aus und versuche es erneut.");
+    showNotice(`${getName(m)} ist jetzt ${roleLabel(normalizedRole)}.`); await loadAll();
   }
 
   async function toggleSuspension(m) {
