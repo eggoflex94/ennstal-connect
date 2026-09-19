@@ -69,3 +69,22 @@ end;
 $function$;
 
 notify pgrst, 'reload schema';
+
+
+-- Backfill the activation notification for business accounts that already existed
+-- before automatic notifications were introduced.
+insert into public.notifications(user_id,title,body,type)
+select
+  p.id,
+  'Unternehmerkonto freigeschaltet ★',
+  'Dein Unternehmerkonto wurde freigeschaltet. Du kannst jetzt dein Unternehmensprofil erweitern, Speisekarten und Dokumente hochladen sowie eigene Veranstaltungen erstellen und hervorheben. Stellenanzeigen werden separat von Ennstal Connect freigeschaltet.',
+  'BUSINESS_ACCOUNT'
+from public.profiles p
+where p.account_badge='BUSINESS'
+  and not exists (
+    select 1
+    from public.notifications n
+    where n.user_id=p.id
+      and n.type='BUSINESS_ACCOUNT'
+      and n.title='Unternehmerkonto freigeschaltet ★'
+  );
