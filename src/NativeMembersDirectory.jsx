@@ -107,8 +107,8 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
     const q = query.trim().toLowerCase();
     const groupRank = (member) => {
       if (isGlobalAdmin(member) || isRegionalAdmin(member)) return 1;
-      if (normalized(member?.role) === "SUPPORTER") return 2;
-      if (isBusiness(member)) return 3;
+      if (isBusiness(member)) return 2;
+      if (normalized(member?.role) === "SUPPORTER") return 3;
       return 4;
     };
     return members
