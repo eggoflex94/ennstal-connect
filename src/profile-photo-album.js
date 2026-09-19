@@ -191,7 +191,7 @@ async function renderAlbum(page, profileId) {
       if (!groupedCards.has(folderId)) groupedCards.set(folderId, []);
       groupedCards.get(folderId).push(card);
     });
-    const folderSections = [...groupedCards.entries()].filter(([, items]) => items.length).map(([folderId, items]) => `<section class="ec-photo-folder-section"><h3>${esc(folderId ? (folderMap.get(folderId) || 'Fotoordner') : 'Allgemein')}</h3><div class="ec-photo-grid">${items.join('')}</div></section>`).join('');
+    const folderSections = [...groupedCards.entries()].map(([folderId, items]) => `<section class="ec-photo-folder-section"><h3>${esc(folderId ? (folderMap.get(folderId) || 'Fotoordner') : 'Allgemein')}</h3><div class="ec-photo-grid">${items.join('') || '<p class="ec-photo-empty">Noch keine Fotos in diesem Album.</p>'}</div></section>`).join('');
     album.innerHTML = `<header class="ec-photo-album-head"><div><span class="eyebrow">FOTOALBUM</span><h2>${mine ? 'Mein Fotoalbum' : 'Fotoalbum'}</h2><p>Kleine Fotoansichten – antippen für Großansicht, Likes und Kommentare.</p></div>${mine ? '<div class="ec-photo-head-actions"><button type="button" class="secondary-button ec-photo-folder-create">+ Ordner</button><button type="button" class="secondary-button ec-photo-upload-open">+ Foto hinzufügen</button></div>' : ''}</header>
       ${mine ? `<form class="ec-photo-upload-form" hidden>
         <label>Foto<input type="file" name="photo" accept="image/jpeg,image/png,image/webp,image/gif" required></label>
@@ -415,6 +415,7 @@ function attachObserver() {
 
 function refresh(force = false) { attachObserver(); scheduleMount(0, force); }
 window.addEventListener('ec:navigate', () => refresh());
+window.addEventListener('ec:profile-photo-folders-changed', () => refresh(true));
 supabase.auth.onAuthStateChange(() => {
   currentUserId = '';
   cleanupRealtime();
