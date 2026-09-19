@@ -998,7 +998,9 @@ export default function App() {
   }
 
   async function uploadProfileImage(file) {
-    if (!file || !user) return; if (!file.type.startsWith("image/")) return showNotice("Bitte ein Bild auswählen."); if (file.size > 5 * 1024 * 1024) return showNotice("Maximal 5 MB.");
+    if (!file || !user) return null;
+    if (!file.type.startsWith("image/")) { showNotice("Bitte ein Bild auswählen."); return null; }
+    if (file.size > 5 * 1024 * 1024) { showNotice("Maximal 5 MB."); return null; }
     const ext = file.name.split(".").pop()?.toLowerCase() || "jpg"; const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
     const { error } = await supabase.storage.from("profile-avatars").upload(path, file, { upsert: false, contentType: file.type }); if (error) { showNotice(error.message); return null; }
     const { data } = supabase.storage.from("profile-avatars").getPublicUrl(path);
@@ -1010,6 +1012,7 @@ export default function App() {
     await logProfileActivity("Profilbild geändert");
     showNotice("Profilbild geändert und ins Fotoalbum übernommen.");
     await loadAll();
+    return publicUrl;
   }
   function selectProfileCoverForEdit(file) {
     if (!file) return;
