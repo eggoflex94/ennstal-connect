@@ -65,7 +65,9 @@ async function ensureSupporter(member){
 }
 
 async function setBaseRole(member,role,status){
-  const {error}=await supabase.rpc('admin_set_role',{target_user:member.id,new_role:role});
+  const nextRole=String(role||'').trim().toUpperCase();
+  if(!['MEMBER','SUPPORTER','ADMIN'].includes(nextRole))throw new Error('Bitte eine gültige Basisrolle auswählen.');
+  const {error}=await supabase.rpc('admin_set_role',{target_user:member.id,new_role:nextRole});
   if(error)throw error;
   status.textContent='Basisrolle gespeichert.';
 }
