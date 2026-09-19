@@ -63,3 +63,98 @@
     width: 100% !important;
   }
 }
+
+
+/* Adaptive title image inside the exact member preview card. */
+.public-profile-preview.ec-profile-preview-parity .ec-mp-card.has-profile-cover{
+  position:relative;
+  isolation:isolate;
+  overflow:hidden;
+  background:#17324a;
+  border-color:rgba(255,255,255,.26);
+}
+.public-profile-preview.ec-profile-preview-parity .ec-mp-card.has-profile-cover>.ec-mp-cover{
+  position:absolute;
+  inset:0;
+  z-index:-2;
+  overflow:hidden;
+}
+.public-profile-preview.ec-profile-preview-parity .ec-mp-card.has-profile-cover>.ec-mp-cover>img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  max-width:none;
+  max-height:none;
+}
+.public-profile-preview.ec-profile-preview-parity .ec-mp-card.has-profile-cover>.ec-mp-cover-shade,
+.public-profile-preview.ec-profile-preview-parity .ec-mp-card.has-profile-cover .ec-mp-cover-shade{
+  position:absolute;
+  inset:0;
+  z-index:1;
+  background:linear-gradient(
+    110deg,
+    rgba(8,22,34,calc(var(--ec-cover-overlay,.18) + .30)) 0%,
+    rgba(8,22,34,calc(var(--ec-cover-overlay,.18) + .18)) 45%,
+    rgba(8,22,34,calc(var(--ec-cover-overlay,.18) + .08)) 100%
+  );
+}
+.public-profile-preview.ec-profile-preview-parity .ec-mp-card.has-profile-cover.is-cover-light .ec-mp-cover-shade{
+  background:linear-gradient(
+    110deg,
+    rgba(255,255,255,calc(var(--ec-cover-overlay,.18) + .42)) 0%,
+    rgba(255,255,255,calc(var(--ec-cover-overlay,.18) + .30)) 46%,
+    rgba(255,255,255,calc(var(--ec-cover-overlay,.18) + .18)) 100%
+  );
+}
+.public-profile-preview.ec-profile-preview-parity .ec-mp-card.has-profile-cover .ec-mp-left,
+.public-profile-preview.ec-profile-preview-parity .ec-mp-card.has-profile-cover .ec-mp-data{
+  position:relative;
+  z-index:2;
+}
+.public-profile-preview.ec-profile-preview-parity .ec-mp-card.has-profile-cover .ec-mp-photo,
+.public-profile-preview.ec-profile-preview-parity .ec-mp-card.has-profile-cover .ec-mp-function,
+.public-profile-preview.ec-profile-preview-parity .ec-mp-card.has-profile-cover .ec-mp-row,
+.public-profile-preview.ec-profile-preview-parity .ec-mp-card.has-profile-cover .ec-mp-data-head{
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+}
+.public-profile-preview.ec-profile-preview-parity .ec-mp-card.has-profile-cover.is-cover-dark .ec-mp-data-head,
+.public-profile-preview.ec-profile-preview-parity .ec-mp-card.has-profile-cover.is-cover-dark .ec-mp-row{
+  background:rgba(9,26,38,.66)!important;
+  border-color:rgba(255,255,255,.18)!important;
+}
+.public-profile-preview.ec-profile-preview-parity .ec-mp-card.has-profile-cover.is-cover-dark .ec-mp-data-head span,
+.public-profile-preview.ec-profile-preview-parity .ec-mp-card.has-profile-cover.is-cover-dark .ec-mp-row span{
+  color:rgba(255,255,255,.72)!important;
+}
+.public-profile-preview.ec-profile-preview-parity .ec-mp-card.has-profile-cover.is-cover-dark .ec-mp-data-head h1,
+.public-profile-preview.ec-profile-preview-parity .ec-mp-card.has-profile-cover.is-cover-dark .ec-mp-row strong{
+  color:#fff!important;
+  text-shadow:0 2px 8px rgba(0,0,0,.28);
+}
+.public-profile-preview.ec-profile-preview-parity .ec-mp-card.has-profile-cover.is-cover-light .ec-mp-data-head,
+.public-profile-preview.ec-profile-preview-parity .ec-mp-card.has-profile-cover.is-cover-light .ec-mp-row{
+  background:rgba(255,255,255,.76)!important;
+  border-color:rgba(20,52,74,.14)!important;
+}
+.public-profile-preview.ec-profile-preview-parity .ec-mp-card.has-profile-cover.is-cover-light .ec-mp-data-head span,
+.public-profile-preview.ec-profile-preview-parity .ec-mp-card.has-profile-cover.is-cover-light .ec-mp-row span{
+  color:#5f7283!important;
+}
+.public-profile-preview.ec-profile-preview-parity .ec-mp-card.has-profile-cover.is-cover-light .ec-mp-data-head h1,
+.public-profile-preview.ec-profile-preview-parity .ec-mp-card.has-profile-cover.is-cover-light .ec-mp-row strong{
+  color:#132b3d!important;
+}
+.public-profile-preview.ec-profile-preview-parity .ec-mp-card.has-profile-cover .ec-mp-function{
+  background:rgba(8,32,22,.78)!important;
+  border-color:rgba(122,255,91,.72)!important;
+}
+.public-profile-preview.ec-profile-preview-parity .ec-mp-card.has-profile-cover .ec-mp-function,
+.public-profile-preview.ec-profile-preview-parity .ec-mp-card.has-profile-cover .ec-mp-function *{
+  color:#fff!important;
+}
+.public-profile-preview.ec-profile-preview-parity .ec-mp-card.has-profile-cover .ec-mp-photo{
+  background:rgba(255,255,255,.82)!important;
+  border-color:rgba(255,255,255,.75)!important;
+  box-shadow:0 10px 30px rgba(5,18,28,.18)!important;
+}
