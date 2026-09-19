@@ -1,0 +1,59 @@
+/* Final interaction reliability layer: no redesign, only click/touch safety. */
+.ec-top-nav button > b,
+.ec-top-nav button > span,
+.ec-right-dock button > b,
+.ec-right-dock button > span,
+.ec-right-dock button > em,
+.admin-dashboard-action > *,
+.ec-profile-admin-action > *,
+.member-card .ec-role-surface,
+.member-card .ec-card-badge-rail,
+.member-card .ec-card-badge-rail *{
+  pointer-events:none!important;
+}
+
+.ec-dock-detail[hidden],
+.ec-mobile-nav-rail[hidden],
+[aria-hidden="true"].ec-click-shield{
+  display:none!important;
+  pointer-events:none!important;
+}
+
+button:not(:disabled),
+a[href],
+[role="button"]:not([aria-disabled="true"]){
+  -webkit-tap-highlight-color:rgba(15,107,143,.16);
+}
+
+.ec-profile-native-link{
+  position:relative;
+  z-index:1;
+}
+
+@media(pointer:coarse){
+  .ec-top-nav>button,
+  .ec-right-dock>button,
+  .ec-right-dock .ec-compact-menu-item,
+  .member-profile-actions button,
+  .profile-original-actions button,
+  .ec-profile-admin-action,
+  .admin-dashboard-action{
+    min-height:48px!important;
+  }
+
+  .ec-top-nav>button,
+  .ec-right-dock>button,
+  .ec-profile-native-link,
+  .member-card,
+  .admin-dashboard-action,
+  .ec-profile-admin-action{
+    touch-action:manipulation!important;
+  }
+
+  .ec-profile-native-link{
+    display:inline-flex!important;
+    align-items:center!important;
+    min-height:36px!important;
+    padding-block:4px!important;
+  }
+}

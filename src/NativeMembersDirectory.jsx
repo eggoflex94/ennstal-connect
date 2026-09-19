@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "./supabaseClient";
-import { loadMemberProfile } from "./memberProfileLoader.js";
 import MemberCardView from "./MemberCardView.jsx";
 
 const PAGE_SIZE = 30;
@@ -29,7 +28,6 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
   const [regionId, setRegionId] = useState("ALL");
   const [onlineOnly, setOnlineOnly] = useState(false);
   const [regionalAssignments, setRegionalAssignments] = useState([]);
-  const [loadingMemberId, setLoadingMemberId] = useState(null);
   const [page, setPage] = useState(1);
 
   useEffect(() => {
@@ -80,15 +78,9 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
 
   const roleStarSrc = (member) => isHeadAdmin(member) || isGlobalAdmin(member) || isRegionalAdmin(member) ? "/role-star-red.svg" : isBusiness(member) ? "/role-star-blue.svg" : normalized(member?.role) === "SUPPORTER" ? "/supporter-star.svg" : null;
 
-  const openFreshMember = async (member) => {
-    if (!member?.id || loadingMemberId) return;
-    setLoadingMemberId(member.id);
-    try {
-      const freshMember = await loadMemberProfile(member);
-      onOpen?.(freshMember || member);
-    } finally {
-      setLoadingMemberId(null);
-    }
+  const openMember = (member) => {
+    if (!member?.id) return;
+    onOpen?.(member);
   };
 
   const visible = useMemo(() => {
@@ -145,7 +137,6 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
       <div className="native-members-count"><strong>{visible.length} Treffer</strong>{visible.length > PAGE_SIZE && <small>Seite {page} von {pageCount}</small>}</div>
     </div>
 
-    {loadingMemberId && <small className="native-member-loading" aria-live="polite">Profil wird geladen …</small>}
 
     <div className="native-member-search panel">
       <input className="search-input" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name, Rolle oder Region suchen …" />
@@ -170,7 +161,7 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
           member={cardMember}
           profile={profile}
           friendships={friendships}
-          onOpen={openFreshMember}
+          onOpen={openMember}
         />;
       })}
       {!visible.length && <div className="empty-card">Keine Mitglieder für diese Auswahl gefunden.</div>}
