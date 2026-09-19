@@ -157,7 +157,8 @@ async function build(root){
       card.insertAdjacentHTML('afterbegin',coverMarkup(target));
     }
     const left=document.createElement('div');left.className='ec-mp-left';
-    const photo=document.createElement('div');photo.className='ec-mp-photo';if(avatar)photo.appendChild(avatar);left.appendChild(photo);
+    const photoTheme=role.star==='/role-star-red.svg'?'admin':role.star==='/supporter-star.svg'?'supporter':role.star==='/role-star-blue.svg'?'business':'member';
+    const photo=document.createElement('div');photo.className='ec-mp-photo';photo.dataset.roleTheme=photoTheme;if(avatar)photo.appendChild(avatar);left.appendChild(photo);
     const functionBox=document.createElement('div');functionBox.className='ec-mp-function';
     const roleMarkup=role.star?`<span class="ec-mp-function-role"><img class="ec-mp-role-star" src="${role.star}" alt="" aria-hidden="true"><strong>${esc(role.label)}</strong></span>`:`<span class="ec-mp-function-role"><strong>${esc(role.label)}</strong></span>`;
     const photographerRegionNames=photographer.regionIds.map(id=>regions.find(r=>r.id===id)?.name).filter(Boolean);
