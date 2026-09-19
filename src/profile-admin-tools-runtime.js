@@ -71,6 +71,7 @@ function buildModal(ctx){
     const groupMod=bool(ctx.targetPermissions?.manage_groups)||(t.admin_responsibilities||[]).some(x=>/gruppen verwalten/i.test(String(x)));
     blocks.push(section('★','Rolle & Zuständigkeiten','Nur Hauptadmin – Rollen, Moderatorstatus und Einzelrechte',`<div class="ec-profile-admin-grid">${toolButton('Rolle entfernen → Mitglied','role:MEMBER')}${toolButton('Zum Supporter machen','role:SUPPORTER')}${toolButton('Zum Community Admin machen','role:ADMIN')}${toolButton('Einzelrechte verwalten','permissions')}${toolButton(t.forum_moderator?'Forum-Moderation entfernen':'Forum-Moderator vergeben','forum-moderator')}${toolButton(groupMod?'Gruppenmoderation entfernen':role(t.role)==='SUPPORTER'?'Gruppenmoderator vergeben':'Supporter + Gruppenmoderation','group-moderator')}</div>`,'head-only'));
     blocks.push(section('⌖','Regionale Rollen','Nur Hauptadmin – Region auswählen und Rolle verwalten',`<label class="ec-profile-admin-region-picker">Region<select class="ec-admin-region-select">${regionOptions}</select></label><div class="ec-profile-admin-grid">${toolButton(homeRegion&&targetRegionalAdminIds.has(homeRegion.id)?'Regionaladmin entfernen':'Regionaladmin vergeben','regional-admin')}${toolButton(homeRegion&&targetRegionalModIds.has(homeRegion.id)?'Regionale Moderation entfernen':'Regionale Moderation vergeben','regional-moderator')}</div>`,'head-only'));
+    blocks.push(section('⌖','Mitgliedsregion',`Aktuell: ${homeRegion?.name||'Keine Region'}`,`<label class="ec-profile-admin-region-picker">Neue Heimatregion<select class="ec-home-region-select">${regionOptions}</select></label><div class="ec-profile-admin-grid">${toolButton('Heimatregion speichern','home-region')}</div>`,'head-only'));
   }
 
   if(canManagePhotographers(ctx)){
@@ -123,6 +124,18 @@ async function handleAction(ctx,action,modal){
   if(action==='forum-moderator'&&ctx.isHead){const enabled=!bool(ctx.target.forum_moderator);const ok=await withPreparedAction(`Forum-Moderation ${enabled?'vergeben':'entfernen'}`,ctx.target.id,()=>supabase.rpc('admin_set_forum_moderator',{p_target_user:ctx.target.id,p_enabled:enabled}));if(ok){notify('Forum-Moderationsrolle wurde aktualisiert.');openTools(ctx.target.id);}return;}
   if(action==='group-moderator'&&ctx.isHead){const current=bool(ctx.targetPermissions?.manage_groups)||(ctx.target.admin_responsibilities||[]).some(x=>/gruppen verwalten/i.test(String(x)));const enabled=!current;if(enabled&&role(ctx.target.role)!=='SUPPORTER'){const roleOk=await withPreparedAction('Supporter-Rolle für Gruppenmoderation vergeben',ctx.target.id,()=>supabase.rpc('admin_set_role',{target_user:ctx.target.id,new_role:'SUPPORTER'}));if(!roleOk)return;}const {data,error}=await supabase.rpc('admin_get_permissions',{target_user:ctx.target.id});if(error)return notify(error.message);const ok=await withPreparedAction(`Gruppenmoderation ${enabled?'vergeben':'entfernen'}`,ctx.target.id,()=>savePermissionSet(ctx.target.id,{...(data||{}),manage_groups:enabled}));if(ok){notify(enabled?'Gruppenmoderation wurde vergeben.':'Gruppenmoderation wurde entfernt.');openTools(ctx.target.id);}return;}
   if((action==='regional-admin'||action==='regional-moderator')&&ctx.isHead){const slug=modal.querySelector('.ec-admin-region-select')?.value,region=ctx.regions.find(r=>r.slug===slug);if(!region)return notify('Bitte eine Region auswählen.');if(action==='regional-admin'){const enabled=!ctx.targetRegionalAdmins.some(x=>x.region_id===region.id);const ok=await withPreparedAction(`Regionaladmin ${enabled?'vergeben':'entfernen'} – ${region.name}`,ctx.target.id,()=>supabase.rpc('ec_set_regional_admin',{p_target:ctx.target.id,p_region_slug:region.slug,p_enabled:enabled}));if(ok){notify('Regionale Adminrolle wurde aktualisiert.');openTools(ctx.target.id);}}else{const enabled=!(ctx.targetRegionalMods||[]).some(x=>x.active!==false&&x.region_id===region.id);const permissions=enabled?['FORUM','GROUPS','EVENTS','NEWS','HOMEPAGE','MEMBERS','BUSINESSES','ANNOUNCEMENTS']:[];const ok=await withPreparedAction(`Regionale Moderation ${enabled?'vergeben':'entfernen'} – ${region.name}`,ctx.target.id,()=>supabase.rpc('ec_set_regional_moderator',{p_target:ctx.target.id,p_region_slug:region.slug,p_permissions:permissions,p_enabled:enabled}));if(ok){notify('Regionale Moderationsrolle wurde aktualisiert.');openTools(ctx.target.id);}}return;}
+  if(action==='home-region'&&ctx.isHead){
+    const slug=modal.querySelector('.ec-home-region-select')?.value;
+    const region=ctx.regions.find(r=>r.slug===slug);
+    if(!region)return notify('Bitte eine Region auswählen.');
+    if(region.id===ctx.target.home_region_id)return notify(`${targetName(ctx.target)} ist bereits ${region.name} zugeordnet.`);
+    const ok=await withPreparedAction(`Heimatregion auf ${region.name} ändern`,ctx.target.id,()=>supabase.rpc('ec_head_set_home_region',{p_target:ctx.target.id,p_region_slug:region.slug}));
+    if(ok){
+      notify(`Heimatregion wurde auf ${region.name} geändert.`);
+      openTools(ctx.target.id);
+    }
+    return;
+  }
   if(action==='photographer-global'&&canManagePhotographers(ctx)){
     const enabled=!ctx.photographerAssignments.some(x=>x.scope==='GLOBAL');
     const {error}=await supabase.rpc('set_community_photographer_assignment',{p_target_user:ctx.target.id,p_scope:'GLOBAL',p_region_id:null,p_enabled:enabled});
