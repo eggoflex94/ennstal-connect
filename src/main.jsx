@@ -140,6 +140,7 @@ import "./profile-visits-layout.css";
 import "./head-admin-menu.js";
 import "./head-admin-activity-folders.css";
 import "./profile-admin-tools-unified.css";
+import "./profile-admin-tools-unified.js";
 import "./admin-head-access-reliability.js";
 import "./ui-requested-fixes.js";
 import "./home-modern-final.css";
