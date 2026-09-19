@@ -4,12 +4,16 @@ import { readFile } from 'node:fs/promises';
 
 const source = async (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
-test('member cards load a fresh profile before opening', async () => {
+test('member cards open immediately while App refreshes the profile in the background', async () => {
   const directory = await source('src/NativeMembersDirectory.jsx');
   const card = await source('src/MemberCardView.jsx');
-  assert.match(directory, /loadMemberProfile\(member\)/);
-  assert.match(directory, /Profil wird geladen/);
-  assert.match(card, /loadMemberProfile\(member\)/);
+  const app = await source('src/App.jsx');
+  assert.doesNotMatch(directory, /loadMemberProfile\(member\)/);
+  assert.doesNotMatch(directory, /Profil wird geladen/);
+  assert.doesNotMatch(card, /loadMemberProfile\(member\)/);
+  assert.match(directory, /onOpen\?\.\(member\)/);
+  assert.match(card, /if \(onOpen\) onOpen\(member\)/);
+  assert.match(app, /setPage\("member-profile"\); void loadMemberProfile\(m\)/);
 });
 
 test('fresh profile loader uses the dedicated authenticated RPC and preserves loaded fields', async () => {
