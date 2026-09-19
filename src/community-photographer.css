@@ -457,3 +457,56 @@ article.member-card[data-role-theme="member"][data-community-photographer="true"
     min-height:48px!important;
   }
 }
+
+
+/* Own-profile photographer status must stay compact; never inherit generic panel image sizing. */
+.community-photographer-self-banner{
+  display:flex!important;
+  align-items:center!important;
+  gap:12px!important;
+  width:100%!important;
+  min-width:0!important;
+  margin:0 0 16px!important;
+  padding:13px 15px!important;
+  overflow:hidden!important;
+}
+.community-photographer-self-banner>img{
+  position:static!important;
+  display:block!important;
+  flex:0 0 34px!important;
+  width:34px!important;
+  height:34px!important;
+  min-width:34px!important;
+  min-height:34px!important;
+  max-width:34px!important;
+  max-height:34px!important;
+  margin:0!important;
+  padding:4px!important;
+  border:0!important;
+  border-radius:9px!important;
+  background:#fff!important;
+  object-fit:contain!important;
+  transform:none!important;
+  box-shadow:0 4px 12px rgba(15,43,64,.12)!important;
+}
+.community-photographer-self-banner>div{
+  display:flex!important;
+  flex:1 1 auto!important;
+  flex-direction:column!important;
+  gap:2px!important;
+  min-width:0!important;
+}
+.community-photographer-self-banner strong{
+  font-size:14px!important;
+  line-height:1.25!important;
+}
+.community-photographer-self-banner small{
+  font-size:11px!important;
+  line-height:1.35!important;
+  opacity:.72!important;
+}
+@media(pointer:coarse){
+  .community-photographer-self-banner{
+    min-height:64px!important;
+  }
+}
