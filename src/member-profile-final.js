@@ -24,6 +24,29 @@ async function targetFor(root){
   if(!data){const all=await supabase.from('profiles').select('*');data=(all.data||[]).find(p=>[p.first_name,p.last_name].filter(Boolean).join(' ')===name)||null}
   return data;
 }
+async function photographerInfo(target){
+  const cachedRegionIds=Array.isArray(target?.community_photographer_region_ids)?target.community_photographer_region_ids:[];
+  if(target?.is_community_photographer){
+    return{
+      active:true,
+      global:Boolean(target.community_photographer_global),
+      regionIds:cachedRegionIds
+    };
+  }
+  if(!target?.id)return{active:false,global:false,regionIds:[]};
+  const {data,error}=await supabase
+    .from('community_photographer_assignments')
+    .select('scope,region_id,active')
+    .eq('user_id',target.id)
+    .eq('active',true);
+  if(error)return{active:false,global:false,regionIds:[]};
+  const active=data||[];
+  return{
+    active:active.length>0,
+    global:active.some(item=>item.scope==='GLOBAL'),
+    regionIds:active.filter(item=>item.scope==='REGIONAL'&&item.region_id).map(item=>item.region_id)
+  };
+}
 async function friendship(targetId){
   if(!viewer?.id||!targetId)return false;
   const {data}=await supabase.from('friendships').select('status').eq('status','ACCEPTED').or(`and(requester_id.eq.${viewer.id},receiver_id.eq.${targetId}),and(requester_id.eq.${targetId},receiver_id.eq.${viewer.id})`).limit(1);
@@ -106,11 +129,12 @@ async function build(root){
   try{
     await context();
     const target=await targetFor(root);if(!target)return;
+    const photographer=await photographerInfo(target);
 
     const existingCard=root.querySelector(':scope > .ec-mp-card');
     if(root.dataset.ecMemberProfileFinal==='1'&&existingCard){
       const hasPhotographerRow=Boolean(existingCard.querySelector('.ec-mp-function-photographer'));
-      const shouldHavePhotographerRow=Boolean(target.is_community_photographer);
+      const shouldHavePhotographerRow=photographer.active;
       if(hasPhotographerRow===shouldHavePhotographerRow)return;
       existingCard.remove();
       root.querySelector(':scope > .ec-mp-actions')?.remove();
@@ -136,14 +160,13 @@ async function build(root){
     const photo=document.createElement('div');photo.className='ec-mp-photo';if(avatar)photo.appendChild(avatar);left.appendChild(photo);
     const functionBox=document.createElement('div');functionBox.className='ec-mp-function';
     const roleMarkup=role.star?`<span class="ec-mp-function-role"><img class="ec-mp-role-star" src="${role.star}" alt="" aria-hidden="true"><strong>${esc(role.label)}</strong></span>`:`<span class="ec-mp-function-role"><strong>${esc(role.label)}</strong></span>`;
-    const photographerRegions=Array.isArray(target.community_photographer_region_ids)?target.community_photographer_region_ids:[];
-    const photographerRegionNames=photographerRegions.map(id=>regions.find(r=>r.id===id)?.name).filter(Boolean);
-    const photographerScope=target.community_photographer_global
+    const photographerRegionNames=photographer.regionIds.map(id=>regions.find(r=>r.id===id)?.name).filter(Boolean);
+    const photographerScope=photographer.global
       ? 'Alle Regionen'
       : photographerRegionNames.length
         ? photographerRegionNames.join(', ')
         : 'Regional';
-    const photographerMarkup=target.is_community_photographer
+    const photographerMarkup=photographer.active
       ? `<span class="ec-mp-function-role ec-mp-function-photographer"><img class="ec-mp-function-camera" src="/community-photographer-camera.svg" alt="" aria-hidden="true"><span class="ec-mp-function-copy"><strong>Community-Fotograf</strong><small>${esc(photographerScope)}</small></span></span>`
       : '';
     const settingMarkup=ownProfile?`<label class="ec-activity-flame-setting"><input type="checkbox" data-activity-flame-toggle ${activity.show?'checked':''}><span>Aktivitätsflamme im Profil anzeigen</span></label>`:'';

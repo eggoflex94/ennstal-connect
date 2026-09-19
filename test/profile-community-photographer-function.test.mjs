@@ -38,3 +38,15 @@ test("profile function card refreshes when photographer status changes", async (
   assert.match(runtime, /existingCard\.remove\(\)/);
   assert.match(runtime, /delete root\.dataset\.ecMemberProfileFinal/);
 });
+
+
+test("profile function resolves photographer status from active assignments", async () => {
+  const runtime = await source("src/member-profile-final.js");
+  assert.match(runtime, /async function photographerInfo\(target\)/);
+  assert.match(runtime, /community_photographer_assignments/);
+  assert.match(runtime, /\.eq\('user_id',target\.id\)/);
+  assert.match(runtime, /\.eq\('active',true\)/);
+  assert.match(runtime, /photographer\.active/);
+  assert.match(runtime, /photographer\.global/);
+  assert.match(runtime, /photographer\.regionIds/);
+});
