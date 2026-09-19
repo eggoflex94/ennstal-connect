@@ -1,0 +1,121 @@
+/* Final theme authority for the fixed top navigation bar.
+   Loaded after all legacy/navigation styles so each saved layout keeps its color identity. */
+
+html[data-ec-theme="standard"]{
+  --ec-topbar-bg-1:#fff8f2;
+  --ec-topbar-bg-2:#fff1e7;
+  --ec-topbar-line:#ffd7bd;
+  --ec-topbar-ink:#3b4654;
+  --ec-topbar-muted:#7a685d;
+  --ec-topbar-accent:#ff6b25;
+  --ec-topbar-accent-strong:#e94f0b;
+  --ec-topbar-soft:rgba(255,107,37,.10);
+}
+html[data-ec-theme="red"]{
+  --ec-topbar-bg-1:#fff5f6;
+  --ec-topbar-bg-2:#ffe8eb;
+  --ec-topbar-line:#ffc3ca;
+  --ec-topbar-ink:#4b2530;
+  --ec-topbar-muted:#8a5b65;
+  --ec-topbar-accent:#ff4357;
+  --ec-topbar-accent-strong:#d8233b;
+  --ec-topbar-soft:rgba(255,67,87,.11);
+}
+html[data-ec-theme="blue"]{
+  --ec-topbar-bg-1:#f4f9ff;
+  --ec-topbar-bg-2:#e5f1ff;
+  --ec-topbar-line:#bddcff;
+  --ec-topbar-ink:#173b66;
+  --ec-topbar-muted:#547290;
+  --ec-topbar-accent:#1677ff;
+  --ec-topbar-accent-strong:#075fd4;
+  --ec-topbar-soft:rgba(22,119,255,.11);
+}
+html[data-ec-theme="neon"]{
+  --ec-topbar-bg-1:#5af900;
+  --ec-topbar-bg-2:#a3ff51;
+  --ec-topbar-line:#c5ff95;
+  --ec-topbar-ink:#07150d;
+  --ec-topbar-muted:#173a24;
+  --ec-topbar-accent:#0a3b25;
+  --ec-topbar-accent-strong:#062818;
+  --ec-topbar-soft:rgba(7,21,13,.12);
+}
+
+html[data-ec-theme] .app .modern-topbar{
+  background:linear-gradient(110deg,var(--ec-topbar-bg-1) 0%,var(--ec-topbar-bg-2) 100%)!important;
+  border-bottom:1px solid var(--ec-topbar-line)!important;
+  color:var(--ec-topbar-ink)!important;
+  box-shadow:0 5px 22px color-mix(in srgb,var(--ec-topbar-accent) 12%,transparent)!important;
+}
+
+html[data-ec-theme] .app .modern-topbar :is(.topbar-brand,.breadcrumb,.topbar-user,strong,span,b,small,p){
+  color:var(--ec-topbar-ink)!important;
+}
+
+html[data-ec-theme] .app .modern-topbar .breadcrumb{
+  color:var(--ec-topbar-muted)!important;
+}
+html[data-ec-theme] .app .modern-topbar .breadcrumb b{
+  color:var(--ec-topbar-accent)!important;
+}
+
+html[data-ec-theme] .app .modern-topbar .brand-mark{
+  background:linear-gradient(135deg,var(--ec-topbar-accent),var(--ec-topbar-accent-strong))!important;
+  color:#fff!important;
+  box-shadow:0 8px 22px color-mix(in srgb,var(--ec-topbar-accent) 28%,transparent)!important;
+}
+
+html[data-ec-theme] .app .modern-topbar .topbar-brand span{
+  color:var(--ec-topbar-accent-strong)!important;
+}
+
+html[data-ec-theme] .app .modern-topbar .topbar-user{
+  padding:5px 8px;
+  border-radius:999px;
+  transition:background .18s ease,box-shadow .18s ease;
+}
+html[data-ec-theme] .app .modern-topbar .topbar-user:hover{
+  background:var(--ec-topbar-soft)!important;
+}
+html[data-ec-theme] .app .modern-topbar .topbar-user img{
+  border-color:var(--ec-topbar-accent)!important;
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--ec-topbar-accent) 12%,transparent)!important;
+}
+
+/* Some responsive/legacy shells still expose ec-top-nav. Keep them in the same theme. */
+html[data-ec-theme] .app .ec-top-nav{
+  background:linear-gradient(110deg,var(--ec-topbar-bg-1),var(--ec-topbar-bg-2))!important;
+  border-color:var(--ec-topbar-line)!important;
+  color:var(--ec-topbar-ink)!important;
+}
+html[data-ec-theme] .app .ec-top-nav :is(button,a,span,strong){
+  color:var(--ec-topbar-ink)!important;
+}
+html[data-ec-theme] .app .ec-top-nav button:hover{
+  background:var(--ec-topbar-soft)!important;
+}
+html[data-ec-theme] .app .ec-top-nav button.active,
+html[data-ec-theme] .app .ec-top-nav button[aria-current="page"]{
+  background:var(--ec-topbar-accent)!important;
+  border-color:var(--ec-topbar-accent-strong)!important;
+  color:#fff!important;
+}
+
+/* Neon needs dark controls on the bright green bar. */
+html[data-ec-theme="neon"] .app .modern-topbar .brand-mark{
+  color:#95ff53!important;
+}
+html[data-ec-theme="neon"] .app .ec-top-nav button.active,
+html[data-ec-theme="neon"] .app .ec-top-nav button[aria-current="page"]{
+  color:#95ff53!important;
+}
+
+@media(max-width:680px){
+  html[data-ec-theme] .app .modern-topbar{
+    background:linear-gradient(110deg,var(--ec-topbar-bg-1),var(--ec-topbar-bg-2))!important;
+  }
+  html[data-ec-theme] .app .modern-topbar .topbar-user{
+    padding:3px 5px;
+  }
+}
