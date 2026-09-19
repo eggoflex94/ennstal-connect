@@ -66,6 +66,7 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
   const [loadError, setLoadError] = useState("");
   const previewCanvasRef = useRef(null);
   const exportCanvasRef = useRef(null);
+  const dragRef = useRef(null);
 
   useEffect(() => {
     let active = true;
@@ -99,6 +100,40 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
       PREVIEW_SIZE
     );
   }, [source, zoom, x, y, rotation]);
+
+  const clampPan = (value) => Math.max(-55, Math.min(55, value));
+
+  const startDrag = (event) => {
+    if (!source || busy) return;
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    dragRef.current = {
+      pointerId: event.pointerId,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+      startX: x,
+      startY: y
+    };
+  };
+
+  const moveDrag = (event) => {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    event.preventDefault();
+    const rect = event.currentTarget.getBoundingClientRect();
+    const width = Math.max(1, rect.width);
+    const height = Math.max(1, rect.height);
+    const nextX = drag.startX + ((event.clientX - drag.startClientX) / width) * 115;
+    const nextY = drag.startY + ((event.clientY - drag.startClientY) / height) * 115;
+    setX(clampPan(nextX));
+    setY(clampPan(nextY));
+  };
+
+  const endDrag = (event) => {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    try { event.currentTarget.releasePointerCapture?.(event.pointerId); } catch {}
+    dragRef.current = null;
+  };
 
   const reset = () => {
     setZoom(1);
@@ -138,13 +173,21 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
         <div>
           <span className="eyebrow">PROFILBILD</span>
           <h2>Foto anpassen</h2>
-          <p>Die Vorschau entspricht jetzt exakt dem Bild, das anschließend gespeichert wird.</p>
+          <p>Ziehe das Bild direkt mit Finger oder Maus an die gewünschte Position. Die Vorschau entspricht exakt dem gespeicherten Ausschnitt.</p>
         </div>
         <button type="button" className="ec-photo-editor-close" onClick={onCancel} aria-label="Schließen">×</button>
       </header>
 
       <div className="ec-photo-editor-workspace">
-        <div className="ec-photo-editor-preview">
+        <div
+          className={`ec-photo-editor-preview${source ? " is-draggable" : ""}`}
+          onPointerDown={startDrag}
+          onPointerMove={moveDrag}
+          onPointerUp={endDrag}
+          onPointerCancel={endDrag}
+          onLostPointerCapture={() => { dragRef.current = null; }}
+          aria-label={source ? "Profilbild-Vorschau. Bild mit Finger oder Maus verschieben." : undefined}
+        >
           {source
             ? <canvas ref={previewCanvasRef} aria-label="Profilbild-Vorschau"/>
             : loadError
