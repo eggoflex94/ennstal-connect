@@ -110,6 +110,7 @@ export default function App() {
   const [profile, setProfile] = useState(null);
   const [profilePhotoEditFile, setProfilePhotoEditFile] = useState(null);
   const [profileCoverEditFile, setProfileCoverEditFile] = useState(null);
+  const [profileCoverEditingExisting, setProfileCoverEditingExisting] = useState(false);
   const [members, setMembers] = useState([]);
   const [adminMembers, setAdminMembers] = useState([]);
   const [adminLog, setAdminLog] = useState([]);
@@ -991,15 +992,20 @@ export default function App() {
   }
 
   async function saveEditedProfileCover(file, settings) {
-    if (!file || !user) return;
-    if (file.size > 8 * 1024 * 1024) return showNotice("Das Coverbild darf maximal 8 MB groß sein.");
-    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-    const path = `${user.id}/backgrounds/${crypto.randomUUID()}.${ext}`;
-    const { error } = await supabase.storage.from("profile-avatars").upload(path, file, { upsert:false, contentType:file.type });
-    if (error) return showNotice(error.message);
-    const { data } = supabase.storage.from("profile-avatars").getPublicUrl(path);
+    if (!user) return;
+    let backgroundUrl = String(profile?.profile_background || "");
+    if (file) {
+      if (file.size > 8 * 1024 * 1024) return showNotice("Das Coverbild darf maximal 8 MB groß sein.");
+      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      const path = `${user.id}/backgrounds/${crypto.randomUUID()}.${ext}`;
+      const { error } = await supabase.storage.from("profile-avatars").upload(path, file, { upsert:false, contentType:file.type });
+      if (error) return showNotice(error.message);
+      const { data } = supabase.storage.from("profile-avatars").getPublicUrl(path);
+      backgroundUrl = data.publicUrl;
+    }
+    if (!backgroundUrl.startsWith("http")) return showNotice("Bitte zuerst ein Coverbild auswählen.");
     const patch = {
-      profile_background: data.publicUrl,
+      profile_background: backgroundUrl,
       profile_background_position_x: Number(settings?.x ?? 50),
       profile_background_position_y: Number(settings?.y ?? 50),
       profile_background_zoom: Number(settings?.zoom ?? 1),
@@ -1009,6 +1015,7 @@ export default function App() {
     if (updateError) return showNotice(updateError.message);
     setProfile((current) => current ? { ...current, ...patch } : current);
     setProfileCoverEditFile(null);
+    setProfileCoverEditingExisting(false);
     await logProfileActivity("Profil-Cover geändert");
     showNotice("Profil-Cover gespeichert.");
     await loadAll();
@@ -1225,8 +1232,8 @@ export default function App() {
         )}
         {page === "admin-forum" && isAdmin(profile?.role) && <Forum title="Admin-Forum" intro="Interner Bereich für Moderation und Administration." scope="ADMIN" posts={forumPosts} members={members} profile={profile} createPost={createForumPost} editPost={editForumPost} deletePost={deleteForumPost} locked={false}/>}
         {profilePhotoEditFile && <ProfilePhotoEditor file={profilePhotoEditFile} onCancel={() => setProfilePhotoEditFile(null)} onSave={saveEditedProfilePhoto}/>}
-        {profileCoverEditFile && <ProfileCoverEditor file={profileCoverEditFile} current={{ x:profile?.profile_background_position_x, y:profile?.profile_background_position_y, zoom:profile?.profile_background_zoom, overlay:profile?.profile_background_overlay }} onCancel={() => setProfileCoverEditFile(null)} onSave={saveEditedProfileCover}/>}
-        {page === "profile" && <section className="profile-page-layout"><Profile profile={profile} user={user} isHeadAdmin={isHeadAdmin} saveProfile={saveProfile} uploadProfileImage={selectProfilePhotoForEdit} uploadProfileBackground={selectProfileCoverForEdit} removeProfileCover={removeProfileCover} uploadProfileBioImage={uploadProfileBioImage} openPublicPreview={() => setPage("profile-preview")}/><BusinessProfileManager profile={profile} user={user}/><ProfileSections member={profile} editable><MemberGroups member={profile} groups={allGroups} onOpen={(group)=>{setSelectedGroup(group);setPage("groups")}}/></ProfileSections><ProfileTimeline visits={profileVisits} activities={profileActivities} members={members} onOpen={openMember}/><ProfileWelcomeBadges badges={welcomeBadges}/><ProfilePhotoGallery photos={memberPhotos.filter((photo) => photo.owner_id === user.id)} likes={photoLikes} comments={photoComments} user={user} onUpload={uploadMemberPhoto} onLike={togglePhotoLike} onComment={addPhotoComment} onDelete={deleteMemberPhoto}/></section>}
+        {(profileCoverEditFile || profileCoverEditingExisting) && <ProfileCoverEditor file={profileCoverEditFile} currentUrl={profile?.profile_background?.startsWith("http") ? profile.profile_background : ""} current={{ x:profile?.profile_background_position_x, y:profile?.profile_background_position_y, zoom:profile?.profile_background_zoom, overlay:profile?.profile_background_overlay }} onCancel={() => { setProfileCoverEditFile(null); setProfileCoverEditingExisting(false); }} onSave={saveEditedProfileCover}/>}
+        {page === "profile" && <section className="profile-page-layout"><Profile profile={profile} user={user} isHeadAdmin={isHeadAdmin} saveProfile={saveProfile} uploadProfileImage={selectProfilePhotoForEdit} uploadProfileBackground={selectProfileCoverForEdit} editProfileCover={() => setProfileCoverEditingExisting(true)} removeProfileCover={removeProfileCover} uploadProfileBioImage={uploadProfileBioImage} openPublicPreview={() => setPage("profile-preview")}/><BusinessProfileManager profile={profile} user={user}/><ProfileSections member={profile} editable><MemberGroups member={profile} groups={allGroups} onOpen={(group)=>{setSelectedGroup(group);setPage("groups")}}/></ProfileSections><ProfileTimeline visits={profileVisits} activities={profileActivities} members={members} onOpen={openMember}/><ProfileWelcomeBadges badges={welcomeBadges}/><ProfilePhotoGallery photos={memberPhotos.filter((photo) => photo.owner_id === user.id)} likes={photoLikes} comments={photoComments} user={user} onUpload={uploadMemberPhoto} onLike={togglePhotoLike} onComment={addPhotoComment} onDelete={deleteMemberPhoto}/></section>}
         {page === "profile-preview" && <PublicProfilePreview profile={profile} photos={memberPhotos} groups={allGroups} onBack={() => setPage("profile")} onOpenGroup={(group) => { setSelectedGroup(group); setPage("groups"); }}/>} 
         {page === "member-profile" && viewingMember && <MemberProfile photos={memberPhotos} member={viewingMember} friends={viewingFriends} groups={allGroups} user={user} viewerProfile={profile} friendship={friendshipWith(viewingMember.id)} back={() => { setViewingMember(null); setViewingFriends([]); setPage("members"); }} onOpen={openMember} onOpenGroup={(group) => { setSelectedGroup(group); setPage("groups"); }} requestFriend={requestFriend} respond={respondToFriendRequest} removeFriend={removeFriend} blockUser={blockUser} reportUser={reportUser} warnMember={warnMember} updateMemberRole={updateMemberRole} toggleSuspension={toggleSuspension} toggleTestAccount={toggleTestAccount} setBusinessAccount={setBusinessAccount} setForumModerator={setForumModerator} setGroupModerator={setGroupModerator} setProfileVerification={setProfileVerification} loadPermissions={loadPermissions} setMemberFeatureLock={setMemberFeatureLock} openChat={openChat}/>} 
         {page === "member-profile" && viewingMember && <ProfileHighlights member={viewingMember} friends={viewingFriends} groups={allGroups} photos={memberPhotos}/>}
@@ -1270,7 +1277,7 @@ function MemberMini({ member }) { return <div className="member-mini"><img src={
 
 function ProfileWelcomeBadges({ badges }) { if (!badges.length) return null; return <section className="panel profile-welcome-badges"><span className="eyebrow">DEINE ERSTEN SCHRITTE</span><h2>Willkommens-Badges</h2><div>{badges.map((badge) => <span className={badge.earned ? "earned" : ""} key={badge.key}><b>{badge.icon}</b><span><strong>{badge.title}</strong><small>{badge.description}</small></span>{badge.earned ? "✓" : ""}</span>)}</div></section>; }
 
-function Profile({ profile, user, isHeadAdmin, saveProfile, uploadProfileImage, uploadProfileBackground, removeProfileCover, uploadProfileBioImage }) { const background = profile?.profile_background || "#1b1f26"; const isImage = background.startsWith("http"); const business = profile?.account_badge === "BUSINESS"; return <section><div className="my-area-layout"><div className="profile-member-card-preview" aria-label="Vorschau deiner Mitgliederkarte"><MemberCardView member={profile} profile={profile} friendships={[]} interactive={false}/></div><form className="panel profile-form profile-editor" onSubmit={saveProfile}>
+function Profile({ profile, user, isHeadAdmin, saveProfile, uploadProfileImage, uploadProfileBackground, editProfileCover, removeProfileCover, uploadProfileBioImage }) { const background = profile?.profile_background || "#1b1f26"; const isImage = background.startsWith("http"); const business = profile?.account_badge === "BUSINESS"; return <section><div className="my-area-layout"><div className="profile-member-card-preview" aria-label="Vorschau deiner Mitgliederkarte"><MemberCardView member={profile} profile={profile} friendships={[]} interactive={false}/></div><form className="panel profile-form profile-editor" onSubmit={saveProfile}>
   <header className="profile-editor-header"><span className="eyebrow">DEIN PROFIL</span><h2>Profil gestalten</h2><p className="profile-editor-note">Passe deine Darstellung übersichtlich an. Änderungen gelten für dein eigenes und dein öffentliches Profil.</p></header>
   <fieldset className="profile-editor-section">
     <legend>Grunddaten und Farben</legend>
@@ -1293,7 +1300,7 @@ function Profile({ profile, user, isHeadAdmin, saveProfile, uploadProfileImage, 
     <legend>Bilder</legend>
     <div className="profile-editor-grid">
       <label className="profile-upload-field"><span>Profilbild</span><small>PNG, JPG, WebP oder GIF · danach zuschneiden, zoomen und ausrichten</small><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(e) => e.target.files?.[0] && uploadProfileImage(e.target.files[0])}/></label>
-      <label className="profile-upload-field"><span>Profil-Cover</span><small>Breites Titelbild · danach Ausschnitt, Zoom und Abdunklung einstellen</small><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(e) => e.target.files?.[0] && uploadProfileBackground(e.target.files[0])}/>{isImage && <button type="button" className="text-button profile-cover-remove" onClick={removeProfileCover}>Hintergrund entfernen</button>}</label>
+      <label className="profile-upload-field"><span>Profil-Cover</span><small>Breites Titelbild · danach Ausschnitt, Zoom und Abdunklung einstellen</small><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(e) => e.target.files?.[0] && uploadProfileBackground(e.target.files[0])}/>{isImage && <span className="profile-cover-inline-actions"><button type="button" className="text-button" onClick={editProfileCover}>Ausschnitt anpassen</button><button type="button" className="text-button profile-cover-remove" onClick={removeProfileCover}>Hintergrund entfernen</button></span>}</label>
       <label className="profile-upload-field profile-editor-field-wide"><span>Bild zu „Über mich“</span><small>Optionales zusätzliches Profilbild</small><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(e) => e.target.files?.[0] && uploadProfileBioImage(e.target.files[0])}/></label>
     </div>
   </fieldset>
