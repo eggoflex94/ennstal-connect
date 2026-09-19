@@ -7,6 +7,7 @@ import ProfileSections from "./ProfileSections.jsx";
 import MemberCardView from "./MemberCardView.jsx";
 import NativeMembersDirectory from "./NativeMembersDirectory.jsx";
 import BusinessProfileManager from "./BusinessProfileManager.jsx";
+import ProfilePhotoEditor from "./ProfilePhotoEditor.jsx";
 
 // A friendly community image is shown until a member uploads a personal photo.
 const DEFAULT_AVATAR = "/community-default-avatar.png";
@@ -106,6 +107,7 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [passwordRecovery, setPasswordRecovery] = useState(false);
   const [profile, setProfile] = useState(null);
+  const [profilePhotoEditFile, setProfilePhotoEditFile] = useState(null);
   const [members, setMembers] = useState([]);
   const [adminMembers, setAdminMembers] = useState([]);
   const [adminLog, setAdminLog] = useState([]);
@@ -953,6 +955,18 @@ export default function App() {
     setViewingMember((current) => current?.id === member.id ? { ...current, [field]: field === "profile_background" ? "#1b1f26" : null } : current);
     showNotice(`${label} wurde entfernt und im Admin-Logbuch protokolliert.`); await loadAll();
   }
+  function selectProfilePhotoForEdit(file) {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) return showNotice("Bitte ein Bild auswählen.");
+    if (file.size > 8 * 1024 * 1024) return showNotice("Das Originalbild darf maximal 8 MB groß sein.");
+    setProfilePhotoEditFile(file);
+  }
+
+  async function saveEditedProfilePhoto(file) {
+    await uploadProfileImage(file);
+    setProfilePhotoEditFile(null);
+  }
+
   async function uploadProfileImage(file) {
     if (!file || !user) return; if (!file.type.startsWith("image/")) return showNotice("Bitte ein Bild auswählen."); if (file.size > 5 * 1024 * 1024) return showNotice("Maximal 5 MB.");
     const ext = file.name.split(".").pop()?.toLowerCase() || "jpg"; const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
@@ -1162,7 +1176,8 @@ export default function App() {
           <Forum title={`Community-Forum · ${activeRegion?.name || "Region"}`} intro="Regionaler Austausch für Mitglieder von Ennstal Connect." scope="COMMUNITY" posts={regionFilter(forumPosts)} members={regionalMembers} profile={profile} createPost={createForumPost} editPost={editForumPost} deletePost={deleteForumPost} locked={isFeatureLocked("FORUM_POSTING")}/>
         )}
         {page === "admin-forum" && isAdmin(profile?.role) && <Forum title="Admin-Forum" intro="Interner Bereich für Moderation und Administration." scope="ADMIN" posts={forumPosts} members={members} profile={profile} createPost={createForumPost} editPost={editForumPost} deletePost={deleteForumPost} locked={false}/>}
-        {page === "profile" && <section className="profile-page-layout"><Profile profile={profile} user={user} isHeadAdmin={isHeadAdmin} saveProfile={saveProfile} uploadProfileImage={uploadProfileImage} uploadProfileBackground={uploadProfileBackground} uploadProfileBioImage={uploadProfileBioImage} openPublicPreview={() => setPage("profile-preview")}/><BusinessProfileManager profile={profile} user={user}/><ProfileSections member={profile} editable><MemberGroups member={profile} groups={allGroups} onOpen={(group)=>{setSelectedGroup(group);setPage("groups")}}/></ProfileSections><ProfileTimeline visits={profileVisits} activities={profileActivities} members={members} onOpen={openMember}/><ProfileWelcomeBadges badges={welcomeBadges}/><ProfilePhotoGallery photos={memberPhotos.filter((photo) => photo.owner_id === user.id)} likes={photoLikes} comments={photoComments} user={user} onUpload={uploadMemberPhoto} onLike={togglePhotoLike} onComment={addPhotoComment} onDelete={deleteMemberPhoto}/></section>}
+        {profilePhotoEditFile && <ProfilePhotoEditor file={profilePhotoEditFile} onCancel={() => setProfilePhotoEditFile(null)} onSave={saveEditedProfilePhoto}/>}
+        {page === "profile" && <section className="profile-page-layout"><Profile profile={profile} user={user} isHeadAdmin={isHeadAdmin} saveProfile={saveProfile} uploadProfileImage={selectProfilePhotoForEdit} uploadProfileBackground={uploadProfileBackground} uploadProfileBioImage={uploadProfileBioImage} openPublicPreview={() => setPage("profile-preview")}/><BusinessProfileManager profile={profile} user={user}/><ProfileSections member={profile} editable><MemberGroups member={profile} groups={allGroups} onOpen={(group)=>{setSelectedGroup(group);setPage("groups")}}/></ProfileSections><ProfileTimeline visits={profileVisits} activities={profileActivities} members={members} onOpen={openMember}/><ProfileWelcomeBadges badges={welcomeBadges}/><ProfilePhotoGallery photos={memberPhotos.filter((photo) => photo.owner_id === user.id)} likes={photoLikes} comments={photoComments} user={user} onUpload={uploadMemberPhoto} onLike={togglePhotoLike} onComment={addPhotoComment} onDelete={deleteMemberPhoto}/></section>}
         {page === "profile-preview" && <PublicProfilePreview profile={profile} photos={memberPhotos} groups={allGroups} onBack={() => setPage("profile")} onOpenGroup={(group) => { setSelectedGroup(group); setPage("groups"); }}/>} 
         {page === "member-profile" && viewingMember && <MemberProfile photos={memberPhotos} member={viewingMember} friends={viewingFriends} groups={allGroups} user={user} viewerProfile={profile} friendship={friendshipWith(viewingMember.id)} back={() => { setViewingMember(null); setViewingFriends([]); setPage("members"); }} onOpen={openMember} onOpenGroup={(group) => { setSelectedGroup(group); setPage("groups"); }} requestFriend={requestFriend} respond={respondToFriendRequest} removeFriend={removeFriend} blockUser={blockUser} reportUser={reportUser} warnMember={warnMember} updateMemberRole={updateMemberRole} toggleSuspension={toggleSuspension} toggleTestAccount={toggleTestAccount} setBusinessAccount={setBusinessAccount} setForumModerator={setForumModerator} setGroupModerator={setGroupModerator} setProfileVerification={setProfileVerification} loadPermissions={loadPermissions} setMemberFeatureLock={setMemberFeatureLock} openChat={openChat}/>} 
         {page === "member-profile" && viewingMember && <ProfileHighlights member={viewingMember} friends={viewingFriends} groups={allGroups} photos={memberPhotos}/>}
@@ -1228,7 +1243,7 @@ function Profile({ profile, user, isHeadAdmin, saveProfile, uploadProfileImage, 
   <fieldset className="profile-editor-section">
     <legend>Bilder</legend>
     <div className="profile-editor-grid">
-      <label className="profile-upload-field"><span>Profilbild</span><small>PNG, JPG, WebP oder GIF</small><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(e) => e.target.files?.[0] && uploadProfileImage(e.target.files[0])}/></label>
+      <label className="profile-upload-field"><span>Profilbild</span><small>PNG, JPG, WebP oder GIF · danach zuschneiden, zoomen und ausrichten</small><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(e) => e.target.files?.[0] && uploadProfileImage(e.target.files[0])}/></label>
       <label className="profile-upload-field"><span>Profil-Hintergrundbild</span><small>Optionaler Hintergrund für dein Profil</small><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(e) => e.target.files?.[0] && uploadProfileBackground(e.target.files[0])}/></label>
       <label className="profile-upload-field profile-editor-field-wide"><span>Bild zu „Über mich“</span><small>Optionales zusätzliches Profilbild</small><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(e) => e.target.files?.[0] && uploadProfileBioImage(e.target.files[0])}/></label>
     </div>
