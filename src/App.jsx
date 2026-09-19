@@ -283,7 +283,7 @@ export default function App() {
   const sortedMembers = useMemo(() => {
     const q = search.trim().toLowerCase();
     const filtered = visibleMembers.filter((m) => [m.nickname, m.first_name, m.last_name].filter(Boolean).join(" ").toLowerCase().includes(q));
-    const rank = (m) => m.role === "HEAD_ADMIN" ? 1 : m.role === "ADMIN" ? 2 : m.role === "SUPPORTER" ? 3 : 4;
+    const rank = (m) => m.role === "HEAD_ADMIN" ? 1 : m.role === "ADMIN" ? 2 : m.account_badge === "BUSINESS" ? 3 : m.role === "SUPPORTER" ? 4 : 5;
     return [...filtered].sort((a, b) => rank(a) - rank(b) || getName(a).localeCompare(getName(b), "de"));
   }, [visibleMembers, search]);
   const activeRegionId = activeRegion?.id || profile?.home_region_id || null;
