@@ -23,23 +23,6 @@ function isRecentlyActive(member) {
   return Number.isFinite(lastActive) && Date.now() - lastActive < 5 * 60 * 1000;
 }
 
-function rewardDateKey(value) {
-  if (!value) return "";
-  const date = new Date(`${value}T12:00:00`);
-  return Number.isNaN(date.getTime()) ? "" : date.toLocaleDateString("en-CA", { timeZone: "Europe/Vienna" });
-}
-
-function activeMemberInfo(member) {
-  const streak = Math.max(0, Number(member?.active_streak) || 0);
-  const last = rewardDateKey(member?.last_daily_reward_date);
-  if (!streak || !last) return { active: false, streak: 0 };
-  const now = new Date();
-  const today = now.toLocaleDateString("en-CA", { timeZone: "Europe/Vienna" });
-  const yesterdayDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-  const yesterday = yesterdayDate.toLocaleDateString("en-CA", { timeZone: "Europe/Vienna" });
-  return { active: last === today || last === yesterday, streak };
-}
-
 function rolePresentation(member) {
   const role = String(member?.role || "MEMBER").toUpperCase();
   const adminPresentation = ["HEAD_ADMIN", "ADMIN", "GLOBAL_ADMIN", "REGIONAL_ADMIN"].includes(role) || member?.directory_admin === true;
@@ -58,7 +41,6 @@ export default function MemberCardView({ member, profile, friendships, onOpen, i
   const friendship = (friendships || []).find((item) => (item.requester_id === profile?.id && item.receiver_id === member.id) || (item.receiver_id === profile?.id && item.requester_id === member.id));
   const friend = friendship?.status === "ACCEPTED";
   const online = isRecentlyActive(member);
-  const activeInfo = activeMemberInfo(member);
   const fullName = [member.first_name, member.last_name].filter(Boolean).join(" ").trim() || getName(member);
   const age = getAge(member.birth_date);
   const statusLabel = online ? (String(member?.presence_device || "").toUpperCase() === "MOBILE" ? "Mobil online" : "Online") : "Offline";
@@ -76,12 +58,11 @@ export default function MemberCardView({ member, profile, friendships, onOpen, i
 
   return (
     <article
-      className={`member-card ${presentation.key} role-theme-${presentation.theme}${activeInfo.active ? " ec-active-member" : ""}${opening ? " is-opening" : ""}`}
+      className={`member-card ${presentation.key} role-theme-${presentation.theme}${opening ? " is-opening" : ""}`}
       data-member-id={member.id}
       data-base-role={baseRole}
       data-home-region-id={member.home_region_id || ""}
       data-role-theme={presentation.theme}
-      data-active-streak={activeInfo.streak}
       onClick={interactive ? () => void openFresh() : undefined}
       onKeyDown={interactive ? (event) => {
         if (event.target !== event.currentTarget) return;
@@ -102,11 +83,6 @@ export default function MemberCardView({ member, profile, friendships, onOpen, i
         {presentation.star && (
           <span className={`ec-card-badge-icon ec-card-badge-role ec-card-badge-role-${presentation.theme}`} title={presentation.label} aria-label={presentation.label}>
             <img className="ec-card-badge-img ec-card-badge-role-img" src={presentation.star} alt="" aria-hidden="true" />
-          </span>
-        )}
-        {activeInfo.active && (
-          <span className="ec-card-badge-icon ec-card-badge-active" title={`Aktives Mitglied · ${activeInfo.streak} Tag${activeInfo.streak === 1 ? "" : "e"}`} aria-label={`Aktives Mitglied, ${activeInfo.streak} Tage Serie`}>
-            <span aria-hidden="true">🔥</span>
           </span>
         )}
         {friend && (
@@ -137,7 +113,6 @@ export default function MemberCardView({ member, profile, friendships, onOpen, i
           <span className="ec-member-realname">{fullName}</span>
           {age !== null && <small className="ec-member-age">{age} Jahre</small>}
         </div>
-        {activeInfo.active && <span className="ec-active-member-label">🔥 Aktiv · {activeInfo.streak} Tag{activeInfo.streak === 1 ? "" : "e"}</span>}
       </div>
 
       {!member.hide_online_status && (
