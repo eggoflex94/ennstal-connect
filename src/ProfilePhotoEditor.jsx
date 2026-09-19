@@ -39,8 +39,14 @@ function drawEditedImage(canvas, source, { zoom, x, y, rotation }, size) {
   const scale = coverScale * zoom;
   const drawW = source.naturalWidth * scale;
   const drawH = source.naturalHeight * scale;
-  const offsetX = (x / 100) * size * 0.48;
-  const offsetY = (y / 100) * size * 0.48;
+  const renderedW = quarterTurn ? drawH : drawW;
+  const renderedH = quarterTurn ? drawW : drawH;
+  const maxOffsetX = Math.max(0, (renderedW - size) / 2);
+  const maxOffsetY = Math.max(0, (renderedH - size) / 2);
+  const requestedX = (x / 100) * size * 0.48;
+  const requestedY = (y / 100) * size * 0.48;
+  const offsetX = Math.max(-maxOffsetX, Math.min(maxOffsetX, requestedX));
+  const offsetY = Math.max(-maxOffsetY, Math.min(maxOffsetY, requestedY));
   const radians = rotation * Math.PI / 180;
 
   ctx.save();
