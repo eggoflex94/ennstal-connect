@@ -988,10 +988,20 @@ export default function App() {
   async function editExistingProfilePhoto() {
     if (!profile?.avatar_url) return showNotice("Bitte zuerst ein Profilbild hochladen.");
     try {
-      const response = await fetch(profile.avatar_url, { mode:"cors", cache:"no-store" });
-      if (!response.ok) throw new Error("Profilbild konnte nicht geladen werden.");
-      const blob = await response.blob();
-      const type = blob.type && blob.type.startsWith("image/") ? blob.type : "image/jpeg";
+      const existingPath = storagePathFromPublicUrl(profile.avatar_url);
+      let blob = null;
+
+      if (existingPath) {
+        const { data, error } = await supabase.storage.from("profile-avatars").download(existingPath);
+        if (error) throw error;
+        blob = data;
+      } else {
+        const response = await fetch(profile.avatar_url, { mode:"cors", cache:"no-store" });
+        if (!response.ok) throw new Error("Profilbild konnte nicht geladen werden.");
+        blob = await response.blob();
+      }
+
+      const type = blob?.type && blob.type.startsWith("image/") ? blob.type : "image/jpeg";
       const ext = type === "image/png" ? "png" : type === "image/webp" ? "webp" : type === "image/gif" ? "gif" : "jpg";
       setProfilePhotoEditingExisting(true);
       setProfilePhotoEditFile(new File([blob], `profilbild-bearbeiten.${ext}`, { type }));
@@ -1003,18 +1013,16 @@ export default function App() {
   async function saveEditedProfilePhoto(file) {
     const oldUrl = String(profile?.avatar_url || "");
     if (profilePhotoEditingExisting && oldUrl) {
-      const existingPath = storagePathFromPublicUrl(oldUrl);
-      if (!existingPath) {
-        showNotice("Das vorhandene Profilbild konnte nicht eindeutig gefunden werden.");
-        return;
-      }
+      const oldPath = storagePathFromPublicUrl(oldUrl);
+      const extension = String(file?.type || "").includes("webp") ? "webp" : "jpg";
+      const newPath = `${user.id}/${crypto.randomUUID()}.${extension}`;
 
       const { error: uploadError } = await supabase.storage
         .from("profile-avatars")
-        .upload(existingPath, file, {
-          upsert: true,
-          contentType: file.type,
-          cacheControl: "0"
+        .upload(newPath, file, {
+          upsert: false,
+          contentType: file.type || "image/webp",
+          cacheControl: "31536000"
         });
 
       if (uploadError) {
@@ -1022,31 +1030,39 @@ export default function App() {
         return;
       }
 
-      const cacheBustedUrl = `${oldUrl.split("?")[0]}?v=${Date.now()}`;
-      setProfile((current) => current ? { ...current, avatar_url: cacheBustedUrl } : current);
-      setMemberPhotos((current) => current.map((photo) =>
-        photo.owner_id === user.id && photo.image_url === oldUrl
-          ? { ...photo, image_url: cacheBustedUrl }
-          : photo
-      ));
+      const { data: publicData } = supabase.storage.from("profile-avatars").getPublicUrl(newPath);
+      const newUrl = publicData.publicUrl;
 
       const { error: profileUpdateError } = await supabase
         .from("profiles")
-        .update({ avatar_url: cacheBustedUrl })
+        .update({ avatar_url: newUrl })
         .eq("id", user.id);
 
       if (profileUpdateError) {
+        await supabase.storage.from("profile-avatars").remove([newPath]);
         showNotice(profileUpdateError.message);
         return;
       }
 
       const { error: photoUpdateError } = await supabase
         .from("member_photos")
-        .update({ image_url: cacheBustedUrl })
+        .update({ image_url: newUrl })
         .eq("owner_id", user.id)
         .eq("image_url", oldUrl);
 
-      if (photoUpdateError) console.warn("Albumfoto konnte nicht auf die neue Cache-Version gesetzt werden:", photoUpdateError);
+      if (photoUpdateError) console.warn("Albumfoto konnte nicht auf das neu ausgerichtete Profilbild gesetzt werden:", photoUpdateError);
+
+      setProfile((current) => current ? { ...current, avatar_url: newUrl } : current);
+      setMemberPhotos((current) => current.map((photo) =>
+        photo.owner_id === user.id && photo.image_url === oldUrl
+          ? { ...photo, image_url: newUrl }
+          : photo
+      ));
+
+      if (oldPath && oldPath !== newPath) {
+        const { error: removeError } = await supabase.storage.from("profile-avatars").remove([oldPath]);
+        if (removeError) console.warn("Altes Profilbild konnte nicht entfernt werden:", removeError.message);
+      }
 
       await logProfileActivity("Profilbild neu ausgerichtet");
       showNotice("Profilbild-Ausschnitt gespeichert.");
@@ -1395,7 +1411,7 @@ function Profile({ profile, user, isHeadAdmin, saveProfile, uploadProfileImage, 
   <fieldset className="profile-editor-section">
     <legend>Bilder</legend>
     <div className="profile-editor-grid">
-      <label className="profile-upload-field profile-upload-field-avatar"><span>Profilbild</span><small>Handyfotos, PNG, JPG, WebP, GIF, HEIC/HEIF · danach zuschneiden, zoomen und ausrichten</small><input className="profile-avatar-file-input" type="file" accept="image/*,.heic,.heif" onClick={(e) => { e.currentTarget.value = ""; }} onChange={(e) => { const file = e.currentTarget.files?.[0]; if (file) uploadProfileImage(file); }}/>{profile?.avatar_url && <span className="profile-cover-inline-actions"><button type="button" className="text-button" onClick={editProfileImage}>Profilbild ausrichten</button></span>}</label>
+      <div className="profile-upload-field profile-upload-field-avatar"><span>Profilbild</span><small>Handyfotos, PNG, JPG, WebP, GIF, HEIC/HEIF · danach zuschneiden, zoomen und ausrichten</small><input id="profile-avatar-file" className="profile-avatar-file-input" type="file" accept="image/*,.heic,.heif" onClick={(e) => { e.currentTarget.value = ""; }} onChange={(e) => { const file = e.currentTarget.files?.[0]; if (file) uploadProfileImage(file); }}/>{profile?.avatar_url && <div className="profile-cover-inline-actions"><button type="button" className="text-button" onClick={editProfileImage}>Profilbild ausrichten</button></div>}</div>
       <label className="profile-upload-field"><span>Profil-Cover</span><small>Breites Titelbild · danach Ausschnitt, Zoom und Abdunklung einstellen</small><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(e) => e.target.files?.[0] && uploadProfileBackground(e.target.files[0])}/>{isImage && <span className="profile-cover-inline-actions"><button type="button" className="text-button" onClick={editProfileCover}>Ausschnitt anpassen</button><button type="button" className="text-button profile-cover-remove" onClick={removeProfileCover}>Hintergrund entfernen</button></span>}</label>
       <label className="profile-upload-field profile-editor-field-wide"><span>Bild zu „Über mich“</span><small>Optionales zusätzliches Profilbild</small><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(e) => e.target.files?.[0] && uploadProfileBioImage(e.target.files[0])}/></label>
     </div>
