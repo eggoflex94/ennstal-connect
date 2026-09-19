@@ -222,7 +222,33 @@ supabase.rpc = async (fn, args = {}, options) => {
     const needsHeadAdmin = fn !== "admin_set_account_status";
     if (!me || (needsHeadAdmin ? me.role !== "HEAD_ADMIN" : !["ADMIN", "HEAD_ADMIN"].includes(me.role))) return { data: null, error: new Error("Keine Berechtigung.") };
     const target = args?.target_user || args?.p_user_id;
-    const changes = fn === "admin_set_role" ? { role: args?.new_role } : fn === "admin_set_account_status" ? { account_status: args?.new_status } : { nickname: args?.p_nickname, first_name: args?.p_first_name, last_name: args?.p_last_name, birth_date: args?.p_birth_date, gender: args?.p_gender, role: args?.p_role, account_status: args?.p_account_status };
+    if (!target) return { data: null, error: new Error("Mitglied nicht gefunden.") };
+
+    let changes;
+    if (fn === "admin_set_role") {
+      const nextRole = String(args?.new_role || "").trim().toUpperCase();
+      if (!["MEMBER", "SUPPORTER", "ADMIN"].includes(nextRole)) {
+        return { data: null, error: new Error("Ungültige Rolle. Bitte eine gültige Rolle auswählen.") };
+      }
+      changes = { role: nextRole };
+    } else if (fn === "admin_set_account_status") {
+      const nextStatus = String(args?.new_status || "").trim().toUpperCase();
+      if (!["ACTIVE", "SUSPENDED"].includes(nextStatus)) {
+        return { data: null, error: new Error("Ungültiger Kontostatus.") };
+      }
+      changes = { account_status: nextStatus };
+    } else {
+      // Member detail editing must never touch enum-backed role/status fields.
+      // This fallback mirrors the live admin_update_member RPC.
+      changes = {
+        nickname: args?.p_nickname,
+        first_name: args?.p_first_name,
+        last_name: args?.p_last_name,
+        birth_date: args?.p_birth_date,
+        gender: args?.p_gender
+      };
+    }
+
     const { error } = await supabase.from("profiles").update(changes).eq("id", target);
     return { data: null, error };
   }
