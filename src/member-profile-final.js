@@ -48,6 +48,15 @@ async function functionInfo(target){
   return{label:'Mitglied',star:null};
 }
 function row(label,value){if(!value)return'';return `<div class="ec-mp-row"><span>${esc(label)}</span><strong>${esc(value)}</strong></div>`}
+function coverMarkup(target){
+  const url=String(target?.profile_background||'');
+  if(!url.startsWith('http'))return '';
+  const x=Number(target?.profile_background_position_x??50);
+  const y=Number(target?.profile_background_position_y??50);
+  const zoom=Number(target?.profile_background_zoom??1);
+  const overlay=Number(target?.profile_background_overlay??0.18);
+  return `<div class="ec-mp-cover"><img src="${esc(url)}" alt="" style="object-position:${x}% ${y}%;transform:scale(${zoom});transform-origin:${x}% ${y}%"><span class="ec-mp-cover-shade" style="--ec-cover-overlay:${overlay}"></span></div>`;
+}
 function cleanActionText(button){
   const t=(button.textContent||'').replace(/[💬🤝♥✓⏳🚫🚩⚠🔓🔒🟢★✕↩⚙]/g,'').replace(/\s+/g,' ').trim();
   if(t)button.textContent=t;
@@ -107,6 +116,10 @@ async function build(root){
     root.classList.add('ec-member-profile-final');
     root.classList.toggle('ec-active-member-profile',activity.show&&activity.active);
     const card=document.createElement('section');card.className='ec-mp-card';
+    if(String(target.profile_background||'').startsWith('http')){
+      card.classList.add('has-profile-cover');
+      card.insertAdjacentHTML('afterbegin',coverMarkup(target));
+    }
     const left=document.createElement('div');left.className='ec-mp-left';
     const photo=document.createElement('div');photo.className='ec-mp-photo';if(avatar)photo.appendChild(avatar);left.appendChild(photo);
     const functionBox=document.createElement('div');functionBox.className='ec-mp-function';
