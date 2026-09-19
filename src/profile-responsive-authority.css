@@ -330,3 +330,7 @@ html, body, #root { min-width: 0 !important; }
     text-align:center!important;
   }
 }
+
+.profile-cover-inline-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.profile-cover-inline-actions .text-button{min-height:36px!important;padding:6px 9px!important}
+.profile-cover-inline-actions .profile-cover-remove{color:#b42318!important}
