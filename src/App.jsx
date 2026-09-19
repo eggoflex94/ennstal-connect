@@ -1007,6 +1007,7 @@ export default function App() {
     const { data } = supabase.storage.from("profile-avatars").getPublicUrl(path);
     const publicUrl = data.publicUrl;
     const { error: updateError } = await supabase.from("profiles").update({ avatar_url: publicUrl }).eq("id", user.id); if (updateError) { showNotice(updateError.message); return null; }
+    setProfile((current) => current ? { ...current, avatar_url: publicUrl } : current);
     const { data: albumPhoto, error: albumError } = await supabase.from("member_photos").select("*").eq("owner_id", user.id).eq("image_url", publicUrl).maybeSingle();
     if (albumError) console.warn("Profilbild konnte im Fotoalbum nicht geprüft werden:", albumError);
     if (albumPhoto) setMemberPhotos((current) => [albumPhoto, ...current.filter((entry) => entry.id !== albumPhoto.id)]);
