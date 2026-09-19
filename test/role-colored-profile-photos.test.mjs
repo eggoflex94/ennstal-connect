@@ -9,7 +9,7 @@ test("member card avatar keeps its size and uses role border color", async () =>
   assert.match(css, /width:86px!important/);
   assert.match(css, /height:86px!important/);
   assert.match(css, /border:3px solid var\(--ec-card-border\)!important/);
-  assert.match(css, /border-radius:50%!important/);
+  assert.match(css, /border-radius:18px!important/);
 });
 
 test("profile photo uses role-colored frame and square shape without changing size", async () => {
