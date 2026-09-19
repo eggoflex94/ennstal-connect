@@ -31,3 +31,13 @@ test("profile photo editor allows extended vertical positioning", async () => {
   assert.match(editor, /Math\.max\(-PAN_LIMIT, Math\.min\(PAN_LIMIT, value\)\)/);
   assert.match(editor, /\* 150/);
 });
+
+
+test("profile photo editor adds adaptive zoom instead of clamping pan", async () => {
+  const editor = await source("src/ProfilePhotoEditor.jsx");
+  assert.match(editor, /requiredRenderedW/);
+  assert.match(editor, /requiredRenderedH/);
+  assert.match(editor, /adaptiveScale/);
+  assert.match(editor, /baseScale \* adaptiveScale/);
+  assert.match(editor, /\(y \/ PAN_LIMIT\) \* size \* 0\.34/);
+});
