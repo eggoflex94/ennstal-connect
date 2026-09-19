@@ -6,6 +6,9 @@ const PREVIEW_SIZE = 720;
 const PAN_X_LIMIT = 120;
 const PAN_Y_UP_LIMIT = 260;
 const PAN_Y_DOWN_LIMIT = 160;
+const PAN_X_SHIFT = 0.30;
+const PAN_Y_UP_SHIFT = 0.72;
+const PAN_Y_DOWN_SHIFT = 0.52;
 
 function loadImage(file) {
   return new Promise((resolve, reject) => {
@@ -40,9 +43,10 @@ function drawEditedImage(canvas, source, { zoom, x, y, rotation }, size) {
   // If the user drags farther than the current crop permits, add only the
   // minimum extra zoom needed to keep the crop filled instead of clamping.
   const coverScale = Math.max(size / rotatedWidth, size / rotatedHeight);
-  const requestedX = (x / PAN_X_LIMIT) * size * 0.30;
+  const requestedX = (x / PAN_X_LIMIT) * size * PAN_X_SHIFT;
   const yLimit = y < 0 ? PAN_Y_UP_LIMIT : PAN_Y_DOWN_LIMIT;
-  const requestedY = (y / yLimit) * size * 0.56;
+  const yShift = y < 0 ? PAN_Y_UP_SHIFT : PAN_Y_DOWN_SHIFT;
+  const requestedY = (y / yLimit) * size * yShift;
 
   const baseScale = coverScale * zoom;
   const baseDrawW = source.naturalWidth * baseScale;
@@ -143,8 +147,16 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
     const rect = event.currentTarget.getBoundingClientRect();
     const width = Math.max(1, rect.width);
     const height = Math.max(1, rect.height);
-    const nextX = drag.startX + ((event.clientX - drag.startClientX) / width) * 120;
-    const nextY = drag.startY + ((event.clientY - drag.startClientY) / height) * 300;
+    const deltaX = event.clientX - drag.startClientX;
+    const deltaY = event.clientY - drag.startClientY;
+
+    // Convert pointer pixels back into the editor's normalized pan values so
+    // the photo follows the finger/mouse roughly 1:1 instead of lagging behind.
+    const nextX = drag.startX + (deltaX / width) * (PAN_X_LIMIT / PAN_X_SHIFT);
+    const yLimit = deltaY < 0 ? PAN_Y_UP_LIMIT : PAN_Y_DOWN_LIMIT;
+    const yShift = deltaY < 0 ? PAN_Y_UP_SHIFT : PAN_Y_DOWN_SHIFT;
+    const nextY = drag.startY + (deltaY / height) * (yLimit / yShift);
+
     setX(clampPanX(nextX));
     setY(clampPanY(nextY));
   };
@@ -194,7 +206,7 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
         <div>
           <span className="eyebrow">PROFILBILD</span>
           <h2>Foto anpassen</h2>
-          <p>Ziehe das Bild direkt mit Finger oder Maus. Nach oben steht jetzt deutlich mehr Spielraum zur Verfügung; der Ausschnitt zoomt automatisch nur so weit nach, dass kein leerer Rand entsteht.</p>
+          <p>Ziehe das Bild direkt mit Finger oder Maus. Das Foto folgt deiner Bewegung jetzt direkt; nach oben steht extra viel Spielraum zur Verfügung.</p>
         </div>
         <button type="button" className="ec-photo-editor-close" onClick={onCancel} aria-label="Schließen">×</button>
       </header>
