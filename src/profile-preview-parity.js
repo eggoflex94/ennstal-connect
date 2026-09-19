@@ -176,7 +176,12 @@ async function buildExactPreview(page) {
     data.className = "ec-mp-data";
     const realName = [profile.first_name, profile.last_name].filter(Boolean).join(" ");
     const nickname = profile.nickname || realName || "Mitglied";
-    data.innerHTML = `<div class="ec-mp-data-head"><div><span>MITGLIEDSPROFIL</span><h1>${esc(nickname)}</h1></div>${profile.is_verified ? '<b class="ec-mp-verified" title="Verifiziert">✓</b>' : ""}</div><div class="ec-mp-rows">${row("Nickname", profile.nickname)}${isPublic(profile, "name") ? row("Vorname", profile.first_name) : ""}${isPublic(profile, "name") ? row("Nachname", profile.last_name) : ""}${isPublic(profile, "birth_date") ? row("Geburtsdatum", formatDate(profile.birth_date)) : ""}${isPublic(profile, "birth_date") ? row("Alter", formatAge(profile.birth_date)) : ""}${row("Heimatregion", regionName)}</div>`;
+    const bioVisible=isPublic(profile,"bio")&&String(profile.bio||"").trim();
+    const bioFont=["modern","serif","handwritten"].includes(String(profile.bio_font||""))?profile.bio_font:"modern";
+    const bioSize=["small","normal","large"].includes(String(profile.bio_size||""))?profile.bio_size:"normal";
+    const bioColor=String(profile.bio_color||"#1e3045");
+    const bioMarkup=bioVisible?`<section class="ec-mp-about"><span>ÜBER MICH</span><p class="member-profile-bio ${esc(bioFont)} ${esc(bioSize)}" style="color:${esc(bioColor)}">${esc(profile.bio)}</p>${profile.bio_image_url?`<img src="${esc(profile.bio_image_url)}" alt="Bild zum Über-mich-Bereich">`:''}</section>`:"";
+    data.innerHTML = `<div class="ec-mp-data-head"><div><span>MITGLIEDSPROFIL</span><h1>${esc(nickname)}</h1></div>${profile.is_verified ? '<b class="ec-mp-verified" title="Verifiziert">✓</b>' : ""}</div><div class="ec-mp-rows">${row("Nickname", profile.nickname)}${isPublic(profile, "name") ? row("Vorname", profile.first_name) : ""}${isPublic(profile, "name") ? row("Nachname", profile.last_name) : ""}${isPublic(profile, "birth_date") ? row("Geburtsdatum", formatDate(profile.birth_date)) : ""}${isPublic(profile, "birth_date") ? row("Alter", formatAge(profile.birth_date)) : ""}${row("Heimatregion", regionName)}</div>${bioMarkup}`;
 
     card.append(left, data);
     hero.insertAdjacentElement("beforebegin", card);
