@@ -126,8 +126,18 @@ async function build(root){
     const photo=document.createElement('div');photo.className='ec-mp-photo';if(avatar)photo.appendChild(avatar);left.appendChild(photo);
     const functionBox=document.createElement('div');functionBox.className='ec-mp-function';
     const roleMarkup=role.star?`<span class="ec-mp-function-role"><img class="ec-mp-role-star" src="${role.star}" alt="" aria-hidden="true"><strong>${esc(role.label)}</strong></span>`:`<span class="ec-mp-function-role"><strong>${esc(role.label)}</strong></span>`;
+    const photographerRegions=Array.isArray(target.community_photographer_region_ids)?target.community_photographer_region_ids:[];
+    const photographerRegionNames=photographerRegions.map(id=>regions.find(r=>r.id===id)?.name).filter(Boolean);
+    const photographerScope=target.community_photographer_global
+      ? 'Alle Regionen'
+      : photographerRegionNames.length
+        ? photographerRegionNames.join(', ')
+        : 'Regional';
+    const photographerMarkup=target.is_community_photographer
+      ? `<span class="ec-mp-function-role ec-mp-function-photographer"><img class="ec-mp-function-camera" src="/community-photographer-camera.svg" alt="" aria-hidden="true"><span class="ec-mp-function-copy"><strong>Community-Fotograf</strong><small>${esc(photographerScope)}</small></span></span>`
+      : '';
     const settingMarkup=ownProfile?`<label class="ec-activity-flame-setting"><input type="checkbox" data-activity-flame-toggle ${activity.show?'checked':''}><span>Aktivitätsflamme im Profil anzeigen</span></label>`:'';
-    functionBox.innerHTML=`<span>Funktion</span>${roleMarkup}${settingMarkup}`;
+    functionBox.innerHTML=`<span>Funktion</span>${roleMarkup}${photographerMarkup}${settingMarkup}`;
     left.appendChild(functionBox);
     const data=document.createElement('div');data.className='ec-mp-data';
     const realName=[target.first_name,target.last_name].filter(Boolean).join(' ');
