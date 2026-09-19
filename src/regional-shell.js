@@ -10,7 +10,12 @@ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const regionName=id=>regions.find(r=>r.id===id)?.name||'Nicht festgelegt';
 const assignmentsFor=p=>regionalAssignments.filter(a=>a.user_id===p?.id&&a.active);
 function roleLabel(p,context=true){const base=String(p?.role||'MEMBER').toUpperCase(),assigned=assignmentsFor(p),here=activeRegion&&p?.home_region_id===activeRegion.id&&assigned.some(a=>a.region_id===activeRegion.id);if(base==='HEAD_ADMIN')return'Hauptadmin · Betreiber';if(base==='ADMIN')return'Global Admin';if(context&&here)return`Regional Admin ${activeRegion.name}`;if(assigned.length)return`Regional Admin ${assigned.map(a=>regionName(a.region_id)).join(', ')}`;if(base==='SUPPORTER')return'Supporter';if(p?.account_badge==='BUSINESS')return'Unternehmenskonto';return'Mitglied'}
-function clickPage(page){const special=page==='adminTools'?document.querySelector('.ec-admin-workspace-entry'):page==='legal'?document.querySelector('.ec-legal-entry'):null;if(special){special.click();return true}window.dispatchEvent(new CustomEvent('ec:navigate',{detail:{page}}));for(const selector of [`[data-page="${page}"]`,`[data-nav="${page}"]`,`button[data-page="${page}"]`]){const el=document.querySelector(selector);if(el&&!el.closest('.ec-regional-shell')){el.click();return true}}for(const label of pageNames[page]||[]){const el=[...document.querySelectorAll('button,a')].find(x=>(x.textContent||'').trim().includes(label)&&!x.closest('.ec-regional-shell'));if(el){el.click();return true}}return true}
+function clickPage(page){
+  const special=page==='adminTools'?document.querySelector('.ec-admin-workspace-entry'):page==='legal'?document.querySelector('.ec-legal-entry'):null;
+  if(special){special.click();return true}
+  window.dispatchEvent(new CustomEvent('ec:navigate',{detail:{page,source:'regional-shell'}}));
+  return true;
+}
 
 function syncRegionUI(){document.querySelectorAll('.ec-active-region-name').forEach(el=>el.textContent=activeRegion?.name||'Region');document.querySelector('.ec-region-status')?.classList.toggle('is-home',activeRegion?.id===currentProfile?.home_region_id);const home=document.querySelector('.ec-dock-home-region');if(home)home.textContent=regionName(currentProfile?.home_region_id)}
 function profileForCard(card){const id=card.dataset.memberId;if(id){const hit=profiles.find(p=>p.id===id);if(hit)return hit}const name=(card.querySelector('.member-nickname')?.textContent||'').trim();return profiles.find(p=>p.nickname===name)||null}
