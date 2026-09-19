@@ -1,0 +1,24 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+
+const source = async (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
+
+test("profile photo editor supports direct drag positioning", async () => {
+  const editor = await source("src/ProfilePhotoEditor.jsx");
+  assert.match(editor, /onPointerDown=\{startDrag\}/);
+  assert.match(editor, /onPointerMove=\{moveDrag\}/);
+  assert.match(editor, /onPointerUp=\{endDrag\}/);
+  assert.match(editor, /setPointerCapture/);
+  assert.match(editor, /releasePointerCapture/);
+  assert.match(editor, /setX\(clampPan/);
+  assert.match(editor, /setY\(clampPan/);
+});
+
+test("profile photo drag blocks page scrolling on touch devices", async () => {
+  const css = await source("src/ProfilePhotoEditor.css");
+  assert.match(css, /\.ec-photo-editor-preview\.is-draggable/);
+  assert.match(css, /touch-action:none/);
+  assert.match(css, /cursor:grab/);
+  assert.match(css, /cursor:grabbing/);
+});
