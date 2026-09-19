@@ -87,7 +87,7 @@ function buildModal(ctx){
 
   if(ctx.isHead){
     const media=[String(t.avatar_url||'').startsWith('http')&&toolButton('Profilbild entfernen','media:avatar_url','danger'),String(t.profile_background||'').startsWith('http')&&toolButton('Hintergrundfoto entfernen','media:profile_background','danger'),String(t.bio_image_url||'').startsWith('http')&&toolButton('Über-mich-Bild entfernen','media:bio_image_url','danger')].filter(Boolean).join('');
-    blocks.push(section('♛','Hauptadmin-Werkzeuge','Verifizierung, Kontoart, Testkonto und Profilmedien',`<div class="ec-profile-admin-grid">${toolButton(t.is_verified?'Verifizierung entfernen':'Profil verifizieren','verify')}${toolButton(t.account_badge==='BUSINESS'?'Unternehmenskonto entfernen':'Unternehmenskonto vergeben','business')}${toolButton(t.is_test_account?'Testkonto wieder sichtbar machen':'Als Testkonto ausblenden','test-account')}${media}</div>`,'head-only'));
+    blocks.push(section('♛','Hauptadmin-Werkzeuge','Verifizierung, Kontoart, Direktnachrichten, Testkonto und Profilmedien',`<div class="ec-profile-admin-grid">${toolButton(t.is_verified?'Verifizierung entfernen':'Profil verifizieren','verify')}${toolButton(t.account_badge==='BUSINESS'?'Unternehmenskonto entfernen':'Unternehmenskonto vergeben','business')}${toolButton('✉ Direktnachrichten verwalten','direct-message-policy')}${toolButton(t.is_test_account?'Testkonto wieder sichtbar machen':'Als Testkonto ausblenden','test-account')}${media}</div>`,'head-only'));
   }
 
   let accessNote='';
@@ -119,6 +119,28 @@ async function handleAction(ctx,action,modal){
   if(action==='points'&&canPoints(ctx)){const amount=Number(window.prompt('Punkteänderung: positive Zahl für Pluspunkte, negative Zahl für Minuspunkte:',''));if(!Number.isInteger(amount)||amount===0)return notify('Bitte eine ganze Zahl ungleich 0 eingeben.');const reason=await askReason(amount>0?'Pluspunkte vergeben':'Minuspunkte vergeben');if(!reason)return;const prepared=await preparePrivilegedAction(amount>0?'Pluspunkte vergeben':'Minuspunkte vergeben',ctx.target.id,reason);if(prepared?.error)return notify(prepared.error.message);const {error}=await supabase.rpc('award_member_points',{target_user:ctx.target.id,point_delta:amount,reason_text:reason,category_text:'ADMIN_ADJUSTMENT',notify_member:true});if(error)return notify(error.message);notify('Punkte wurden aktualisiert.');return openTools(ctx.target.id);}
   if(action==='point-history'&&canPoints(ctx))return showPointHistory(ctx,modal);
   if(action==='verify'&&ctx.isHead){const enabled=!bool(ctx.target.is_verified);const ok=await withPreparedAction(`Profilverifizierung ${enabled?'vergeben':'entfernen'}`,ctx.target.id,()=>supabase.rpc('admin_set_profile_verification',{p_user_id:ctx.target.id,p_verified:enabled}));if(ok){notify('Verifizierung wurde aktualisiert.');openTools(ctx.target.id);}return;}
+  if(action==='direct-message-policy'&&ctx.isHead){
+    const {data,error}=await supabase.rpc('head_admin_get_direct_message_policy',{p_target_user:ctx.target.id});
+    if(error)return notify(error.message);
+    const policy=Array.isArray(data)?data[0]:data;
+    const disabled=bool(policy?.disabled);
+    if(disabled){
+      if(!window.confirm(`Direktnachrichten für ${targetName(ctx.target)} wieder aktivieren?`))return;
+      const {error:updateError}=await supabase.rpc('head_admin_set_direct_message_policy',{p_target_user:ctx.target.id,p_disabled:false,p_auto_reply:policy?.auto_reply||null});
+      if(updateError)return notify(updateError.message);
+      notify('Direktnachrichten wurden wieder aktiviert.');
+      return openTools(ctx.target.id);
+    }
+    const fallback='Hallo! 👋 Dieser Account wird nicht für Direktnachrichten verwendet. Bitte nutze den vorgesehenen Support- bzw. Kontaktbereich in der Ennstal Connect Community.';
+    const reply=window.prompt(`Automatische Antwort für ${targetName(ctx.target)}:`,policy?.auto_reply||fallback);
+    if(reply===null)return;
+    const clean=reply.trim();
+    if(clean.length<10)return notify('Die automatische Antwort muss mindestens 10 Zeichen lang sein.');
+    const {error:updateError}=await supabase.rpc('head_admin_set_direct_message_policy',{p_target_user:ctx.target.id,p_disabled:true,p_auto_reply:clean});
+    if(updateError)return notify(updateError.message);
+    notify('Direktnachrichten wurden deaktiviert und die automatische Antwort aktiviert.');
+    return openTools(ctx.target.id);
+  }
   if(action==='test-account'&&ctx.isHead){const enabled=!bool(ctx.target.is_test_account);const ok=await withPreparedAction(`Testkonto ${enabled?'aktivieren':'deaktivieren'}`,ctx.target.id,()=>supabase.rpc('admin_set_test_account',{p_user_id:ctx.target.id,p_is_test:enabled}));if(ok){notify('Testkonto-Status wurde aktualisiert.');openTools(ctx.target.id);}return;}
   if(action==='business'&&ctx.isHead){const enabled=ctx.target.account_badge!=='BUSINESS';let company=null;if(enabled){company=window.prompt('Firmen- oder Vereinsname:','');if(company===null||company.trim().length<2)return;}const ok=await withPreparedAction(`Unternehmenskonto ${enabled?'vergeben':'entfernen'}`,ctx.target.id,()=>supabase.rpc('admin_set_business_account',{p_user_id:ctx.target.id,p_enabled:enabled,p_company_name:company?.trim()||null,p_company_description:null}));if(ok){notify('Unternehmenskonto wurde aktualisiert.');openTools(ctx.target.id);}return;}
   if(action.startsWith('media:')&&ctx.isHead){const field=action.split(':')[1],labels={avatar_url:'Profilbild',profile_background:'Hintergrundfoto',bio_image_url:'Über-mich-Bild'},label=labels[field]||'Profilmedium';const ok=await withPreparedAction(`${label} bei Regelverstoß entfernen`,ctx.target.id,()=>supabase.rpc('admin_remove_profile_media',{p_user_id:ctx.target.id,p_field:field}));if(ok){notify(`${label} wurde entfernt.`);openTools(ctx.target.id);}}
