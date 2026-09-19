@@ -126,9 +126,8 @@ async function build(root){
     const photo=document.createElement('div');photo.className='ec-mp-photo';if(avatar)photo.appendChild(avatar);left.appendChild(photo);
     const functionBox=document.createElement('div');functionBox.className='ec-mp-function';
     const roleMarkup=role.star?`<span class="ec-mp-function-role"><img class="ec-mp-role-star" src="${role.star}" alt="" aria-hidden="true"><strong>${esc(role.label)}</strong></span>`:`<span class="ec-mp-function-role"><strong>${esc(role.label)}</strong></span>`;
-    const activeMarkup=activity.show&&activity.active?`<span class="ec-mp-active-badge" title="Tägliche Aktivitätsserie">🔥 ${activity.streak} Tag${activity.streak===1?'':'e'} aktiv</span>`:'';
     const settingMarkup=ownProfile?`<label class="ec-activity-flame-setting"><input type="checkbox" data-activity-flame-toggle ${activity.show?'checked':''}><span>Aktivitätsflamme im Profil anzeigen</span></label>`:'';
-    functionBox.innerHTML=`<span>Funktion</span>${roleMarkup}${activeMarkup}${settingMarkup}`;
+    functionBox.innerHTML=`<span>Funktion</span>${roleMarkup}${settingMarkup}`;
     left.appendChild(functionBox);
     const data=document.createElement('div');data.className='ec-mp-data';
     const realName=[target.first_name,target.last_name].filter(Boolean).join(' ');
