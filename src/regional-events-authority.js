@@ -24,9 +24,9 @@ async function ensureContext() {
     const { data: authData } = await supabase.auth.getUser();
     const userId = authData?.user?.id || null;
     if (userId) {
-      const { data: profile } = await supabase.from('profiles').select('id,role').eq('id', userId).maybeSingle();
+      const { data: profile } = await supabase.from('profiles').select('id,role,account_badge').eq('id', userId).maybeSingle();
       viewer = profile || { id: userId, role: 'MEMBER' };
-    } else viewer = { id: null, role: 'MEMBER' };
+    } else viewer = { id: null, role: 'MEMBER', account_badge: 'STANDARD' };
   }
   const slug = currentSlug();
   return regions.find((region) => region.slug === slug) || regions.find((region) => region.id === activeRegionHint?.id) || null;
@@ -62,6 +62,35 @@ async function setRsvp(eventId, status) {
     return;
   }
   schedule(0);
+}
+
+async function shareEventOnProfile(event) {
+  if (!viewer?.id || !event?.id || String(event.status || '').toUpperCase() === 'CANCELLED') return;
+  const { error } = await supabase.from('profile_shared_items').upsert(
+    { profile_id: viewer.id, item_type: 'EVENT', item_id: event.id },
+    { onConflict: 'profile_id,item_type,item_id' }
+  );
+  if (error) return alert(error.message);
+  window.dispatchEvent(new CustomEvent('ec:profile-shares-changed'));
+  alert('Veranstaltung wurde auf deinem Profil geteilt.');
+}
+
+async function toggleFeaturedEvent(event) {
+  if (!viewer?.id || !event?.id) return;
+  const role = String(viewer.role || '').toUpperCase();
+  const businessOwner = String(viewer.account_badge || '').toUpperCase() === 'BUSINESS' && event.created_by === viewer.id;
+  if (!['HEAD_ADMIN','ADMIN'].includes(role) && !businessOwner) return;
+  const next = !event.is_featured;
+  const color = next
+    ? (prompt('Hervorhebungsfarbe: gold, blue, green, red, purple oder orange', event.featured_color || 'gold') || 'gold').trim().toLowerCase()
+    : (event.featured_color || 'gold');
+  const { error } = await supabase.rpc('set_community_event_featured', {
+    p_event_id: event.id,
+    p_featured: next,
+    p_color: color
+  });
+  if (error) return alert(error.message);
+  window.dispatchEvent(new CustomEvent('ec:regional-events-refresh'));
 }
 
 async function editEvent(event) {
@@ -108,7 +137,7 @@ async function deleteEvent(event) {
 function buildEventRow(event, rsvpStatus) {
   const state = eventState(event);
   const article = document.createElement('article');
-  article.className = `ec-regional-event-row is-${state.key}${event.image_url ? ' has-image' : ''}`;
+  article.className = `ec-regional-event-row is-${state.key}${event.image_url ? ' has-image' : ''}${event.is_featured ? ` is-featured featured-${event.featured_color || 'gold'}` : ''}`;
   article.dataset.eventId = event.id;
 
   if (event.image_url) {
@@ -117,11 +146,17 @@ function buildEventRow(event, rsvpStatus) {
     image.alt = '';
     image.loading = 'lazy';
     article.appendChild(image);
+  } else {
+    const date = new Date(event.event_at);
+    const tile = document.createElement('div');
+    tile.className = 'ec-regional-event-date-tile';
+    tile.innerHTML = `<strong>${Number.isNaN(date.getTime()) ? '–' : String(date.getDate()).padStart(2,'0')}</strong><span>${Number.isNaN(date.getTime()) ? '' : new Intl.DateTimeFormat('de-AT',{month:'short'}).format(date)}</span>`;
+    article.appendChild(tile);
   }
 
   const body = document.createElement('div');
   body.className = 'ec-regional-event-body';
-  body.innerHTML = `<div class="ec-regional-event-top"><span class="ec-regional-event-state">${esc(state.label)}</span><time>${esc(formatDate(event.event_at))}</time></div><strong>${esc(event.title)}</strong>${event.location ? `<span class="ec-regional-event-location">⌖ ${esc(event.location)}</span>` : ''}${event.description ? `<p>${esc(event.description)}</p>` : ''}${state.key === 'cancelled' && event.cancellation_reason ? `<small class="ec-regional-event-cancel-reason">${esc(event.cancellation_reason)}</small>` : ''}`;
+  body.innerHTML = `<div class="ec-regional-event-top">${event.is_featured ? '<span class="ec-regional-event-featured">★ Hervorgehoben</span>' : ''}<span class="ec-regional-event-state">${esc(state.label)}</span><time>${esc(formatDate(event.event_at))}</time></div><strong>${esc(event.title)}</strong>${event.location ? `<span class="ec-regional-event-location">⌖ ${esc(event.location)}</span>` : ''}${event.description ? `<p>${esc(event.description)}</p>` : ''}${state.key === 'cancelled' && event.cancellation_reason ? `<small class="ec-regional-event-cancel-reason">${esc(event.cancellation_reason)}</small>` : ''}`;
   article.appendChild(body);
 
   const actions = document.createElement('div');
@@ -135,8 +170,26 @@ function buildEventRow(event, rsvpStatus) {
       button.onclick = () => void setRsvp(event.id, status);
       actions.appendChild(button);
     }
+    const share = document.createElement('button');
+    share.type = 'button';
+    share.className = 'secondary-button';
+    share.textContent = '↗ Auf Profil teilen';
+    share.onclick = () => void shareEventOnProfile(event);
+    actions.appendChild(share);
   }
-  if (['HEAD_ADMIN', 'ADMIN'].includes(String(viewer?.role || '').toUpperCase())) {
+
+  const role = String(viewer?.role || '').toUpperCase();
+  const canFeature = ['HEAD_ADMIN','ADMIN'].includes(role) || (String(viewer?.account_badge || '').toUpperCase() === 'BUSINESS' && event.created_by === viewer?.id);
+  if (canFeature && state.key !== 'past') {
+    const feature = document.createElement('button');
+    feature.type = 'button';
+    feature.className = event.is_featured ? 'ec-event-feature-button is-active' : 'ec-event-feature-button';
+    feature.textContent = event.is_featured ? '★ Hervorhebung ändern' : '★ Hervorheben';
+    feature.onclick = () => void toggleFeaturedEvent(event);
+    actions.appendChild(feature);
+  }
+
+  if (['HEAD_ADMIN', 'ADMIN'].includes(role)) {
     const edit = document.createElement('button'); edit.type = 'button'; edit.className = 'secondary-button'; edit.textContent = 'Bearbeiten'; edit.onclick = () => void editEvent(event); actions.appendChild(edit);
     const toggle = document.createElement('button'); toggle.type = 'button'; toggle.className = 'secondary-button'; toggle.textContent = state.key === 'cancelled' ? 'Aktivieren' : 'Absagen'; toggle.onclick = () => void toggleEvent(event); actions.appendChild(toggle);
     const del = document.createElement('button'); del.type = 'button'; del.className = 'ec-event-delete-button'; del.textContent = 'Löschen'; del.onclick = () => void deleteEvent(event); actions.appendChild(del);
@@ -171,6 +224,7 @@ function renderCommunity(region, events, rsvps) {
       const aPast = new Date(a.event_at).getTime() < Date.now();
       const bPast = new Date(b.event_at).getTime() < Date.now();
       if (aPast !== bPast) return aPast ? 1 : -1;
+      if (!aPast && Boolean(a.is_featured) !== Boolean(b.is_featured)) return a.is_featured ? -1 : 1;
       return aPast ? new Date(b.event_at) - new Date(a.event_at) : new Date(a.event_at) - new Date(b.event_at);
     });
     sorted.forEach((event) => list.appendChild(buildEventRow(event, rsvps.get(event.id))));
@@ -211,7 +265,7 @@ async function refresh() {
     if (!region || version !== requestVersion) return;
     document.documentElement.dataset.ecRegion = region.slug;
     const { data: events, error } = await supabase.from('community_events')
-      .select('id,title,description,event_at,location,image_url,status,cancellation_reason,cancelled_at,region_id,created_by')
+      .select('id,title,description,event_at,location,image_url,status,cancellation_reason,cancelled_at,region_id,created_by,is_featured,featured_color')
       .eq('region_id', region.id)
       .order('event_at', { ascending: true });
     if (error) throw error;
