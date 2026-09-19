@@ -14,6 +14,7 @@ grant select on public.business_profile_documents to anon;
 grant select,insert,update,delete on public.business_profile_documents to authenticated;
 
 drop policy if exists business_profile_documents_read on public.business_profile_documents;
+drop policy if exists business_profile_documents_read_public on public.business_profile_documents;
 drop policy if exists business_profile_documents_read_anon on public.business_profile_documents;
 drop policy if exists business_profile_documents_read_authenticated on public.business_profile_documents;
 drop policy if exists business_profile_documents_update on public.business_profile_documents;
@@ -66,6 +67,7 @@ with check (
 );
 
 drop policy if exists business_profile_documents_storage_read on storage.objects;
+drop policy if exists business_profile_documents_storage_read_public on storage.objects;
 drop policy if exists business_profile_documents_storage_read_anon on storage.objects;
 drop policy if exists business_profile_documents_storage_read_authenticated on storage.objects;
 
