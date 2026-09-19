@@ -969,11 +969,19 @@ export default function App() {
     return index >= 0 ? decodeURIComponent(value.slice(index + marker.length).split("?")[0]) : "";
   }
 
+  function isProfileImageFile(file) {
+    if (!file) return false;
+    if (String(file.type || "").startsWith("image/")) return true;
+    return /\.(png|jpe?g|webp|gif|heic|heif|avif)$/i.test(String(file.name || ""));
+  }
+
   function selectProfilePhotoForEdit(file) {
     if (!file) return;
     setProfilePhotoEditingExisting(false);
-    if (!file.type.startsWith("image/")) return showNotice("Bitte ein Bild auswählen.");
-    if (file.size > 8 * 1024 * 1024) return showNotice("Das Originalbild darf maximal 8 MB groß sein.");
+    if (!isProfileImageFile(file)) return showNotice("Bitte ein Bild auswählen.");
+    // Large phone originals are processed locally in the crop editor.
+    // Only the optimized square result is uploaded to Storage.
+    if (file.size > 25 * 1024 * 1024) return showNotice("Das Originalbild darf maximal 25 MB groß sein.");
     setProfilePhotoEditFile(file);
   }
 
@@ -1387,7 +1395,7 @@ function Profile({ profile, user, isHeadAdmin, saveProfile, uploadProfileImage, 
   <fieldset className="profile-editor-section">
     <legend>Bilder</legend>
     <div className="profile-editor-grid">
-      <label className="profile-upload-field"><span>Profilbild</span><small>PNG, JPG, WebP oder GIF · danach zuschneiden, zoomen und ausrichten</small><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(e) => e.target.files?.[0] && uploadProfileImage(e.target.files[0])}/>{profile?.avatar_url && <span className="profile-cover-inline-actions"><button type="button" className="text-button" onClick={editProfileImage}>Profilbild ausrichten</button></span>}</label>
+      <label className="profile-upload-field profile-upload-field-avatar"><span>Profilbild</span><small>Handyfotos, PNG, JPG, WebP, GIF, HEIC/HEIF · danach zuschneiden, zoomen und ausrichten</small><input className="profile-avatar-file-input" type="file" accept="image/*,.heic,.heif" onClick={(e) => { e.currentTarget.value = ""; }} onChange={(e) => { const file = e.currentTarget.files?.[0]; if (file) uploadProfileImage(file); }}/>{profile?.avatar_url && <span className="profile-cover-inline-actions"><button type="button" className="text-button" onClick={editProfileImage}>Profilbild ausrichten</button></span>}</label>
       <label className="profile-upload-field"><span>Profil-Cover</span><small>Breites Titelbild · danach Ausschnitt, Zoom und Abdunklung einstellen</small><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(e) => e.target.files?.[0] && uploadProfileBackground(e.target.files[0])}/>{isImage && <span className="profile-cover-inline-actions"><button type="button" className="text-button" onClick={editProfileCover}>Ausschnitt anpassen</button><button type="button" className="text-button profile-cover-remove" onClick={removeProfileCover}>Hintergrund entfernen</button></span>}</label>
       <label className="profile-upload-field profile-editor-field-wide"><span>Bild zu „Über mich“</span><small>Optionales zusätzliches Profilbild</small><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(e) => e.target.files?.[0] && uploadProfileBioImage(e.target.files[0])}/></label>
     </div>

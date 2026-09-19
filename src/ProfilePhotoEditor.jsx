@@ -63,6 +63,7 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
   const [y, setY] = useState(0);
   const [rotation, setRotation] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [loadError, setLoadError] = useState("");
   const previewCanvasRef = useRef(null);
   const exportCanvasRef = useRef(null);
 
@@ -71,10 +72,16 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
     let url = "";
     if (!file) return undefined;
 
+    setLoadError("");
     void loadImage(file).then((loaded) => {
       url = loaded.url;
       if (active) setSource(loaded.img);
       else URL.revokeObjectURL(loaded.url);
+    }).catch((error) => {
+      if (active) {
+        setSource(null);
+        setLoadError(error?.message || "Bild konnte nicht geladen werden.");
+      }
     });
 
     return () => {
@@ -140,7 +147,9 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
         <div className="ec-photo-editor-preview">
           {source
             ? <canvas ref={previewCanvasRef} aria-label="Profilbild-Vorschau"/>
-            : <span>Bild wird geladen …</span>}
+            : loadError
+              ? <div className="ec-photo-editor-load-error"><strong>Bild kann nicht geöffnet werden.</strong><span>{loadError}</span><small>Bitte wähle ein anderes Foto oder speichere es auf dem Handy als JPG/PNG.</small></div>
+              : <span>Bild wird geladen …</span>}
           <div className="ec-photo-editor-circle" aria-hidden="true"/>
         </div>
 
