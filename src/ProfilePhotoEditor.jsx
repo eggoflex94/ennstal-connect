@@ -35,17 +35,33 @@ function drawEditedImage(canvas, source, { zoom, x, y, rotation }, size) {
   const rotatedHeight = quarterTurn ? source.naturalWidth : source.naturalHeight;
 
   // Cover the square first, then apply the user's zoom and pan.
-  // These exact same calculations are used for preview and final export.
+  // If the user drags farther than the current crop permits, add only the
+  // minimum extra zoom needed to keep the crop filled instead of clamping.
   const coverScale = Math.max(size / rotatedWidth, size / rotatedHeight);
-  const scale = coverScale * zoom;
+  const requestedX = (x / PAN_LIMIT) * size * 0.30;
+  const requestedY = (y / PAN_LIMIT) * size * 0.34;
+
+  const baseScale = coverScale * zoom;
+  const baseDrawW = source.naturalWidth * baseScale;
+  const baseDrawH = source.naturalHeight * baseScale;
+  const baseRenderedW = quarterTurn ? baseDrawH : baseDrawW;
+  const baseRenderedH = quarterTurn ? baseDrawW : baseDrawH;
+
+  const requiredRenderedW = size + Math.abs(requestedX) * 2;
+  const requiredRenderedH = size + Math.abs(requestedY) * 2;
+  const adaptiveScale = Math.max(
+    1,
+    requiredRenderedW / Math.max(1, baseRenderedW),
+    requiredRenderedH / Math.max(1, baseRenderedH)
+  );
+
+  const scale = baseScale * adaptiveScale;
   const drawW = source.naturalWidth * scale;
   const drawH = source.naturalHeight * scale;
   const renderedW = quarterTurn ? drawH : drawW;
   const renderedH = quarterTurn ? drawW : drawH;
   const maxOffsetX = Math.max(0, (renderedW - size) / 2);
   const maxOffsetY = Math.max(0, (renderedH - size) / 2);
-  const requestedX = (x / 100) * size * 0.48;
-  const requestedY = (y / 100) * size * 0.48;
   const offsetX = Math.max(-maxOffsetX, Math.min(maxOffsetX, requestedX));
   const offsetY = Math.max(-maxOffsetY, Math.min(maxOffsetY, requestedY));
   const radians = rotation * Math.PI / 180;
@@ -174,7 +190,7 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
         <div>
           <span className="eyebrow">PROFILBILD</span>
           <h2>Foto anpassen</h2>
-          <p>Ziehe das Bild direkt mit Finger oder Maus an die gewünschte Position. Die Vorschau entspricht exakt dem gespeicherten Ausschnitt.</p>
+          <p>Ziehe das Bild direkt mit Finger oder Maus. Wenn du es weiter nach oben oder unten ziehst, zoomt der Ausschnitt automatisch nur so weit nach, dass kein leerer Rand entsteht.</p>
         </div>
         <button type="button" className="ec-photo-editor-close" onClick={onCancel} aria-label="Schließen">×</button>
       </header>
