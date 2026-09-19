@@ -63,10 +63,20 @@ async function loadActivities() {
 }
 
 async function loadEvents() {
-  let query = supabase.from('community_events').select('*').gte('event_at', new Date().toISOString()).order('event_at', { ascending:true }).limit(8);
+  const now = new Date();
+  const soon = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  let query = supabase.from('community_events')
+    .select('*')
+    .eq('status','ACTIVE')
+    .gte('event_at', now.toISOString())
+    .lte('event_at', soon.toISOString())
+    .order('event_at', { ascending:true })
+    .limit(12);
   if (activeRegionId) query = query.eq('region_id', activeRegionId);
   const { data } = await query;
-  return data || [];
+  return (data || [])
+    .sort((a,b) => Number(Boolean(b.is_featured)) - Number(Boolean(a.is_featured)) || new Date(a.event_at) - new Date(b.event_at))
+    .slice(0,6);
 }
 
 async function loadReminders() {
@@ -137,18 +147,25 @@ async function deleteEvent(event) {
 
 function eventCard(event, reminder = false) {
   const fontClass = `ec-font-${esc(event.font_family || 'modern')} ec-size-${esc(event.font_size || 'normal')} ec-em-${esc(event.emphasis || 'normal')}`;
-  return `<article class="ec-home-event ${event.status === 'CANCELLED' ? 'is-cancelled' : ''}" data-event-id="${esc(event.id)}">
-    ${event.image_url ? `<img src="${esc(event.image_url)}" alt="">` : ''}
+  const date = new Date(event.event_at);
+  const day = Number.isNaN(date.getTime()) ? '–' : String(date.getDate()).padStart(2,'0');
+  const month = Number.isNaN(date.getTime()) ? '' : new Intl.DateTimeFormat('de-AT',{month:'short'}).format(date);
+  const colorClass = event.is_featured ? ` is-featured featured-${esc(event.featured_color || 'gold')}` : '';
+  return `<article class="ec-home-event${colorClass}" data-event-id="${esc(event.id)}">
+    <div class="ec-home-event-media">
+      ${event.image_url ? `<img src="${esc(event.image_url)}" alt="">` : `<div class="ec-home-event-date"><strong>${esc(day)}</strong><span>${esc(month)}</span></div>`}
+      ${event.is_featured ? '<span class="ec-home-event-featured">★ Hervorgehoben</span>' : ''}
+    </div>
     <div class="ec-home-event-body ${fontClass}" style="--event-color:${esc(event.font_color || '#17324a')}">
-      <small>${reminder ? 'ERINNERUNG' : 'AKTUELLES EVENT'}</small>
+      <small>${reminder ? 'ERINNERUNG' : 'BALD IN DEINER REGION'}</small>
       <h3>${esc(event.title)}</h3>
       <p class="ec-home-event-meta">${esc(fmt(event.event_at))}${event.location ? ` · ${esc(event.location)}` : ''}</p>
-      ${event.description ? `<p>${esc(event.description)}</p>` : ''}
+      ${event.description ? `<p class="ec-home-event-description">${esc(event.description)}</p>` : ''}
       <div class="ec-home-event-actions">
-        <button type="button" data-action="share">Aktivität teilen</button>
-        <button type="button" data-action="going">Ich bin dabei</button>
-        <button type="button" data-action="interested">Interessiert</button>
-        ${canManageRegion ? '<button type="button" data-action="edit">Bearbeiten</button><button type="button" data-action="delete" class="danger">Löschen</button>' : ''}
+        <button type="button" data-action="interested">☆ Interessiert</button>
+        <button type="button" data-action="going">✓ Ich komme</button>
+        <button type="button" data-action="share">↗ Teilen</button>
+        ${canManageRegion ? '<button type="button" data-action="edit">✎ Bearbeiten</button><button type="button" data-action="delete" class="danger">Löschen</button>' : ''}
       </div>
     </div>
   </article>`;
@@ -168,7 +185,7 @@ function buildHomeShell(home) {
         <article class="ec-reminder-card panel"><span class="eyebrow">ERINNERUNGEN</span><h2>Deine kommenden Events</h2><div class="ec-reminder-list"></div></article>
       </div>
       <section class="ec-friend-feed panel"><div class="ec-section-head"><div><span class="eyebrow">FREUNDE & REGION</span><h2>Aktuelle Aktivitäten</h2></div></div><div class="ec-friend-feed-list"></div></section>
-      <section class="ec-home-events panel"><div class="ec-section-head"><div><span class="eyebrow">VERANSTALTUNGEN</span><h2>Aktuelle Events</h2><p>Events der ausgewählten Region direkt auf der Startseite.</p></div></div><div class="ec-home-event-list"></div><div class="ec-event-admin-slot"></div></section>
+      <section class="ec-home-events panel"><div class="ec-section-head"><div><span class="eyebrow">MEHR REICHWEITE FÜR REGIONALE TERMINE</span><h2>Bald in deiner Region</h2><p>Veranstaltungen der nächsten 7 Tage. Hervorgehobene Events stehen zuerst.</p></div><button type="button" class="ec-home-events-more">Alle Veranstaltungen →</button></div><div class="ec-home-event-list"></div><div class="ec-event-admin-slot"></div></section>
     `;
     const heading = home.querySelector('.page-heading');
     heading?.insertAdjacentElement('afterend', social);
@@ -210,8 +227,9 @@ async function renderHome() {
   const reminderList = social.querySelector('.ec-reminder-list');
   reminderList.innerHTML = reminders.length ? reminders.map((r) => `<button type="button" data-event-id="${esc(r.event_id)}"><strong>${esc(r.title)}</strong><small>${esc(fmt(r.event_at))}${r.location ? ` · ${esc(r.location)}` : ''}</small></button>`).join('') : '<p>Keine anstehenden Erinnerungen.</p>';
 
+  social.querySelector('.ec-home-events-more')?.addEventListener('click', () => window.dispatchEvent(new CustomEvent('ec:navigate', { detail:{ page:'community' } })));
   const list = social.querySelector('.ec-home-event-list');
-  list.innerHTML = events.length ? events.map((event) => eventCard(event)).join('') : '<div class="ec-empty-state">Derzeit keine kommenden Events in dieser Region.</div>';
+  list.innerHTML = events.length ? events.map((event) => eventCard(event)).join('') : '<div class="ec-empty-state">In den nächsten 7 Tagen sind derzeit keine Veranstaltungen eingetragen.</div>';
   list.querySelectorAll('.ec-home-event').forEach((card) => {
     const event = events.find((item) => item.id === card.dataset.eventId); if (!event) return;
     card.querySelector('[data-action="share"]')?.addEventListener('click', () => shareEvent(event));
