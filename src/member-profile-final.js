@@ -55,7 +55,9 @@ function coverMarkup(target){
   const y=Number(target?.profile_background_position_y??50);
   const zoom=Number(target?.profile_background_zoom??1);
   const overlay=Number(target?.profile_background_overlay??0.18);
-  return `<div class="ec-mp-cover"><img src="${esc(url)}" alt="" style="object-position:${x}% ${y}%;transform:scale(${zoom});transform-origin:${x}% ${y}%"><span class="ec-mp-cover-shade" style="--ec-cover-overlay:${overlay}"></span></div>`;
+  const panX=(x-50)*0.16;
+  const panY=(y-50)*0.16;
+  return `<div class="ec-mp-cover"><img src="${esc(url)}" alt="" style="object-position:50% 50%;transform:translate(${panX}%, ${panY}%) scale(${zoom});transform-origin:50% 50%"><span class="ec-mp-cover-shade" style="--ec-cover-overlay:${overlay}"></span></div>`;
 }
 function cleanActionText(button){
   const t=(button.textContent||'').replace(/[💬🤝♥✓⏳🚫🚩⚠🔓🔒🟢★✕↩⚙]/g,'').replace(/\s+/g,' ').trim();
