@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import "./ProfileCoverEditor.css";
 
-export default function ProfileCoverEditor({ file, current, onCancel, onSave }) {
+export default function ProfileCoverEditor({ file, currentUrl = "", current, onCancel, onSave }) {
   const [url, setUrl] = useState("");
   const [x, setX] = useState(Number(current?.x ?? 50));
   const [y, setY] = useState(Number(current?.y ?? 50));
@@ -10,11 +10,14 @@ export default function ProfileCoverEditor({ file, current, onCancel, onSave }) 
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!file) return undefined;
+    if (!file) {
+      setUrl(currentUrl || "");
+      return undefined;
+    }
     const next = URL.createObjectURL(file);
     setUrl(next);
     return () => URL.revokeObjectURL(next);
-  }, [file]);
+  }, [file, currentUrl]);
 
   const imageStyle = useMemo(() => ({
     objectPosition: `${x}% ${y}%`,
@@ -23,7 +26,7 @@ export default function ProfileCoverEditor({ file, current, onCancel, onSave }) 
   }), [x, y, zoom]);
 
   const save = async () => {
-    if (!file || busy) return;
+    if ((!file && !currentUrl) || busy) return;
     setBusy(true);
     try {
       await onSave(file, { x, y, zoom, overlay });
@@ -32,7 +35,7 @@ export default function ProfileCoverEditor({ file, current, onCancel, onSave }) 
     }
   };
 
-  if (!file) return null;
+  if (!file && !currentUrl) return null;
 
   return <div className="ec-cover-editor-backdrop" role="dialog" aria-modal="true" aria-label="Profilhintergrund anpassen">
     <section className="ec-cover-editor">
