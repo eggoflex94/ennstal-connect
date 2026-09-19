@@ -105,9 +105,11 @@
   z-index:2!important;
 }
 .ec-member-profile-final .ec-mp-card.has-profile-cover .ec-mp-photo{
-  background:rgba(255,255,255,.86)!important;
-  border:1px solid rgba(255,255,255,.78)!important;
+  background:rgba(9,26,38,.66)!important;
+  border:1px solid rgba(255,255,255,.18)!important;
   box-shadow:0 12px 30px rgba(5,18,28,.20)!important;
+  backdrop-filter:blur(10px)!important;
+  -webkit-backdrop-filter:blur(10px)!important;
 }
 .ec-member-profile-final .ec-mp-card.has-profile-cover .ec-mp-function{
   background:rgba(8,32,22,.80)!important;
