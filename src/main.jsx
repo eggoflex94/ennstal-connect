@@ -179,6 +179,9 @@ import "./profile-responsive-authority.css";
 import "./profile-layout-organizer.css";
 import "./profile-layout-organizer.js";
 
+/* Final click/touch reliability authority. */
+import "./interaction-reliability-final.css";
+
 class AppErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
