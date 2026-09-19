@@ -605,11 +605,6 @@ export default function App() {
       button.onclick = () => deleteProfileDesignImage(field, label, value); mediaDeleteActions.appendChild(button);
     });
     if (mediaDeleteActions.childElementCount) form.querySelector(".primary-button")?.before(mediaDeleteActions);
-    const layout = document.createElement("section"); layout.className = "layout-rewards";
-    layout.innerHTML = `<span class="eyebrow">COMMUNITY-DESIGN</span><h3>Dein Layout</h3><p>Der Aufbau bleibt immer gleich. Du wählst nur zwischen dem Standarddesign und zwei einheitlichen Farbvarianten.</p>`;
-    const layoutSelect = document.createElement("select"); layoutSelect.name = "profile_layout";
-    [["standard", "Standard – Ennstal Connect"], ["theme-red", "Connect Rot – Hellrot"], ["theme-blue", "Connect Blau – Kräftig"]].forEach(([value, label]) => { const option = document.createElement("option"); option.value = value; option.textContent = label; layoutSelect.appendChild(option); });
-    layoutSelect.value = ["standard", "theme-red", "theme-blue"].includes(profile.profile_layout) ? profile.profile_layout : "standard"; layout.appendChild(layoutSelect); form.querySelector(".primary-button")?.before(layout);
     document.querySelectorAll(".profile-gallery figure").forEach((figure, index) => {
       const photo = memberPhotos.filter((item) => item.owner_id === user?.id)[index]; if (!photo || figure.querySelector(".photo-visibility")) return;
       const select = document.createElement("select"); select.className = "photo-visibility"; select.value = photo.visibility === "FRIENDS" ? "FRIENDS" : "PUBLIC";
@@ -617,7 +612,7 @@ export default function App() {
       select.onchange = async () => { const { error } = await supabase.from("member_photos").update({ visibility: select.value }).eq("id", photo.id).eq("owner_id", user.id); if (error) showNotice(error.message); else { showNotice("Foto-Sichtbarkeit gespeichert."); await loadAll(); } };
       figure.querySelector(".photo-actions")?.appendChild(select);
     });
-  }, [page, profile?.id, profile?.privacy_settings, profile?.avatar_url, profile?.profile_background, profile?.bio_image_url, memberPhotos, user?.id]);
+  }, [page, profile?.id, profile?.role, profile?.account_badge, profile?.profile_layout, profile?.privacy_settings, profile?.avatar_url, profile?.profile_background, profile?.bio_image_url, memberPhotos, user?.id]);
 
   useEffect(() => {
     if (page !== "forum" && page !== "admin-forum") return;
@@ -1210,7 +1205,7 @@ function MemberMini({ member }) { return <div className="member-mini"><img src={
 
 function ProfileWelcomeBadges({ badges }) { if (!badges.length) return null; return <section className="panel profile-welcome-badges"><span className="eyebrow">DEINE ERSTEN SCHRITTE</span><h2>Willkommens-Badges</h2><div>{badges.map((badge) => <span className={badge.earned ? "earned" : ""} key={badge.key}><b>{badge.icon}</b><span><strong>{badge.title}</strong><small>{badge.description}</small></span>{badge.earned ? "✓" : ""}</span>)}</div></section>; }
 
-function Profile({ profile, user, isHeadAdmin, saveProfile, uploadProfileImage, uploadProfileBioImage }) { const background = profile?.profile_background || "#1b1f26"; const isImage = background.startsWith("http"); return <section><div className="my-area-layout"><div className="profile-member-card-preview" aria-label="Vorschau deiner Mitgliederkarte"><MemberCardView member={profile} profile={profile} friendships={[]} interactive={false}/></div><form className="panel profile-form profile-editor" onSubmit={saveProfile}>
+function Profile({ profile, user, isHeadAdmin, saveProfile, uploadProfileImage, uploadProfileBackground, uploadProfileBioImage }) { const background = profile?.profile_background || "#1b1f26"; const isImage = background.startsWith("http"); const business = profile?.account_badge === "BUSINESS"; return <section><div className="my-area-layout"><div className="profile-member-card-preview" aria-label="Vorschau deiner Mitgliederkarte"><MemberCardView member={profile} profile={profile} friendships={[]} interactive={false}/></div><form className="panel profile-form profile-editor" onSubmit={saveProfile}>
   <header className="profile-editor-header"><span className="eyebrow">DEIN PROFIL</span><h2>Profil gestalten</h2><p className="profile-editor-note">Passe deine Darstellung übersichtlich an. Änderungen gelten für dein eigenes und dein öffentliches Profil.</p></header>
   <fieldset className="profile-editor-section">
     <legend>Grunddaten und Farben</legend>
@@ -1221,10 +1216,19 @@ function Profile({ profile, user, isHeadAdmin, saveProfile, uploadProfileImage, 
     </div>
     <input type="hidden" name="profile_background_image" value=""/>
   </fieldset>
+  <fieldset className={`profile-editor-section layout-rewards ${business ? "business-layout-rewards" : ""}`}>
+    <legend>{business ? "Erweiterte Profilgestaltung für Unternehmer" : "Community-Design"}</legend>
+    <span className="eyebrow">{business ? "UNTERNEHMER-DESIGN" : "COMMUNITY-DESIGN"}</span>
+    <h3>Dein Layout</h3>
+    <p>{business ? "Mit deinem Unternehmerkonto sind alle Profil-Layouts automatisch freigeschaltet." : "Wähle das Design deines Profils. Zusätzliche Layouts können durch Community-Aktivität freigeschaltet werden."}</p>
+    <label className="profile-editor-field profile-editor-field-wide"><span>Profil-Layout</span><select name="profile_layout" defaultValue={["standard","theme-red","theme-blue","theme-neon"].includes(profile?.profile_layout) ? profile.profile_layout : "standard"}><option value="standard">Standard – Ennstal Connect</option><option value="theme-red">Connect Rot – Hellrot</option><option value="theme-blue">Connect Blau – Kräftig</option><option value="theme-neon">Neon Grün – Giftgrün & Dunkel</option></select></label>
+    {business && <small className="profile-editor-help">★ Unternehmerkonto: Rot, Blau und Neon sind automatisch freigeschaltet.</small>}
+  </fieldset>
   <fieldset className="profile-editor-section">
     <legend>Bilder</legend>
     <div className="profile-editor-grid">
       <label className="profile-upload-field"><span>Profilbild</span><small>PNG, JPG, WebP oder GIF</small><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(e) => e.target.files?.[0] && uploadProfileImage(e.target.files[0])}/></label>
+      <label className="profile-upload-field"><span>Profil-Hintergrundbild</span><small>Optionaler Hintergrund für dein Profil</small><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(e) => e.target.files?.[0] && uploadProfileBackground(e.target.files[0])}/></label>
       <label className="profile-upload-field profile-editor-field-wide"><span>Bild zu „Über mich“</span><small>Optionales zusätzliches Profilbild</small><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(e) => e.target.files?.[0] && uploadProfileBioImage(e.target.files[0])}/></label>
     </div>
   </fieldset>
