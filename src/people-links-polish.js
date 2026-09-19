@@ -44,8 +44,21 @@ function normalizeOnlineFriends(){
       });
       const id=row.dataset.profileId;
       row.dataset.profileHref=profileHref(id);
-      row.setAttribute('aria-label',`Profil von ${(row.querySelector('.ec-online-friend-name,.ec-profile-native-link')?.textContent||'Mitglied').trim()} öffnen`);
-      makeVisualLink(row,id,'.ec-online-friend-name,.ec-profile-native-link');
+
+      // The row is already a button. Never nest an anchor inside it.
+      const nestedLink=row.querySelector('a.ec-profile-native-link');
+      if(nestedLink){
+        const strong=document.createElement('strong');
+        strong.className='ec-online-friend-name';
+        strong.textContent=nestedLink.textContent.trim()||'Mitglied';
+        nestedLink.replaceWith(strong);
+      }
+
+      const name=(row.querySelector('.ec-online-friend-name')?.textContent||'Mitglied').trim();
+      row.setAttribute('aria-label',`Profil von ${name} öffnen`);
+      row.title=`Profil von ${name} öffnen`;
+      row.style.cursor='pointer';
+      row.style.touchAction='manipulation';
     });
   });
 }
