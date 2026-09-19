@@ -1,0 +1,127 @@
+/* Compact profile editor and public-profile content tabs */
+.profile-page-layout .profile-form.profile-editor .profile-editor-tabbar{
+  display:flex!important;
+  gap:8px!important;
+  overflow-x:auto!important;
+  padding:6px!important;
+  margin:0 0 4px!important;
+  border:1px solid #dbe5eb!important;
+  border-radius:16px!important;
+  background:#f5f8fa!important;
+  scrollbar-width:thin;
+}
+.profile-page-layout .profile-form.profile-editor .profile-editor-tabbar button{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:7px!important;
+  min-height:44px!important;
+  padding:9px 13px!important;
+  border:0!important;
+  border-radius:11px!important;
+  background:transparent!important;
+  color:#54697b!important;
+  font-weight:800!important;
+  white-space:nowrap!important;
+  box-shadow:none!important;
+}
+.profile-page-layout .profile-form.profile-editor .profile-editor-tabbar button.active{
+  background:#fff!important;
+  color:#17324a!important;
+  box-shadow:0 5px 16px rgba(25,54,78,.10)!important;
+}
+.profile-page-layout .profile-form.profile-editor .profile-editor-tabpanel{
+  display:grid!important;
+  gap:14px!important;
+  min-width:0!important;
+}
+.profile-page-layout .profile-form.profile-editor .profile-editor-tabpanel[hidden]{
+  display:none!important;
+}
+.profile-page-layout .profile-form.profile-editor .profile-editor-about-group{
+  display:grid!important;
+  gap:14px!important;
+}
+.profile-editor-content-note{
+  padding:14px 16px;
+  border-radius:14px;
+  background:#f6f9fb;
+  border:1px solid #dfe8ed;
+}
+.profile-editor-content-note strong{display:block;margin-bottom:3px;color:#17324a}
+.profile-editor-content-note p{margin:0;color:#667b8d;line-height:1.45}
+.profile-page-layout .profile-form.profile-editor .profile-editor-actions{
+  position:sticky!important;
+  bottom:10px!important;
+  z-index:6!important;
+  padding:10px!important;
+  border-radius:14px!important;
+  background:rgba(255,255,255,.94)!important;
+  backdrop-filter:blur(10px)!important;
+  box-shadow:0 8px 26px rgba(18,42,60,.12)!important;
+}
+
+.member-profile-page>.profile-content-tabs-runtime{
+  margin-top:16px!important;
+}
+.profile-content-tabs-runtime .profile-content-tabbar{
+  display:flex;
+  gap:8px;
+  overflow-x:auto;
+  padding:7px;
+  border:1px solid rgba(132,151,166,.20);
+  border-radius:16px;
+  background:rgba(255,255,255,.84);
+  box-shadow:0 8px 24px rgba(18,42,60,.07);
+}
+.profile-content-tabs-runtime .profile-content-tabbar button{
+  flex:0 0 auto;
+  min-height:42px;
+  padding:8px 13px;
+  border:0;
+  border-radius:11px;
+  background:transparent;
+  color:#52697b;
+  font-weight:850;
+  cursor:pointer;
+}
+.profile-content-tabs-runtime .profile-content-tabbar button.active{
+  background:#17324a;
+  color:#fff;
+  box-shadow:0 5px 15px rgba(23,50,74,.18);
+}
+.member-profile-page>.profile-tab-hidden{
+  display:none!important;
+}
+.member-profile-page>.personal-profile-sections,
+.member-profile-page>.ec-profile-photo-album,
+.member-profile-page>.public-photo-folder,
+.member-profile-page>.member-groups,
+.member-profile-page>.public-friends,
+.member-profile-page>.ec-profile-shared-items,
+.member-profile-page>.business-profile-extended,
+.member-profile-page>.ec-business-profile-extended{
+  margin-top:14px!important;
+}
+.member-profile-page .profile-highlights{
+  margin-top:14px!important;
+}
+.member-profile-page .profile-stat-grid{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+}
+
+@media(max-width:700px){
+  .profile-page-layout .profile-form.profile-editor .profile-editor-tabbar{
+    margin-left:-4px!important;
+    margin-right:-4px!important;
+  }
+  .profile-page-layout .profile-form.profile-editor .profile-editor-tabbar button{
+    min-width:max-content!important;
+  }
+  .profile-content-tabs-runtime .profile-content-tabbar{
+    border-radius:13px;
+  }
+  .profile-content-tabs-runtime .profile-content-tabbar button{
+    min-width:max-content;
+  }
+}
