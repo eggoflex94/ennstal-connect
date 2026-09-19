@@ -20,3 +20,12 @@ test("Community Photographer function row uses dedicated profile styling", async
   assert.match(css, /\.ec-mp-function-camera/);
   assert.match(css, /\.ec-mp-function-copy/);
 });
+
+
+test("own-profile photographer banner stays compact", async () => {
+  const css = await source("src/community-photographer.css");
+  assert.match(css, /\.community-photographer-self-banner>img/);
+  assert.match(css, /max-width:34px!important/);
+  assert.match(css, /max-height:34px!important/);
+  assert.match(css, /object-fit:contain!important/);
+});
