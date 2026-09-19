@@ -182,6 +182,9 @@ import "./profile-layout-organizer.js";
 /* Final click/touch reliability authority. */
 import "./interaction-reliability-final.css";
 
+/* Community Photographer badge and event-photo gallery. */
+import "./community-photographer.css";
+
 class AppErrorBoundary extends React.Component {
   constructor(props) {
     super(props);

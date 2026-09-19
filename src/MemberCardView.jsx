@@ -53,6 +53,7 @@ export default function MemberCardView({ member, profile, friendships, onOpen, i
       data-base-role={baseRole}
       data-home-region-id={member.home_region_id || ""}
       data-role-theme={presentation.theme}
+      data-community-photographer={member?.is_community_photographer ? "true" : "false"}
       onClick={interactive ? openProfile : undefined}
       onKeyDown={interactive ? (event) => {
         if (event.target !== event.currentTarget) return;
@@ -72,6 +73,11 @@ export default function MemberCardView({ member, profile, friendships, onOpen, i
         {presentation.star && (
           <span className={`ec-card-badge-icon ec-card-badge-role ec-card-badge-role-${presentation.theme}`} title={presentation.label} aria-label={presentation.label}>
             <img className="ec-card-badge-img ec-card-badge-role-img" src={presentation.star} alt="" aria-hidden="true" />
+          </span>
+        )}
+        {member?.is_community_photographer && (
+          <span className="ec-card-badge-icon ec-card-badge-photographer" title={member?.community_photographer_global ? "Community-Fotograf · Alle Regionen" : "Community-Fotograf"} aria-label={member?.community_photographer_global ? "Community-Fotograf · Alle Regionen" : "Community-Fotograf"}>
+            <img className="ec-card-badge-img ec-card-badge-photographer-img" src="/community-photographer-camera.svg" alt="" aria-hidden="true" />
           </span>
         )}
         {friend && (

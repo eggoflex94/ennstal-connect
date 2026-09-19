@@ -16,7 +16,7 @@ async function withPreparedAction(action,targetId,task){const reason=await askRe
 
 async function loadContext(targetId){
   const {data:{user}}=await supabase.auth.getUser(); if(!user?.id||!targetId||user.id===targetId)return null;
-  const [viewerResult,targetResult,permResult,regionsResult,regionalAdminResult,regionalModResult,targetRegionalAdminResult,targetRegionalModResult]=await Promise.all([
+  const [viewerResult,targetResult,permResult,regionsResult,regionalAdminResult,regionalModResult,targetRegionalAdminResult,targetRegionalModResult,photographerAssignmentsResult,targetPermissionResult]=await Promise.all([
     supabase.from('profiles').select('id,nickname,role,account_status,forum_moderator,home_region_id').eq('id',user.id).maybeSingle(),
     supabase.from('profiles').select('id,nickname,first_name,last_name,role,account_status,forum_moderator,is_verified,is_test_account,account_badge,home_region_id,community_points,purchase_points,avatar_url,profile_background,bio_image_url,admin_responsibilities').eq('id',targetId).maybeSingle(),
     supabase.from('user_permissions').select('*').eq('user_id',user.id).maybeSingle(),
@@ -24,7 +24,9 @@ async function loadContext(targetId){
     supabase.from('regional_admin_assignments').select('region_id,active').eq('user_id',user.id).eq('active',true),
     supabase.from('regional_moderation_assignments').select('region_id,permissions,active').eq('user_id',user.id).eq('active',true),
     supabase.from('regional_admin_assignments').select('region_id,active').eq('user_id',targetId).eq('active',true),
-    supabase.from('regional_moderation_assignments').select('region_id,permissions,active').eq('user_id',targetId).eq('active',true)
+    supabase.from('regional_moderation_assignments').select('region_id,permissions,active').eq('user_id',targetId).eq('active',true),
+    supabase.from('community_photographer_assignments').select('id,scope,region_id,active').eq('user_id',targetId).eq('active',true),
+    supabase.from('user_permissions').select('manage_community_photographers').eq('user_id',targetId).maybeSingle()
   ]);
   const viewer=viewerResult.data,target=targetResult.data;if(!viewer||!target||viewer.account_status!=='ACTIVE')return null;
   const isHead=role(viewer.role)==='HEAD_ADMIN';
@@ -41,7 +43,7 @@ async function loadContext(targetId){
   const hasExtraProfileTool=bool(viewer.forum_moderator)||Object.values(permissions).some(v=>v===true)||targetRegionalPermissions.size>0;
   if(!hasBasicAdmin&&!hasExtraProfileTool)return null;
   let targetPermissions={};if(isHead){const {data}=await supabase.rpc('admin_get_permissions',{target_user:targetId});targetPermissions=data||{};}
-  return {viewer,target,isHead,isGlobalAdmin,isRegionalAdminForTarget,hasBasicAdmin,permissions,targetRegionalPermissions,targetPermissions,regions:regionsResult.data||[],targetRegionalAdmins,targetRegionalMods:targetRegionalModResult.data||[]};
+  return {viewer,target,isHead,isGlobalAdmin,isRegionalAdminForTarget,hasBasicAdmin,permissions,targetRegionalPermissions,targetPermissions,regions:regionsResult.data||[],targetRegionalAdmins,targetRegionalMods:targetRegionalModResult.data||[],photographerAssignments:(photographerAssignmentsResult.data||[]).filter(x=>x.active!==false),targetCanManagePhotographers:bool(targetPermissionResult.data?.manage_community_photographers)};
 }
 
 const canGlobal=(ctx,key)=>ctx.isHead||bool(ctx.permissions?.[key]);
@@ -54,6 +56,7 @@ const canFriendLock=ctx=>ctx.hasBasicAdmin||canGlobal(ctx,'manage_members')||can
 const canVerificationRequest=ctx=>ctx.hasBasicAdmin||canGlobal(ctx,'manage_members')||canRegional(ctx,'MEMBERS');
 const canPoints=ctx=>ctx.hasBasicAdmin||canGlobal(ctx,'manage_points');
 const canReports=ctx=>ctx.hasBasicAdmin||canGlobal(ctx,'manage_reports')||canRegional(ctx,'MEMBERS');
+const canManagePhotographers=ctx=>ctx.isHead||(ctx.isGlobalAdmin&&bool(ctx.permissions?.manage_community_photographers));
 const targetName=t=>t.nickname||[t.first_name,t.last_name].filter(Boolean).join(' ')||'Mitglied';
 const toolButton=(label,action,cls='')=>`<button type="button" class="ec-profile-admin-action ${cls}" data-admin-action="${esc(action)}">${esc(label)}</button>`;
 const section=(icon,title,subtitle,body,cls='')=>`<section class="ec-profile-admin-section ${cls}"><header class="ec-profile-admin-section-head"><span class="ec-profile-admin-section-icon">${icon}</span><div><h3>${esc(title)}</h3>${subtitle?`<p>${esc(subtitle)}</p>`:''}</div></header>${body}</section>`;
@@ -68,6 +71,15 @@ function buildModal(ctx){
     const groupMod=bool(ctx.targetPermissions?.manage_groups)||(t.admin_responsibilities||[]).some(x=>/gruppen verwalten/i.test(String(x)));
     blocks.push(section('★','Rolle & Zuständigkeiten','Nur Hauptadmin – Rollen, Moderatorstatus und Einzelrechte',`<div class="ec-profile-admin-grid">${toolButton('Rolle entfernen → Mitglied','role:MEMBER')}${toolButton('Zum Supporter machen','role:SUPPORTER')}${toolButton('Zum Community Admin machen','role:ADMIN')}${toolButton('Einzelrechte verwalten','permissions')}${toolButton(t.forum_moderator?'Forum-Moderation entfernen':'Forum-Moderator vergeben','forum-moderator')}${toolButton(groupMod?'Gruppenmoderation entfernen':role(t.role)==='SUPPORTER'?'Gruppenmoderator vergeben':'Supporter + Gruppenmoderation','group-moderator')}</div>`,'head-only'));
     blocks.push(section('⌖','Regionale Rollen','Nur Hauptadmin – Region auswählen und Rolle verwalten',`<label class="ec-profile-admin-region-picker">Region<select class="ec-admin-region-select">${regionOptions}</select></label><div class="ec-profile-admin-grid">${toolButton(homeRegion&&targetRegionalAdminIds.has(homeRegion.id)?'Regionaladmin entfernen':'Regionaladmin vergeben','regional-admin')}${toolButton(homeRegion&&targetRegionalModIds.has(homeRegion.id)?'Regionale Moderation entfernen':'Regionale Moderation vergeben','regional-moderator')}</div>`,'head-only'));
+  }
+
+  if(canManagePhotographers(ctx)){
+    const regionOptions=ctx.regions.map(r=>`<option value="${esc(r.slug)}">${esc(r.name)}</option>`).join('');
+    const hasGlobal=ctx.photographerAssignments.some(x=>x.scope==='GLOBAL');
+    const regionalIds=new Set(ctx.photographerAssignments.filter(x=>x.scope==='REGIONAL').map(x=>x.region_id));
+    const regionalNames=ctx.regions.filter(r=>regionalIds.has(r.id)).map(r=>r.name);
+    const status=hasGlobal?'Global · alle Regionen':regionalNames.length?`Regional · ${regionalNames.join(' · ')}`:'Nicht vergeben';
+    blocks.push(section('📷','Community-Fotograf',`Aktuell: ${status}`,`<label class="ec-profile-admin-region-picker">Region<select class="ec-photographer-region-select">${regionOptions}</select></label><div class="ec-profile-admin-grid">${toolButton(hasGlobal?'Globale Fotografenfreigabe entfernen':'Global vergeben','photographer-global')}${toolButton('Regionale Freigabe umschalten','photographer-regional')}${ctx.isHead&&role(t.role)==='ADMIN'?toolButton(ctx.targetCanManagePhotographers?'Zusatzrecht Fotografenverwaltung entfernen':'Global Admin: Fotografenverwaltung erlauben','photographer-manager-right'):''}</div>`));
   }
 
   const moderation=[];
@@ -111,6 +123,30 @@ async function handleAction(ctx,action,modal){
   if(action==='forum-moderator'&&ctx.isHead){const enabled=!bool(ctx.target.forum_moderator);const ok=await withPreparedAction(`Forum-Moderation ${enabled?'vergeben':'entfernen'}`,ctx.target.id,()=>supabase.rpc('admin_set_forum_moderator',{p_target_user:ctx.target.id,p_enabled:enabled}));if(ok){notify('Forum-Moderationsrolle wurde aktualisiert.');openTools(ctx.target.id);}return;}
   if(action==='group-moderator'&&ctx.isHead){const current=bool(ctx.targetPermissions?.manage_groups)||(ctx.target.admin_responsibilities||[]).some(x=>/gruppen verwalten/i.test(String(x)));const enabled=!current;if(enabled&&role(ctx.target.role)!=='SUPPORTER'){const roleOk=await withPreparedAction('Supporter-Rolle für Gruppenmoderation vergeben',ctx.target.id,()=>supabase.rpc('admin_set_role',{target_user:ctx.target.id,new_role:'SUPPORTER'}));if(!roleOk)return;}const {data,error}=await supabase.rpc('admin_get_permissions',{target_user:ctx.target.id});if(error)return notify(error.message);const ok=await withPreparedAction(`Gruppenmoderation ${enabled?'vergeben':'entfernen'}`,ctx.target.id,()=>savePermissionSet(ctx.target.id,{...(data||{}),manage_groups:enabled}));if(ok){notify(enabled?'Gruppenmoderation wurde vergeben.':'Gruppenmoderation wurde entfernt.');openTools(ctx.target.id);}return;}
   if((action==='regional-admin'||action==='regional-moderator')&&ctx.isHead){const slug=modal.querySelector('.ec-admin-region-select')?.value,region=ctx.regions.find(r=>r.slug===slug);if(!region)return notify('Bitte eine Region auswählen.');if(action==='regional-admin'){const enabled=!ctx.targetRegionalAdmins.some(x=>x.region_id===region.id);const ok=await withPreparedAction(`Regionaladmin ${enabled?'vergeben':'entfernen'} – ${region.name}`,ctx.target.id,()=>supabase.rpc('ec_set_regional_admin',{p_target:ctx.target.id,p_region_slug:region.slug,p_enabled:enabled}));if(ok){notify('Regionale Adminrolle wurde aktualisiert.');openTools(ctx.target.id);}}else{const enabled=!(ctx.targetRegionalMods||[]).some(x=>x.active!==false&&x.region_id===region.id);const permissions=enabled?['FORUM','GROUPS','EVENTS','NEWS','HOMEPAGE','MEMBERS','BUSINESSES','ANNOUNCEMENTS']:[];const ok=await withPreparedAction(`Regionale Moderation ${enabled?'vergeben':'entfernen'} – ${region.name}`,ctx.target.id,()=>supabase.rpc('ec_set_regional_moderator',{p_target:ctx.target.id,p_region_slug:region.slug,p_permissions:permissions,p_enabled:enabled}));if(ok){notify('Regionale Moderationsrolle wurde aktualisiert.');openTools(ctx.target.id);}}return;}
+  if(action==='photographer-global'&&canManagePhotographers(ctx)){
+    const enabled=!ctx.photographerAssignments.some(x=>x.scope==='GLOBAL');
+    const {error}=await supabase.rpc('set_community_photographer_assignment',{p_target_user:ctx.target.id,p_scope:'GLOBAL',p_region_id:null,p_enabled:enabled});
+    if(error)return notify(error.message);
+    notify(enabled?'Community-Fotograf wurde global freigeschaltet.':'Globale Community-Fotografenfreigabe wurde entfernt.');
+    return openTools(ctx.target.id);
+  }
+  if(action==='photographer-regional'&&canManagePhotographers(ctx)){
+    const slug=modal.querySelector('.ec-photographer-region-select')?.value;
+    const region=ctx.regions.find(r=>r.slug===slug);
+    if(!region)return notify('Bitte eine Region auswählen.');
+    const enabled=!ctx.photographerAssignments.some(x=>x.scope==='REGIONAL'&&x.region_id===region.id);
+    const {error}=await supabase.rpc('set_community_photographer_assignment',{p_target_user:ctx.target.id,p_scope:'REGIONAL',p_region_id:region.id,p_enabled:enabled});
+    if(error)return notify(error.message);
+    notify(enabled?`Community-Fotograf wurde für ${region.name} freigeschaltet.`:`Fotografenfreigabe für ${region.name} wurde entfernt.`);
+    return openTools(ctx.target.id);
+  }
+  if(action==='photographer-manager-right'&&ctx.isHead&&role(ctx.target.role)==='ADMIN'){
+    const enabled=!ctx.targetCanManagePhotographers;
+    const {error}=await supabase.rpc('head_admin_set_photographer_manager',{p_target_user:ctx.target.id,p_enabled:enabled});
+    if(error)return notify(error.message);
+    notify(enabled?'Der Global Admin darf jetzt Community-Fotografen verwalten.':'Das Zusatzrecht zur Fotografenverwaltung wurde entfernt.');
+    return openTools(ctx.target.id);
+  }
   if(action==='warn'&&canWarn(ctx)){const text=window.prompt(`Verwarnung für ${targetName(ctx.target)}:`,'Bitte beachte die Community-Regeln.');if(text===null||text.trim().length<10)return notify('Bitte einen Verwarnungstext mit mindestens 10 Zeichen eingeben.');if(bool(ctx.viewer.forum_moderator)&&!ctx.hasBasicAdmin&&!canGlobal(ctx,'manage_reports')&&!canGlobal(ctx,'manage_members')&&!canRegional(ctx,'MEMBERS')){const {error}=await supabase.rpc('forum_moderator_warn_user',{p_target_user:ctx.target.id,p_warning:text.trim()});return notify(error?error.message:'Verwarnung wurde gesendet.');}const {error}=await supabase.rpc('admin_warn_user',{target_user:ctx.target.id,warning_text:text.trim()});return notify(error?error.message:'Verwarnung wurde gesendet.');}
   if(action==='suspend'&&canSuspend(ctx)){const next=ctx.target.account_status==='SUSPENDED'?'ACTIVE':'SUSPENDED';const ok=await withPreparedAction(next==='SUSPENDED'?'Profil/Konto sperren':'Profil/Konto freischalten',ctx.target.id,reason=>supabase.rpc('admin_set_account_status',{target_user:ctx.target.id,new_status:next,p_reason:reason}));if(ok){notify(next==='SUSPENDED'?'Profil wurde gesperrt.':'Profil wurde freigeschaltet.');openTools(ctx.target.id);}return;}
   if(action.startsWith('feature:')){const feature=action.split(':')[1],allowed=feature==='FORUM_POSTING'?canForumLock(ctx):feature==='MESSAGING'?canMessageLock(ctx):canFriendLock(ctx);if(!allowed)return;const ok=await toggleFeature(ctx.target.id,feature);if(ok){notify('Funktionsstatus wurde aktualisiert.');openTools(ctx.target.id);}return;}
