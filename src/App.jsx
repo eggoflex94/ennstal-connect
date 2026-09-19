@@ -109,6 +109,7 @@ export default function App() {
   const [passwordRecovery, setPasswordRecovery] = useState(false);
   const [profile, setProfile] = useState(null);
   const [profilePhotoEditFile, setProfilePhotoEditFile] = useState(null);
+  const [profilePhotoEditingExisting, setProfilePhotoEditingExisting] = useState(false);
   const [profileCoverEditFile, setProfileCoverEditFile] = useState(null);
   const [profileCoverEditingExisting, setProfileCoverEditingExisting] = useState(false);
   const [members, setMembers] = useState([]);
@@ -960,6 +961,7 @@ export default function App() {
   }
   function selectProfilePhotoForEdit(file) {
     if (!file) return;
+    setProfilePhotoEditingExisting(false);
     if (!file.type.startsWith("image/")) return showNotice("Bitte ein Bild auswählen.");
     if (file.size > 8 * 1024 * 1024) return showNotice("Das Originalbild darf maximal 8 MB groß sein.");
     setProfilePhotoEditFile(file);
@@ -973,6 +975,7 @@ export default function App() {
       const blob = await response.blob();
       const type = blob.type && blob.type.startsWith("image/") ? blob.type : "image/jpeg";
       const ext = type === "image/png" ? "png" : type === "image/webp" ? "webp" : type === "image/gif" ? "gif" : "jpg";
+      setProfilePhotoEditingExisting(true);
       setProfilePhotoEditFile(new File([blob], `profilbild-bearbeiten.${ext}`, { type }));
     } catch (error) {
       showNotice(error?.message || "Profilbild konnte nicht zum Bearbeiten geöffnet werden.");
@@ -980,17 +983,27 @@ export default function App() {
   }
 
   async function saveEditedProfilePhoto(file) {
-    await uploadProfileImage(file);
+    const oldUrl = String(profile?.avatar_url || "");
+    const newUrl = await uploadProfileImage(file, { editedExisting: profilePhotoEditingExisting, oldUrl });
+    if (newUrl && profilePhotoEditingExisting && oldUrl && oldUrl !== newUrl) {
+      const { error: reconcileError } = await supabase.rpc("ec_reconcile_edited_profile_album_image", {
+        p_old_url: oldUrl,
+        p_new_url: newUrl,
+        p_kind: "AVATAR"
+      });
+      if (reconcileError) console.warn("Profilbild-Album konnte nicht zusammengeführt werden:", reconcileError);
+    }
     setProfilePhotoEditFile(null);
+    setProfilePhotoEditingExisting(false);
   }
 
   async function uploadProfileImage(file) {
     if (!file || !user) return; if (!file.type.startsWith("image/")) return showNotice("Bitte ein Bild auswählen."); if (file.size > 5 * 1024 * 1024) return showNotice("Maximal 5 MB.");
     const ext = file.name.split(".").pop()?.toLowerCase() || "jpg"; const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
-    const { error } = await supabase.storage.from("profile-avatars").upload(path, file, { upsert: false, contentType: file.type }); if (error) return showNotice(error.message);
+    const { error } = await supabase.storage.from("profile-avatars").upload(path, file, { upsert: false, contentType: file.type }); if (error) { showNotice(error.message); return null; }
     const { data } = supabase.storage.from("profile-avatars").getPublicUrl(path);
     const publicUrl = data.publicUrl;
-    const { error: updateError } = await supabase.from("profiles").update({ avatar_url: publicUrl }).eq("id", user.id); if (updateError) return showNotice(updateError.message);
+    const { error: updateError } = await supabase.from("profiles").update({ avatar_url: publicUrl }).eq("id", user.id); if (updateError) { showNotice(updateError.message); return null; }
     const { data: albumPhoto, error: albumError } = await supabase.from("member_photos").select("*").eq("owner_id", user.id).eq("image_url", publicUrl).maybeSingle();
     if (albumError) console.warn("Profilbild konnte im Fotoalbum nicht geprüft werden:", albumError);
     if (albumPhoto) setMemberPhotos((current) => [albumPhoto, ...current.filter((entry) => entry.id !== albumPhoto.id)]);
@@ -1033,6 +1046,7 @@ export default function App() {
     await logProfileActivity("Profil-Cover geändert");
     showNotice("Profil-Cover gespeichert.");
     await loadAll();
+    return publicUrl;
   }
 
   async function removeProfileCover() {
@@ -1245,7 +1259,7 @@ export default function App() {
           <Forum title={`Community-Forum · ${activeRegion?.name || "Region"}`} intro="Regionaler Austausch für Mitglieder von Ennstal Connect." scope="COMMUNITY" posts={regionFilter(forumPosts)} members={regionalMembers} profile={profile} createPost={createForumPost} editPost={editForumPost} deletePost={deleteForumPost} locked={isFeatureLocked("FORUM_POSTING")}/>
         )}
         {page === "admin-forum" && isAdmin(profile?.role) && <Forum title="Admin-Forum" intro="Interner Bereich für Moderation und Administration." scope="ADMIN" posts={forumPosts} members={members} profile={profile} createPost={createForumPost} editPost={editForumPost} deletePost={deleteForumPost} locked={false}/>}
-        {profilePhotoEditFile && <ProfilePhotoEditor file={profilePhotoEditFile} onCancel={() => setProfilePhotoEditFile(null)} onSave={saveEditedProfilePhoto}/>}
+        {profilePhotoEditFile && <ProfilePhotoEditor file={profilePhotoEditFile} onCancel={() => { setProfilePhotoEditFile(null); setProfilePhotoEditingExisting(false); }} onSave={saveEditedProfilePhoto}/>}
         {(profileCoverEditFile || profileCoverEditingExisting) && <ProfileCoverEditor file={profileCoverEditFile} currentUrl={profile?.profile_background?.startsWith("http") ? profile.profile_background : ""} current={{ x:profile?.profile_background_position_x, y:profile?.profile_background_position_y, zoom:profile?.profile_background_zoom, overlay:profile?.profile_background_overlay }} onCancel={() => { setProfileCoverEditFile(null); setProfileCoverEditingExisting(false); }} onSave={saveEditedProfileCover}/>}
         {page === "profile" && <section className="profile-page-layout"><Profile profile={profile} user={user} isHeadAdmin={isHeadAdmin} saveProfile={saveProfile} uploadProfileImage={selectProfilePhotoForEdit} editProfileImage={editExistingProfilePhoto} uploadProfileBackground={selectProfileCoverForEdit} editProfileCover={() => setProfileCoverEditingExisting(true)} removeProfileCover={removeProfileCover} uploadProfileBioImage={uploadProfileBioImage} openPublicPreview={() => setPage("profile-preview")}/><BusinessProfileManager profile={profile} user={user}/><ProfileSections member={profile} editable><MemberGroups member={profile} groups={allGroups} onOpen={(group)=>{setSelectedGroup(group);setPage("groups")}}/></ProfileSections><ProfileTimeline visits={profileVisits} activities={profileActivities} members={members} onOpen={openMember}/><ProfileWelcomeBadges badges={welcomeBadges}/><ProfilePhotoGallery photos={memberPhotos.filter((photo) => photo.owner_id === user.id)} likes={photoLikes} comments={photoComments} user={user} onUpload={uploadMemberPhoto} onLike={togglePhotoLike} onComment={addPhotoComment} onDelete={deleteMemberPhoto}/></section>}
         {page === "profile-preview" && <PublicProfilePreview profile={profile} photos={memberPhotos} groups={allGroups} onBack={() => setPage("profile")} onOpenGroup={(group) => { setSelectedGroup(group); setPage("groups"); }}/>} 
