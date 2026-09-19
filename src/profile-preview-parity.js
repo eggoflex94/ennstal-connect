@@ -78,6 +78,42 @@ async function loadRegionName(profile) {
   return data?.name || "";
 }
 
+async function applyCoverContrast(card, imageUrl) {
+  if (!card || !imageUrl) return;
+  try {
+    const image = new Image();
+    image.crossOrigin = "anonymous";
+    image.decoding = "async";
+    const loaded = new Promise((resolve, reject) => {
+      image.onload = resolve;
+      image.onerror = reject;
+    });
+    image.src = imageUrl;
+    await loaded;
+    const canvas = document.createElement("canvas");
+    const size = 32;
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    ctx.drawImage(image, 0, 0, size, size);
+    const pixels = ctx.getImageData(0, 0, size, size).data;
+    let luminance = 0;
+    let count = 0;
+    for (let i = 0; i < pixels.length; i += 16) {
+      const r = pixels[i] / 255;
+      const g = pixels[i + 1] / 255;
+      const b = pixels[i + 2] / 255;
+      luminance += 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      count += 1;
+    }
+    const avg = count ? luminance / count : 0.5;
+    card.classList.toggle("is-cover-light", avg > 0.58);
+    card.classList.toggle("is-cover-dark", avg <= 0.58);
+  } catch {
+    card.classList.add("is-cover-dark");
+  }
+}
+
 async function buildExactPreview(page) {
   if (!(page instanceof HTMLElement) || page.dataset.previewParityLoading === "1" || page.dataset.previewParityReady === "1") return;
   const profileId = page.dataset.profileId;
@@ -100,6 +136,24 @@ async function buildExactPreview(page) {
 
     const card = document.createElement("section");
     card.className = "ec-mp-card";
+    if (String(profile.profile_background || "").startsWith("http")) {
+      card.classList.add("has-profile-cover");
+      const cover = document.createElement("div");
+      cover.className = "ec-mp-cover";
+      const coverImage = document.createElement("img");
+      coverImage.src = profile.profile_background;
+      coverImage.alt = "";
+      coverImage.loading = "eager";
+      coverImage.style.objectPosition = `${Number(profile.profile_background_position_x ?? 50)}% ${Number(profile.profile_background_position_y ?? 50)}%`;
+      coverImage.style.transform = `scale(${Number(profile.profile_background_zoom ?? 1)})`;
+      coverImage.style.transformOrigin = `${Number(profile.profile_background_position_x ?? 50)}% ${Number(profile.profile_background_position_y ?? 50)}%`;
+      const coverShade = document.createElement("span");
+      coverShade.className = "ec-mp-cover-shade";
+      coverShade.style.setProperty("--ec-cover-overlay", String(Number(profile.profile_background_overlay ?? 0.18)));
+      cover.append(coverImage, coverShade);
+      card.appendChild(cover);
+      void applyCoverContrast(card, profile.profile_background);
+    }
 
     const left = document.createElement("div");
     left.className = "ec-mp-left";
