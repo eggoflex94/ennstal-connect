@@ -959,6 +959,13 @@ export default function App() {
     setViewingMember((current) => current?.id === member.id ? { ...current, [field]: field === "profile_background" ? "#1b1f26" : null } : current);
     showNotice(`${label} wurde entfernt und im Admin-Logbuch protokolliert.`); await loadAll();
   }
+  function storagePathFromPublicUrl(url) {
+    const marker = "/storage/v1/object/public/profile-avatars/";
+    const value = String(url || "");
+    const index = value.indexOf(marker);
+    return index >= 0 ? decodeURIComponent(value.slice(index + marker.length).split("?")[0]) : "";
+  }
+
   function selectProfilePhotoForEdit(file) {
     if (!file) return;
     setProfilePhotoEditingExisting(false);
@@ -984,16 +991,59 @@ export default function App() {
 
   async function saveEditedProfilePhoto(file) {
     const oldUrl = String(profile?.avatar_url || "");
-    const newUrl = await uploadProfileImage(file, { editedExisting: profilePhotoEditingExisting, oldUrl });
-    if (newUrl && profilePhotoEditingExisting && oldUrl && oldUrl !== newUrl) {
-      const { error: reconcileError } = await supabase.rpc("ec_reconcile_edited_profile_album_image", {
-        p_old_url: oldUrl,
-        p_new_url: newUrl,
-        p_kind: "AVATAR"
-      });
-      if (reconcileError) console.warn("Profilbild-Album konnte nicht zusammengeführt werden:", reconcileError);
-      else await loadAll();
+    if (profilePhotoEditingExisting && oldUrl) {
+      const existingPath = storagePathFromPublicUrl(oldUrl);
+      if (!existingPath) {
+        showNotice("Das vorhandene Profilbild konnte nicht eindeutig gefunden werden.");
+        return;
+      }
+
+      const { error: uploadError } = await supabase.storage
+        .from("profile-avatars")
+        .upload(existingPath, file, {
+          upsert: true,
+          contentType: file.type,
+          cacheControl: "0"
+        });
+
+      if (uploadError) {
+        showNotice(uploadError.message);
+        return;
+      }
+
+      const cacheBustedUrl = `${oldUrl.split("?")[0]}?v=${Date.now()}`;
+      setProfile((current) => current ? { ...current, avatar_url: cacheBustedUrl } : current);
+      setMemberPhotos((current) => current.map((photo) =>
+        photo.owner_id === user.id && photo.image_url === oldUrl
+          ? { ...photo, image_url: cacheBustedUrl }
+          : photo
+      ));
+
+      const { error: profileUpdateError } = await supabase
+        .from("profiles")
+        .update({ avatar_url: cacheBustedUrl })
+        .eq("id", user.id);
+
+      if (profileUpdateError) {
+        showNotice(profileUpdateError.message);
+        return;
+      }
+
+      const { error: photoUpdateError } = await supabase
+        .from("member_photos")
+        .update({ image_url: cacheBustedUrl })
+        .eq("owner_id", user.id)
+        .eq("image_url", oldUrl);
+
+      if (photoUpdateError) console.warn("Albumfoto konnte nicht auf die neue Cache-Version gesetzt werden:", photoUpdateError);
+
+      await logProfileActivity("Profilbild neu ausgerichtet");
+      showNotice("Profilbild-Ausschnitt gespeichert.");
+      await loadAll();
+    } else {
+      await uploadProfileImage(file);
     }
+
     setProfilePhotoEditFile(null);
     setProfilePhotoEditingExisting(false);
   }
