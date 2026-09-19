@@ -204,3 +204,30 @@
 @media(max-width:600px){
   .ec-member-profile-final .ec-mp-about{padding:14px!important}
 }
+
+
+/* Final authority: every role/function label uses the same typography. */
+body .modern-main .member-profile-page.ec-member-profile-final .ec-mp-function .ec-mp-function-role>strong,
+body .modern-main .member-profile-page.ec-member-profile-final .ec-mp-function .ec-mp-function-copy>strong,
+body .public-profile-preview.ec-member-profile-final .ec-mp-function .ec-mp-function-role>strong,
+body .public-profile-preview.ec-member-profile-final .ec-mp-function .ec-mp-function-copy>strong{
+  margin:0!important;
+  padding:0!important;
+  font-family:inherit!important;
+  font-size:1rem!important;
+  line-height:1.25!important;
+  font-weight:800!important;
+  letter-spacing:0!important;
+  text-transform:none!important;
+  opacity:1!important;
+  color:#fff!important;
+  white-space:normal!important;
+  word-break:normal!important;
+  overflow-wrap:normal!important;
+  hyphens:none!important;
+}
+body .modern-main .member-profile-page.ec-member-profile-final .ec-mp-function .ec-mp-function-role,
+body .public-profile-preview.ec-member-profile-final .ec-mp-function .ec-mp-function-role{
+  align-items:center!important;
+  max-width:100%!important;
+}
