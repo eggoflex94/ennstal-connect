@@ -66,3 +66,34 @@
     min-height: 48px !important;
   }
 }
+
+
+/* Mobile avatar picker: keep the native file control fully interactive. */
+.profile-upload-field-avatar,
+.profile-upload-field-avatar .profile-avatar-file-input{
+  pointer-events:auto!important;
+  touch-action:manipulation!important;
+}
+.profile-upload-field-avatar .profile-avatar-file-input{
+  display:block!important;
+  position:static!important;
+  width:100%!important;
+  min-height:48px!important;
+  max-width:100%!important;
+  opacity:1!important;
+  visibility:visible!important;
+  appearance:auto!important;
+  -webkit-appearance:auto!important;
+  font-size:16px!important;
+  line-height:1.25!important;
+  z-index:3!important;
+}
+@media(pointer:coarse){
+  .profile-upload-field-avatar{
+    cursor:pointer!important;
+  }
+  .profile-upload-field-avatar .profile-avatar-file-input{
+    min-height:52px!important;
+    padding:10px!important;
+  }
+}
