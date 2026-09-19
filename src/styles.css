@@ -2118,3 +2118,40 @@ img.member-avatar,
   .integrated-profile-actions { min-width:0; }
   .profile-form-grid, .integrated-profile-details, .admin-tool-grid { grid-template-columns:1fr; }
 }
+
+
+/* AI content labeling */
+.ai-content-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  width:max-content;
+  padding:4px 8px;
+  border-radius:999px;
+  background:rgba(99,102,241,.10);
+  color:#4338ca;
+  border:1px solid rgba(99,102,241,.18);
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.03em;
+}
+.ai-content-option{
+  display:flex!important;
+  align-items:flex-start!important;
+  gap:9px!important;
+  padding:10px 12px;
+  border:1px solid rgba(99,102,241,.16);
+  border-radius:12px;
+  background:rgba(99,102,241,.05);
+  color:#475569;
+}
+.ai-content-option input[type="checkbox"]{
+  width:17px;
+  height:17px;
+  margin-top:2px;
+  flex:0 0 auto;
+}
+.ai-content-option span{
+  font-size:.88rem;
+  line-height:1.35;
+}
