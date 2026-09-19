@@ -99,13 +99,23 @@ function cleanProfileNoise(root){
 }
 async function build(root){
   cleanProfileNoise(root);
-  if(root.dataset.ecMemberProfileFinal==='1'||root.dataset.ecMemberProfileBuilding==='1')return;
+  if(root.dataset.ecMemberProfileBuilding==='1')return;
   const hero=root.querySelector('.member-profile-hero');
   if(!hero)return;
   root.dataset.ecMemberProfileBuilding='1';
   try{
     await context();
     const target=await targetFor(root);if(!target)return;
+
+    const existingCard=root.querySelector(':scope > .ec-mp-card');
+    if(root.dataset.ecMemberProfileFinal==='1'&&existingCard){
+      const hasPhotographerRow=Boolean(existingCard.querySelector('.ec-mp-function-photographer'));
+      const shouldHavePhotographerRow=Boolean(target.is_community_photographer);
+      if(hasPhotographerRow===shouldHavePhotographerRow)return;
+      existingCard.remove();
+      root.querySelector(':scope > .ec-mp-actions')?.remove();
+      delete root.dataset.ecMemberProfileFinal;
+    }
     const isFriend=await friendship(target.id);
     const avatar=hero.querySelector(':scope > img:not(.profile-bio-image)');
     const role=await functionInfo(target);

@@ -29,3 +29,12 @@ test("own-profile photographer banner stays compact", async () => {
   assert.match(css, /max-height:34px!important/);
   assert.match(css, /object-fit:contain!important/);
 });
+
+
+test("profile function card refreshes when photographer status changes", async () => {
+  const runtime = await source("src/member-profile-final.js");
+  assert.match(runtime, /hasPhotographerRow/);
+  assert.match(runtime, /shouldHavePhotographerRow/);
+  assert.match(runtime, /existingCard\.remove\(\)/);
+  assert.match(runtime, /delete root\.dataset\.ecMemberProfileFinal/);
+});
