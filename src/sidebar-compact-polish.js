@@ -134,7 +134,7 @@ function compactMenu(dock) {
     grid.className = 'ec-compact-menu-grid';
     grid.setAttribute('aria-label', 'Persönliche Funktionen');
     const first = buttons[0].button;
-    first.parentElement?.insertBefore(grid, first);
+    first.before(grid);
   }
 
   MENU_LABELS.forEach((wanted) => {
