@@ -53,9 +53,10 @@ test("deferred admin modules stay reachable instead of disappearing from the UI"
   const main=await source("src/main.jsx");
   const deferred=await source("src/deferred-admin-enhancements.js");
   assert.ok(main.includes('import "./deferred-admin-enhancements.js";'));
+  assert.ok(main.includes('import "./admin-central-hub.js";'), "shared admin center must load eagerly");
   for(const module of [
     "./admin-dashboard-modern.js","./admin-compact-enhancements.js","./admin-community-popup-manager.js","./admin-central-permissions.js",
-    "./business-account-admin-fix.js","./head-admin-activity-folders.js","./admin-central-hub.js","./admin-reload-watch.js","./admin-system-watch.js",
+    "./business-account-admin-fix.js","./head-admin-activity-folders.js","./admin-reload-watch.js","./admin-system-watch.js",
     "./profile-admin-tools-unified.js","./profile-admin-role-actions.js","./regional-admin-tools-bridge.js"
   ]) assert.ok(deferred.includes(module), `missing deferred module: ${module}`);
   for(const page of ["admin","reports","admin-forum","admin-account-review","adminTools","legal","profile","profile-preview","member-profile","members"])
