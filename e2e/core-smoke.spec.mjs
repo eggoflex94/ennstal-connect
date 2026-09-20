@@ -397,3 +397,20 @@ test("legal and rules pages remain visible from the footer", async ({ page }) =>
     await expect(page.locator(".app-recovery")).toHaveCount(0);
   }
 });
+
+
+test("head admin can open the automated error center from admin tools", async ({ page }) => {
+  await login(page, "HEAD_ADMIN");
+
+  await page.evaluate(() => window.dispatchEvent(new CustomEvent("ec:open-admin-tools")));
+  await expect(page.getByRole("heading", { name: "Admin Tools" })).toBeVisible();
+
+  const errorCenter = page.getByRole("button", { name: /Fehlerzentrale/i }).first();
+  await expect(errorCenter).toBeVisible();
+  await expect(errorCenter).toBeEnabled();
+  await errorCenter.click();
+
+  await expect(page.getByRole("heading", { name: "Fehlerzentrale" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Head Admin Fehlerzentrale" })).toBeVisible();
+  await expect(page.locator(".app-recovery")).toHaveCount(0);
+});
