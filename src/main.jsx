@@ -148,7 +148,7 @@ import "./profile-admin-tools-unified.js";
 import "./admin-head-access-reliability.js";
 import "./ui-requested-fixes.js";
 import "./home-modern-final.css";
-import "./home-modern-final.js";
+// Disabled: runtime reorders React-owned home nodes and can break React DOM reconciliation.
 
 import "./message-emoji-picker.css";
 import "./message-emoji-picker.js";
@@ -182,7 +182,7 @@ import "./member-card-exact-authority.css";
 /* Final profile geometry authority for desktop and mobile. */
 import "./profile-responsive-authority.css";
 import "./profile-layout-organizer.css";
-import "./profile-layout-organizer.js";
+// Disabled: runtime reparents React-owned profile form nodes and can trigger insertBefore NotFoundError.
 
 /* Final click/touch reliability authority. */
 import "./interaction-reliability-final.css";
