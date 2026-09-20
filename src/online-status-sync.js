@@ -50,15 +50,25 @@ function schedule(delay = 80) {
   timer = setTimeout(() => void refresh(), delay);
 }
 
-window.addEventListener("ec:navigate", () => schedule());
+window.addEventListener("ec:navigate", apply);
 window.addEventListener("ec:region-change", () => schedule());
 window.addEventListener("focus", () => schedule(20));
 document.addEventListener("visibilitychange", () => { if (!document.hidden) schedule(20); });
-window.setInterval(() => void refresh(), 20000);
+
+// Presence changes arrive through Realtime. Re-evaluate stale timestamps locally
+// instead of reloading the complete member directory every few seconds.
+window.setInterval(apply, 30000);
 
 if (supabase) {
   const channel = supabase.channel("ec-member-online-status-sync")
-    .on("postgres_changes", { event: "UPDATE", schema: "public", table: "profiles" }, () => schedule(40))
+    .on("postgres_changes", { event: "UPDATE", schema: "public", table: "profiles" }, (payload) => {
+      const member = payload.new;
+      if (!member?.id) return;
+      const key = String(member.id);
+      const previous = cache.get(key) || {};
+      cache.set(key, { ...previous, ...member });
+      document.querySelectorAll(`.member-card[data-member-id="${CSS.escape(key)}"]`).forEach((card) => paintCard(card, cache.get(key)));
+    })
     .subscribe();
   window.addEventListener("pagehide", () => supabase.removeChannel(channel), { once: true });
 }
