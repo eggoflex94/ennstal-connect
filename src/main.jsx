@@ -11,7 +11,7 @@ import "./admin-online-status.js";
 import "./last-name-privacy.js";
 import "./last-active-privacy.js";
 import "./online-status-sync.js";
-import "./mobile-presence-sync.js";
+import "./profile-live-presence.js";
 import "./online-reward-tracker.js";
 import "./sidebar-reward-progress.css";
 import "./sidebar-reward-progress.js";
