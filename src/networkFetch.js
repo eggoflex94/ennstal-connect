@@ -65,7 +65,7 @@ function requestBodyKey(init) {
   return '[body]';
 }
 
-export function createNetworkFetch(fetchImpl, timeoutMs = 6_000, readCacheMs = 900) {
+export function createNetworkFetch(fetchImpl, timeoutMs = 12_000, readCacheMs = 900) {
   const inFlightReads = new Map();
   const recentReads = new Map();
 
