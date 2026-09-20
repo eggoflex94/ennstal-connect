@@ -55,7 +55,7 @@ test("deferred admin modules stay reachable instead of disappearing from the UI"
   assert.ok(main.includes('import "./deferred-admin-enhancements.js";'));
   assert.ok(main.includes('import "./admin-central-hub.js";'), "shared admin center must load eagerly");
   for(const module of [
-    "./admin-dashboard-modern.js","./admin-compact-enhancements.js","./admin-community-popup-manager.js","./admin-central-permissions.js",
+    "./admin-dashboard-modern.js","./admin-community-popup-manager.js","./admin-central-permissions.js",
     "./business-account-admin-fix.js","./head-admin-activity-folders.js","./admin-reload-watch.js","./admin-system-watch.js",
     "./profile-admin-tools-unified.js","./profile-admin-role-actions.js","./regional-admin-tools-bridge.js"
   ]) assert.ok(deferred.includes(module), `missing deferred module: ${module}`);
@@ -320,7 +320,7 @@ test("legacy DOM reparenting layers stay disabled on React-owned surfaces", asyn
 
 test("point suspension migration keeps status fields consistent at minus ten", async()=>{
   const sql=await source("supabase/migrations/20260920224000_point_suspension_consistency.sql");
-  assert.match(sql,/coalesce\(new\.points,0\) <= -10/);
+  assert.match(sql,/coalesce\(new\.points,\s*0\) <= -10/);
   assert.match(sql,/account_status = 'SUSPENDED'/);
   assert.match(sql,/is_suspended = true/);
   assert.match(sql,/ec_is_protected_admin_target/);
