@@ -187,7 +187,7 @@ test("first-paint assets stay lightweight, cacheable and preloaded", async()=>{
   assert.match(index,/preload" as="image" href="\/community-default-avatar-fast\.svg"/);
   assert.match(headers,/\/\*\.svg[\s\S]*stale-while-revalidate=86400/);
   assert.match(headers,/\/\*\.png[\s\S]*stale-while-revalidate=86400/);
-  assert.match(main,/ec-legacy-cache-cleanup-v7/);
+  assert.match(main,/ec-legacy-cache-cleanup-v8/);
   assert.ok(avatar.length < 10000, "fallback avatar must remain lightweight");
 });
 
@@ -209,7 +209,7 @@ test("first-paint assets stay cacheable and legacy service workers self-heal", a
   assert.match(app,/community-default-avatar-fast\.svg/);
   assert.match(cards,/community-default-avatar-fast\.svg/);
   assert.match(shell,/community-default-avatar-fast\.svg/);
-  assert.match(main,/ec-legacy-cache-cleanup-v7/);
+  assert.match(main,/ec-legacy-cache-cleanup-v8/);
   assert.match(main,/window\.location\.reload\(\)/);
 });
 
@@ -422,4 +422,18 @@ test("session bootstrap recovers without requiring a manual Ctrl+R", async()=>{
   assert.match(main,/ec-legacy-cache-cleanup-v8/);
   assert.match(main,/getRegistrations\(\)/);
   assert.match(main,/sessionStorage\.getItem\(reloadKey\)/);
+});
+
+
+test("Community hub keeps readable desktop and mobile layout", async()=>{
+  const main=await source("src/main.jsx");
+  const css=await source("src/community-hub-final.css");
+  assert.ok(main.includes('import "./community-hub-final.css";'));
+  assert.match(css,/\.community-section-links\{/);
+  assert.match(css,/grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+  assert.match(css,/\.community-hub-layout\{/);
+  assert.match(css,/minmax\(320px,\.95fr\)/);
+  assert.match(css,/\.hub-row:not\(:has\(>img\)\)>div/);
+  assert.match(css,/justify-self:start/);
+  assert.match(css,/@media\(max-width:760px\)/);
 });

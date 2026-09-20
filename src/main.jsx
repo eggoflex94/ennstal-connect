@@ -130,6 +130,7 @@ import "./mobile-visibility-final.css";
 import "./mobile-nav-runtime.js";
 
 import "./community-event-card-polish.css";
+import "./community-hub-final.css";
 import "./dashboard-mobile-profile-final.css";
 import "./standard-theme-variants.css";
 import "./standard-theme-rich.css";
