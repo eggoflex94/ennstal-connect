@@ -154,3 +154,16 @@ test("modern admin dashboard always loads its own styles", async()=>{
   for(const selector of [".ec-admin-modern",".ec-admin-tabs",".ec-admin-stat-grid",".ec-admin-system-row",".ec-admin-notice-row"])
     assert.ok(css.includes(selector), `missing admin dashboard selector: ${selector}`);
 });
+
+
+test("admin dashboard actions navigate instead of silently failing on missing DOM targets", async()=>{
+  const code=await source("src/admin-dashboard-modern.js");
+  assert.match(code,/async function navigateAndFocus/);
+  assert.match(code,/navigateAndFocus\("reports","\.report-list"\)/);
+  assert.match(code,/navigateAndFocus\("admin","\.admin-member-cards"\)/);
+  assert.match(code,/navigateAndFocus\("admin","\.admin-email-directory"\)/);
+  assert.match(code,/async function openVerificationReview/);
+  assert.match(code,/new CustomEvent\("ec:navigate"/);
+  assert.doesNotMatch(code,/\["Meldungen",d\.reports,\(\)=>scrollTo\("\.report-list"\)\]/);
+  assert.doesNotMatch(code,/\["✓ Verifizierungen",\(\)=>document\.querySelector\("\.admin-review-button"\)\?\.click\(\)\]/);
+});
