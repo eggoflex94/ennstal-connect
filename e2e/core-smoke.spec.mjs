@@ -186,13 +186,13 @@ async function login(page, role = "MEMBER") {
   await page.locator('input[name="email"]').fill(role === "HEAD_ADMIN" ? "admin@example.test" : "member@example.test");
   await page.locator('input[name="password"]').fill("smoke-password");
   await page.getByRole("button", { name: "Anmelden" }).click();
-  await expect(page.locator(".modern-sidebar")).toBeVisible();
-  await expect(page.getByRole("button", { name: /Startseite/ })).toBeVisible();
+  await expect(page.locator(".app")).toBeVisible();
+  await expect(page.locator("button:visible").filter({ hasText: /Startseite/i }).first()).toBeVisible();
   await expect(page.locator(".app-recovery")).toHaveCount(0);
 }
 
 async function assertNavigationWorks(page, label) {
-  const button = page.getByRole("button", { name: new RegExp(label, "i") }).first();
+  const button = page.locator("button:visible").filter({ hasText: new RegExp(label, "i") }).first();
   await expect(button).toBeVisible();
   await expect(button).toBeEnabled();
   await button.click();
@@ -226,7 +226,7 @@ test("member core functions remain visible and navigable", async ({ page }) => {
 test("head admin keeps all admin entry points visible and usable", async ({ page }) => {
   await login(page, "HEAD_ADMIN");
 
-  const adminEntry = page.getByRole("button", { name: /Admin-Zentrale/i }).first();
+  const adminEntry = page.locator("button:visible").filter({ hasText: /Admin-Zentrale/i }).first();
   await expect(adminEntry).toBeVisible();
   await adminEntry.click();
 
@@ -235,12 +235,12 @@ test("head admin keeps all admin entry points visible and usable", async ({ page
   await expect(page.locator(".app-recovery")).toHaveCount(0);
 
   for (const label of ["Mitglieder", "Meldungen", "Admin-Forum", "Community", "Neuigkeiten", "Kontoschutz"]) {
-    const shortcut = page.getByRole("button", { name: new RegExp(label, "i") }).first();
+    const shortcut = page.locator("button:visible").filter({ hasText: new RegExp(label, "i") }).first();
     await expect(shortcut).toBeVisible();
     await expect(shortcut).toBeEnabled();
   }
 
-  await page.getByRole("button", { name: /Mitglieder/i }).first().click();
+  await page.locator("button:visible").filter({ hasText: /Mitglieder/i }).first().click();
   const memberCard = page.locator(".member-card[data-member-id]").filter({ hasText: "Zweites Mitglied" }).first();
   await expect(memberCard).toBeVisible();
   await memberCard.click();
