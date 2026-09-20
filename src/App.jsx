@@ -14,7 +14,7 @@ import EventPhotosPage from "./EventPhotosPage.jsx";
 import HeadAdminSelfControls from "./HeadAdminSelfControls.jsx";
 
 // A friendly community image is shown until a member uploads a personal photo.
-const DEFAULT_AVATAR = "/community-default-avatar.png";
+const DEFAULT_AVATAR = "/community-default-avatar-fast.svg";
 const COMMUNITY_RULES_VERSION = "2026-09-05";
 const ADMIN_LOG_LABELS = {
   ROLE_ASSIGNED: "Rolle ernannt",
