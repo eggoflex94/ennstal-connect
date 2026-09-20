@@ -26,7 +26,8 @@ export function loadDeferredAdminEnhancements() {
   if (!adminPromise) {
     adminPromise = Promise.all([
       import('./admin-dashboard-modern.js'),
-      import('./admin-compact-enhancements.js'),
+      // admin-compact-enhancements reparents React-owned action rows; keep admin DOM React-owned.
+
       import('./admin-community-popup-manager.js'),
       import('./admin-central-permissions.js'),
       import('./business-account-admin-fix.js'),

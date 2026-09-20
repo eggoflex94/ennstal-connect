@@ -53,12 +53,12 @@ import "./clean-layout.css";
 import "./clean-components.css";
 
 import "./role-region-polish.css";
-import "./role-region-polish.js";
+// Disabled for React DOM ownership stability: ./role-region-polish.js
 import "./sidebar-compact-polish.css";
-import "./sidebar-compact-polish.js";
+// Disabled for React DOM ownership stability: ./sidebar-compact-polish.js
 import "./admin-access-placement-final.js";
 import "./global-role-identity-polish.css";
-import "./global-role-identity-polish.js";
+// Disabled for React DOM ownership stability: ./global-role-identity-polish.js
 import "./profile-footer-polish.css";
 
 import "./sidebar-layout-stabilizer.css";
@@ -83,13 +83,13 @@ import "./profile-community-modules.css";
 import "./profile-community-modules.js";
 import "./sidebar-interaction-fix.css";
 import "./sidebar-interaction-fix.js";
-import "./community-contact-cleanup.js";
+// Disabled for React DOM ownership stability: ./community-contact-cleanup.js
 
 import "./auth-community-intro.js";
 import "./community-stability-final.css";
 import "./mobile-authority.css";
 import "./people-links-polish.css";
-import "./people-links-polish.js";
+// Disabled for React DOM ownership stability: ./people-links-polish.js
 import "./mobile-interaction-authority.css";
 
 import "./global-community-news-popup.css";
@@ -148,7 +148,7 @@ import "./profile-admin-tools-unified.js";
 import "./admin-head-access-reliability.js";
 import "./ui-requested-fixes.js";
 import "./home-modern-final.css";
-import "./home-modern-final.js";
+// Disabled: runtime reorders React-owned home nodes and can break React DOM reconciliation.
 
 import "./message-emoji-picker.css";
 import "./message-emoji-picker.js";
@@ -182,7 +182,7 @@ import "./member-card-exact-authority.css";
 /* Final profile geometry authority for desktop and mobile. */
 import "./profile-responsive-authority.css";
 import "./profile-layout-organizer.css";
-import "./profile-layout-organizer.js";
+// Disabled: runtime reparents React-owned profile form nodes and can trigger insertBefore NotFoundError.
 
 /* Final click/touch reliability authority. */
 import "./interaction-reliability-final.css";

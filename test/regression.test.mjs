@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 
 const source = async path => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
-const requiredMainModules = ["./notification-center.js","./privacy-center.js","./account-deletion-admin.js","./legal-evidence-admin.js","./admin-workspace.js","./admin-dashboard-modern.js","./admin-compact-enhancements.js","./regional-shell.js","./clean-profile-runtime.js","./clean-layout.css","./clean-components.css","./role-region-polish.css","./role-region-polish.js","./sidebar-compact-polish.css","./sidebar-compact-polish.js","./global-role-identity-polish.css","./global-role-identity-polish.js","./people-links-polish.css","./people-links-polish.js"];
+const requiredMainModules = ["./notification-center.js","./privacy-center.js","./account-deletion-admin.js","./legal-evidence-admin.js","./admin-workspace.js","./regional-shell.js","./clean-profile-runtime.js","./clean-layout.css","./clean-components.css","./role-region-polish.css","./sidebar-compact-polish.css","./global-role-identity-polish.css","./people-links-polish.css"];
 
 test("main entry keeps critical member/admin/regional modules wired without legacy layout stack", async () => {const main=await source("src/main.jsx");for(const module of requiredMainModules) assert.match(main,new RegExp(module.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")));for(const legacy of ["mobile-admin-production.css","member-grid-final.css","role-theme-lock.css","profile-simple.css","regional-shell.css"])assert.doesNotMatch(main,new RegExp(legacy.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")));assert.doesNotMatch(main,/live-notifications\.js/);});
 
@@ -55,7 +55,7 @@ test("deferred admin modules stay reachable instead of disappearing from the UI"
   assert.ok(main.includes('import "./deferred-admin-enhancements.js";'));
   assert.ok(main.includes('import "./admin-central-hub.js";'), "shared admin center must load eagerly");
   for(const module of [
-    "./admin-dashboard-modern.js","./admin-compact-enhancements.js","./admin-community-popup-manager.js","./admin-central-permissions.js",
+    "./admin-dashboard-modern.js","./admin-community-popup-manager.js","./admin-central-permissions.js",
     "./business-account-admin-fix.js","./head-admin-activity-folders.js","./admin-reload-watch.js","./admin-system-watch.js",
     "./profile-admin-tools-unified.js","./profile-admin-role-actions.js","./regional-admin-tools-bridge.js"
   ]) assert.ok(deferred.includes(module), `missing deferred module: ${module}`);
@@ -307,4 +307,37 @@ test("async DOM enhancers revalidate their live surfaces before mutation", async
   assert.match(lastName,/!section\.isConnected/);
   assert.match(eventRegion,/!form\.isConnected \|\| form !== eventForm\(\)/);
   assert.match(stable,/!root\.isConnected\|\|hero\.parentNode!==root/);
+});
+
+
+test("legacy DOM reparenting layers stay disabled on React-owned surfaces", async()=>{
+  const main=await source("src/main.jsx");
+  const deferred=await source("src/deferred-admin-enhancements.js");
+  assert.doesNotMatch(main,/^import "\.\/home-modern-final\.js";/m);
+  assert.doesNotMatch(main,/^import "\.\/profile-layout-organizer\.js";/m);
+  assert.doesNotMatch(deferred,/import\('\.\/admin-compact-enhancements\.js'\)/);
+});
+
+test("point suspension migration keeps status fields consistent at minus ten", async()=>{
+  const sql=await source("supabase/migrations/20260920224000_point_suspension_consistency.sql");
+  assert.match(sql,/coalesce\(new\.points,\s*0\) <= -10/);
+  assert.match(sql,/account_status = 'SUSPENDED'/);
+  assert.match(sql,/is_suspended = true/);
+  assert.match(sql,/ec_is_protected_admin_target/);
+});
+
+
+test("legacy polish scripts that mutate React-owned DOM stay disabled", async()=>{
+  const main=await source("src/main.jsx");
+  for(const script of [
+    "role-region-polish.js",
+    "sidebar-compact-polish.js",
+    "global-role-identity-polish.js",
+    "people-links-polish.js",
+    "community-contact-cleanup.js",
+    "home-modern-final.js",
+    "profile-layout-organizer.js"
+  ]){
+    assert.doesNotMatch(main,new RegExp('^import "\\.\\/'+script.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+'";','m'));
+  }
 });

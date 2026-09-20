@@ -115,7 +115,16 @@ async function loadAccess() {
 }
 
 function grid() {
-  return document.querySelector('.ec-right-dock .ec-compact-menu-grid') || document.querySelector('.ec-compact-menu-grid');
+  const dock = document.querySelector('.ec-right-dock');
+  if (!dock) return null;
+  let slot = dock.querySelector(':scope > .ec-admin-central-native-slot');
+  if (!slot) {
+    slot = document.createElement('div');
+    slot.className = 'ec-admin-central-native-slot';
+    slot.setAttribute('aria-label', 'Administration');
+    dock.appendChild(slot);
+  }
+  return slot;
 }
 
 function removeCompetingAdminButtons(keep) {
@@ -148,8 +157,8 @@ async function ensureButton() {
   button.innerHTML = `<span class="ec-compact-menu-icon ec-admin-central-icon">${svg.admin}<b class="ec-admin-central-badge" aria-hidden="true">A</b></span><span class="ec-compact-menu-label">Admin-Zentrale</span>`;
   button.dataset.ecAdminCentralReady = '1';
 
-  if (button.parentElement !== menu || menu.firstElementChild !== button) {
-    menu.prepend(button);
+  if (button.parentElement !== menu) {
+    menu.appendChild(button);
   }
 
   button.onclick = async (event) => {
