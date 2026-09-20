@@ -341,3 +341,30 @@ test("legacy polish scripts that mutate React-owned DOM stay disabled", async()=
     assert.doesNotMatch(main,new RegExp('^import "\\.\\/'+script.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+'";','m'));
   }
 });
+
+
+test("member profile exposes groups forum posts and friends as dedicated tabs", async()=>{
+  const app=await source("src/App.jsx");
+  const tabs=await source("src/ProfileSocialTabs.jsx");
+  const css=await source("src/profile-social-tabs.css");
+  const sql=await source("supabase/migrations/20260920235000_profile_social_overview.sql");
+  assert.match(app,/ProfileSocialTabs/);
+  assert.match(tabs,/label:"Gruppen"/);
+  assert.match(tabs,/label:"Forum-Beiträge"/);
+  assert.match(tabs,/label:"Freunde"/);
+  assert.match(tabs,/MemberCardView/);
+  assert.match(tabs,/ec_profile_social_overview/);
+  assert.match(css,/profile-social-member-grid/);
+  assert.match(sql,/friend_count/);
+  assert.match(sql,/group_count/);
+  assert.match(sql,/forum_post_count/);
+});
+
+test("legacy duplicate friend and group blocks are removed from member profile", async()=>{
+  const app=await source("src/App.jsx");
+  const start=app.indexOf("function MemberProfile(");
+  const end=app.indexOf("function PublicProfileUpdatesPreview",start);
+  const block=app.slice(start,end);
+  assert.doesNotMatch(block,/className="public-friends"/);
+  assert.doesNotMatch(block,/<MemberGroups member={member}/);
+});
