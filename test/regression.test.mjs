@@ -145,3 +145,12 @@ test("high-frequency UI modules do not hammer the auth user endpoint", async()=>
   assert.match(network,/isAuthUserRead/);
   assert.match(network,/10_000/);
 });
+
+
+test("modern admin dashboard always loads its own styles", async()=>{
+  const dashboard=await source("src/admin-dashboard-modern.js");
+  const css=await source("src/admin-dashboard-modern.css");
+  assert.match(dashboard,/import "\.\/admin-dashboard-modern\.css";/);
+  for(const selector of [".ec-admin-modern",".ec-admin-tabs",".ec-admin-stat-grid",".ec-admin-system-row",".ec-admin-notice-row"])
+    assert.ok(css.includes(selector), `missing admin dashboard selector: ${selector}`);
+});
