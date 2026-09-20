@@ -70,3 +70,11 @@ test("core visible community surfaces remain wired while performance code change
   for(const table of ["messages","forum_posts","community_events","community_ads","member_photos"])
     assert.ok(app.includes(`from("${table}")`), `missing community data source: ${table}`);
 });
+
+
+test("Events navigation has a rendered page and Head Admin access stays visibly wired", async()=>{
+  const app=await source("src/App.jsx");
+  const main=await source("src/main.jsx");
+  assert.ok(app.includes('page === "events"'), "Events navigation target must render content");
+  assert.ok(main.includes('import "./admin-access-placement-final.js";'), "final admin access placement must load at startup");
+});
