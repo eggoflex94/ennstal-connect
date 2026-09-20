@@ -231,3 +231,24 @@ test("stable dock enhancement is idempotent instead of remove-and-reinsert churn
   assert.match(code,/if\(!box\)/);
   assert.ok(!code.includes(".ec-production-logout,.ec-stable-admin-dock').forEach(el=>el.remove())"));
 });
+
+
+test("municipality partnership module stays wired and scoped", async()=>{
+  const main=await source("src/main.jsx");
+  const module=await source("src/municipality-module.js");
+  const sql=await source("supabase/migrations/20260920213000_municipality_partnership_module.sql");
+  assert.ok(main.includes('import "./municipality-module.js";'));
+  assert.ok(main.includes('import "./municipality-module.css";'));
+  assert.match(module,/ec_municipality_context/);
+  assert.match(module,/ec_submit_citizen_request/);
+  assert.match(module,/ec_municipality_staff_requests/);
+  assert.match(module,/ec_municipality_update_request/);
+  assert.match(module,/data-ec-page="municipality"/);
+  assert.match(sql,/create table if not exists public\.municipality_profiles/);
+  assert.match(sql,/create table if not exists public\.municipality_staff/);
+  assert.match(sql,/create table if not exists public\.municipality_notices/);
+  assert.match(sql,/create table if not exists public\.citizen_requests/);
+  assert.match(sql,/enable row level security/);
+  assert.match(sql,/ec_municipality_can_manage/);
+  assert.match(sql,/reporter_id = auth\.uid\(\)/);
+});
