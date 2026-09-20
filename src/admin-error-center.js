@@ -1,7 +1,7 @@
 import { supabase } from "./supabaseClient";
 import "./admin-error-center.css";
 
-let accessCache = { userId: null, allowed: false, checkedAt: 0 };
+let accessCache = { allowed: false, checkedAt: 0 };
 let activeStatus = "OPEN";
 let refreshTimer = null;
 
@@ -9,20 +9,16 @@ const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&":"&a
 const fmt = (value) => value ? new Date(value).toLocaleString("de-AT") : "–";
 
 async function canUse() {
+  if (Date.now() - accessCache.checkedAt < 15_000) return accessCache.allowed;
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user?.id) {
-      accessCache = { userId: null, allowed: false, checkedAt: 0 };
-      return false;
-    }
-    if (accessCache.userId === user.id && Date.now() - accessCache.checkedAt < 15_000) {
-      return accessCache.allowed;
-    }
-    const { data } = await supabase.from("profiles").select("role,account_status").eq("id", user.id).maybeSingle();
-    const allowed = data?.account_status === "ACTIVE" && String(data?.role || "").toUpperCase() === "HEAD_ADMIN";
-    accessCache = { userId: user.id, allowed, checkedAt: Date.now() };
-    return allowed;
+    // The backend RPC is the authorization source of truth. Avoid auth.getUser()
+    // here because it adds an extra /auth/v1/user network request and can block
+    // the error center precisely when the auth endpoint is slow.
+    await summary();
+    accessCache = { allowed: true, checkedAt: Date.now() };
+    return true;
   } catch {
+    accessCache = { allowed: false, checkedAt: Date.now() };
     return false;
   }
 }
@@ -182,6 +178,6 @@ void updateAdminTile();
 
 
 supabase?.auth?.onAuthStateChange?.(() => {
-  accessCache = { userId: null, allowed: false, checkedAt: 0 };
+  accessCache = { allowed: false, checkedAt: 0 };
   setTimeout(() => void updateAdminTile(), 100);
 });
