@@ -10,7 +10,7 @@ const nowIso = () => new Date().toISOString();
 function profileFor(role) {
   return {
     id: MEMBER_ID,
-    nickname: role === "HEAD_ADMIN" ? "Smoke Admin" : "Smoke Mitglied",
+    nickname: role === "HEAD_ADMIN" ? "Smoke Hauptadmin" : role === "ADMIN" ? "Smoke Admin" : "Smoke Mitglied",
     first_name: "Smoke",
     last_name: "Test",
     role,
@@ -67,7 +67,7 @@ function jwt(userId, email) {
 async function installSupabaseMock(page, role) {
   const profile = profileFor(role);
   const members = [profile, otherMember()];
-  const email = role === "HEAD_ADMIN" ? "admin@example.test" : "member@example.test";
+  const email = role === "HEAD_ADMIN" ? "head-admin@example.test" : role === "ADMIN" ? "admin@example.test" : "member@example.test";
   const user = {
     id: MEMBER_ID,
     aud: "authenticated",
@@ -186,7 +186,7 @@ async function login(page, role = "MEMBER") {
   await installSupabaseMock(page, role);
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Anmelden" })).toBeVisible();
-  await page.locator('input[name="email"]').fill(role === "HEAD_ADMIN" ? "admin@example.test" : "member@example.test");
+  await page.locator('input[name="email"]').fill(role === "HEAD_ADMIN" ? "head-admin@example.test" : role === "ADMIN" ? "admin@example.test" : "member@example.test");
   await page.locator('input[name="password"]').fill("smoke-password");
   await page.getByRole("button", { name: "Anmelden" }).click();
   await expect(page.locator(".app")).toBeVisible();
@@ -316,4 +316,84 @@ test("public login and registration entry points stay visible", async ({ page })
   await expect(page.locator('input[name="nickname"]')).toBeVisible();
   await expect(page.locator('select[name="home_region_slug"]')).toBeVisible();
   await expect(page.getByRole("button", { name: "Konto erstellen" })).toBeVisible();
+});
+
+
+const ROLE_VISIBILITY_MATRIX = {
+  MEMBER: {
+    top: ["Startseite", "Mitglieder", "Forum", "Gruppen", "Events", "Fotos", "Neuigkeiten", "Community"],
+    dock: ["Mein Profil", "Nachrichten", "Freunde", "Anfragen", "Blockiert"],
+    adminVisible: false
+  },
+  ADMIN: {
+    top: ["Startseite", "Mitglieder", "Forum", "Gruppen", "Events", "Fotos", "Neuigkeiten", "Community"],
+    dock: ["Mein Profil", "Nachrichten", "Freunde", "Anfragen", "Blockiert", "Admin-Zentrale"],
+    adminVisible: true
+  },
+  HEAD_ADMIN: {
+    top: ["Startseite", "Mitglieder", "Forum", "Gruppen", "Events", "Fotos", "Neuigkeiten", "Community"],
+    dock: ["Mein Profil", "Nachrichten", "Freunde", "Anfragen", "Blockiert", "Admin-Zentrale"],
+    adminVisible: true
+  }
+};
+
+for (const [role, expected] of Object.entries(ROLE_VISIBILITY_MATRIX)) {
+  test(`${role} keeps its complete visible function matrix`, async ({ page }) => {
+    await login(page, role);
+
+    for (const label of expected.top) {
+      const button = page.locator(".ec-top-nav").getByRole("button", { name: new RegExp(label, "i") }).first();
+      await expect(button, `${role}: ${label} must stay visible in top navigation`).toBeVisible();
+      await expect(button).toBeEnabled();
+    }
+
+    await openPersonalDock(page);
+    for (const label of expected.dock) {
+      const button = page.locator(".ec-right-dock button:visible").filter({ hasText: new RegExp(label, "i") }).first();
+      await expect(button, `${role}: ${label} must stay visible in personal dock`).toBeVisible();
+      await expect(button).toBeEnabled();
+    }
+
+    const adminEntry = page.locator(".ec-right-dock button:visible").filter({ hasText: /Admin-Zentrale/i });
+    if (expected.adminVisible) await expect(adminEntry.first()).toBeVisible();
+    else await expect(adminEntry).toHaveCount(0);
+
+    await expect(page.locator(".app-recovery")).toHaveCount(0);
+  });
+}
+
+test("community admin keeps admin center but not head-admin-only member controls", async ({ page }) => {
+  await login(page, "ADMIN");
+  await openPersonalDock(page);
+
+  const adminEntry = page.locator(".ec-right-dock button:visible").filter({ hasText: /Admin-Zentrale/i }).first();
+  await expect(adminEntry).toBeVisible();
+  await adminEntry.click();
+
+  await expect(page.getByRole("heading", { name: "Admin-Zentrale" })).toBeVisible();
+  await expect(page.locator(".admin-member-card")).toHaveCount(2);
+
+  const other = page.locator(".admin-member-card").filter({ hasText: "Zweites Mitglied" }).first();
+  await expect(other).toBeVisible();
+  await expect(other.locator(".admin-member-card-actions")).toHaveCount(0);
+  await expect(page.locator(".app-recovery")).toHaveCount(0);
+});
+
+test("member cannot accidentally see admin navigation", async ({ page }) => {
+  await login(page, "MEMBER");
+  await openPersonalDock(page);
+  await expect(page.locator(".ec-right-dock button:visible").filter({ hasText: /Admin-Zentrale/i })).toHaveCount(0);
+  await expect(page.locator(".admin-page")).toHaveCount(0);
+});
+
+test("legal and rules pages remain visible from the footer", async ({ page }) => {
+  await login(page, "MEMBER");
+
+  for (const label of ["Impressum", "Datenschutz", "Community-Regeln"]) {
+    const button = page.locator(".site-footer").getByRole("button", { name: label });
+    await expect(button).toBeVisible();
+    await button.click();
+    await expect(page.locator(".content-root")).toBeVisible();
+    await expect(page.locator(".app-recovery")).toHaveCount(0);
+  }
 });
