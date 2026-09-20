@@ -42,8 +42,8 @@ function renderQuickOverview(data) {
     panel = document.createElement("section");
     panel.className = "ec-member-overview panel";
     panel.dataset.ecDashboardExtras = "overview";
-    const anchor = home.querySelector(".engagement-grid") || home.querySelector(".page-heading")?.nextElementSibling;
-    if (anchor) home.insertBefore(panel, anchor);
+    const anchor = home.querySelector(":scope > .engagement-grid") || home.querySelector(":scope > .page-heading")?.nextElementSibling;
+    if (anchor?.parentElement === home) anchor.before(panel);
     else home.prepend(panel);
   }
   panel.dataset.ecDashboardExtras = "overview";

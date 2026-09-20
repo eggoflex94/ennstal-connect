@@ -279,11 +279,18 @@ test("member core functions remain visible and navigable", async ({ page }) => {
     "Forum",
     "Gruppen",
     "Events",
-    "Fotos",
-    "Neuigkeiten",
     "Community"
   ]) {
     await assertTopNavigationWorks(page, label);
+  }
+
+  await assertTopNavigationWorks(page, "Community");
+  const communityLinks = page.locator(".community-section-links");
+  await expect(communityLinks).toBeVisible();
+  for (const label of ["Neuigkeiten", "Fotos", "Gemeinde & Service"]) {
+    const button = communityLinks.getByRole("button", { name: new RegExp(label, "i") });
+    await expect(button, label + " must stay reachable from Community").toBeVisible();
+    await expect(button).toBeEnabled();
   }
 
   for (const label of ["Mein Profil", "Nachrichten", "Freunde", "Anfragen", "Blockiert"]) {
@@ -348,22 +355,22 @@ test("public login and registration entry points stay visible", async ({ page })
 
 const ROLE_VISIBILITY_MATRIX = {
   MEMBER: {
-    top: ["Startseite", "Mitglieder", "Forum", "Gruppen", "Events", "Fotos", "Neuigkeiten", "Community"],
+    top: ["Startseite", "Mitglieder", "Forum", "Gruppen", "Events", "Community"],
     dock: ["Mein Profil", "Nachrichten", "Freunde", "Anfragen", "Blockiert"],
     adminVisible: false
   },
   ADMIN: {
-    top: ["Startseite", "Mitglieder", "Forum", "Gruppen", "Events", "Fotos", "Neuigkeiten", "Community"],
+    top: ["Startseite", "Mitglieder", "Forum", "Gruppen", "Events", "Community"],
     dock: ["Mein Profil", "Nachrichten", "Freunde", "Anfragen", "Blockiert", "Admin-Zentrale"],
     adminVisible: true
   },
   REGIONAL_ADMIN: {
-    top: ["Startseite", "Mitglieder", "Forum", "Gruppen", "Events", "Fotos", "Neuigkeiten", "Community"],
+    top: ["Startseite", "Mitglieder", "Forum", "Gruppen", "Events", "Community"],
     dock: ["Mein Profil", "Nachrichten", "Freunde", "Anfragen", "Blockiert", "Admin-Zentrale"],
     adminVisible: true
   },
   HEAD_ADMIN: {
-    top: ["Startseite", "Mitglieder", "Forum", "Gruppen", "Events", "Fotos", "Neuigkeiten", "Community"],
+    top: ["Startseite", "Mitglieder", "Forum", "Gruppen", "Events", "Community"],
     dock: ["Mein Profil", "Nachrichten", "Freunde", "Anfragen", "Blockiert", "Admin-Zentrale"],
     adminVisible: true
   }

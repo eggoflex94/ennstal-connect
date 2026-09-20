@@ -277,3 +277,34 @@ test("mobile navigation never reparents React-owned top-nav buttons", async()=>{
   assert.doesNotMatch(code,/nav\.prepend\(rail\)/);
   assert.match(code,/classList\.toggle\('ec-mobile-nav-ready'/);
 });
+
+
+test("runtime DOM insertion guards avoid stale insertBefore references", async()=>{
+  const paths=[
+    "src/admin-online-status.js",
+    "src/last-name-privacy.js",
+    "src/community-event-region-fix.js",
+    "src/sidebar-reward-progress.js",
+    "src/standard-theme-runtime.js",
+    "src/community-support-verification.js",
+    "src/member-extras.js",
+    "src/sidebar-compact-polish.js",
+    "src/mobile-nav-runtime.js",
+    "src/stable-app.js"
+  ];
+  for(const path of paths){
+    const code=await source(path);
+    assert.doesNotMatch(code,/\.insertBefore\(/, `${path} must not insert against a potentially stale reference node`);
+  }
+});
+
+test("async DOM enhancers revalidate their live surfaces before mutation", async()=>{
+  const adminOnline=await source("src/admin-online-status.js");
+  const lastName=await source("src/last-name-privacy.js");
+  const eventRegion=await source("src/community-event-region-fix.js");
+  const stable=await source("src/stable-app.js");
+  assert.match(adminOnline,/!form\.isConnected/);
+  assert.match(lastName,/!section\.isConnected/);
+  assert.match(eventRegion,/!form\.isConnected \|\| form !== eventForm\(\)/);
+  assert.match(stable,/!root\.isConnected\|\|hero\.parentNode!==root/);
+});

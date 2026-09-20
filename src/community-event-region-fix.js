@@ -84,8 +84,9 @@ async function ensureRegionSelect() {
     if (preferred) select.value = preferred.id;
     label.appendChild(select);
 
-    const title = form.querySelector('input[name="title"]');
-    form.insertBefore(label, title || form.firstChild);
+    const title = form.querySelector(':scope > input[name="title"]');
+    if (title) title.before(label);
+    else form.prepend(label);
 
     if (!form.querySelector('input[name="image"]')) {
       const imageLabel = document.createElement('label');

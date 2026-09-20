@@ -10,10 +10,12 @@ test("phones use the desktop viewport", async () => {
   assert.doesNotMatch(html, /width=device-width/);
 });
 
-test("touch phones keep the desktop navigation DOM", async () => {
+test("touch phones keep navigation DOM ownership stable", async () => {
   const code = await source("src/mobile-nav-runtime.js");
-  assert.match(code, /const TOUCH_QUERY = '\(pointer: coarse\)'/);
-  assert.match(code, /if \(window\.matchMedia\(TOUCH_QUERY\)\.matches\) \{\s*disableMobileNav\(nav\)/s);
+  assert.match(code, /classList\.toggle\('ec-mobile-nav-ready'/);
+  assert.doesNotMatch(code, /appendChild\(button\)/);
+  assert.doesNotMatch(code, /insertBefore\(button/);
+  assert.doesNotMatch(code, /nav\.prepend\(rail\)/);
 });
 
 test("mobile layout override files stay disabled for desktop parity", async () => {
