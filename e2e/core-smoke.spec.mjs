@@ -88,6 +88,18 @@ async function installSupabaseMock(page, role) {
     const path = url.pathname;
     const accept = request.headers()["accept"] || "";
 
+    if (method === "OPTIONS") {
+      return route.fulfill({
+        status: 204,
+        headers: {
+          "access-control-allow-origin": "*",
+          "access-control-allow-methods": "GET,POST,PATCH,PUT,DELETE,HEAD,OPTIONS",
+          "access-control-allow-headers": "*"
+        },
+        body: ""
+      });
+    }
+
     const json = async (body, status = 200, headers = {}) => {
       await route.fulfill({
         status,
