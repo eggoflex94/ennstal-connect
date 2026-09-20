@@ -167,3 +167,48 @@ test("admin dashboard actions navigate instead of silently failing on missing DO
   assert.doesNotMatch(code,/\["Meldungen",d\.reports,\(\)=>scrollTo\("\.report-list"\)\]/);
   assert.doesNotMatch(code,/\["✓ Verifizierungen",\(\)=>document\.querySelector\("\.admin-review-button"\)\?\.click\(\)\]/);
 });
+
+
+test("first-paint assets stay lightweight, cacheable and preloaded", async()=>{
+  const app=await source("src/App.jsx");
+  const memberCard=await source("src/MemberCardView.jsx");
+  const regional=await source("src/regional-shell.js");
+  const main=await source("src/main.jsx");
+  const index=await source("index.html");
+  const headers=await source("public/_headers");
+  const avatar=await source("public/community-default-avatar-fast.svg");
+
+  for(const code of [app,memberCard,regional])
+    assert.ok(code.includes("/community-default-avatar-fast.svg"), "visible fallback avatar must use lightweight SVG");
+
+  assert.ok(!app.includes('const DEFAULT_AVATAR = "/community-default-avatar.png"'));
+  assert.match(index,/preconnect" href="https:\/\/eqfvhgiyrofjscvimvrc\.supabase\.co"/);
+  assert.match(index,/preload" as="image" href="\/ennstal-connect-wordmark\.svg"/);
+  assert.match(index,/preload" as="image" href="\/community-default-avatar-fast\.svg"/);
+  assert.match(headers,/\/\*\.svg[\s\S]*stale-while-revalidate=86400/);
+  assert.match(headers,/\/\*\.png[\s\S]*stale-while-revalidate=86400/);
+  assert.match(main,/ec-legacy-cache-cleanup-v7/);
+  assert.ok(avatar.length < 10000, "fallback avatar must remain lightweight");
+});
+
+
+test("first-paint assets stay cacheable and legacy service workers self-heal", async()=>{
+  const headers=await source("public/_headers");
+  const index=await source("index.html");
+  const main=await source("src/main.jsx");
+  const app=await source("src/App.jsx");
+  const cards=await source("src/MemberCardView.jsx");
+  const shell=await source("src/regional-shell.js");
+
+  assert.match(headers,/\/\*\.svg[\s\S]*Cache-Control: public/);
+  assert.match(headers,/\/\*\.png[\s\S]*Cache-Control: public/);
+  assert.match(headers,/\/assets\/\*[\s\S]*immutable/);
+  assert.match(index,/preconnect[^>]+supabase\.co/);
+  assert.match(index,/community-default-avatar-fast\.svg/);
+  assert.match(index,/ennstal-connect-wordmark\.svg/);
+  assert.match(app,/community-default-avatar-fast\.svg/);
+  assert.match(cards,/community-default-avatar-fast\.svg/);
+  assert.match(shell,/community-default-avatar-fast\.svg/);
+  assert.match(main,/ec-legacy-cache-cleanup-v7/);
+  assert.match(main,/window\.location\.reload\(\)/);
+});

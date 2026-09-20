@@ -1,4 +1,4 @@
-const DEFAULT_AVATAR = "/community-default-avatar.png";
+const DEFAULT_AVATAR = "/community-default-avatar-fast.svg";
 
 function getAge(date) {
   if (!date) return null;

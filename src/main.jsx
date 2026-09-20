@@ -219,18 +219,30 @@ class AppErrorBoundary extends React.Component {
 }
 
 async function removeLegacyAppShellOnce() {
-  const cleanupKey = "ec-legacy-cache-cleanup-v5";
+  const cleanupKey = "ec-legacy-cache-cleanup-v7";
   try {
     if (localStorage.getItem(cleanupKey) === "done") return;
+    const wasControlled = Boolean(navigator.serviceWorker?.controller);
+    let removedRegistration = false;
+
     if ("serviceWorker" in navigator) {
       const registrations = await navigator.serviceWorker.getRegistrations();
+      removedRegistration = registrations.length > 0;
       await Promise.all(registrations.map((registration) => registration.unregister()));
     }
     if ("caches" in window) {
       const keys = await caches.keys();
       await Promise.all(keys.map((key) => caches.delete(key)));
     }
+
     localStorage.setItem(cleanupKey, "done");
+
+    // A service worker that already controls this tab stays in control until the
+    // next navigation. Do that navigation automatically once so users do not
+    // need Ctrl+R to receive current scripts, icons and images.
+    if (wasControlled || removedRegistration) {
+      window.location.reload();
+    }
   } catch (error) {
     console.warn("Alter App-Cache konnte nicht vollständig entfernt werden:", error);
   }
