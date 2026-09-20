@@ -53,12 +53,12 @@ import "./clean-layout.css";
 import "./clean-components.css";
 
 import "./role-region-polish.css";
-import "./role-region-polish.js";
+// Disabled for React DOM ownership stability: ./role-region-polish.js
 import "./sidebar-compact-polish.css";
-import "./sidebar-compact-polish.js";
+// Disabled for React DOM ownership stability: ./sidebar-compact-polish.js
 import "./admin-access-placement-final.js";
 import "./global-role-identity-polish.css";
-import "./global-role-identity-polish.js";
+// Disabled for React DOM ownership stability: ./global-role-identity-polish.js
 import "./profile-footer-polish.css";
 
 import "./sidebar-layout-stabilizer.css";
@@ -83,13 +83,13 @@ import "./profile-community-modules.css";
 import "./profile-community-modules.js";
 import "./sidebar-interaction-fix.css";
 import "./sidebar-interaction-fix.js";
-import "./community-contact-cleanup.js";
+// Disabled for React DOM ownership stability: ./community-contact-cleanup.js
 
 import "./auth-community-intro.js";
 import "./community-stability-final.css";
 import "./mobile-authority.css";
 import "./people-links-polish.css";
-import "./people-links-polish.js";
+// Disabled for React DOM ownership stability: ./people-links-polish.js
 import "./mobile-interaction-authority.css";
 
 import "./global-community-news-popup.css";
