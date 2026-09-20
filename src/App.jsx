@@ -507,7 +507,7 @@ export default function App() {
         }
       });
     }
-    if (page === "community") {
+    if (page === "community" || page === "events") {
       const eventCard = document.querySelector(".community-hub-grid article");
       eventCard?.querySelectorAll(".hub-row").forEach((row, index) => {
         const entry = communityEvents.slice(0, 5)[index]; if (!entry) return;
@@ -1324,7 +1324,7 @@ export default function App() {
         {page === "blocked" && <Blocked blockedUsers={blockedUsers} memberById={memberById} unblock={unblockUser}/>} 
         {page === "messages" && <Messages user={user} messages={messages} chatMember={chatMember} setChatMember={setChatMember} memberById={memberById} openChat={openChat} messageText={messageText} setMessageText={setMessageText} sendMessage={sendMessage} deleteMessage={deleteMessage}/>}
         {page === "news" && <News news={regionFilter(news)} members={members} profile={profile} canManage={canManageActiveRegion} activeRegion={activeRegion} createNews={createNews} editNews={editNews} deleteNews={deleteNews}/>}
-        {page === "community" && <><CommunityHub members={regionalMembers} events={regionFilter(communityEvents)} ads={regionFilter(communityAds)} photos={memberPhotos} profile={profile} profileUpdates={publicProfileUpdates} activeRegion={activeRegion} onDeleteAd={deleteCommunityAd} onToggleEventFeatured={toggleCommunityEventFeatured}/>{canManageActiveRegion && <AdminCommunityTools members={regionalMembers} isHeadAdmin={isHeadAdmin(profile?.role)} createEvent={createCommunityEvent} createAd={createCommunityAd} setBusinessAccount={setBusinessAccount}/>}</>}
+        {(page === "community" || page === "events") && <><CommunityHub members={regionalMembers} events={regionFilter(communityEvents)} ads={regionFilter(communityAds)} photos={memberPhotos} profile={profile} profileUpdates={publicProfileUpdates} activeRegion={activeRegion} onDeleteAd={deleteCommunityAd} onToggleEventFeatured={toggleCommunityEventFeatured}/>{canManageActiveRegion && <AdminCommunityTools members={regionalMembers} isHeadAdmin={isHeadAdmin(profile?.role)} createEvent={createCommunityEvent} createAd={createCommunityAd} setBusinessAccount={setBusinessAccount}/>}</>}
         {page === "groups" && <GroupsPage groups={regionFilter(groups)} members={members} profile={profile} user={user} transferRequests={groupOwnerChanges} onCreate={createGroup} onJoin={joinGroup} onLeave={leaveGroup} onEdit={editGroup} onDelete={deleteGroup} onTransfer={requestGroupOwnerChange} onReviewTransfer={reviewGroupOwnerChange} onOpen={setSelectedGroup}/>}
         {page === "groups" && selectedGroup && <GroupDetails group={groups.find((group) => group.id === selectedGroup.id) || selectedGroup} members={members} profile={profile} user={user} onClose={() => setSelectedGroup(null)} onJoin={joinGroup} onLeave={leaveGroup} onEdit={editGroup} onDelete={deleteGroup}/>}
         {page === "forum" && (
