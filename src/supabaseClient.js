@@ -1,6 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
 import { createNetworkFetch } from "./networkFetch.js";
-import { createE2EMockSupabase } from "./e2eSupabaseMock.js";
 
 // Supabase configuration is supplied by the Vite/Cloudflare build variables.
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -8,22 +7,18 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 // Configuration problems must not prevent the public login screen from rendering.
 // The app displays a helpful message when a login is attempted instead.
-const useE2EMock = import.meta.env.VITE_E2E_MOCK === "1";
-
-export const isSupabaseConfigured = useE2EMock || Boolean(
+export const isSupabaseConfigured = Boolean(
   supabaseUrl?.startsWith("https://") && supabaseAnonKey
 );
 export const supabaseUnavailableMessage =
   "Die Anmeldung ist momentan nicht erreichbar. Bitte versuche es später erneut.";
 export let preparePrivilegedAction = async () => ({ error: new Error(supabaseUnavailableMessage) });
 
-export const supabase = useE2EMock
-  ? createE2EMockSupabase()
-  : isSupabaseConfigured
-    ? createClient(supabaseUrl, supabaseAnonKey, {
-        global: { fetch: createNetworkFetch(globalThis.fetch.bind(globalThis)) }
-      })
-    : null;
+export const supabase = isSupabaseConfigured
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+      global: { fetch: createNetworkFetch(globalThis.fetch.bind(globalThis)) }
+    })
+  : null;
 
 if (!supabase) {
   // The missing configuration is deliberately not logged: it may contain deployment details.
