@@ -80,6 +80,7 @@ import "./admin-hours-statistics.css";
 import "./admin-hours-statistics.js";
 import "./profile-final-stability.css";
 import "./profile-community-modules.css";
+import "./profile-social-tabs.css";
 import "./profile-community-modules.js";
 import "./sidebar-interaction-fix.css";
 import "./sidebar-interaction-fix.js";
