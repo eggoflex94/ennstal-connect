@@ -34,6 +34,8 @@ import "./member-onboarding.js";
 import "./admin-workspace.css";
 import "./admin-workspace.js";
 import "./sidebar-news-popup.js";
+import "./municipality-module.css";
+import "./municipality-module.js";
 
 import "./regional-shell.js";
 import "./deferred-admin-enhancements.js";
