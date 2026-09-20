@@ -187,7 +187,7 @@ test("first-paint assets stay lightweight, cacheable and preloaded", async()=>{
   assert.match(index,/preload" as="image" href="\/community-default-avatar-fast\.svg"/);
   assert.match(headers,/\/\*\.svg[\s\S]*stale-while-revalidate=86400/);
   assert.match(headers,/\/\*\.png[\s\S]*stale-while-revalidate=86400/);
-  assert.match(main,/ec-legacy-cache-cleanup-v6/);
+  assert.match(main,/ec-legacy-cache-cleanup-v7/);
   assert.ok(avatar.length < 10000, "fallback avatar must remain lightweight");
 });
 
