@@ -11,10 +11,12 @@ test("Community Photographer badge is shown on member cards", async () => {
   assert.match(card, /ec-card-badge-photographer/);
 });
 
-test("Photos navigation is wired into shell and App", async () => {
+test("Photos remain reachable from Community without crowding the primary navigation", async () => {
   const shell = await source("src/regional-shell.js");
   const app = await source("src/App.jsx");
-  assert.match(shell, /\['📷','Fotos','photos'\]/);
+  const topLinks = shell.match(/const TOP_LINKS=\[(.*?)\];/s)?.[1] || "";
+  assert.doesNotMatch(topLinks, /Fotos/);
+  assert.match(app, /page:"photos"/);
   assert.match(app, /photos: "photos"/);
   assert.match(app, /page === "photos"/);
   assert.match(app, /<EventPhotosPage/);
