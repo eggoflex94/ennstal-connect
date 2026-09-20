@@ -31,7 +31,6 @@ export function loadDeferredAdminEnhancements() {
       import('./admin-central-permissions.js'),
       import('./business-account-admin-fix.js'),
       import('./head-admin-activity-folders.js'),
-      import('./admin-central-hub.js'),
       import('./admin-reload-watch.js'),
       import('./admin-system-watch.js')
     ]).catch((error) => {
