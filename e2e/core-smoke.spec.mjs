@@ -8,12 +8,13 @@ const OTHER_ID = "33333333-3333-4333-8333-333333333333";
 const nowIso = () => new Date().toISOString();
 
 function profileFor(role) {
+  const databaseRole = role === "REGIONAL_ADMIN" ? "SUPPORTER" : role;
   return {
     id: MEMBER_ID,
-    nickname: role === "HEAD_ADMIN" ? "Smoke Hauptadmin" : role === "ADMIN" ? "Smoke Admin" : "Smoke Mitglied",
+    nickname: role === "HEAD_ADMIN" ? "Smoke Hauptadmin" : role === "ADMIN" ? "Smoke Admin" : role === "REGIONAL_ADMIN" ? "Smoke Regionaladmin" : "Smoke Mitglied",
     first_name: "Smoke",
     last_name: "Test",
-    role,
+    role: databaseRole,
     account_status: "ACTIVE",
     account_badge: null,
     home_region_id: REGION_ID,
@@ -170,6 +171,14 @@ async function installSupabaseMock(page, role) {
       return json([{ id: REGION_ID, slug: "ennstal", name: "Ennstal", active: true, is_active: true }]);
     }
 
+    if (path === "/rest/v1/regional_admin_assignments") {
+      return json(role === "REGIONAL_ADMIN" ? [{ user_id: MEMBER_ID, region_id: REGION_ID, active: true }] : []);
+    }
+
+    if (path === "/rest/v1/regional_moderation_assignments") {
+      return json([]);
+    }
+
     if (path === "/rest/v1/notifications" && method === "HEAD") {
       return json([], 200, { "content-range": "*/0" });
     }
@@ -277,12 +286,18 @@ test("head admin keeps all admin entry points visible and usable", async ({ page
   await login(page, "HEAD_ADMIN");
 
   await openPersonalDock(page);
-  const adminEntry = page.locator(".ec-right-dock button:visible").filter({ hasText: /Admin-Zentrale/i }).first();
+  const adminEntry = page.locator('.ec-right-dock [data-ec-admin-central-hub="1"]');
+  await expect(adminEntry).toHaveCount(1);
   await expect(adminEntry).toBeVisible();
   await adminEntry.click();
 
+  const hub = page.getByRole("dialog", { name: "Admin-Zentrale" });
+  await expect(hub).toBeVisible();
+  await expect(hub.getByRole("button", { name: /Team-Aktivitäten/i })).toBeVisible();
+  await expect(hub.getByRole("button", { name: /Verwaltung/i })).toBeVisible();
+  await hub.getByRole("button", { name: /Verwaltung/i }).click();
+
   await expect(page.locator(".admin-page")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Admin-Zentrale" })).toBeVisible();
   await expect(page.locator(".app-recovery")).toHaveCount(0);
 
   const shortcuts = page.locator(".admin-dashboard-shortcuts");
@@ -330,6 +345,11 @@ const ROLE_VISIBILITY_MATRIX = {
     dock: ["Mein Profil", "Nachrichten", "Freunde", "Anfragen", "Blockiert", "Admin-Zentrale"],
     adminVisible: true
   },
+  REGIONAL_ADMIN: {
+    top: ["Startseite", "Mitglieder", "Forum", "Gruppen", "Events", "Fotos", "Neuigkeiten", "Community"],
+    dock: ["Mein Profil", "Nachrichten", "Freunde", "Anfragen", "Blockiert", "Admin-Zentrale"],
+    adminVisible: true
+  },
   HEAD_ADMIN: {
     top: ["Startseite", "Mitglieder", "Forum", "Gruppen", "Events", "Fotos", "Neuigkeiten", "Community"],
     dock: ["Mein Profil", "Nachrichten", "Freunde", "Anfragen", "Blockiert", "Admin-Zentrale"],
@@ -354,23 +374,34 @@ for (const [role, expected] of Object.entries(ROLE_VISIBILITY_MATRIX)) {
       await expect(button).toBeEnabled();
     }
 
-    const adminEntry = page.locator(".ec-right-dock button:visible").filter({ hasText: /Admin-Zentrale/i });
-    if (expected.adminVisible) await expect(adminEntry.first()).toBeVisible();
-    else await expect(adminEntry).toHaveCount(0);
+    const adminEntry = page.locator('.ec-right-dock [data-ec-admin-central-hub="1"]');
+    if (expected.adminVisible) {
+      await expect(adminEntry).toHaveCount(1);
+      await expect(adminEntry).toBeVisible();
+      await expect(adminEntry).toHaveAttribute("aria-label", "Admin-Zentrale");
+    } else {
+      await expect(adminEntry).toHaveCount(0);
+    }
 
     await expect(page.locator(".app-recovery")).toHaveCount(0);
   });
 }
 
-test("community admin keeps admin center but not head-admin-only member controls", async ({ page }) => {
+test("community admin sees one central hub and no head-admin-only areas", async ({ page }) => {
   await login(page, "ADMIN");
   await openPersonalDock(page);
 
-  const adminEntry = page.locator(".ec-right-dock button:visible").filter({ hasText: /Admin-Zentrale/i }).first();
-  await expect(adminEntry).toBeVisible();
+  const adminEntry = page.locator('.ec-right-dock [data-ec-admin-central-hub="1"]');
+  await expect(adminEntry).toHaveCount(1);
   await adminEntry.click();
 
-  await expect(page.getByRole("heading", { name: "Admin-Zentrale" })).toBeVisible();
+  const hub = page.getByRole("dialog", { name: "Admin-Zentrale" });
+  await expect(hub).toBeVisible();
+  await expect(hub.getByRole("button", { name: /Verwaltung/i })).toBeVisible();
+  await expect(hub.getByRole("button", { name: /Team-Aktivitäten/i })).toHaveCount(0);
+
+  await hub.getByRole("button", { name: /Verwaltung/i }).click();
+  await expect(page.locator(".admin-page")).toBeVisible();
   await expect(page.locator(".admin-member-card")).toHaveCount(2);
 
   const other = page.locator(".admin-member-card").filter({ hasText: "Zweites Mitglied" }).first();
@@ -378,6 +409,25 @@ test("community admin keeps admin center but not head-admin-only member controls
   await expect(other.locator(".admin-member-card-actions")).toHaveCount(0);
   await expect(page.locator(".app-recovery")).toHaveCount(0);
 });
+
+test("regional admin sees only regional admin-center areas", async ({ page }) => {
+  await login(page, "REGIONAL_ADMIN");
+  await openPersonalDock(page);
+
+  const adminEntry = page.locator('.ec-right-dock [data-ec-admin-central-hub="1"]');
+  await expect(adminEntry).toHaveCount(1);
+  await expect(adminEntry).toBeVisible();
+  await adminEntry.click();
+
+  const hub = page.getByRole("dialog", { name: "Admin-Zentrale" });
+  await expect(hub).toBeVisible();
+  for (const label of ["Admin-Forum", "Mitglieder", "Gruppen", "Neuigkeiten", "Community"]) {
+    await expect(hub.getByRole("button", { name: new RegExp(label, "i") })).toBeVisible();
+  }
+  await expect(hub.getByRole("button", { name: /Verwaltung/i })).toHaveCount(0);
+  await expect(hub.getByRole("button", { name: /Team-Aktivitäten/i })).toHaveCount(0);
+});
+
 
 test("member cannot accidentally see admin navigation", async ({ page }) => {
   await login(page, "MEMBER");
