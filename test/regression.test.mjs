@@ -47,3 +47,26 @@ test("supporter role remains gold with black nickname in clean layout",async()=>
 test("linked people presentation keeps online friends text-only and responsibilities profile-linked",async()=>{const code=await source("src/people-links-polish.js"),css=await source("src/people-links-polish.css");assert.match(code,/ec-online-friend/);assert.match(code,/ec-region-responsibility-person/);assert.match(code,/ec:open-profile/);assert.match(css,/\.ec-dock-detail-row>img\{display:none!important\}/);assert.match(css,/\.ec-responsibility-avatar\{display:block!important/);});
 
 test("service worker cleanup prevents stale application shells",async()=>{const main=await source("src/main.jsx");assert.match(main,/getRegistrations\(\)/);assert.match(main,/registration\.unregister\(\)/);assert.doesNotMatch(main,/serviceWorker\.register/);});
+
+
+test("deferred admin modules stay reachable instead of disappearing from the UI", async()=>{
+  const main=await source("src/main.jsx");
+  const deferred=await source("src/deferred-admin-enhancements.js");
+  assert.match(main,/import "\\.\\/deferred-admin-enhancements\\.js"/);
+  for(const module of [
+    "./admin-dashboard-modern.js","./admin-compact-enhancements.js","./admin-community-popup-manager.js","./admin-central-permissions.js",
+    "./business-account-admin-fix.js","./head-admin-activity-folders.js","./admin-central-hub.js","./admin-reload-watch.js","./admin-system-watch.js",
+    "./profile-admin-tools-unified.js","./profile-admin-role-actions.js","./regional-admin-tools-bridge.js"
+  ]) assert.ok(deferred.includes(module), `missing deferred module: ${module}`);
+  for(const page of ["admin","reports","admin-forum","admin-account-review","adminTools","legal","profile","profile-preview","member-profile","members"])
+    assert.ok(deferred.includes(`\'${page}\'`) || deferred.includes(`"${page}"`), `missing deferred page route: ${page}`);
+  assert.match(deferred,/member-profile-page\\[data-profile-id\\]/);
+});
+
+test("core visible community surfaces remain wired while performance code changes", async()=>{
+  const app=await source("src/App.jsx");
+  for(const label of ["Nachrichten","Forum","Mitglieder","Gruppen","Events"])
+    assert.ok(app.includes(label), `missing visible community label: ${label}`);
+  for(const table of ["messages","forum_posts","community_events","community_ads","member_photos"])
+    assert.ok(app.includes(`from("${table}")`), `missing community data source: ${table}`);
+});
