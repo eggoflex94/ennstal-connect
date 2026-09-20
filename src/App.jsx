@@ -406,14 +406,6 @@ export default function App() {
   };
   loadAllRef.current = loadAll;
 
-  useEffect(() => {
-    loadVersion.current++;
-    if (!activeRegionId) return undefined;
-    setHomepageSections([]); setNews([]); setGroups([]); setForumPosts([]);
-    setWeeklyPoll(null); setFeaturedGroup(null); setCommunityRequests([]);
-    const timer = setTimeout(() => void loadAllRef.current(), 150);
-    return () => clearTimeout(timer);
-  }, [activeRegionId]);
 
   async function openAccountReview() {
     if (!isAdmin(profile?.role)) return;
@@ -651,17 +643,13 @@ export default function App() {
     if (!supabase || !user?.id) return undefined;
     let cancelled = false;
     const loadCommunityExtras = async () => {
-      const [eventResult, adResult, photoResult, likeResult, commentResult, rsvpResult] = await Promise.all([
-        activeRegionId ? supabase.from("community_events").select("*").eq("region_id", activeRegionId).order("event_at", { ascending: true }) : supabase.from("community_events").select("*").order("event_at", { ascending: true }),
-        activeRegionId ? supabase.from("community_ads").select("*").eq("is_active", true).eq("region_id", activeRegionId).order("created_at", { ascending: false }) : supabase.from("community_ads").select("*").eq("is_active", true).order("created_at", { ascending: false }),
+      const [photoResult, likeResult, commentResult, rsvpResult] = await Promise.all([
         supabase.from("member_photos").select("*").order("created_at", { ascending: false }).limit(100),
         supabase.from("member_photo_likes").select("*"),
         supabase.from("member_photo_comments").select("*").order("created_at", { ascending: true }),
         supabase.from("community_event_rsvps").select("*")
       ]);
       if (cancelled) return;
-      if (!eventResult.error) setCommunityEvents(eventResult.data || []);
-      if (!adResult.error) setCommunityAds(adResult.data || []);
       if (!photoResult.error) setMemberPhotos(photoResult.data || []);
       if (!likeResult.error) setPhotoLikes(likeResult.data || []);
       if (!commentResult.error) setPhotoComments(commentResult.data || []);
@@ -669,7 +657,7 @@ export default function App() {
     };
     void loadCommunityExtras().catch(error => { if (!cancelled) console.warn(error); });
     return () => { cancelled = true; };
-  }, [user?.id, activeRegionId]);
+  }, [user?.id]);
 
   useEffect(() => {
     if (!supabase || !user?.id || !activeRegionId) return undefined;
