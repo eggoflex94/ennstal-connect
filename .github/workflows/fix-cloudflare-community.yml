@@ -56,9 +56,9 @@ jobs:
           required = [
               'Was machst du gerade?',
               'Aktuelle Aktivitäten',
-              'Aktuelle Events',
+              'Nächste Veranstaltungen',
               'Aktivität teilen',
-              'Ich bin dabei',
+              'Gemeinde & Service',
               'Interessiert',
               'ec-fake-portal',
               'Fake-Account-Prüfung',
