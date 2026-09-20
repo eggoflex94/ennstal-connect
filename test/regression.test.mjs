@@ -379,3 +379,15 @@ test("personal dashboard stays off-canvas on narrow screens", async()=>{
   assert.match(code,/addEventListener\('resize',schedule/);
   assert.doesNotMatch(css,/ec-stable-personal-dock\.ec-document-flow-dock\{grid-column:1/);
 });
+
+
+test("regional dashboard renders its compact icon grid natively", async()=>{
+  const shell=await source("src/regional-shell.js");
+  assert.match(shell,/ec-right-dock ec-compact-personal-dock/);
+  assert.match(shell,/class="ec-compact-menu-grid"/);
+  for(const label of ["Benachrichtigungen","Mein Profil","Nachrichten","Freunde","Anfragen","Blockiert","Einstellungen","Hilfe","Heimatregion ändern"]){
+    assert.ok(shell.includes(label), "missing dashboard item: "+label);
+  }
+  assert.match(shell,/ec-compact-menu-icon/);
+  assert.match(shell,/DOCK_ICONS/);
+});
