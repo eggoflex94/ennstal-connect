@@ -27,20 +27,8 @@ function removePage(){
   pageRoot=null;
 }
 
-function ensureNavButton(){
-  const nav=document.querySelector('.ec-top-nav');
-  if(!nav)return false;
-  let button=nav.querySelector('[data-ec-page="municipality"]');
-  if(!button){
-    button=document.createElement('button');
-    button.type='button';
-    button.dataset.ecPage='municipality';
-    button.className='ec-municipality-nav';
-    button.textContent='Gemeinde';
-    button.onclick=()=>window.dispatchEvent(new CustomEvent('ec:navigate',{detail:{page:'municipality',source:'municipality-module'}}));
-    nav.appendChild(button);
-  }
-  return true;
+function removeLegacyNavButton(){
+  document.querySelector('.ec-top-nav [data-ec-page="municipality"]')?.remove();
 }
 
 function noticeCard(item,canManage){
@@ -206,9 +194,7 @@ function wirePage(){
 }
 
 function boot(){
-  ensureNavButton();
-  const observer=new MutationObserver(()=>ensureNavButton());
-  observer.observe(document.documentElement,{childList:true,subtree:true});
+  removeLegacyNavButton();
   window.addEventListener('ec:navigate',event=>{
     if(event?.detail?.page==='municipality')void render();
     else if(document.body.classList.contains('ec-municipality-open'))removePage();
