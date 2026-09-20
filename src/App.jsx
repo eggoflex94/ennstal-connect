@@ -419,7 +419,7 @@ export default function App() {
           const attempt = ++bootstrapRetry.current.count;
           window.clearTimeout(bootstrapRetry.current.timer);
           bootstrapRetry.current.timer = window.setTimeout(() => {
-            if (!document.hidden) void loadAllRef.current?.();
+            if (!globalThis.document?.hidden) void loadAllRef.current?.();
           }, Math.min(6000, 1200 * attempt));
         }
       }
@@ -460,11 +460,11 @@ export default function App() {
     });
     const handlePageShow = () => refresh();
     const handleVisibility = () => {
-      if (!document.hidden) refresh();
+      if (!globalThis.document?.hidden) refresh();
     };
     window.addEventListener("ec:network-restored", refresh);
     window.addEventListener("pageshow", handlePageShow);
-    document.addEventListener("visibilitychange", handleVisibility);
+    globalThis.document?.addEventListener?.("visibilitychange", handleVisibility);
     return () => {
       loadVersion.current++;
       window.clearTimeout(bootstrapRetry.current.timer);
@@ -473,7 +473,7 @@ export default function App() {
       subscription.unsubscribe();
       window.removeEventListener("ec:network-restored", refresh);
       window.removeEventListener("pageshow", handlePageShow);
-      document.removeEventListener("visibilitychange", handleVisibility);
+      globalThis.document?.removeEventListener?.("visibilitychange", handleVisibility);
     };
   }, []);
 
