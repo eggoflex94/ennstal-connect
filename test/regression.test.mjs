@@ -78,3 +78,32 @@ test("Events navigation has a rendered page and Head Admin access stays visibly 
   assert.ok(app.includes('page === "events"'), "Events navigation target must render content");
   assert.ok(main.includes('import "./admin-access-placement-final.js";'), "final admin access placement must load at startup");
 });
+
+
+test("head admin error center stays wired and system notifications open it", async()=>{
+  const main=await source("src/main.jsx");
+  const monitor=await source("src/error-monitor.js");
+  const center=await source("src/admin-error-center.js");
+  const notifications=await source("src/notification-center.js");
+  const network=await source("src/networkFetch.js");
+  const sql=await source("supabase/head_admin_error_center.sql");
+
+  assert.match(main,/import "\.\/error-monitor\.js"/);
+  assert.match(main,/import "\.\/admin-error-center\.js"/);
+  assert.match(monitor,/window\.addEventListener\("error"/);
+  assert.match(monitor,/unhandledrejection/);
+  assert.match(monitor,/ec:network-error/);
+  assert.match(monitor,/LAYOUT/);
+  assert.match(network,/record_client_error/);
+  assert.match(network,/response\.status >= 500/);
+  assert.match(center,/head_admin_error_summary/);
+  assert.match(center,/head_admin_error_feed/);
+  assert.match(center,/head_admin_set_error_status/);
+  assert.match(center,/ec:open-system-errors/);
+  assert.match(notifications,/SYSTEM_ERROR/);
+  assert.match(notifications,/ec:open-system-errors/);
+  assert.match(sql,/private\.app_error_events/);
+  assert.match(sql,/revoke all on table private\.app_error_events from public, anon, authenticated/);
+  assert.match(sql,/not public\.ec_is_head_admin\(\)/);
+  assert.match(sql,/grant execute on function public\.record_client_error[\s\S]*to authenticated/);
+});
