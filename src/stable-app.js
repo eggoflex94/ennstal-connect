@@ -124,22 +124,61 @@ async function openAdminCenter(regionsOnly=false){
 }
 
 async function enhanceMemberProfile(root){
-  if(root.dataset.ecStableProfile==='1')return;const hero=root.querySelector(':scope > .member-profile-hero');if(!hero)return;const member=memberFromProfilePage(root);if(!member)return;
-  root.dataset.ecStableProfile='1';root.classList.add('ec-stable-profile-page');const friend=await areFriends(member),avatar=hero.querySelector('img'),sourceActions=root.querySelector(':scope > .member-profile-actions'),sourceAdmin=root.querySelector(':scope > .member-admin-tools'),roleInfo=effectiveRole(member);
-  const layout=document.createElement('section');layout.className='ec-stable-profile-card';const left=document.createElement('div');left.className='ec-stable-profile-left';const photo=document.createElement('div');photo.className='ec-stable-photo';if(avatar)photo.appendChild(avatar);left.appendChild(photo);
+  if(root.dataset.ecStableProfile==='1')return;
+  const hero=root.querySelector(':scope > .member-profile-hero');if(!hero)return;
+  const member=memberFromProfilePage(root);if(!member)return;
+  const friend=await areFriends(member);
+  // React may replace the profile surface while the friendship query is in flight.
+  // Never mutate a stale subtree or use a detached reference node with insertBefore().
+  if(!root.isConnected||hero.parentNode!==root)return;
+  const currentHero=root.querySelector(':scope > .member-profile-hero');
+  if(currentHero!==hero)return;
+  root.dataset.ecStableProfile='1';
+  root.classList.add('ec-stable-profile-page');
+  const avatar=hero.querySelector('img'),sourceActions=root.querySelector(':scope > .member-profile-actions'),sourceAdmin=root.querySelector(':scope > .member-admin-tools'),roleInfo=effectiveRole(member);
+  const layout=document.createElement('section');layout.className='ec-stable-profile-card';
+  const left=document.createElement('div');left.className='ec-stable-profile-left';
+  const photo=document.createElement('div');photo.className='ec-stable-photo';
+  if(avatar){const avatarClone=avatar.cloneNode(true);avatarClone.removeAttribute('id');photo.appendChild(avatarClone)}
+  left.appendChild(photo);
   const role=document.createElement('div');role.className=`ec-stable-role role-${roleInfo.theme}`;role.innerHTML=`<span>FUNKTION</span><strong>${esc(roleInfo.profile)}</strong><small>Heimatregion: ${esc(regionName(member.home_region_id))}</small>`;left.appendChild(role);
-  const actions=document.createElement('div');actions.className='ec-stable-actions';if(sourceActions){[...sourceActions.querySelectorAll('button')].forEach(button=>{button.classList.add('ec-stable-action');button.textContent=(button.textContent||'').replace(/[💬🤝♥✓⏳🚫🚩]/g,'').replace(/\s+/g,' ').trim();actions.appendChild(button)});sourceActions.hidden=true}left.appendChild(actions);if(isHead()){const admin=document.createElement('button');admin.type='button';admin.className='ec-stable-admin-toggle';admin.textContent='Admin Tools';admin.onclick=()=>openMemberAdmin(member);left.appendChild(admin)}
+  const actions=document.createElement('div');actions.className='ec-stable-actions';
+  if(sourceActions){
+    [...sourceActions.querySelectorAll('button')].forEach(button=>{
+      const copy=button.cloneNode(true);
+      copy.classList.add('ec-stable-action');
+      copy.textContent=(copy.textContent||'').replace(/[💬🤝♥✓⏳🚫🚩]/g,'').replace(/\s+/g,' ').trim();
+      copy.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();button.click()});
+      actions.appendChild(copy);
+    });
+    sourceActions.hidden=true;
+  }
+  left.appendChild(actions);
+  if(isHead()){const admin=document.createElement('button');admin.type='button';admin.className='ec-stable-admin-toggle';admin.textContent='Admin Tools';admin.onclick=()=>openMemberAdmin(member);left.appendChild(admin)}
   const rows=[row('Nickname',member.nickname)];if(privacyAllows(member,'name',friend))rows.push(row('Vorname',member.first_name),row('Nachname',member.last_name));if(privacyAllows(member,'birth_date',friend))rows.push(row('Geburtsdatum',fmtDate(member.birth_date)),row('Alter',age(member.birth_date)));if(privacyAllows(member,'location',friend))rows.push(row('Wohnort',member.location));rows.push(row('Heimatregion',regionName(member.home_region_id)));
-  const data=document.createElement('div');data.className='ec-stable-profile-data';data.innerHTML=`<div class="ec-stable-data-head"><div><span>MITGLIEDSPROFIL</span><h1 class="ec-stable-name">${esc(member.nickname||'Mitglied')}</h1></div>${member.is_verified?'<b title="Verifiziert">✓</b>':''}</div><div class="ec-stable-data-grid">${rows.join('')}</div>`;layout.append(left,data);root.insertBefore(layout,hero);hero.hidden=true;if(sourceAdmin)sourceAdmin.hidden=true;
+  const data=document.createElement('div');data.className='ec-stable-profile-data';data.innerHTML=`<div class="ec-stable-data-head"><div><span>MITGLIEDSPROFIL</span><h1 class="ec-stable-name">${esc(member.nickname||'Mitglied')}</h1></div>${member.is_verified?'<b title="Verifiziert">✓</b>':''}</div><div class="ec-stable-data-grid">${rows.join('')}</div>`;
+  layout.append(left,data);
+  if(!root.isConnected||hero.parentNode!==root)return;
+  hero.before(layout);
+  hero.hidden=true;
+  if(sourceAdmin?.isConnected)sourceAdmin.hidden=true;
   if(member.bio&&privacyAllows(member,'bio',friend)){const more=document.createElement('section');more.className='ec-stable-more ec-stable-section';more.innerHTML=`<span>ÜBER MICH</span><h2>Über ${esc(member.nickname||'dieses Mitglied')}</h2><p>${esc(member.bio)}</p>`;layout.after(more)}
 }
 
 function ensureDock(){
   const dock=document.querySelector('.ec-right-dock');if(!dock)return;
-  dock.querySelectorAll('.ec-dock-admin-slot,.ec-dock-admin-recovery,.ec-production-logout,.ec-stable-admin-dock').forEach(el=>el.remove());
+  dock.querySelectorAll('.ec-dock-admin-slot,.ec-dock-admin-recovery,.ec-production-logout').forEach(el=>el.remove());
+  let box=dock.querySelector(':scope > .ec-stable-admin-dock');
   if(isHead()){
-    const box=document.createElement('div');box.className='ec-stable-admin-dock';box.innerHTML='<div class="ec-dock-divider"></div><div class="ec-dock-section-label">VERWALTUNG</div><button data-a="center"><b>⚙</b><span>Admin-Zentrale</span></button><button data-a="regions"><b>⌖</b><span>Regionen & Rechte</span></button>';
-    const community=[...dock.querySelectorAll('.ec-dock-section-label')].find(x=>/COMMUNITY/i.test(x.textContent||''));dock.insertBefore(box,community||null);box.querySelector('[data-a="center"]').onclick=()=>openAdminCenter(false);box.querySelector('[data-a="regions"]').onclick=()=>openAdminCenter(true);
+    if(!box){
+      box=document.createElement('div');box.className='ec-stable-admin-dock';box.innerHTML='<div class="ec-dock-divider"></div><div class="ec-dock-section-label">VERWALTUNG</div><button data-a="center"><b>⚙</b><span>Admin-Zentrale</span></button><button data-a="regions"><b>⌖</b><span>Regionen & Rechte</span></button>';
+      const community=[...dock.querySelectorAll(':scope > .ec-dock-section-label')].find(x=>/COMMUNITY/i.test(x.textContent||''));
+      if(community?.parentNode===dock)community.before(box);else dock.appendChild(box);
+    }
+    box.querySelector('[data-a="center"]').onclick=()=>openAdminCenter(false);
+    box.querySelector('[data-a="regions"]').onclick=()=>openAdminCenter(true);
+  }else if(box){
+    box.remove();
   }
   let logout=dock.querySelector('.ec-logout,.ec-stable-logout');if(!logout){logout=document.createElement('button');logout.type='button';logout.className='ec-stable-logout';logout.innerHTML='<b>↪</b><span>Abmelden</span>';dock.appendChild(logout)}
   logout.onclick=async e=>{e.preventDefault();e.stopPropagation();logout.disabled=true;try{await supabase.auth.signOut();localStorage.removeItem('ec-active-region');sessionStorage.clear();location.replace('/')}catch(error){logout.disabled=false;alert(`Abmelden fehlgeschlagen: ${error.message||error}`)}};

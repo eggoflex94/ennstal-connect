@@ -212,3 +212,22 @@ test("first-paint assets stay cacheable and legacy service workers self-heal", a
   assert.match(main,/ec-legacy-cache-cleanup-v7/);
   assert.match(main,/window\.location\.reload\(\)/);
 });
+
+
+test("stable profile enhancement does not move React-owned nodes or insert against stale parents", async()=>{
+  const code=await source("src/stable-app.js");
+  assert.match(code,/if\(!root\.isConnected\|\|hero\.parentNode!==root\)return/);
+  assert.match(code,/currentHero!==hero/);
+  assert.match(code,/cloneNode\(true\)/);
+  assert.match(code,/hero\.before\(layout\)/);
+  assert.doesNotMatch(code,/root\.insertBefore\(layout,hero\)/);
+  assert.doesNotMatch(code,/photo\.appendChild\(avatar\)/);
+  assert.doesNotMatch(code,/actions\.appendChild\(button\)/);
+});
+
+test("stable dock enhancement is idempotent instead of remove-and-reinsert churn", async()=>{
+  const code=await source("src/stable-app.js");
+  assert.match(code,/let box=dock\.querySelector\(':scope > \.ec-stable-admin-dock'\)/);
+  assert.match(code,/if\(!box\)/);
+  assert.ok(!code.includes(".ec-production-logout,.ec-stable-admin-dock').forEach(el=>el.remove())"));
+});
