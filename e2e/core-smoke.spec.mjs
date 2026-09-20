@@ -196,10 +196,12 @@ async function visibleButton(page, label) {
 }
 
 async function openPersonalDock(page) {
+  const dock = page.locator(".ec-right-dock");
+  if (await dock.isVisible()) return;
   const toggle = page.getByRole("button", { name: "Menü öffnen" });
   await expect(toggle).toBeVisible();
   await toggle.click();
-  await expect(page.locator(".ec-right-dock")).toBeVisible();
+  await expect(dock).toBeVisible();
 }
 
 async function assertTopNavigationWorks(page, label) {
