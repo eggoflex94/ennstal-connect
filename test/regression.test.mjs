@@ -268,3 +268,12 @@ test("primary navigation stays focused and Community groups secondary areas", as
   assert.match(app,/Gemeinde & Service/);
   assert.ok(!municipality.includes("nav.appendChild(button)"));
 });
+
+
+test("mobile navigation never reparents React-owned top-nav buttons", async()=>{
+  const code=await source("src/mobile-nav-runtime.js");
+  assert.doesNotMatch(code,/appendChild\(button\)/);
+  assert.doesNotMatch(code,/insertBefore\(button/);
+  assert.doesNotMatch(code,/nav\.prepend\(rail\)/);
+  assert.match(code,/classList\.toggle\('ec-mobile-nav-ready'/);
+});
