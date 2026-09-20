@@ -96,7 +96,7 @@ function place(){
 
   if(!gridIsCorrect(grid,targets)){
     grid.querySelectorAll(':scope > [data-ec-admin-primary="1"]').forEach(node=>node.remove());
-    grid.querySelectorAll(':scope > [data-ec-page="admin"],:scope > [data-ec-page="adminTools"],:scope > [data-ec-page="legal"]').forEach(node=>node.remove());
+    grid.querySelectorAll(':scope > [data-ec-page="admin"]:not([data-ec-admin-central-hub="1"]),:scope > [data-ec-page="adminTools"],:scope > [data-ec-page="legal"]').forEach(node=>node.remove());
     targets.forEach(target=>grid.appendChild(buttonFor(target)));
   }
 
