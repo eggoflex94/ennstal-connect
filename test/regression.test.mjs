@@ -397,7 +397,7 @@ test("Admin Central stays in the compact dashboard icon grid", async()=>{
   const hub=await source("src/admin-central-hub.js");
   const placement=await source("src/admin-access-placement-final.js");
   assert.match(hub,/querySelector\(':scope > \.ec-compact-menu-grid'\)/);
-  assert.match(hub,/data\.ecAdminCentralHub = '1'/);
+  assert.match(hub,/dataset\.ecAdminCentralHub = '1'/);
   assert.match(placement,/:not\(\[data-ec-admin-central-hub="1"\]\)/);
 });
 
