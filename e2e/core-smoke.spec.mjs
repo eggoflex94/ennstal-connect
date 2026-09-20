@@ -150,6 +150,9 @@ async function installSupabaseMock(page, role) {
           notify_forum_reply_popup: true
         }]);
       }
+      if (fn === "member_onboarding_status") {
+        return json([{ completed: true }]);
+      }
       if (fn === "record_online_time") return json({ rewards: 0 });
       return json([]);
     }
