@@ -123,3 +123,25 @@ test("error center does not depend on auth user endpoint and stays visible on ba
   assert.match(network,/head_admin_error_summary/);
   assert.match(network,/head_admin_error_feed/);
 });
+
+
+test("high-frequency UI modules do not hammer the auth user endpoint", async()=>{
+  const paths=[
+    "src/sidebar-reward-progress.js",
+    "src/regional-shell.js",
+    "src/sidebar-friends-newsfeed.js",
+    "src/personal-dashboard-final-fix.js",
+    "src/notification-center.js",
+    "src/dashboard-top-polish.js",
+    "src/role-region-polish.js",
+    "src/sidebar-role-pin.js"
+  ];
+  for(const path of paths){
+    const code=await source(path);
+    assert.ok(!code.includes("auth.getUser()"), `${path} must use local session data for repeated UI identity reads`);
+    assert.ok(code.includes("auth.getSession()"), `${path} must keep a local session identity source`);
+  }
+  const network=await source("src/networkFetch.js");
+  assert.match(network,/isAuthUserRead/);
+  assert.match(network,/10_000/);
+});
