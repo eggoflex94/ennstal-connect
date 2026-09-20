@@ -27,8 +27,6 @@ async function report({ type = "CLIENT", severity = "ERROR", title, message, sou
   recent.set(key, Date.now());
 
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user?.id) return;
     await supabase.rpc("record_client_error", {
       p_fingerprint: key,
       p_error_type: text(type, 40),
