@@ -308,3 +308,20 @@ test("async DOM enhancers revalidate their live surfaces before mutation", async
   assert.match(eventRegion,/!form\.isConnected \|\| form !== eventForm\(\)/);
   assert.match(stable,/!root\.isConnected\|\|hero\.parentNode!==root/);
 });
+
+
+test("legacy DOM reparenting layers stay disabled on React-owned surfaces", async()=>{
+  const main=await source("src/main.jsx");
+  const deferred=await source("src/deferred-admin-enhancements.js");
+  assert.doesNotMatch(main,/^import "\.\/home-modern-final\.js";/m);
+  assert.doesNotMatch(main,/^import "\.\/profile-layout-organizer\.js";/m);
+  assert.doesNotMatch(deferred,/import\('\.\/admin-compact-enhancements\.js'\)/);
+});
+
+test("point suspension migration keeps status fields consistent at minus ten", async()=>{
+  const sql=await source("supabase/migrations/20260920224000_point_suspension_consistency.sql");
+  assert.match(sql,/coalesce\(new\.points,0\) <= -10/);
+  assert.match(sql,/account_status = 'SUSPENDED'/);
+  assert.match(sql,/is_suspended = true/);
+  assert.match(sql,/ec_is_protected_admin_target/);
+});
