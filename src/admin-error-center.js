@@ -97,7 +97,6 @@ async function refreshOpenCenter() {
 }
 
 async function openErrorCenter() {
-  if (!(await canUse())) return;
   document.querySelector(".ec-error-center-overlay")?.remove();
   const overlay = document.createElement("div");
   overlay.className = "ec-error-center-overlay";
@@ -112,7 +111,7 @@ async function openErrorCenter() {
         <button type="button" data-filter="ALL">Alle</button>
         <button type="button" data-refresh>Neu laden</button>
       </div>
-      <div class="ec-error-list"></div>
+      <div class="ec-error-list"><p class="ec-error-empty">Berechtigung und Verbindung werden geprüft …</p></div>
     </section>`;
   document.body.appendChild(overlay);
   overlay.querySelector(".ec-error-center-close").onclick = () => overlay.remove();
@@ -124,8 +123,17 @@ async function openErrorCenter() {
       await refreshOpenCenter();
     };
   });
-  overlay.querySelector("[data-refresh]").onclick = () => void refreshOpenCenter();
-  await refreshOpenCenter();
+  overlay.querySelector("[data-refresh]").onclick = async () => {
+    accessCache = { allowed: false, checkedAt: 0 };
+    if (await canUse()) await refreshOpenCenter();
+    else overlay.querySelector(".ec-error-list").innerHTML = '<div class="ec-error-empty"><strong>Verbindung nicht verfügbar</strong><p>Die Fehlerzentrale konnte den Server gerade nicht erreichen. Bitte erneut versuchen.</p></div>';
+  };
+
+  if (await canUse()) {
+    await refreshOpenCenter();
+  } else {
+    overlay.querySelector(".ec-error-list").innerHTML = '<div class="ec-error-empty"><strong>Verbindung nicht verfügbar</strong><p>Die Fehlerzentrale konnte den Server gerade nicht erreichen. Bitte erneut versuchen.</p></div>';
+  }
 }
 
 async function updateAdminTile() {
