@@ -222,28 +222,31 @@ class AppErrorBoundary extends React.Component {
 }
 
 async function removeLegacyAppShellOnce() {
-  const cleanupKey = "ec-legacy-cache-cleanup-v7";
+  const cleanupKey = "ec-legacy-cache-cleanup-v8";
+  const reloadKey = "ec-legacy-sw-reload-v8";
   try {
-    if (localStorage.getItem(cleanupKey) === "done") return;
     const wasControlled = Boolean(navigator.serviceWorker?.controller);
     let removedRegistration = false;
 
+    // Always check for an old registration. The previous one-time cleanup flag
+    // could outlive a later browser restore and leave users stuck on a stale shell
+    // until they pressed Ctrl+R manually.
     if ("serviceWorker" in navigator) {
       const registrations = await navigator.serviceWorker.getRegistrations();
       removedRegistration = registrations.length > 0;
       await Promise.all(registrations.map((registration) => registration.unregister()));
     }
-    if ("caches" in window) {
+
+    if (localStorage.getItem(cleanupKey) !== "done" && "caches" in window) {
       const keys = await caches.keys();
       await Promise.all(keys.map((key) => caches.delete(key)));
+      localStorage.setItem(cleanupKey, "done");
     }
 
-    localStorage.setItem(cleanupKey, "done");
-
-    // A service worker that already controls this tab stays in control until the
-    // next navigation. Do that navigation automatically once so users do not
-    // need Ctrl+R to receive current scripts, icons and images.
-    if (wasControlled || removedRegistration) {
+    // A controlling worker remains attached until the next navigation. Reload
+    // automatically at most once per tab instead of making the user do it.
+    if ((wasControlled || removedRegistration) && sessionStorage.getItem(reloadKey) !== "done") {
+      sessionStorage.setItem(reloadKey, "done");
       window.location.reload();
     }
   } catch (error) {

@@ -409,3 +409,17 @@ test("network monitor coalesces transient timeout bursts and uses a safer read t
   assert.match(monitor,/severity: Number\(d\.status\) >= 500 \? "ERROR" : "WARN"/);
   assert.match(network,/timeoutMs = 12_000/);
 });
+
+
+test("session bootstrap recovers without requiring a manual Ctrl+R", async()=>{
+  const app=await source("src/App.jsx");
+  const main=await source("src/main.jsx");
+  assert.match(app,/bootstrapRetry = useRef/);
+  assert.match(app,/bootstrapRetry\.current\.count < 3/);
+  assert.match(app,/addEventListener\("pageshow", handlePageShow\)/);
+  assert.match(app,/visibilitychange/);
+  assert.match(app,/15000/);
+  assert.match(main,/ec-legacy-cache-cleanup-v8/);
+  assert.match(main,/getRegistrations\(\)/);
+  assert.match(main,/sessionStorage\.getItem\(reloadKey\)/);
+});
