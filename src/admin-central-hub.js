@@ -117,14 +117,8 @@ async function loadAccess() {
 function grid() {
   const dock = document.querySelector('.ec-right-dock');
   if (!dock) return null;
-  let slot = dock.querySelector(':scope > .ec-admin-central-native-slot');
-  if (!slot) {
-    slot = document.createElement('div');
-    slot.className = 'ec-admin-central-native-slot';
-    slot.setAttribute('aria-label', 'Administration');
-    dock.appendChild(slot);
-  }
-  return slot;
+  dock.querySelector(':scope > .ec-admin-central-native-slot')?.remove();
+  return dock.querySelector(':scope > .ec-compact-menu-grid');
 }
 
 function removeCompetingAdminButtons(keep) {

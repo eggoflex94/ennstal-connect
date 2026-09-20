@@ -391,3 +391,21 @@ test("regional dashboard renders its compact icon grid natively", async()=>{
   assert.match(shell,/ec-compact-menu-icon/);
   assert.match(shell,/DOCK_ICONS/);
 });
+
+
+test("Admin Central stays in the compact dashboard icon grid", async()=>{
+  const hub=await source("src/admin-central-hub.js");
+  const placement=await source("src/admin-access-placement-final.js");
+  assert.match(hub,/querySelector\(':scope > \.ec-compact-menu-grid'\)/);
+  assert.match(hub,/data\.ecAdminCentralHub = '1'/);
+  assert.match(placement,/:not\(\[data-ec-admin-central-hub="1"\]\)/);
+});
+
+test("network monitor coalesces transient timeout bursts and uses a safer read timeout", async()=>{
+  const monitor=await source("src/error-monitor.js");
+  const network=await source("src/networkFetch.js");
+  assert.match(monitor,/NETWORK_BURST_COOLDOWN_MS = 60_000/);
+  assert.match(monitor,/Serververbindung verzögert/);
+  assert.match(monitor,/severity: Number\(d\.status\) >= 500 \? "ERROR" : "WARN"/);
+  assert.match(network,/timeoutMs = 12_000/);
+});
