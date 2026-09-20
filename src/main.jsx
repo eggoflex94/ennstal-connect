@@ -53,6 +53,7 @@ import "./role-region-polish.css";
 import "./role-region-polish.js";
 import "./sidebar-compact-polish.css";
 import "./sidebar-compact-polish.js";
+import "./admin-access-placement-final.js";
 import "./global-role-identity-polish.css";
 import "./global-role-identity-polish.js";
 import "./profile-footer-polish.css";
