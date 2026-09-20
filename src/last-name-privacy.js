@@ -74,8 +74,8 @@ async function attachLastNamePrivacyControl() {
     });
 
     wrapper.append(select, help, status);
-    const verification = section.querySelector(".verification-request");
-    if (verification) section.insertBefore(wrapper, verification);
+    const verification = section.querySelector(":scope > .verification-request");
+    if (verification) verification.before(wrapper);
     else section.appendChild(wrapper);
   } finally {
     attachRunning = false;
