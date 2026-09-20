@@ -709,7 +709,6 @@ export default function App() {
       lastSent = Date.now();
       const lastActive = new Date().toISOString();
       void writePresence(true);
-      void supabase.rpc("record_online_activity");
       setProfile((current) => current?.id === user.id ? { ...current, is_online: true, last_active_at: lastActive, presence_device: presenceDevice } : current);
       setMembers((current) => current.map((member) => member.id === user.id ? { ...member, is_online: true, last_active_at: lastActive, presence_device: presenceDevice } : member));
     };
