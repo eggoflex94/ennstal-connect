@@ -60,6 +60,15 @@ begin
 
   if v_severity not in ('INFO','WARN','ERROR','CRITICAL') then v_severity := 'ERROR'; end if;
 
+  if (
+    select count(*)
+    from private.app_error_events
+    where last_user_id = v_user
+      and last_seen_at >= now() - interval '10 minutes'
+  ) >= 60 then
+    return null;
+  end if;
+
   select id, last_notified_at
     into v_id, v_existing_notified
   from private.app_error_events
@@ -105,7 +114,12 @@ begin
   end if;
 
   v_notify := v_severity in ('ERROR','CRITICAL')
-    and (not v_existing or v_existing_notified is null or v_existing_notified < now() - interval '30 minutes');
+    and (not v_existing or v_existing_notified is null or v_existing_notified < now() - interval '30 minutes')
+    and not exists (
+      select 1
+      from private.app_error_events recent_notice
+      where recent_notice.last_notified_at >= now() - interval '5 minutes'
+    );
 
   if v_notify then
     insert into public.notifications(user_id,title,body,type)
