@@ -170,6 +170,7 @@ export default function App() {
   const loadVersion = useRef(0);
   const initializedProfileUser = useRef(null);
   const loadAllRef = useRef(null);
+  const bootstrapRetry = useRef({ count: 0, timer: null });
   const membersRef = useRef(members);
   membersRef.current = members;
   const resetSession = () => {
@@ -308,7 +309,7 @@ export default function App() {
   const canManageActiveRegion = isAdmin(profile?.role) || isRegionalAdminHere;
 
   const withTimeout = (promise, message) => new Promise((resolve, reject) => {
-    const timer = window.setTimeout(() => reject(new Error(message)), 5000);
+    const timer = window.setTimeout(() => reject(new Error(message)), 15000);
     Promise.resolve(promise).then(
       (value) => { window.clearTimeout(timer); resolve(value); },
       (error) => { window.clearTimeout(timer); reject(error); }
@@ -332,6 +333,9 @@ export default function App() {
       if (!isCurrent()) return;
       setUser(currentUser);
       if (!currentUser) {
+        bootstrapRetry.current.count = 0;
+        window.clearTimeout(bootstrapRetry.current.timer);
+        bootstrapRetry.current.timer = null;
         resetSession(); return;
       }
       if (initializedProfileUser.current !== currentUser.id) {
@@ -361,6 +365,9 @@ export default function App() {
         showNotice("Dein Konto ist gesperrt. Grund: " + (p.suspension_reason || "Kein Grund wurde hinterlegt."));
         return;
       }
+      bootstrapRetry.current.count = 0;
+      window.clearTimeout(bootstrapRetry.current.timer);
+      bootstrapRetry.current.timer = null;
       setProfile(p); setBlockedUsers(bs); setFeatureLocks(locks); setRulesAccepted(Boolean(ruleAcceptance));
       const readMemberDirectory = async () => {
         const { data, error } = await supabase.rpc("community_member_directory");
@@ -403,7 +410,20 @@ export default function App() {
         },
         onSettled: name => setSectionStatus(status => ({ ...status, pending: status.pending.filter(item => item !== name) }))
       });
-    } catch (e) { if (isCurrent()) { setSectionStatus({ pending: [], failed: ["Anmeldung und Profil"] }); console.error(e); showNotice(e?.message || "Fehler beim Laden"); } }
+    } catch (e) {
+      if (isCurrent()) {
+        setSectionStatus({ pending: [], failed: ["Anmeldung und Profil"] });
+        console.error(e);
+        showNotice(e?.message || "Fehler beim Laden");
+        if (bootstrapRetry.current.count < 3) {
+          const attempt = ++bootstrapRetry.current.count;
+          window.clearTimeout(bootstrapRetry.current.timer);
+          bootstrapRetry.current.timer = window.setTimeout(() => {
+            if (!document.hidden) void loadAllRef.current?.();
+          }, Math.min(6000, 1200 * attempt));
+        }
+      }
+    }
   };
   loadAllRef.current = loadAll;
 
@@ -438,12 +458,22 @@ export default function App() {
       sessionUserId = nextId;
       refresh();
     });
+    const handlePageShow = () => refresh();
+    const handleVisibility = () => {
+      if (!document.hidden) refresh();
+    };
     window.addEventListener("ec:network-restored", refresh);
+    window.addEventListener("pageshow", handlePageShow);
+    document.addEventListener("visibilitychange", handleVisibility);
     return () => {
       loadVersion.current++;
+      window.clearTimeout(bootstrapRetry.current.timer);
+      bootstrapRetry.current.timer = null;
       refresh.dispose();
       subscription.unsubscribe();
       window.removeEventListener("ec:network-restored", refresh);
+      window.removeEventListener("pageshow", handlePageShow);
+      document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, []);
 
