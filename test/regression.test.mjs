@@ -108,3 +108,18 @@ test("head admin error center stays wired and system notifications open it", asy
   assert.match(sql,/not public\.ec_is_head_admin\(\)/);
   assert.match(sql,/grant execute on function public\.record_client_error[\s\S]*to authenticated/);
 });
+
+
+test("error center does not depend on auth user endpoint and stays visible on backend failure", async()=>{
+  const center=await source("src/admin-error-center.js");
+  const monitor=await source("src/error-monitor.js");
+  const network=await source("src/networkFetch.js");
+
+  assert.ok(!center.includes("supabase.auth.getUser()"), "error center must not call /auth/v1/user");
+  assert.ok(!monitor.includes("supabase.auth.getUser()"), "error reporter must not call /auth/v1/user");
+  assert.match(center,/Berechtigung und Verbindung werden geprüft/);
+  assert.match(center,/Verbindung nicht verfügbar/);
+  assert.match(center,/head_admin_error_summary/);
+  assert.match(network,/head_admin_error_summary/);
+  assert.match(network,/head_admin_error_feed/);
+});
