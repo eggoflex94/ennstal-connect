@@ -45,8 +45,9 @@ function ensureStyle(){
 }
 
 function expectedTargets(){
-  if(role==='HEAD_ADMIN')return['admin','legal'];
-  if(role==='ADMIN'||isRegionalAdmin)return['admin'];
+  // Admin-Zentrale is owned by admin-central-hub.js for every authorized admin.
+  // This legacy placer only keeps the Head-Admin-only evidence shortcut.
+  if(role==='HEAD_ADMIN')return['legal'];
   return[];
 }
 

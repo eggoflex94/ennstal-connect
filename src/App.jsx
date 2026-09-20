@@ -406,14 +406,6 @@ export default function App() {
   };
   loadAllRef.current = loadAll;
 
-  useEffect(() => {
-    loadVersion.current++;
-    if (!activeRegionId) return undefined;
-    setHomepageSections([]); setNews([]); setGroups([]); setForumPosts([]);
-    setWeeklyPoll(null); setFeaturedGroup(null); setCommunityRequests([]);
-    const timer = setTimeout(() => void loadAllRef.current(), 150);
-    return () => clearTimeout(timer);
-  }, [activeRegionId]);
 
   async function openAccountReview() {
     if (!isAdmin(profile?.role)) return;
@@ -515,7 +507,7 @@ export default function App() {
         }
       });
     }
-    if (page === "community") {
+    if (page === "community" || page === "events") {
       const eventCard = document.querySelector(".community-hub-grid article");
       eventCard?.querySelectorAll(".hub-row").forEach((row, index) => {
         const entry = communityEvents.slice(0, 5)[index]; if (!entry) return;
@@ -651,17 +643,13 @@ export default function App() {
     if (!supabase || !user?.id) return undefined;
     let cancelled = false;
     const loadCommunityExtras = async () => {
-      const [eventResult, adResult, photoResult, likeResult, commentResult, rsvpResult] = await Promise.all([
-        activeRegionId ? supabase.from("community_events").select("*").eq("region_id", activeRegionId).order("event_at", { ascending: true }) : supabase.from("community_events").select("*").order("event_at", { ascending: true }),
-        activeRegionId ? supabase.from("community_ads").select("*").eq("is_active", true).eq("region_id", activeRegionId).order("created_at", { ascending: false }) : supabase.from("community_ads").select("*").eq("is_active", true).order("created_at", { ascending: false }),
+      const [photoResult, likeResult, commentResult, rsvpResult] = await Promise.all([
         supabase.from("member_photos").select("*").order("created_at", { ascending: false }).limit(100),
         supabase.from("member_photo_likes").select("*"),
         supabase.from("member_photo_comments").select("*").order("created_at", { ascending: true }),
         supabase.from("community_event_rsvps").select("*")
       ]);
       if (cancelled) return;
-      if (!eventResult.error) setCommunityEvents(eventResult.data || []);
-      if (!adResult.error) setCommunityAds(adResult.data || []);
       if (!photoResult.error) setMemberPhotos(photoResult.data || []);
       if (!likeResult.error) setPhotoLikes(likeResult.data || []);
       if (!commentResult.error) setPhotoComments(commentResult.data || []);
@@ -669,7 +657,7 @@ export default function App() {
     };
     void loadCommunityExtras().catch(error => { if (!cancelled) console.warn(error); });
     return () => { cancelled = true; };
-  }, [user?.id, activeRegionId]);
+  }, [user?.id]);
 
   useEffect(() => {
     if (!supabase || !user?.id || !activeRegionId) return undefined;
@@ -721,7 +709,6 @@ export default function App() {
       lastSent = Date.now();
       const lastActive = new Date().toISOString();
       void writePresence(true);
-      void supabase.rpc("record_online_activity");
       setProfile((current) => current?.id === user.id ? { ...current, is_online: true, last_active_at: lastActive, presence_device: presenceDevice } : current);
       setMembers((current) => current.map((member) => member.id === user.id ? { ...member, is_online: true, last_active_at: lastActive, presence_device: presenceDevice } : member));
     };
@@ -1337,7 +1324,7 @@ export default function App() {
         {page === "blocked" && <Blocked blockedUsers={blockedUsers} memberById={memberById} unblock={unblockUser}/>} 
         {page === "messages" && <Messages user={user} messages={messages} chatMember={chatMember} setChatMember={setChatMember} memberById={memberById} openChat={openChat} messageText={messageText} setMessageText={setMessageText} sendMessage={sendMessage} deleteMessage={deleteMessage}/>}
         {page === "news" && <News news={regionFilter(news)} members={members} profile={profile} canManage={canManageActiveRegion} activeRegion={activeRegion} createNews={createNews} editNews={editNews} deleteNews={deleteNews}/>}
-        {page === "community" && <><CommunityHub members={regionalMembers} events={regionFilter(communityEvents)} ads={regionFilter(communityAds)} photos={memberPhotos} profile={profile} profileUpdates={publicProfileUpdates} activeRegion={activeRegion} onDeleteAd={deleteCommunityAd} onToggleEventFeatured={toggleCommunityEventFeatured}/>{canManageActiveRegion && <AdminCommunityTools members={regionalMembers} isHeadAdmin={isHeadAdmin(profile?.role)} createEvent={createCommunityEvent} createAd={createCommunityAd} setBusinessAccount={setBusinessAccount}/>}</>}
+        {(page === "community" || page === "events") && <><CommunityHub members={regionalMembers} events={regionFilter(communityEvents)} ads={regionFilter(communityAds)} photos={memberPhotos} profile={profile} profileUpdates={publicProfileUpdates} activeRegion={activeRegion} onDeleteAd={deleteCommunityAd} onToggleEventFeatured={toggleCommunityEventFeatured}/>{canManageActiveRegion && <AdminCommunityTools members={regionalMembers} isHeadAdmin={isHeadAdmin(profile?.role)} createEvent={createCommunityEvent} createAd={createCommunityAd} setBusinessAccount={setBusinessAccount}/>}</>}
         {page === "groups" && <GroupsPage groups={regionFilter(groups)} members={members} profile={profile} user={user} transferRequests={groupOwnerChanges} onCreate={createGroup} onJoin={joinGroup} onLeave={leaveGroup} onEdit={editGroup} onDelete={deleteGroup} onTransfer={requestGroupOwnerChange} onReviewTransfer={reviewGroupOwnerChange} onOpen={setSelectedGroup}/>}
         {page === "groups" && selectedGroup && <GroupDetails group={groups.find((group) => group.id === selectedGroup.id) || selectedGroup} members={members} profile={profile} user={user} onClose={() => setSelectedGroup(null)} onJoin={joinGroup} onLeave={leaveGroup} onEdit={editGroup} onDelete={deleteGroup}/>}
         {page === "forum" && (

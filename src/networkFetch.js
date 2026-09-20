@@ -10,6 +10,20 @@
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const isTransientNetworkError = (error) => /failed to fetch|networkerror|network request failed|load failed|fetch failed|timeout|aborted/i.test(String(error?.message || error || ''));
 
+function emitNetworkError(url, method, detail = {}) {
+  if (/\/rpc\/record_client_error(?:[/?#]|$)/i.test(String(url || ""))) return;
+  try {
+    const parsed = new URL(String(url || ""), globalThis.location?.href || "http://localhost");
+    globalThis.window?.dispatchEvent?.(new CustomEvent("ec:network-error", {
+      detail: {
+        endpoint: `${parsed.host}${parsed.pathname}`.slice(0, 500),
+        method,
+        ...detail
+      }
+    }));
+  } catch {}
+}
+
 const READ_ONLY_RPCS = new Set([
   'community_member_directory',
   'community_group_directory',
@@ -97,10 +111,25 @@ export function createNetworkFetch(fetchImpl, timeoutMs = 6_000, readCacheMs = 9
         )), effectiveTimeoutMs);
 
         try {
-          return await fetchImpl(input, { ...init, signal: controller.signal });
+          const response = await fetchImpl(input, { ...init, signal: controller.signal });
+          if (!response.ok && response.status >= 500) {
+            emitNetworkError(url, method, {
+              kind: "server",
+              status: response.status,
+              message: `Serveranfrage fehlgeschlagen (HTTP ${response.status}).`
+            });
+          }
+          return response;
         } catch (error) {
           lastError = error;
-          if (!safeRead || callerSignal?.aborted || !isTransientNetworkError(error) || attempt === attempts - 1) throw error;
+          const finalAttempt = !safeRead || callerSignal?.aborted || !isTransientNetworkError(error) || attempt === attempts - 1;
+          if (finalAttempt) {
+            emitNetworkError(url, method, {
+              kind: error?.name === "TimeoutError" || /timeout|antwortet nicht/i.test(String(error?.message || error || "")) ? "timeout" : "network",
+              message: String(error?.message || error || "Netzwerkanfrage fehlgeschlagen.").slice(0, 1000)
+            });
+            throw error;
+          }
           await wait(300);
         } finally {
           clearTimeout(timer);

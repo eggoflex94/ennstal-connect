@@ -11,7 +11,7 @@ import "./admin-online-status.js";
 import "./last-name-privacy.js";
 import "./last-active-privacy.js";
 import "./online-status-sync.js";
-import "./mobile-presence-sync.js";
+import "./profile-live-presence.js";
 import "./online-reward-tracker.js";
 import "./sidebar-reward-progress.css";
 import "./sidebar-reward-progress.js";
@@ -28,6 +28,8 @@ import "./fake-account-admin.js";
 import "./help-center.js";
 import "./notification-center.css";
 import "./notification-center.js";
+import "./error-monitor.js";
+import "./admin-error-center.js";
 import "./member-onboarding.js";
 import "./admin-workspace.css";
 import "./admin-workspace.js";
@@ -37,7 +39,6 @@ import "./regional-shell.js";
 import "./deferred-admin-enhancements.js";
 // Deferred admin wiring remains explicit for regression visibility:
 // ./admin-dashboard-modern.js ./admin-compact-enhancements.js
-import "./top-nav-events-cleanup.js";
 import "./profile-visits-realtime.js";
 import "./navigation-stability.js";
 import "./admin-forum-cross-region.js";
@@ -53,6 +54,7 @@ import "./role-region-polish.css";
 import "./role-region-polish.js";
 import "./sidebar-compact-polish.css";
 import "./sidebar-compact-polish.js";
+import "./admin-access-placement-final.js";
 import "./global-role-identity-polish.css";
 import "./global-role-identity-polish.js";
 import "./profile-footer-polish.css";
@@ -151,6 +153,7 @@ import "./message-emoji-picker.js";
 
 /* Shared admin hub and colored icon-only dock. */
 import "./admin-central-hub.css";
+import "./admin-central-hub.js";
 import "./admin-reload-watch.css";
 import "./admin-system-watch.css";
 import "./dock-icon-color-authority.js";

@@ -1,7 +1,7 @@
 import { supabase } from './supabaseClient';
 
 const svg = {
-  admin: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4.5 6.5V12c0 4.7 3 7.4 7.5 9 4.5-1.6 7.5-4.3 7.5-9V6.5L12 3Z"/><path d="M9 12.2 11.1 14 15.5 9.7"/></svg>',
+  admin: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="1.5"/><rect x="14" y="4" width="6" height="6" rx="1.5"/><rect x="4" y="14" width="6" height="6" rx="1.5"/><path d="m17 13 .9 2.2 2.3.2-1.8 1.5.6 2.2-2-1.2-2 1.2.6-2.2-1.8-1.5 2.3-.2L17 13Z"/></svg>',
 };
 
 let access = null;
@@ -19,6 +19,19 @@ function roleName(role) {
   if (value === 'ADMIN') return 'Global Admin';
   if (value === 'SUPPORTER') return 'Supporter';
   return 'Moderation';
+}
+
+function selectedRegionId(regions, profile) {
+  const pickerValue = document.querySelector('.ec-region-picker select')?.value || '';
+  const storedSlug = localStorage.getItem('ec-active-region') || '';
+  const datasetSlug = document.documentElement.dataset.ecRegion || '';
+  const visibleName = document.querySelector('.ec-active-region-name')?.textContent?.trim() || '';
+  return regions.find((region) => pickerValue && (region.slug === pickerValue || region.id === pickerValue))?.id
+    || regions.find((region) => storedSlug && region.slug === storedSlug)?.id
+    || regions.find((region) => datasetSlug && region.slug === datasetSlug)?.id
+    || regions.find((region) => visibleName && region.name === visibleName)?.id
+    || profile?.home_region_id
+    || null;
 }
 
 function rightsFor({ profile, permissions, regionalAdmin, regionalPermissions }) {
@@ -50,23 +63,29 @@ async function loadAccess() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { access = null; return null; }
 
-    const [profileResult, permissionResult, regionalResult, moderationResult] = await Promise.all([
-      supabase.from('profiles').select('id,nickname,role,account_status,forum_moderator').eq('id', user.id).maybeSingle(),
+    const [profileResult, permissionResult, regionalResult, moderationResult, regionResult] = await Promise.all([
+      supabase.from('profiles').select('id,nickname,role,account_status,forum_moderator,home_region_id').eq('id', user.id).maybeSingle(),
       supabase.from('user_permissions').select('*').eq('user_id', user.id).maybeSingle(),
       supabase.from('regional_admin_assignments').select('region_id,active').eq('user_id', user.id).eq('active', true),
       supabase.from('regional_moderation_assignments').select('region_id,permissions,active').eq('user_id', user.id).eq('active', true),
+      supabase.from('regions').select('id,slug,name').eq('is_active', true),
     ]);
 
     const profile = profileResult.data;
     if (!profile || profile.account_status !== 'ACTIVE') { access = null; return null; }
 
-    const regionalPermissions = (moderationResult.data || []).flatMap((row) => Array.isArray(row.permissions) ? row.permissions.map((x) => String(x).toUpperCase()) : []);
+    const activeRegionId = selectedRegionId(regionResult.data || [], profile);
+    const regionalAdmin = Boolean(activeRegionId && (regionalResult.data || []).some((row) => row.region_id === activeRegionId && row.active !== false));
+    const regionalPermissions = (moderationResult.data || [])
+      .filter((row) => activeRegionId && row.region_id === activeRegionId && row.active !== false)
+      .flatMap((row) => Array.isArray(row.permissions) ? row.permissions.map((x) => String(x).toUpperCase()) : []);
     access = {
       user,
       profile,
       permissions: permissionResult.data || {},
-      regionalAdmin: Boolean((regionalResult.data || []).length),
+      regionalAdmin,
       regionalPermissions,
+      activeRegionId,
     };
     access.rights = rightsFor(access);
 
@@ -100,8 +119,8 @@ function grid() {
 }
 
 function removeCompetingAdminButtons(keep) {
-  document.querySelectorAll('[data-regional-admin-tools-bridge="1"], [data-ec-admin-primary="1"][data-ec-page="admin"]').forEach((node) => {
-    if (node !== keep) node.remove();
+  document.querySelectorAll('[data-regional-admin-tools-bridge="1"], [data-ec-admin-primary="1"][data-ec-page="admin"], [data-head-admin-tool="admin-tools"]').forEach((node) => {
+    if (node !== keep && node.dataset.ecAdminCentralHub !== '1') node.remove();
   });
 }
 
@@ -114,24 +133,23 @@ async function ensureButton() {
     return false;
   }
 
-  let button = menu.querySelector('[data-ec-admin-central-hub="1"]') || menu.querySelector('[data-head-admin-tool="admin-tools"]');
+  let button = menu.querySelector('[data-ec-admin-central-hub="1"]');
   if (!button) {
     button = document.createElement('button');
     button.type = 'button';
-    button.className = 'ec-compact-menu-item ec-dashboard-utility-button';
-    menu.appendChild(button);
+    button.className = 'ec-compact-menu-item ec-dashboard-utility-button ec-admin-central-entry';
   }
 
   button.dataset.ecAdminCentralHub = '1';
-  button.dataset.headAdminTool = 'admin-tools';
   button.dataset.ecCompactLabel = 'Admin-Zentrale';
   button.dataset.ecIconTone = 'admin';
   button.title = 'Admin-Zentrale';
   button.setAttribute('aria-label', 'Admin-Zentrale');
+  button.innerHTML = `<span class="ec-compact-menu-icon ec-admin-central-icon">${svg.admin}<b class="ec-admin-central-badge" aria-hidden="true">A</b></span><span class="ec-compact-menu-label">Admin-Zentrale</span>`;
+  button.dataset.ecAdminCentralReady = '1';
 
-  if (button.dataset.ecAdminCentralReady !== '1') {
-    button.innerHTML = `<span class="ec-compact-menu-icon">${svg.admin}</span><span class="ec-compact-menu-label">Admin-Zentrale</span>`;
-    button.dataset.ecAdminCentralReady = '1';
+  if (button.parentElement !== menu || menu.firstElementChild !== button) {
+    menu.prepend(button);
   }
 
   button.onclick = async (event) => {

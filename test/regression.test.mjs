@@ -47,3 +47,64 @@ test("supporter role remains gold with black nickname in clean layout",async()=>
 test("linked people presentation keeps online friends text-only and responsibilities profile-linked",async()=>{const code=await source("src/people-links-polish.js"),css=await source("src/people-links-polish.css");assert.match(code,/ec-online-friend/);assert.match(code,/ec-region-responsibility-person/);assert.match(code,/ec:open-profile/);assert.match(css,/\.ec-dock-detail-row>img\{display:none!important\}/);assert.match(css,/\.ec-responsibility-avatar\{display:block!important/);});
 
 test("service worker cleanup prevents stale application shells",async()=>{const main=await source("src/main.jsx");assert.match(main,/getRegistrations\(\)/);assert.match(main,/registration\.unregister\(\)/);assert.doesNotMatch(main,/serviceWorker\.register/);});
+
+
+test("deferred admin modules stay reachable instead of disappearing from the UI", async()=>{
+  const main=await source("src/main.jsx");
+  const deferred=await source("src/deferred-admin-enhancements.js");
+  assert.ok(main.includes('import "./deferred-admin-enhancements.js";'));
+  assert.ok(main.includes('import "./admin-central-hub.js";'), "shared admin center must load eagerly");
+  for(const module of [
+    "./admin-dashboard-modern.js","./admin-compact-enhancements.js","./admin-community-popup-manager.js","./admin-central-permissions.js",
+    "./business-account-admin-fix.js","./head-admin-activity-folders.js","./admin-reload-watch.js","./admin-system-watch.js",
+    "./profile-admin-tools-unified.js","./profile-admin-role-actions.js","./regional-admin-tools-bridge.js"
+  ]) assert.ok(deferred.includes(module), `missing deferred module: ${module}`);
+  for(const page of ["admin","reports","admin-forum","admin-account-review","adminTools","legal","profile","profile-preview","member-profile","members"])
+    assert.ok(deferred.includes(`\'${page}\'`) || deferred.includes(`"${page}"`), `missing deferred page route: ${page}`);
+  assert.ok(deferred.includes(".member-profile-page[data-profile-id]"));
+});
+
+test("core visible community surfaces remain wired while performance code changes", async()=>{
+  const app=await source("src/App.jsx");
+  for(const label of ["Nachrichten","Forum","Mitglieder","Gruppen","Events"])
+    assert.ok(app.includes(label), `missing visible community label: ${label}`);
+  for(const table of ["messages","forum_posts","community_events","community_ads","member_photos"])
+    assert.ok(app.includes(`from("${table}")`), `missing community data source: ${table}`);
+});
+
+
+test("Events navigation has a rendered page and Head Admin access stays visibly wired", async()=>{
+  const app=await source("src/App.jsx");
+  const main=await source("src/main.jsx");
+  assert.ok(app.includes('page === "events"'), "Events navigation target must render content");
+  assert.ok(main.includes('import "./admin-access-placement-final.js";'), "final admin access placement must load at startup");
+});
+
+
+test("head admin error center stays wired and system notifications open it", async()=>{
+  const main=await source("src/main.jsx");
+  const monitor=await source("src/error-monitor.js");
+  const center=await source("src/admin-error-center.js");
+  const notifications=await source("src/notification-center.js");
+  const network=await source("src/networkFetch.js");
+  const sql=await source("supabase/head_admin_error_center.sql");
+
+  assert.match(main,/import "\.\/error-monitor\.js"/);
+  assert.match(main,/import "\.\/admin-error-center\.js"/);
+  assert.match(monitor,/window\.addEventListener\("error"/);
+  assert.match(monitor,/unhandledrejection/);
+  assert.match(monitor,/ec:network-error/);
+  assert.match(monitor,/LAYOUT/);
+  assert.match(network,/record_client_error/);
+  assert.match(network,/response\.status >= 500/);
+  assert.match(center,/head_admin_error_summary/);
+  assert.match(center,/head_admin_error_feed/);
+  assert.match(center,/head_admin_set_error_status/);
+  assert.match(center,/ec:open-system-errors/);
+  assert.match(notifications,/SYSTEM_ERROR/);
+  assert.match(notifications,/ec:open-system-errors/);
+  assert.match(sql,/private\.app_error_events/);
+  assert.match(sql,/revoke all on table private\.app_error_events from public, anon, authenticated/);
+  assert.match(sql,/not public\.ec_is_head_admin\(\)/);
+  assert.match(sql,/grant execute on function public\.record_client_error[\s\S]*to authenticated/);
+});

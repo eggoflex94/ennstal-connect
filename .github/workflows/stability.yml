@@ -30,6 +30,12 @@ jobs:
         run: npm ci
       - name: Regression tests and production build
         run: npm run test:ci
+      - name: Install Playwright smoke-test runtime
+        run: |
+          npm install --no-save @playwright/test@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Browser visibility smoke tests
+        run: npx playwright test --config=playwright.config.mjs
       - name: Verify production output
         run: |
           test -f dist/index.html
@@ -37,6 +43,16 @@ jobs:
           grep -q 'data-role-theme' dist/assets/index-*.js
           grep -q 'role-theme-supporter' dist/assets/index-*.css
           grep -q '#ffe537' dist/assets/index-*.css
+      - name: Archive Playwright diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-diagnostics
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Archive verified production build
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v4
