@@ -3,6 +3,12 @@ import { supabase } from "./supabaseClient";
 const recent = new Map();
 const REPORT_COOLDOWN_MS = 30_000;
 let layoutTimer = null;
+const recentNetworkBursts = new Map();
+const NETWORK_BURST_COOLDOWN_MS = 60_000;
+
+function networkHost(endpoint) {
+  return String(endpoint || "").split("/")[0] || "network";
+}
 
 function text(value, max = 3000) {
   return String(value ?? "").replace(/\s+/g, " ").trim().slice(0, max);
@@ -75,13 +81,21 @@ window.addEventListener("unhandledrejection", (event) => {
 
 window.addEventListener("ec:network-error", (event) => {
   const d = event.detail || {};
+  const kind = d.kind || "request";
+  const host = networkHost(d.endpoint);
+  if (kind === "timeout" || kind === "network") {
+    const key = `${host}:${kind}`;
+    const last = recentNetworkBursts.get(key) || 0;
+    if (Date.now() - last < NETWORK_BURST_COOLDOWN_MS) return;
+    recentNetworkBursts.set(key, Date.now());
+  }
   void report({
     type: "NETWORK",
-    severity: Number(d.status) >= 500 || d.kind === "timeout" ? "ERROR" : "WARN",
-    title: d.kind === "timeout" ? "Server antwortet nicht" : `Netzwerkfehler${d.status ? ` HTTP ${d.status}` : ""}`,
+    severity: Number(d.status) >= 500 ? "ERROR" : "WARN",
+    title: kind === "timeout" ? "Serververbindung verzögert" : `Netzwerkfehler${d.status ? ` HTTP ${d.status}` : ""}`,
     message: d.message || "Eine Serveranfrage ist fehlgeschlagen.",
-    source: d.endpoint || "",
-    metadata: { method: d.method || "", status: d.status || null, kind: d.kind || "request" }
+    source: kind === "timeout" || kind === "network" ? host : (d.endpoint || ""),
+    metadata: { endpoint: d.endpoint || "", method: d.method || "", status: d.status || null, kind }
   });
 });
 
