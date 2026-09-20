@@ -191,8 +191,29 @@ async function login(page, role = "MEMBER") {
   await expect(page.locator(".app-recovery")).toHaveCount(0);
 }
 
-async function assertNavigationWorks(page, label) {
-  const button = page.locator("button:visible").filter({ hasText: new RegExp(label, "i") }).first();
+async function visibleButton(page, label) {
+  return page.locator("button:visible").filter({ hasText: new RegExp(label, "i") }).first();
+}
+
+async function openPersonalDock(page) {
+  const toggle = page.getByRole("button", { name: "Menü öffnen" });
+  await expect(toggle).toBeVisible();
+  await toggle.click();
+  await expect(page.locator(".ec-right-dock")).toBeVisible();
+}
+
+async function assertTopNavigationWorks(page, label) {
+  const button = await visibleButton(page, label);
+  await expect(button).toBeVisible();
+  await expect(button).toBeEnabled();
+  await button.click();
+  await expect(page.locator(".content-root")).toBeVisible();
+  await expect(page.locator(".app-recovery")).toHaveCount(0);
+}
+
+async function assertDockNavigationWorks(page, label) {
+  await openPersonalDock(page);
+  const button = await visibleButton(page, label);
   await expect(button).toBeVisible();
   await expect(button).toBeEnabled();
   await button.click();
@@ -206,27 +227,29 @@ test("member core functions remain visible and navigable", async ({ page }) => {
   for (const label of [
     "Startseite",
     "Mitglieder",
-    "Freunde",
-    "Anfragen",
-    "Blockiert",
-    "Nachrichten",
-    "Neuigkeiten",
-    "Community",
-    "Gruppen",
     "Forum",
-    "Mein Profil"
+    "Gruppen",
+    "Events",
+    "Fotos",
+    "Neuigkeiten",
+    "Community"
   ]) {
-    await assertNavigationWorks(page, label);
+    await assertTopNavigationWorks(page, label);
   }
 
-  await page.getByRole("button", { name: /Community/i }).first().click();
+  for (const label of ["Mein Profil", "Nachrichten", "Freunde", "Anfragen", "Blockiert"]) {
+    await assertDockNavigationWorks(page, label);
+  }
+
+  await assertTopNavigationWorks(page, "Community");
   await expect(page.locator(".community-hub-grid")).toBeVisible();
 });
 
 test("head admin keeps all admin entry points visible and usable", async ({ page }) => {
   await login(page, "HEAD_ADMIN");
 
-  const adminEntry = page.locator("button:visible").filter({ hasText: /Admin-Zentrale/i }).first();
+  await openPersonalDock(page);
+  const adminEntry = page.locator(".ec-right-dock button:visible").filter({ hasText: /Admin-Zentrale/i }).first();
   await expect(adminEntry).toBeVisible();
   await adminEntry.click();
 
@@ -240,10 +263,9 @@ test("head admin keeps all admin entry points visible and usable", async ({ page
     await expect(shortcut).toBeEnabled();
   }
 
-  await page.locator("button:visible").filter({ hasText: /Mitglieder/i }).first().click();
-  const memberCard = page.locator(".member-card[data-member-id]").filter({ hasText: "Zweites Mitglied" }).first();
+  const memberCard = page.locator(".admin-member-card").filter({ hasText: "Zweites Mitglied" }).first();
   await expect(memberCard).toBeVisible();
-  await memberCard.click();
+  await memberCard.locator(".admin-member-person-button").click();
   await expect(page.locator(".member-profile-page")).toBeVisible();
 
   const adminTools = page.getByRole("button", { name: /Admin Tools/i }).first();
