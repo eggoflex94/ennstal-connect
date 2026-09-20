@@ -1,7 +1,7 @@
 import { supabase } from "./supabaseClient";
 import "./admin-error-center.css";
 
-let allowed = null;
+let accessCache = { userId: null, allowed: false, checkedAt: 0 };
 let activeStatus = "OPEN";
 let refreshTimer = null;
 
@@ -9,15 +9,21 @@ const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&":"&a
 const fmt = (value) => value ? new Date(value).toLocaleString("de-AT") : "–";
 
 async function canUse() {
-  if (allowed !== null) return allowed;
   try {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return allowed = false;
+    if (!user?.id) {
+      accessCache = { userId: null, allowed: false, checkedAt: 0 };
+      return false;
+    }
+    if (accessCache.userId === user.id && Date.now() - accessCache.checkedAt < 15_000) {
+      return accessCache.allowed;
+    }
     const { data } = await supabase.from("profiles").select("role,account_status").eq("id", user.id).maybeSingle();
-    allowed = data?.account_status === "ACTIVE" && String(data?.role || "").toUpperCase() === "HEAD_ADMIN";
+    const allowed = data?.account_status === "ACTIVE" && String(data?.role || "").toUpperCase() === "HEAD_ADMIN";
+    accessCache = { userId: user.id, allowed, checkedAt: Date.now() };
     return allowed;
   } catch {
-    return allowed = false;
+    return false;
   }
 }
 
@@ -173,3 +179,9 @@ refreshTimer = window.setInterval(() => {
 }, 60_000);
 window.addEventListener("pagehide", () => clearInterval(refreshTimer), { once: true });
 void updateAdminTile();
+
+
+supabase?.auth?.onAuthStateChange?.(() => {
+  accessCache = { userId: null, allowed: false, checkedAt: 0 };
+  setTimeout(() => void updateAdminTile(), 100);
+});
