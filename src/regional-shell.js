@@ -1,6 +1,6 @@
 import { supabase } from './supabaseClient';
 
-const TOP_LINKS=[['⌂','Startseite','home'],['♟','Mitglieder','members'],['▤','Forum','forum'],['●','Gruppen','groups'],['▣','Events','events'],['📷','Fotos','photos'],['▦','Neuigkeiten','news'],['▥','Community','community']];
+const TOP_LINKS=[['⌂','Startseite','home'],['♟','Mitglieder','members'],['▤','Forum','forum'],['●','Gruppen','groups'],['▣','Events','events'],['▥','Community','community']];
 const DOCK_LINKS=[['●','Mein Profil','profile'],['✉','Nachrichten','messages'],['♥','Freunde','friends'],['◇','Anfragen','requests'],['⊘','Blockiert','blocked'],['⚙','Einstellungen','profile'],['?','Hilfe','help']];
 const FALLBACK_REGIONS=[{slug:'ennstal',name:'Ennstal'},{slug:'leoben-bruck-muerzzuschlag',name:'Leoben – Bruck – Mürzzuschlag'},{slug:'ueberregional',name:'Überregional'}];
 let regions=FALLBACK_REGIONS,activeRegion=null,regionalAssignments=[],currentProfile=null,profiles=[],showAllMembers=false;
