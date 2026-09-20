@@ -2155,3 +2155,119 @@ img.member-avatar,
   font-size:.88rem;
   line-height:1.35;
 }
+
+
+/* Members directory: high-visibility responsive pagination */
+.native-members-directory .native-members-pagination{
+  width:min(100%,760px)!important;
+  margin:30px auto 10px!important;
+  padding:12px!important;
+  display:grid!important;
+  grid-template-columns:minmax(118px,auto) minmax(0,1fr) minmax(118px,auto)!important;
+  align-items:center!important;
+  gap:12px!important;
+  border:1px solid rgba(188,205,221,.9)!important;
+  border-radius:20px!important;
+  background:rgba(255,255,255,.94)!important;
+  box-shadow:0 12px 32px rgba(42,67,91,.10)!important;
+  backdrop-filter:blur(12px)!important;
+  -webkit-backdrop-filter:blur(12px)!important;
+}
+.native-members-directory .native-members-pagination>button,
+.native-members-directory .native-members-page-numbers>button{
+  min-width:46px!important;
+  height:46px!important;
+  min-height:46px!important;
+  padding:0 16px!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  border:1px solid #cbd8e4!important;
+  border-radius:14px!important;
+  background:#fff!important;
+  color:#24384d!important;
+  box-shadow:0 5px 14px rgba(37,58,79,.08)!important;
+  font-size:.92rem!important;
+  font-weight:850!important;
+  line-height:1!important;
+  text-shadow:none!important;
+  opacity:1!important;
+  cursor:pointer!important;
+  transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease,background .16s ease,color .16s ease!important;
+}
+.native-members-directory .native-members-pagination>button{
+  white-space:nowrap!important;
+}
+.native-members-directory .native-members-pagination>button:hover:not(:disabled),
+.native-members-directory .native-members-page-numbers>button:hover:not(.active){
+  transform:translateY(-2px)!important;
+  border-color:#ff6b25!important;
+  background:#fff7f1!important;
+  color:#b94108!important;
+  box-shadow:0 9px 20px rgba(255,107,37,.15)!important;
+}
+.native-members-directory .native-members-pagination>button:focus-visible,
+.native-members-directory .native-members-page-numbers>button:focus-visible{
+  outline:3px solid rgba(15,99,201,.22)!important;
+  outline-offset:2px!important;
+}
+.native-members-directory .native-members-pagination>button:disabled{
+  background:#f1f5f8!important;
+  color:#8292a1!important;
+  border-color:#dce4eb!important;
+  box-shadow:none!important;
+  opacity:.72!important;
+  cursor:not-allowed!important;
+}
+.native-members-directory .native-members-page-numbers{
+  min-width:0!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  flex-wrap:wrap!important;
+  gap:8px!important;
+}
+.native-members-directory .native-members-page-numbers>button{
+  padding:0!important;
+}
+.native-members-directory .native-members-page-numbers>button.active,
+.native-members-directory .native-members-page-numbers>button[aria-current="page"]{
+  border-color:#25384c!important;
+  background:linear-gradient(145deg,#26394d,#172737)!important;
+  color:#fff!important;
+  box-shadow:0 10px 22px rgba(23,39,55,.24)!important;
+  transform:translateY(-1px)!important;
+}
+@media(max-width:720px){
+  .native-members-directory .native-members-pagination{
+    width:100%!important;
+    grid-template-columns:1fr 1fr!important;
+    gap:10px!important;
+    padding:10px!important;
+    border-radius:17px!important;
+  }
+  .native-members-directory .native-members-page-numbers{
+    grid-column:1/-1!important;
+    grid-row:1!important;
+    order:-1!important;
+  }
+  .native-members-directory .native-members-pagination>button{
+    width:100%!important;
+    min-width:0!important;
+  }
+}
+@media(max-width:420px){
+  .native-members-directory .native-members-pagination{
+    margin-top:22px!important;
+  }
+  .native-members-directory .native-members-pagination>button,
+  .native-members-directory .native-members-page-numbers>button{
+    height:44px!important;
+    min-height:44px!important;
+    border-radius:12px!important;
+    font-size:.86rem!important;
+  }
+  .native-members-directory .native-members-page-numbers{
+    gap:6px!important;
+  }
+}
