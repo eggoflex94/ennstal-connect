@@ -209,10 +209,10 @@ function ensureSupportNav() {
     void openSupport();
   };
 
-  const regionPicker = nav.querySelector(".ec-region-picker");
-  const dockToggle = nav.querySelector(".ec-dock-toggle");
-  if (regionPicker) nav.insertBefore(button, regionPicker);
-  else if (dockToggle) nav.insertBefore(button, dockToggle);
+  const regionPicker = nav.querySelector(":scope > .ec-region-picker");
+  const dockToggle = nav.querySelector(":scope > .ec-dock-toggle");
+  if (regionPicker) regionPicker.before(button);
+  else if (dockToggle) dockToggle.before(button);
   else nav.append(button);
 }
 
