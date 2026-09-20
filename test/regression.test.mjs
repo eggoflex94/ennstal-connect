@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 
 const source = async path => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
-const requiredMainModules = ["./notification-center.js","./privacy-center.js","./account-deletion-admin.js","./legal-evidence-admin.js","./admin-workspace.js","./admin-dashboard-modern.js","./admin-compact-enhancements.js","./regional-shell.js","./clean-profile-runtime.js","./clean-layout.css","./clean-components.css","./role-region-polish.css","./role-region-polish.js","./sidebar-compact-polish.css","./sidebar-compact-polish.js","./global-role-identity-polish.css","./global-role-identity-polish.js","./people-links-polish.css","./people-links-polish.js"];
+const requiredMainModules = ["./notification-center.js","./privacy-center.js","./account-deletion-admin.js","./legal-evidence-admin.js","./admin-workspace.js","./regional-shell.js","./clean-profile-runtime.js","./clean-layout.css","./clean-components.css","./role-region-polish.css","./sidebar-compact-polish.css","./global-role-identity-polish.css","./people-links-polish.css"];
 
 test("main entry keeps critical member/admin/regional modules wired without legacy layout stack", async () => {const main=await source("src/main.jsx");for(const module of requiredMainModules) assert.match(main,new RegExp(module.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")));for(const legacy of ["mobile-admin-production.css","member-grid-final.css","role-theme-lock.css","profile-simple.css","regional-shell.css"])assert.doesNotMatch(main,new RegExp(legacy.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")));assert.doesNotMatch(main,/live-notifications\.js/);});
 
@@ -324,4 +324,20 @@ test("point suspension migration keeps status fields consistent at minus ten", a
   assert.match(sql,/account_status = 'SUSPENDED'/);
   assert.match(sql,/is_suspended = true/);
   assert.match(sql,/ec_is_protected_admin_target/);
+});
+
+
+test("legacy polish scripts that mutate React-owned DOM stay disabled", async()=>{
+  const main=await source("src/main.jsx");
+  for(const script of [
+    "role-region-polish.js",
+    "sidebar-compact-polish.js",
+    "global-role-identity-polish.js",
+    "people-links-polish.js",
+    "community-contact-cleanup.js",
+    "home-modern-final.js",
+    "profile-layout-organizer.js"
+  ]){
+    assert.doesNotMatch(main,new RegExp('^import "\\.\\/'+script.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+'";','m'));
+  }
 });
