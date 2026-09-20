@@ -252,3 +252,19 @@ test("municipality partnership module stays wired and scoped", async()=>{
   assert.match(sql,/ec_municipality_can_manage/);
   assert.match(sql,/reporter_id = auth\.uid\(\)/);
 });
+
+
+test("primary navigation stays focused and Community groups secondary areas", async()=>{
+  const shell=await source("src/regional-shell.js");
+  const app=await source("src/App.jsx");
+  const municipality=await source("src/municipality-module.js");
+  const topLinks=shell.match(/const TOP_LINKS=\[(.*?)\];/s)?.[1]||"";
+  for(const label of ["Startseite","Mitglieder","Forum","Gruppen","Events","Community"]) assert.ok(topLinks.includes(label), `missing primary nav item: ${label}`);
+  for(const label of ["Fotos","Neuigkeiten"]) assert.ok(!topLinks.includes(label), `secondary item leaked into primary nav: ${label}`);
+  assert.match(app,/className="community-section-links"/);
+  assert.match(app,/page:"news"/);
+  assert.match(app,/page:"photos"/);
+  assert.match(app,/page:"municipality"/);
+  assert.match(app,/Gemeinde & Service/);
+  assert.ok(!municipality.includes("nav.appendChild(button)"));
+});
