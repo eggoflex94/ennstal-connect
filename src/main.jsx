@@ -219,7 +219,7 @@ class AppErrorBoundary extends React.Component {
 }
 
 async function removeLegacyAppShellOnce() {
-  const cleanupKey = "ec-legacy-cache-cleanup-v5";
+  const cleanupKey = "ec-legacy-cache-cleanup-v6";
   try {
     if (localStorage.getItem(cleanupKey) === "done") return;
     if ("serviceWorker" in navigator) {
