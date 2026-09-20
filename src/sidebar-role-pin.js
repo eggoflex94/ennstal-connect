@@ -22,8 +22,8 @@ async function load(){
   if(busy||!supabase)return;
   busy=true;
   try{
-    const {data:auth}=await supabase.auth.getUser();
-    const uid=auth?.user?.id||null;
+    const {data:auth}=await supabase.auth.getSession();
+    const uid=auth?.session?.user?.id||null;
     if(!uid)return;
     const [{data:profile},{data:regions},{data:assignments}]=await Promise.all([
       supabase.from('profiles').select('id,nickname,role,account_badge,home_region_id').eq('id',uid).maybeSingle(),
