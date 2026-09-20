@@ -1,45 +1,19 @@
-/* Navigation runtime without full-page DOM observation.
-   Touch devices keep the complete desktop navigation DOM. */
+/* Mobile navigation must never reparent React-owned navigation buttons.
+   React reconciles the .ec-top-nav children itself; moving those nodes into
+   another container caused intermittent insertBefore NotFoundError failures
+   during navigation and responsive layout changes. */
 const MOBILE_QUERY = '(max-width: 760px)';
-const TOUCH_QUERY = '(pointer: coarse)';
 let queued = false;
-
-function directPageButtons(nav) {
-  return [...nav.children].filter((node) => node.matches?.('button[data-ec-page]'));
-}
-
-function enableMobileNav(nav) {
-  let rail = nav.querySelector(':scope > .ec-mobile-nav-rail');
-  if (!rail) {
-    rail = document.createElement('div');
-    rail.className = 'ec-mobile-nav-rail';
-    rail.setAttribute('role', 'group');
-    rail.setAttribute('aria-label', 'Hauptbereiche');
-    nav.prepend(rail);
-  }
-  directPageButtons(nav).forEach((button) => rail.appendChild(button));
-  nav.classList.add('ec-mobile-nav-ready');
-}
-
-function disableMobileNav(nav) {
-  const rail = nav.querySelector(':scope > .ec-mobile-nav-rail');
-  if (!rail) return;
-  const picker = nav.querySelector(':scope > .ec-region-picker');
-  [...rail.children].forEach((button) => nav.insertBefore(button, picker || rail));
-  rail.remove();
-  nav.classList.remove('ec-mobile-nav-ready');
-}
 
 function sync() {
   queued = false;
   const nav = document.querySelector('.ec-top-nav');
   if (!nav) return;
-  if (window.matchMedia(TOUCH_QUERY).matches) {
-    disableMobileNav(nav);
-    return;
-  }
-  if (window.matchMedia(MOBILE_QUERY).matches) enableMobileNav(nav);
-  else disableMobileNav(nav);
+  nav.classList.toggle('ec-mobile-nav-ready', window.matchMedia(MOBILE_QUERY).matches);
+  // Clean up the legacy rail only when it is empty. Never move React-owned
+  // buttons out of it here; a page reload after deployment removes old rails.
+  const legacyRail = nav.querySelector(':scope > .ec-mobile-nav-rail');
+  if (legacyRail && !legacyRail.children.length) legacyRail.remove();
 }
 
 function schedule() {
