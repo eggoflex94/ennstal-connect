@@ -20,7 +20,7 @@ async function count(table,filter){try{let q=supabase.from(table).select('*',{co
 async function load(){
   if(loading||!supabase)return;loading=true;
   try{
-    const {data:{user}}=await supabase.auth.getUser();if(!user)return;
+    const {data:{session}}=await supabase.auth.getSession();const user=session?.user;if(!user)return;
     const [{data:profile},{data:regions},{data:assignments},{data:friendships}]=await Promise.all([
       supabase.from('profiles').select('id,nickname,role,home_region_id,account_badge,account_status').eq('id',user.id).maybeSingle(),
       supabase.from('regions').select('id,slug,name').eq('is_active',true).order('sort_order'),
