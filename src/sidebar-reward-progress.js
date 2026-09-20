@@ -36,7 +36,7 @@ async function load(force=false){
   })();
   return request;
 }
-function ensureCard(){const dock=q('.ec-right-dock');if(!dock)return null;let card=q('.ec-dock-reward-card',dock);if(!card){card=document.createElement('section');card.className='ec-dock-reward-card';card.setAttribute('aria-label','Community-Belohnungen');const communityLabel=[...dock.querySelectorAll('.ec-dock-section-label')].find(node=>(node.textContent||'').trim().toUpperCase()==='COMMUNITY');if(communityLabel)dock.insertBefore(card,communityLabel);else q('.ec-dock-admin-slot',dock)?.insertAdjacentElement('afterend',card)||dock.appendChild(card)}return card}
+function ensureCard(){const dock=q('.ec-right-dock');if(!dock)return null;let card=q('.ec-dock-reward-card',dock);if(!card){card=document.createElement('section');card.className='ec-dock-reward-card';card.setAttribute('aria-label','Community-Belohnungen');const communityLabel=[...dock.querySelectorAll(':scope > .ec-dock-section-label')].find(node=>(node.textContent||'').trim().toUpperCase()==='COMMUNITY');if(communityLabel)communityLabel.before(card);else q(':scope > .ec-dock-admin-slot',dock)?.insertAdjacentElement('afterend',card)||dock.appendChild(card)}return card}
 function prestigeCopy(state){const score=Number(state.score||0),prestige=state.prestige||'',next=state.prestige_next_score==null?null:Number(state.prestige_next_score);if(score<300)return `Noch ${300-score} Punkte bis Prestige Bronze`;if(!next)return 'Prestige Platin erreicht';return `${prestige} · noch ${Math.max(0,next-score)} Punkte bis zur nächsten Stufe`}
 function render(state){
   const card=ensureCard();if(!card)return;
