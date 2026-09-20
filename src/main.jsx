@@ -28,6 +28,8 @@ import "./fake-account-admin.js";
 import "./help-center.js";
 import "./notification-center.css";
 import "./notification-center.js";
+import "./error-monitor.js";
+import "./admin-error-center.js";
 import "./member-onboarding.js";
 import "./admin-workspace.css";
 import "./admin-workspace.js";
