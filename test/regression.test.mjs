@@ -368,3 +368,14 @@ test("legacy duplicate friend and group blocks are removed from member profile",
   assert.doesNotMatch(block,/className="public-friends"/);
   assert.doesNotMatch(block,/<MemberGroups member={member}/);
 });
+
+
+test("personal dashboard stays off-canvas on narrow screens", async()=>{
+  const code=await source("src/personal-dashboard-final-fix.js");
+  const css=await source("src/layout-overlap-authority.css");
+  assert.match(code,/max-width:900px/);
+  assert.match(code,/classList\.remove\('ec-document-flow-dock'\)/);
+  assert.match(code,/document\.body\.appendChild\(dock\)/);
+  assert.match(code,/addEventListener\('resize',schedule/);
+  assert.doesNotMatch(css,/ec-stable-personal-dock\.ec-document-flow-dock\{grid-column:1/);
+});

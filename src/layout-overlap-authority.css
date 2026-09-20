@@ -30,7 +30,7 @@ img,video,canvas,svg{max-width:100%;height:auto}
 @media(max-width:900px){
   .ec-regional-ui .modern-main{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:16px!important;width:100%!important;max-width:100%!important;padding-left:14px!important;padding-right:14px!important}
   .ec-regional-ui .modern-main>.content-root{grid-column:1!important;width:100%!important;max-width:100%!important;margin:0!important}
-  .ec-right-dock.ec-stable-personal-dock.ec-document-flow-dock{grid-column:1!important;position:static!important;inset:auto!important;width:100%!important;max-width:100%!important;height:auto!important;max-height:none!important;overflow:visible!important}
+  .ec-right-dock.ec-document-flow-dock{grid-column:auto!important}
   .my-area-layout,.ec-clean-editor.my-area-layout{grid-template-columns:minmax(0,1fr)!important}
   .my-area-layout .my-profile-card{max-width:min(360px,100%)!important;margin:0 auto!important}
   .profile-editor-grid,.profile-typography-grid,.ec-clean-profile-data,.form-grid{grid-template-columns:minmax(0,1fr)!important}
