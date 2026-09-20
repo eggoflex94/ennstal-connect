@@ -30,7 +30,7 @@ test("clean layout has mobile dock and single-column member fallback",async()=>{
 
 test("clean components keep compact profile and dock surfaces",async()=>{const css=await source("src/clean-components.css");assert.match(css,/\.ec-clean-profile/);assert.match(css,/\.ec-dock-identity/);assert.match(css,/\.ec-dock-detail/);assert.match(css,/member-card/);});
 
-test("notification center remains private and realtime",async()=>{const code=await source("src/notification-center.js");assert.match(code,/auth\.getUser\(\)/);assert.match(code,/\.eq\("user_id",uid\)/);assert.match(code,/member_mark_notification_read/);assert.match(code,/removeChannel\(channel\)/);});
+test("notification center remains private and realtime",async()=>{const code=await source("src/notification-center.js");assert.match(code,/auth\.getSession\(\)/);assert.doesNotMatch(code,/auth\.getUser\(\)/);assert.match(code,/\.eq\("user_id",uid\)/);assert.match(code,/member_mark_notification_read/);assert.match(code,/removeChannel\(channel\)/);});
 
 test("friend requests use the canonical friendships table",async()=>{const code=await source("src/Friends.jsx");assert.match(code,/from\("friendships"\)/);assert.match(code,/\.eq\("receiver_id", user\.id\)/);});
 
@@ -122,4 +122,26 @@ test("error center does not depend on auth user endpoint and stays visible on ba
   assert.match(center,/head_admin_error_summary/);
   assert.match(network,/head_admin_error_summary/);
   assert.match(network,/head_admin_error_feed/);
+});
+
+
+test("high-frequency UI modules do not hammer the auth user endpoint", async()=>{
+  const paths=[
+    "src/sidebar-reward-progress.js",
+    "src/regional-shell.js",
+    "src/sidebar-friends-newsfeed.js",
+    "src/personal-dashboard-final-fix.js",
+    "src/notification-center.js",
+    "src/dashboard-top-polish.js",
+    "src/role-region-polish.js",
+    "src/sidebar-role-pin.js"
+  ];
+  for(const path of paths){
+    const code=await source(path);
+    assert.ok(!code.includes("auth.getUser()"), `${path} must use local session data for repeated UI identity reads`);
+    assert.ok(code.includes("auth.getSession()"), `${path} must keep a local session identity source`);
+  }
+  const network=await source("src/networkFetch.js");
+  assert.match(network,/isAuthUserRead/);
+  assert.match(network,/10_000/);
 });

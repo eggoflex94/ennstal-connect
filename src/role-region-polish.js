@@ -56,9 +56,9 @@ async function loadContext(force = false) {
       supabase.from('regional_admin_assignments').select('user_id,region_id,active').eq('active', true),
       supabase.from('regional_moderation_assignments').select('user_id,region_id,permissions,active').eq('active', true),
       supabase.from('profiles').select('id,nickname,role,home_region_id,account_badge,avatar_url,account_status').eq('account_status', 'ACTIVE'),
-      supabase.auth.getUser()
+      supabase.auth.getSession()
     ]);
-    regions = regionRows || []; regionalAdmins = assignmentRows || []; regionalModeration = moderationRows || []; profiles = profileRows || []; currentUserId = authData?.user?.id || null; lastRefresh = Date.now();
+    regions = regionRows || []; regionalAdmins = assignmentRows || []; regionalModeration = moderationRows || []; profiles = profileRows || []; currentUserId = authData?.session?.user?.id || null; lastRefresh = Date.now();
   } catch (error) { console.warn('Rollen- und Regionsdarstellung konnte nicht vollständig geladen werden:', error); }
   finally { refreshRunning = false; }
 }

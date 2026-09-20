@@ -103,7 +103,8 @@ async function refresh() {
 function queueRefresh(delay = 120) { clearTimeout(refreshTimer); refreshTimer = setTimeout(() => void refresh(), delay); }
 
 async function start() {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
   if (!user?.id) return;
   currentUserId = user.id;
   ensureCard();

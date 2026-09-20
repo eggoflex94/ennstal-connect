@@ -77,7 +77,9 @@ export function createNetworkFetch(fetchImpl, timeoutMs = 6_000, readCacheMs = 9
     const safeRead = method === 'GET' || method === 'HEAD' || safeRpcRead;
     const attempts = safeRead ? 2 : 1;
     const isSupabaseRestRead = safeRead && /\/rest\/v1\//i.test(url);
-    const readKey = isSupabaseRestRead
+    const isAuthUserRead = safeRead && /\/auth\/v1\/user(?:[/?#]|$)/i.test(url);
+    const dedupeRead = isSupabaseRestRead || isAuthUserRead;
+    const readKey = dedupeRead
       ? `${method}|${url}|${requestBodyKey(init)}|${requestHeader(input, init, 'authorization')}|${requestHeader(input, init, 'accept-profile')}`
       : '';
 
@@ -146,7 +148,8 @@ export function createNetworkFetch(fetchImpl, timeoutMs = 6_000, readCacheMs = 9
     const pending = execute()
       .then((response) => {
         if (response.ok && readCacheMs > 0) {
-          recentReads.set(readKey, { response: response.clone(), expiresAt: Date.now() + readCacheMs });
+          const ttl = isAuthUserRead ? Math.max(readCacheMs, 10_000) : readCacheMs;
+          recentReads.set(readKey, { response: response.clone(), expiresAt: Date.now() + ttl });
         }
         return response;
       })

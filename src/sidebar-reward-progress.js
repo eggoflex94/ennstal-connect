@@ -18,8 +18,8 @@ async function load(force=false){
   if(request)return request;
   request=(async()=>{
     try{
-      const {data:{user}}=await withTimeout(supabase.auth.getUser(),5000);
-      if(!user?.id)return null;
+      const {data:{session}}=await withTimeout(supabase.auth.getSession(),5000);
+      const user=session?.user;if(!user?.id)return null;
       const [{data:progress,error:progressError},{data:profile,error:profileError}]=await withTimeout(Promise.all([
         supabase.rpc('community_activity_progress'),
         supabase.from('profiles').select('total_online_seconds').eq('id',user.id).maybeSingle()
