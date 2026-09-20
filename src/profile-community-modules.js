@@ -17,7 +17,6 @@ import './activity-flame-card-restore.css';
 import './homepage-post-typography.css';
 import './homepage-supabase-bridge.js';
 import './homepage-final.css';
-import './hide-news-final.js';
 import './homepage-create-final.js';
 import './homepage-global-final.js';
 import './homepage-layout-final.js';
