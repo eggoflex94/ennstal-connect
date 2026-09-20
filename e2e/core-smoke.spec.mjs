@@ -218,7 +218,7 @@ async function openPersonalDock(page) {
 
 async function assertTopNavigationWorks(page, label) {
   const escaped = label.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&");
-  const button = page.locator(".ec-top-nav").getByRole("button", { name: new RegExp("^" + escaped + "$", "i") }).first();
+  const button = page.locator(".ec-top-nav button:visible, .modern-nav button:visible").filter({ hasText: new RegExp("^" + escaped + "$", "i") }).first();
   await expect(button).toBeVisible();
   await expect(button).toBeEnabled();
   const hit = await button.evaluate((element) => {
@@ -293,9 +293,9 @@ test("head admin keeps all admin entry points visible and usable", async ({ page
 
   const hub = page.getByRole("dialog", { name: "Admin-Zentrale" });
   await expect(hub).toBeVisible();
-  await expect(hub.getByRole("button", { name: /Team-Aktivitäten/i })).toBeVisible();
-  await expect(hub.getByRole("button", { name: /Verwaltung/i })).toBeVisible();
-  await hub.getByRole("button", { name: /Verwaltung/i }).click();
+  await expect(hub.locator('[data-admin-hub-action="admin-log"]')).toBeVisible();
+  await expect(hub.locator('[data-admin-hub-action="admin"]')).toBeVisible();
+  await hub.locator('[data-admin-hub-action="admin"]').click();
 
   await expect(page.locator(".admin-page")).toBeVisible();
   await expect(page.locator(".app-recovery")).toHaveCount(0);
@@ -362,7 +362,7 @@ for (const [role, expected] of Object.entries(ROLE_VISIBILITY_MATRIX)) {
     await login(page, role);
 
     for (const label of expected.top) {
-      const button = page.locator(".ec-top-nav").getByRole("button", { name: new RegExp(label, "i") }).first();
+      const button = page.locator(".ec-top-nav button:visible, .modern-nav button:visible").filter({ hasText: new RegExp(label, "i") }).first();
       await expect(button, `${role}: ${label} must stay visible in top navigation`).toBeVisible();
       await expect(button).toBeEnabled();
     }
@@ -397,10 +397,10 @@ test("community admin sees one central hub and no head-admin-only areas", async 
 
   const hub = page.getByRole("dialog", { name: "Admin-Zentrale" });
   await expect(hub).toBeVisible();
-  await expect(hub.getByRole("button", { name: /Verwaltung/i })).toBeVisible();
-  await expect(hub.getByRole("button", { name: /Team-Aktivitäten/i })).toHaveCount(0);
+  await expect(hub.locator('[data-admin-hub-action="admin"]')).toBeVisible();
+  await expect(hub.locator('[data-admin-hub-action="admin-log"]')).toHaveCount(0);
 
-  await hub.getByRole("button", { name: /Verwaltung/i }).click();
+  await hub.locator('[data-admin-hub-action="admin"]').click();
   await expect(page.locator(".admin-page")).toBeVisible();
   await expect(page.locator(".admin-member-card")).toHaveCount(2);
 
@@ -424,8 +424,8 @@ test("regional admin sees only regional admin-center areas", async ({ page }) =>
   for (const label of ["Admin-Forum", "Mitglieder", "Gruppen", "Neuigkeiten", "Community"]) {
     await expect(hub.getByRole("button", { name: new RegExp(label, "i") })).toBeVisible();
   }
-  await expect(hub.getByRole("button", { name: /Verwaltung/i })).toHaveCount(0);
-  await expect(hub.getByRole("button", { name: /Team-Aktivitäten/i })).toHaveCount(0);
+  await expect(hub.locator('[data-admin-hub-action="admin"]')).toHaveCount(0);
+  await expect(hub.locator('[data-admin-hub-action="admin-log"]')).toHaveCount(0);
 });
 
 
