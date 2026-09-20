@@ -110,8 +110,9 @@ function renderProgress(section) {
     card = document.createElement('div');
     card.className = 'ec-activity-progress';
     const select = section.querySelector('select[name="profile_layout"]');
-    if (select) section.insertBefore(card, select);
-    else section.appendChild(card);
+    const directReference = select && select.parentElement === section ? select : null;
+    if (directReference) directReference.before(card);
+    else section.prepend(card);
   }
 
   if (!progress) {
