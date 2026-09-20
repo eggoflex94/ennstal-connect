@@ -167,3 +167,26 @@ test("admin dashboard actions navigate instead of silently failing on missing DO
   assert.doesNotMatch(code,/\["Meldungen",d\.reports,\(\)=>scrollTo\("\.report-list"\)\]/);
   assert.doesNotMatch(code,/\["✓ Verifizierungen",\(\)=>document\.querySelector\("\.admin-review-button"\)\?\.click\(\)\]/);
 });
+
+
+test("first-paint assets stay lightweight, cacheable and preloaded", async()=>{
+  const app=await source("src/App.jsx");
+  const memberCard=await source("src/MemberCardView.jsx");
+  const regional=await source("src/regional-shell.js");
+  const main=await source("src/main.jsx");
+  const index=await source("index.html");
+  const headers=await source("public/_headers");
+  const avatar=await source("public/community-default-avatar-fast.svg");
+
+  for(const code of [app,memberCard,regional])
+    assert.ok(code.includes("/community-default-avatar-fast.svg"), "visible fallback avatar must use lightweight SVG");
+
+  assert.ok(!app.includes('const DEFAULT_AVATAR = "/community-default-avatar.png"'));
+  assert.match(index,/preconnect" href="https:\/\/eqfvhgiyrofjscvimvrc\.supabase\.co"/);
+  assert.match(index,/preload" as="image" href="\/ennstal-connect-wordmark\.svg"/);
+  assert.match(index,/preload" as="image" href="\/community-default-avatar-fast\.svg"/);
+  assert.match(headers,/\/\*\.svg[\s\S]*stale-while-revalidate=86400/);
+  assert.match(headers,/\/\*\.png[\s\S]*stale-while-revalidate=86400/);
+  assert.match(main,/ec-legacy-cache-cleanup-v6/);
+  assert.ok(avatar.length < 10000, "fallback avatar must remain lightweight");
+});
