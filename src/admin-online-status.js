@@ -24,7 +24,11 @@ async function addAdminOnlineStatusControl() {
     checkbox.name = "hide_online_status";
     checkbox.checked = !!profile.hide_online_status;
     label.append(checkbox, document.createTextNode(" Online- und „zuletzt aktiv“-Status verbergen"));
-    form.insertBefore(label, form.querySelector("button"));
+    const directAction = [...form.children].find((child) =>
+      child.matches?.("button,.profile-editor-actions")
+    );
+    if (directAction) directAction.before(label);
+    else form.appendChild(label);
     return true;
   } finally {
     loading = false;
