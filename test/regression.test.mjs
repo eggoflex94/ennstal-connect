@@ -60,7 +60,7 @@ test("deferred admin modules stay reachable instead of disappearing from the UI"
   ]) assert.ok(deferred.includes(module), `missing deferred module: ${module}`);
   for(const page of ["admin","reports","admin-forum","admin-account-review","adminTools","legal","profile","profile-preview","member-profile","members"])
     assert.ok(deferred.includes(`\'${page}\'`) || deferred.includes(`"${page}"`), `missing deferred page route: ${page}`);
-  assert.match(deferred,/member-profile-page\\[data-profile-id\\]/);
+  assert.ok(deferred.includes(".member-profile-page[data-profile-id]"));
 });
 
 test("core visible community surfaces remain wired while performance code changes", async()=>{
