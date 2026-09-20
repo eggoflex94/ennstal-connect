@@ -52,7 +52,7 @@ test("service worker cleanup prevents stale application shells",async()=>{const 
 test("deferred admin modules stay reachable instead of disappearing from the UI", async()=>{
   const main=await source("src/main.jsx");
   const deferred=await source("src/deferred-admin-enhancements.js");
-  assert.match(main,/import "\\.\\/deferred-admin-enhancements\\.js"/);
+  assert.ok(main.includes('import "./deferred-admin-enhancements.js";'));
   for(const module of [
     "./admin-dashboard-modern.js","./admin-compact-enhancements.js","./admin-community-popup-manager.js","./admin-central-permissions.js",
     "./business-account-admin-fix.js","./head-admin-activity-folders.js","./admin-central-hub.js","./admin-reload-watch.js","./admin-system-watch.js",
