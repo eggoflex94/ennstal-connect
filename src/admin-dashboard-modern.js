@@ -1,3 +1,4 @@
+import "./admin-dashboard-modern.css";
 import { supabase } from "./supabaseClient";
 let mounted=false,realtimeProbe=null;
 const el=(t,c,x)=>{const n=document.createElement(t);if(c)n.className=c;if(x!==undefined)n.textContent=x;return n;};
