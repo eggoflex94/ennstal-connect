@@ -208,13 +208,29 @@ async function assertTopNavigationWorks(page, label) {
   const button = await visibleButton(page, label);
   await expect(button).toBeVisible();
   await expect(button).toBeEnabled();
-  const clickable = await button.evaluate((element) => {
+  const hit = await button.evaluate((element) => {
     const rect = element.getBoundingClientRect();
-    if (!rect.width || !rect.height) return false;
-    const top = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
-    return top === element || Boolean(top?.closest("button") === element);
+    if (!rect.width || !rect.height) return { clickable: false, reason: "zero-size" };
+    const x = rect.left + rect.width / 2;
+    const y = rect.top + rect.height / 2;
+    const top = document.elementFromPoint(x, y);
+    return {
+      clickable: top === element || Boolean(top?.closest("button") === element),
+      target: {
+        tag: element.tagName,
+        className: String(element.className || ""),
+        text: String(element.textContent || "").trim(),
+        rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height }
+      },
+      top: top ? {
+        tag: top.tagName,
+        className: String(top.className || ""),
+        id: top.id || "",
+        text: String(top.textContent || "").trim().slice(0, 160)
+      } : null
+    };
   });
-  expect(clickable, `${label} must not be covered by another element`).toBe(true);
+  expect(hit.clickable, `${label} must not be covered: ${JSON.stringify(hit)}`).toBe(true);
   await button.evaluate((element) => element.click());
   await expect(page.locator(".content-root")).toBeVisible();
   await expect(page.locator(".app-recovery")).toHaveCount(0);
