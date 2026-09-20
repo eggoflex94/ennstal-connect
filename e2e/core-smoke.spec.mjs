@@ -259,8 +259,10 @@ test("head admin keeps all admin entry points visible and usable", async ({ page
   await expect(page.getByRole("heading", { name: "Admin-Zentrale" })).toBeVisible();
   await expect(page.locator(".app-recovery")).toHaveCount(0);
 
+  const shortcuts = page.locator(".admin-dashboard-shortcuts");
+  await expect(shortcuts).toBeVisible();
   for (const label of ["Mitglieder", "Meldungen", "Admin-Forum", "Community", "Neuigkeiten", "Kontoschutz"]) {
-    const shortcut = page.locator("button:visible").filter({ hasText: new RegExp(label, "i") }).first();
+    const shortcut = shortcuts.locator(".admin-dashboard-action:visible").filter({ hasText: new RegExp(label, "i") }).first();
     await expect(shortcut).toBeVisible();
     await expect(shortcut).toBeEnabled();
   }
