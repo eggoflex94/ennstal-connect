@@ -217,15 +217,27 @@ async function openPersonalDock(page) {
 }
 
 async function assertTopNavigationWorks(page, label) {
-  const escaped = label.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&");
-  const button = page.locator(".ec-top-nav button:visible, .modern-nav button:visible").filter({ hasText: new RegExp("^" + escaped + "$", "i") }).first();
+  const pageByLabel = {
+    "Startseite": "home",
+    "Mitglieder": "members",
+    "Forum": "forum",
+    "Gruppen": "groups",
+    "Events": "events",
+    "Fotos": "photos",
+    "Neuigkeiten": "news",
+    "Community": "community"
+  };
+  const target = pageByLabel[label];
+  const button = target
+    ? page.locator(`.ec-top-nav [data-ec-page="${target}"]`).first()
+    : page.getByRole("button", { name: new RegExp(label, "i") }).first();
   await expect(button).toBeVisible();
   await expect(button).toBeEnabled();
   const hit = await button.evaluate((element) => {
     const rect = element.getBoundingClientRect();
     if (!rect.width || !rect.height) return { clickable: false, reason: "zero-size" };
-    const x = rect.left + rect.width / 2;
-    const y = rect.top + rect.height / 2;
+    const x = Math.min(window.innerWidth - 1, Math.max(0, rect.left + Math.min(rect.width / 2, 20)));
+    const y = Math.min(window.innerHeight - 1, Math.max(0, rect.top + rect.height / 2));
     const top = document.elementFromPoint(x, y);
     return {
       clickable: top === element || Boolean(top?.closest("button") === element),
@@ -362,7 +374,8 @@ for (const [role, expected] of Object.entries(ROLE_VISIBILITY_MATRIX)) {
     await login(page, role);
 
     for (const label of expected.top) {
-      const button = page.locator(".ec-top-nav button:visible, .modern-nav button:visible").filter({ hasText: new RegExp(label, "i") }).first();
+      const pageByLabel = { "Startseite":"home", "Mitglieder":"members", "Forum":"forum", "Gruppen":"groups", "Events":"events", "Fotos":"photos", "Neuigkeiten":"news", "Community":"community" };
+      const button = page.locator(`.ec-top-nav [data-ec-page="${pageByLabel[label]}"]`).first();
       await expect(button, `${role}: ${label} must stay visible in top navigation`).toBeVisible();
       await expect(button).toBeEnabled();
     }
