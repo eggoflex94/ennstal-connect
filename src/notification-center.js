@@ -145,8 +145,8 @@ function ensureOptionalBell(){
 async function mount(){
   if(mounted||!supabase)return;
   try{
-    const result=await withTimeout(supabase.auth.getUser(),7000,"Anmeldung antwortet nicht.");
-    const user=result.data?.user;if(!user)return;
+    const result=await withTimeout(supabase.auth.getSession(),7000,"Anmeldung antwortet nicht.");
+    const user=result.data?.session?.user;if(!user)return;
     uid=user.id;mounted=true;ensureOptionalBell();scheduleBadge();
     if(channel)try{await supabase.removeChannel(channel)}catch{}
     channel=supabase.channel(`ec-notification-center-${uid}`).on("postgres_changes",{event:"INSERT",schema:"public",table:"notifications",filter:`user_id=eq.${uid}`},payload=>{scheduleBadge();void popup(payload.new)}).on("postgres_changes",{event:"UPDATE",schema:"public",table:"notifications",filter:`user_id=eq.${uid}`},scheduleBadge).subscribe();
