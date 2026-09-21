@@ -183,37 +183,8 @@ async function openSupport() {
   close.focus();
 }
 
-function findNav() {
-  return document.querySelector(".ec-top-nav")
-    || document.querySelector(".ec-regional-shell .regional-topbar")
-    || document.querySelector(".ec-regional-shell header nav")
-    || document.querySelector(".modern-nav");
-}
-
-function ensureSupportNav() {
-  const nav = findNav();
-  if (!nav) return;
-
-  document.querySelectorAll(".ec-support-nav-button").forEach((existing) => {
-    if (existing.parentElement !== nav) existing.remove();
-  });
-  if (nav.querySelector(".ec-support-nav-button")) return;
-
-  const button = createButton("Support", "ec-support-nav-button");
-  button.setAttribute("aria-label", "Support öffnen");
-  button.setAttribute("title", "Support");
-  button.innerHTML = '<b aria-hidden="true">?</b><span>Support</span>';
-  button.onclick = (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    void openSupport();
-  };
-
-  const regionPicker = nav.querySelector(":scope > .ec-region-picker");
-  const dockToggle = nav.querySelector(":scope > .ec-dock-toggle");
-  if (regionPicker) regionPicker.before(button);
-  else if (dockToggle) dockToggle.before(button);
-  else nav.append(button);
+function removeLegacySupportNav() {
+  document.querySelectorAll(".ec-support-nav-button").forEach((node) => node.remove());
 }
 
 function removeResponsibilityLabels() {
@@ -251,7 +222,7 @@ function improveProfileLinks() {
 }
 
 function syncUi() {
-  ensureSupportNav();
+  removeLegacySupportNav();
   removeResponsibilityLabels();
   dedupeMessageOverview();
   improveProfileLinks();

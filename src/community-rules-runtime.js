@@ -81,43 +81,13 @@ function openRules() {
   });
 }
 
-function ensureRulesNavButton() {
-  const nav = document.querySelector('.ec-top-nav');
-  if (!nav) return;
-
-  let button = nav.querySelector('[data-ec-rules-button="1"]');
-  if (!button) {
-    button = document.createElement('button');
-    button.type = 'button';
-    button.dataset.ecRulesButton = '1';
-    button.className = 'ec-community-rules-nav';
-    button.setAttribute('aria-label', 'Community-Regeln');
-    button.setAttribute('title', 'Community-Regeln');
-    button.innerHTML = '<b aria-hidden="true">§</b><span>Regeln</span>';
-    const regionPicker = nav.querySelector('.ec-region-picker');
-    if (regionPicker) nav.insertBefore(button, regionPicker);
-    else nav.appendChild(button);
-  }
-
-  if (button.dataset.ecRulesBound !== '1') {
-    button.dataset.ecRulesBound = '1';
-    button.addEventListener('click', openRules);
-  }
+function removeLegacyRulesNav() {
+  document.querySelectorAll('[data-ec-rules-button="1"]').forEach((node) => node.remove());
 }
 
-let queued = false;
-function schedule() {
-  if (queued) return;
-  queued = true;
-  requestAnimationFrame(() => {
-    queued = false;
-    ensureRulesNavButton();
-  });
-}
-
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', schedule, { once: true });
-else schedule();
-new MutationObserver(schedule).observe(document.documentElement, { childList: true, subtree: true });
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', removeLegacyRulesNav, { once: true });
+else removeLegacyRulesNav();
+window.addEventListener('ec:open-rules', openRules);
 window.addEventListener('keydown', (event) => {
   if (event.key === 'Escape' && document.getElementById(RULES_ID)) closeRules();
 });

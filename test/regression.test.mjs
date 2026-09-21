@@ -437,3 +437,23 @@ test("Community hub keeps readable desktop and mobile layout", async()=>{
   assert.match(css,/justify-self:start/);
   assert.match(css,/@media\(max-width:760px\)/);
 });
+
+
+test("secondary tools stay inside Community instead of crowding primary navigation", async()=>{
+  const app=await source("src/App.jsx");
+  const support=await source("src/community-support-verification.js");
+  const rules=await source("src/community-rules-runtime.js");
+  const reels=await source("src/community-reels.js");
+  for(const label of ["Reels","Regeln","Support"]) assert.ok(app.includes(`<b>${label}</b>`));
+  assert.match(app,/ec:open-rules/);
+  assert.match(app,/ec:open-support/);
+  assert.match(app,/page:"reels"/);
+  assert.doesNotMatch(support,/ensureSupportNav/);
+  assert.doesNotMatch(rules,/insertBefore\(button/);
+  assert.doesNotMatch(reels,/insertBefore\(button/);
+});
+
+test("dashboard utility shortcuts remain icon-only", async()=>{
+  const css=await source("src/admin-central-hub.css");
+  assert.match(css,/ec-dashboard-utility-button>\.ec-compact-menu-label[\s\S]*display:none!important/);
+});
