@@ -25,12 +25,9 @@ function ensureStyles(){
   `;document.head.appendChild(s);
 }
 
-function ensureNav(){
-  const nav=document.querySelector('.ec-top-nav');if(!nav)return false;
-  if(nav.querySelector('[data-ec-page="reels"]'))return true;
-  const button=el('button',null);button.type='button';button.dataset.ecPage='reels';button.title='Reels';button.setAttribute('aria-label','Reels');button.innerHTML='<b aria-hidden="true">▶</b><span>Reels</span>';
-  button.onclick=()=>window.dispatchEvent(new CustomEvent('ec:navigate',{detail:{page:'reels'}}));
-  const picker=nav.querySelector('.ec-region-picker');if(picker)nav.insertBefore(button,picker);else nav.appendChild(button);return true;
+function removeLegacyReelsNav(){
+  document.querySelectorAll('.ec-top-nav [data-ec-page="reels"]').forEach(node=>node.remove());
+  return true;
 }
 
 async function loadContext(){
@@ -119,8 +116,8 @@ async function enterReels(){
 
 function leaveReels(){observer?.disconnect();observer=null;const main=document.querySelector('.modern-main');main?.classList.remove('ec-reels-mode');main?.querySelector('.ec-reels-page')?.remove();}
 
-function boot(retries=12){ensureStyles();if(ensureNav())return;if(retries>0){clearTimeout(navTimer);navTimer=setTimeout(()=>boot(retries-1),180)}}
-window.addEventListener('ec:navigate',e=>{const page=e.detail?.page;if(page==='reels')setTimeout(()=>void enterReels(),30);else if(document.querySelector('.ec-reels-page'))leaveReels();setTimeout(()=>boot(3),80)});
+function boot(){ensureStyles();removeLegacyReelsNav();}
+window.addEventListener('ec:navigate',e=>{const page=e.detail?.page;if(page==='reels')setTimeout(()=>void enterReels(),30);else if(document.querySelector('.ec-reels-page'))leaveReels();setTimeout(boot,80)});
 window.addEventListener('ec:region-change',()=>{void loadContext().then(()=>{if(document.querySelector('.ec-reels-page'))void enterReels()})});
-window.addEventListener('focus',()=>boot(2));
+window.addEventListener('focus',boot);
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>boot(),{once:true});else boot();
