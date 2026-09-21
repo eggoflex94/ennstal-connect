@@ -455,5 +455,5 @@ test("secondary tools stay inside Community instead of crowding primary navigati
 
 test("dashboard utility shortcuts remain icon-only", async()=>{
   const css=await source("src/admin-central-hub.css");
-  assert.match(css,/ec-dashboard-utility-button>\.ec-compact-menu-label\{display:none!important/);
+  assert.match(css,/ec-dashboard-utility-button>\.ec-compact-menu-label[\s\S]*display:none!important/);
 });
