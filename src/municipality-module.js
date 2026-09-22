@@ -73,12 +73,37 @@ function profileBlock(ctx){
   </section>`;
 }
 
+function managerPanel(ctx){
+  if(!ctx.can_manage)return '';
+  const m=ctx.municipality||{},counts=ctx.counts||{};
+  return `<section class="ec-municipality-panel ec-municipality-cockpit">
+    <header><div><span class="eyebrow">GEMEINDE-COCKPIT</span><h2>Offiziellen Gemeindebereich verwalten</h2><p>Pflege die offiziellen Kontaktdaten, veröffentliche Hinweise und bearbeite Bürgeranliegen deiner Region.</p></div><img src="/role-star-green.svg" alt="" aria-hidden="true"></header>
+    <div class="ec-municipality-benefits"><span>Offizielle Hinweise</span><span>Bürgeranliegen</span><span>Gemeindeprofil</span><span>Grüner Gemeinde-Stern</span></div>
+    <div class="ec-municipality-cockpit-counts"><span><b>${Number(counts.open_total||0)}</b> offene Anliegen</span><span><b>${Number(counts.new_total||0)}</b> neu</span><span><b>${Number(counts.in_progress_total||0)}</b> in Bearbeitung</span><span><b>${Number(counts.done_total||0)}</b> erledigt</span></div>
+    <details class="ec-municipality-profile-settings"><summary>Gemeindeprofil & Kontaktdaten bearbeiten</summary>
+      <form class="ec-municipality-profile-form">
+        <label>Offizieller Name<input name="official_name" minlength="2" maxlength="180" required value="${esc(m.official_name||ctx.region?.name||'')}"></label>
+        <label>Kurzbeschreibung<textarea name="short_description" maxlength="1000">${esc(m.short_description||'')}</textarea></label>
+        <div class="ec-municipality-form-grid">
+          <label>Website<input name="website" type="url" value="${esc(m.website||'')}" placeholder="https://…"></label>
+          <label>E-Mail<input name="contact_email" type="email" value="${esc(m.contact_email||'')}"></label>
+          <label>Telefon<input name="phone" value="${esc(m.phone||'')}"></label>
+          <label>Adresse<input name="address" value="${esc(m.address||'')}"></label>
+        </div>
+        <label>Logo-URL<input name="logo_url" value="${esc(m.logo_url||'')}" placeholder="https://…"></label>
+        <button type="submit" class="primary">Gemeindeprofil speichern</button><p class="ec-municipality-profile-status"></p>
+      </form>
+    </details>
+  </section>`;
+}
+
 function pageMarkup(ctx){
   const notices=(ctx.notices||[]).map(n=>noticeCard(n,ctx.can_manage)).join('')||'<p class="ec-municipality-empty">Noch keine offiziellen Hinweise veröffentlicht.</p>';
   const requests=(ctx.my_requests||[]).map(r=>requestCard(r,false)).join('')||'<p class="ec-municipality-empty">Du hast noch keine Anliegen gemeldet.</p>';
   const counts=ctx.counts||{};
   return `<section class="ec-municipality-page">
     ${profileBlock(ctx)}
+    ${managerPanel(ctx)}
     <div class="ec-municipality-grid">
       <section class="ec-municipality-panel ec-municipality-official"><header><div><span class="eyebrow">OFFIZIELL</span><h2>Gemeinde-Informationen</h2></div>${ctx.can_manage?'<button type="button" class="primary" data-new-notice>+ Hinweis</button>':''}</header><div class="ec-municipality-notices">${notices}</div></section>
       <section class="ec-municipality-panel ec-citizen-center"><header><div><span class="eyebrow">BÜRGERANLIEGEN</span><h2>Ein Anliegen melden</h2></div></header>
@@ -116,6 +141,30 @@ async function render(){
     removePage();
     const p=document.createElement('section');p.className='ec-municipality-page ec-municipality-error';p.innerHTML=`<h2>Gemeindebereich nicht verfügbar</h2><p>${esc(error.message||error)}</p>`;host.appendChild(p);pageRoot=p;
   }finally{loading=false}
+}
+
+async function saveMunicipalityProfile(form){
+  const status=form.querySelector('.ec-municipality-profile-status');
+  const button=form.querySelector('[type="submit"]');
+  button.disabled=true;status.textContent='Wird gespeichert …';
+  try{
+    const {error}=await supabase.rpc('ec_municipality_save_profile',{
+      p_region_slug:activeRegionSlug(),
+      p_official_name:form.official_name.value,
+      p_short_description:form.short_description.value||'',
+      p_website:form.website.value||null,
+      p_contact_email:form.contact_email.value||null,
+      p_phone:form.phone.value||null,
+      p_address:form.address.value||null,
+      p_logo_url:form.logo_url.value||null,
+      p_active:true,
+      p_verified:Boolean(currentContext?.municipality?.verified)
+    });
+    if(error)throw error;
+    status.textContent='Gemeindeprofil gespeichert.';
+    await render();
+  }catch(error){status.textContent=error.message||'Gemeindeprofil konnte nicht gespeichert werden.'}
+  finally{button.disabled=false}
 }
 
 async function submitRequest(form){
@@ -183,6 +232,7 @@ async function saveStaffRequest(card){
 }
 
 function wirePage(){
+  const municipalityForm=pageRoot?.querySelector('.ec-municipality-profile-form');if(municipalityForm)municipalityForm.onsubmit=e=>{e.preventDefault();void saveMunicipalityProfile(municipalityForm)};
   const form=pageRoot?.querySelector('.ec-citizen-form');if(form)form.onsubmit=e=>{e.preventDefault();void submitRequest(form)};
   pageRoot?.querySelector('[data-new-notice]')?.addEventListener('click',()=>openNoticeEditor());
   pageRoot?.querySelectorAll('[data-edit-notice]').forEach(button=>button.onclick=()=>{
