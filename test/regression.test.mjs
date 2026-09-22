@@ -597,3 +597,11 @@ test("personal area role pin supports municipality", async()=>{
   assert.match(code,/municipality:'\/role-star-green\.svg'/);
   assert.match(code,/if\(base==='MUNICIPALITY'\)return'municipality'/);
 });
+
+
+test("municipality page stays below the fixed regional shell", async()=>{
+  const css=await source("src/municipality-module.css");
+  assert.match(css,/body\.ec-municipality-open \.modern-main\{\s*padding-top:var\(--ec-page-top,154px\)!important;/);
+  assert.match(css,/body\.ec-municipality-open \.ec-municipality-page[\s\S]*margin-top:0!important;/);
+  assert.match(css,/@media\(max-width:1050px\)[\s\S]*body\.ec-municipality-open \.modern-main\{padding-top:128px!important\}/);
+});
