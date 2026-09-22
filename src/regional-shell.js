@@ -103,7 +103,7 @@ async function syncDockDetail(type,{force=false}={}){
 }
 
 function toggleDockDetail(key){
-  const button=document.querySelector(`.ec-regional-shell [data-ec-detail="${key}"]`);
+  const button=document.querySelector(`[data-ec-detail="${key}"]`);
   const panel=document.querySelector(`.ec-dock-detail[data-panel="${key}"]`);
   if(!button||!panel)return;
   const opening=panel.hidden;
