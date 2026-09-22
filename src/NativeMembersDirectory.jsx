@@ -76,7 +76,7 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
     return assigned.has(activeRegion.id);
   };
 
-  const roleStarSrc = (member) => isHeadAdmin(member) || isGlobalAdmin(member) || isRegionalAdmin(member) ? "/role-star-red.svg" : isBusiness(member) ? "/role-star-blue.svg" : normalized(member?.role) === "SUPPORTER" ? "/supporter-star.svg" : null;
+  const roleStarSrc = (member) => isHeadAdmin(member) || isGlobalAdmin(member) || isRegionalAdmin(member) ? "/role-star-red.svg" : isBusiness(member) ? "/role-star-blue.svg" : normalized(member?.role) === "MUNICIPALITY" ? "/role-star-green.svg" : normalized(member?.role) === "SUPPORTER" ? "/supporter-star.svg" : null;
 
   const openMember = (member) => {
     if (!member?.id) return;
@@ -88,8 +88,9 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
     const groupRank = (member) => {
       if (isGlobalAdmin(member) || isRegionalAdmin(member)) return 1;
       if (isBusiness(member)) return 2;
-      if (normalized(member?.role) === "SUPPORTER") return 3;
-      return 4;
+      if (normalized(member?.role) === "MUNICIPALITY") return 3;
+      if (normalized(member?.role) === "SUPPORTER") return 4;
+      return 5;
     };
     return members
       .filter((member) => member && member.account_status !== "SUSPENDED" && !member.is_test_account)
@@ -98,7 +99,7 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
       .filter((member) => {
         if (!q) return true;
         const region = regionById[member.home_region_id]?.name || "";
-        const roleWord = isGlobalAdmin(member) || isRegionalAdmin(member) ? "admin" : normalized(member?.role) === "SUPPORTER" ? "supporter" : isBusiness(member) ? "unternehmer" : "mitglied";
+        const roleWord = isGlobalAdmin(member) || isRegionalAdmin(member) ? "admin" : isBusiness(member) ? "unternehmer" : normalized(member?.role) === "MUNICIPALITY" ? "gemeinde" : normalized(member?.role) === "SUPPORTER" ? "supporter" : "mitglied";
         return [member.nickname, member.first_name, member.last_name, region, roleWord].filter(Boolean).join(" ").toLowerCase().includes(q);
       })
       .sort((a, b) => {
