@@ -225,40 +225,51 @@ class AppErrorBoundary extends React.Component {
 }
 
 async function removeLegacyAppShellOnce() {
-  const cleanupKey = "ec-legacy-cache-cleanup-v9";
-  const reloadKey = "ec-legacy-sw-reload-v9";
+  // Vite fingerprints the production entry bundle. Using its own URL as the
+  // cleanup version means every deployed build gets exactly one fresh-shell
+  // pass without requiring users to hard-refresh manually.
+  const buildId = new URL(import.meta.url).pathname;
+  const cleanupKey = "ec-app-shell-build";
+  const reloadParam = "ec_build_refresh";
   try {
+    const previousBuild = localStorage.getItem(cleanupKey);
+    const buildChanged = previousBuild !== buildId;
     const wasControlled = Boolean(navigator.serviceWorker?.controller);
     let removedRegistration = false;
+    let removedCache = false;
 
-    // Always check for an old registration. The previous one-time cleanup flag
-    // could outlive a later browser restore and leave users stuck on a stale shell
-    // until they pressed Ctrl+R manually.
-    if ("serviceWorker" in navigator) {
+    if (buildChanged && "serviceWorker" in navigator) {
       const registrations = await navigator.serviceWorker.getRegistrations();
       removedRegistration = registrations.length > 0;
       await Promise.all(registrations.map((registration) => registration.unregister()));
     }
 
-    if (localStorage.getItem(cleanupKey) !== "done" && "caches" in window) {
+    if (buildChanged && "caches" in window) {
       const keys = await caches.keys();
+      removedCache = keys.length > 0;
       await Promise.all(keys.map((key) => caches.delete(key)));
-      localStorage.setItem(cleanupKey, "done");
     }
 
-    // A controlling worker remains attached until the next navigation. Reload
-    // automatically at most once per tab instead of making the user do it.
-    if ((wasControlled || removedRegistration) && sessionStorage.getItem(reloadKey) !== "done") {
-      sessionStorage.setItem(reloadKey, "done");
-      window.location.reload();
+    if (buildChanged) localStorage.setItem(cleanupKey, buildId);
+
+    const url = new URL(window.location.href);
+    const alreadyFresh = url.searchParams.get(reloadParam) === buildId;
+
+    if (buildChanged && (wasControlled || removedRegistration || removedCache) && !alreadyFresh) {
+      url.searchParams.set(reloadParam, buildId);
+      window.location.replace(url.toString());
       return true;
+    }
+
+    if (url.searchParams.has(reloadParam)) {
+      url.searchParams.delete(reloadParam);
+      window.history.replaceState(null, "", url.pathname + url.search + url.hash);
     }
   } catch (error) {
     console.warn("Alter App-Cache konnte nicht vollständig entfernt werden:", error);
   }
   return false;
 }
-
 async function bootstrap() {
   const reloading = await removeLegacyAppShellOnce();
   if (reloading) return;
