@@ -508,3 +508,51 @@ test("capture-phase lightweight dashboard navigation is not loaded", async()=>{
   assert.doesNotMatch(html,/lightweight-dashboard-nav\.js/);
   assert.match(html,/width=device-width/);
 });
+
+
+test("municipality accounts have a dedicated protected role and regional management rights", async()=>{
+  const sql=await source("supabase/migrations/20260922123000_municipality_account_role.sql");
+  const protection=await source("supabase/migrations/20260922124500_municipality_role_protection.sql");
+  assert.match(sql,/alter type public\.user_role add value if not exists 'MUNICIPALITY'/);
+  assert.match(sql,/new_role not in \('MEMBER','SUPPORTER','ADMIN','MUNICIPALITY'\)/);
+  assert.match(sql,/upper\(p\.role::text\) = 'MUNICIPALITY'/);
+  assert.match(sql,/p\.home_region_id = p_region_id/);
+  assert.match(protection,/HEAD_ADMIN','ADMIN','MUNICIPALITY/);
+});
+
+test("municipality accounts render green identity and immediate login benefits", async()=>{
+  const app=await source("src/App.jsx");
+  const card=await source("src/MemberCardView.jsx");
+  const identity=await source("src/roleIdentity.js");
+  const css=await source("src/municipality-role.css");
+  const main=await source("src/main.jsx");
+  assert.match(card,/role === "MUNICIPALITY"/);
+  assert.match(card,/role-star-green\.svg/);
+  assert.match(identity,/label:"Gemeinde"/);
+  assert.match(app,/function MunicipalityWelcome/);
+  assert.match(app,/Offizielle Hinweise veröffentlichen/);
+  assert.match(app,/Bürgeranliegen bearbeiten/);
+  assert.match(app,/Gemeindebereich öffnen/);
+  assert.match(css,/role-theme-municipality/);
+  assert.match(css,/--ec-municipality-green/);
+  assert.ok(main.indexOf('import "./municipality-role.css";') > main.indexOf('import "./member-card-exact-authority.css";'));
+});
+
+test("municipality area includes an official management cockpit", async()=>{
+  const module=await source("src/municipality-module.js");
+  const css=await source("src/municipality-module.css");
+  assert.match(module,/GEMEINDE-COCKPIT/);
+  assert.match(module,/ec_municipality_save_profile/);
+  assert.match(module,/Gemeindeprofil & Kontaktdaten bearbeiten/);
+  assert.match(module,/ec-municipality-profile-form/);
+  assert.match(css,/ec-municipality-cockpit/);
+  assert.match(css,/ec-municipality-profile-settings/);
+});
+
+test("Head Admin can assign and filter municipality accounts", async()=>{
+  const manager=await source("src/admin-role-manager.js");
+  assert.match(manager,/MUNICIPALITY_STAR/);
+  assert.match(manager,/<option value="MUNICIPALITY">Gemeinde<\/option>/);
+  assert.match(manager,/\['municipality','Gemeinden'\]/);
+  assert.match(manager,/new_role:'MUNICIPALITY'|MUNICIPALITY/);
+});
