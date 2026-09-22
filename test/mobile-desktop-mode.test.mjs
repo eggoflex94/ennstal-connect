@@ -95,7 +95,22 @@ test("member profile keeps identical desktop structure on touch devices", async 
 
 test("member role stars stay mapped to the correct functions", async () => {
   const code = await source("src/NativeMembersDirectory.jsx");
-  assert.match(code, /const roleStarSrc = \(member\) => isHeadAdmin\(member\) \|\| isGlobalAdmin\(member\) \|\| isRegionalAdmin\(member\) \? "\/role-star-red\.svg" : isBusiness\(member\) \? "\/role-star-blue\.svg" : normalized\(member\?\.role\) === "SUPPORTER" \? "\/supporter-star\.svg" : null;/);
+  assert.match(code, /const roleStarSrc = \(member\) => isHeadAdmin\(member\) \|\| isGlobalAdmin\(member\) \|\| isRegionalAdmin\(member\) \? "\/role-star-red\.svg" : isBusiness\(member\) \? "\/role-star-blue\.svg" : normalized\(member\?\.role\) === "MUNICIPALITY" \? "\/role-star-green\.svg" : normalized\(member\?\.role\) === "SUPPORTER" \? "\/supporter-star\.svg" : null;/);
+});
+
+test("municipality cards use the standard role frame and sort between business and supporter", async () => {
+  const code = await source("src/NativeMembersDirectory.jsx");
+  const css = await source("src/municipality-role.css");
+  const greenStar = await source("public/role-star-green.svg");
+  const blueStar = await source("public/role-star-blue.svg");
+
+  assert.match(code, /if \(isBusiness\(member\)\) return 2;[\s\S]*MUNICIPALITY"\) return 3;[\s\S]*SUPPORTER"\) return 4;/);
+  assert.match(css, /article\.member-card\[data-role-theme="municipality"\][\s\S]*--ec-card-border:#21c978/);
+  assert.match(css, /--ec-card-bg:linear-gradient\(145deg,#149c60/);
+  assert.doesNotMatch(css, /border:4px solid/);
+  assert.match(greenStar, /viewBox="0 0 64 64"/);
+  assert.match(greenStar, /<rect x="5" y="5" width="54" height="54" rx="13"/);
+  assert.match(blueStar, /<rect x="5" y="5" width="54" height="54" rx="13"/);
 });
 
 test("profile presence remains visually separated", async () => {
