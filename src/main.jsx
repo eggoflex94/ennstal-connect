@@ -36,7 +36,6 @@ import "./admin-workspace.js";
 import "./sidebar-news-popup.js";
 import "./municipality-module.css";
 import "./municipality-module.js";
-import "./municipality-role.css";
 
 import "./regional-shell.js";
 import "./deferred-admin-enhancements.js";
@@ -181,6 +180,7 @@ import "./touch-desktop-stability.css";
 /* Absolute final member-card authority: approved visual mockup. */
 import "./member-card-mockup-final.css";
 import "./member-card-exact-authority.css";
+import "./municipality-role.css";
 
 /* Final profile geometry authority for desktop and mobile. */
 import "./profile-responsive-authority.css";
