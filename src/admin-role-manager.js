@@ -3,6 +3,7 @@ import { supabase } from './supabaseClient';
 const ADMIN_STAR='/role-star-red.svg';
 const SUPPORTER_STAR='/supporter-star.svg';
 const BUSINESS_STAR='/role-star-blue.svg';
+const MUNICIPALITY_STAR='/role-star-green.svg';
 let viewer=null;
 let members=[];
 let regions=[];
@@ -27,6 +28,7 @@ const permissionLabel=p=>permissionLabels[String(p).toUpperCase()]||String(p);
 const roleStar=member=>{
   const base=String(member?.role||'MEMBER').toUpperCase();
   if(base==='HEAD_ADMIN'||base==='ADMIN'||isRegionalAdmin(member?.id))return ADMIN_STAR;
+  if(base==='MUNICIPALITY')return MUNICIPALITY_STAR;
   if(base==='SUPPORTER')return SUPPORTER_STAR;
   if(String(member?.account_badge||'').toUpperCase()==='BUSINESS')return BUSINESS_STAR;
   return'';
@@ -34,6 +36,7 @@ const roleStar=member=>{
 const overviewType=member=>{
   const base=String(member?.role||'MEMBER').toUpperCase();
   if(base==='HEAD_ADMIN'||base==='ADMIN'||isRegionalAdmin(member.id))return'admin';
+  if(base==='MUNICIPALITY')return'municipality';
   if(base==='SUPPORTER')return'supporter';
   if(String(member?.account_badge||'').toUpperCase()==='BUSINESS')return'business';
   return'member';
@@ -66,7 +69,7 @@ async function ensureSupporter(member){
 
 async function setBaseRole(member,role,status){
   const nextRole=String(role||'').trim().toUpperCase();
-  if(!['MEMBER','SUPPORTER','ADMIN'].includes(nextRole))throw new Error('Bitte eine gültige Basisrolle auswählen.');
+  if(!['MEMBER','SUPPORTER','ADMIN','MUNICIPALITY'].includes(nextRole))throw new Error('Bitte eine gültige Basisrolle auswählen.');
   const {error}=await supabase.rpc('admin_set_role',{target_user:member.id,new_role:nextRole});
   if(error)throw error;
   status.textContent='Basisrolle gespeichert.';
@@ -115,7 +118,8 @@ function decorateIdentity(card,member){
   if(infoRole){
     const base=String(member.role||'MEMBER').toUpperCase();
     const regional=assignedRegions(member.id).map(regionName);
-    if(regional.length&&!['HEAD_ADMIN','ADMIN'].includes(base))infoRole.textContent=`Regional Admin · ${regional.join(', ')}`;
+    if(base==='MUNICIPALITY')infoRole.textContent='Gemeindekonto · offizielle Regionalvertretung';
+    else if(regional.length&&!['HEAD_ADMIN','ADMIN'].includes(base))infoRole.textContent=`Regional Admin · ${regional.join(', ')}`;
     else if(String(member.account_badge||'').toUpperCase()==='BUSINESS'&&base==='MEMBER')infoRole.textContent='Unternehmenskonto';
   }
 }
@@ -125,8 +129,8 @@ function buildOverview(){
   if(!container)return;
   let bar=document.querySelector('.ec-admin-role-overview');
   if(!bar){bar=document.createElement('section');bar.className='ec-admin-role-overview';container.before(bar)}
-  const counts={all:members.length,admin:members.filter(m=>overviewType(m)==='admin').length,supporter:members.filter(m=>overviewType(m)==='supporter').length,business:members.filter(m=>overviewType(m)==='business').length,member:members.filter(m=>overviewType(m)==='member').length};
-  bar.innerHTML=`<div><strong>Mitglieder & Rollen</strong><small>Nach Rolle filtern und regionale Rechte direkt verwalten.</small></div><div class="ec-admin-role-filters">${[['all','Alle'],['admin','Admins'],['supporter','Supporter'],['business','Unternehmen'],['member','Mitglieder']].map(([key,label])=>`<button type="button" data-filter="${key}"><span>${label}</span><b>${counts[key]}</b></button>`).join('')}</div>`;
+  const counts={all:members.length,admin:members.filter(m=>overviewType(m)==='admin').length,municipality:members.filter(m=>overviewType(m)==='municipality').length,supporter:members.filter(m=>overviewType(m)==='supporter').length,business:members.filter(m=>overviewType(m)==='business').length,member:members.filter(m=>overviewType(m)==='member').length};
+  bar.innerHTML=`<div><strong>Mitglieder & Rollen</strong><small>Nach Rolle filtern und regionale Rechte direkt verwalten.</small></div><div class="ec-admin-role-filters">${[['all','Alle'],['admin','Admins'],['municipality','Gemeinden'],['supporter','Supporter'],['business','Unternehmen'],['member','Mitglieder']].map(([key,label])=>`<button type="button" data-filter="${key}"><span>${label}</span><b>${counts[key]}</b></button>`).join('')}</div>`;
   const apply=filter=>{
     container.dataset.ecRoleFilter=filter;
     container.querySelectorAll('.admin-member-card').forEach(card=>{card.hidden=filter!=='all'&&card.dataset.ecOverviewType!==filter});
@@ -146,7 +150,7 @@ function buildManager(card,member,force=false){
   const assigned=assignedRegions(member.id);
   wrap.innerHTML=`<div class="ec-role-manager-head"><div><strong>Rollen & regionale Rechte</strong><small>Basisrolle, Regionaladmin und einzelne Regionsrechte getrennt steuern.</small></div></div>
     <div class="ec-role-manager-grid">
-      <label><span>Basisrolle</span><select class="ec-base-role"><option value="MEMBER">Mitglied</option><option value="SUPPORTER">Supporter</option><option value="ADMIN">Global Admin</option></select></label>
+      <label><span>Basisrolle</span><select class="ec-base-role"><option value="MEMBER">Mitglied</option><option value="MUNICIPALITY">Gemeinde</option><option value="SUPPORTER">Supporter</option><option value="ADMIN">Global Admin</option></select></label>
       <label><span>Region</span><select class="ec-region-role"><option value="">Region wählen</option>${regions.map(r=>`<option value="${r.slug}">${esc(r.name)}</option>`).join('')}</select></label>
     </div>
     <div class="ec-role-manager-actions ec-role-basic-actions"><button type="button" data-action="base">Basisrolle speichern</button><button type="button" data-action="regional-on">Regional Admin vergeben</button><button type="button" data-action="regional-off">Regional Admin entfernen</button></div>
@@ -169,7 +173,7 @@ function buildManager(card,member,force=false){
     <p class="ec-role-manager-status" aria-live="polite"></p>`;
 
   const base=wrap.querySelector('.ec-base-role');
-  base.value=['MEMBER','SUPPORTER','ADMIN'].includes(String(member.role||'').toUpperCase())?String(member.role).toUpperCase():'MEMBER';
+  base.value=['MEMBER','MUNICIPALITY','SUPPORTER','ADMIN'].includes(String(member.role||'').toUpperCase())?String(member.role).toUpperCase():'MEMBER';
   const status=wrap.querySelector('.ec-role-manager-status');
   const selectedPermissions=()=>[...wrap.querySelectorAll('.ec-moderation-permissions input:checked')].map(input=>input.value);
   const selectedRegion=()=>wrap.querySelector('.ec-region-role').value;
