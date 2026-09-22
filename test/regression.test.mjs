@@ -590,3 +590,10 @@ test("app shell cleanup is versioned by the deployed bundle", async()=>{
   assert.doesNotMatch(main,/ec-legacy-cache-cleanup-v9/);
   assert.doesNotMatch(main,/ec-legacy-sw-reload-v9/);
 });
+
+
+test("personal area role pin supports municipality", async()=>{
+  const code=await source("src/sidebar-role-pin.js");
+  assert.match(code,/municipality:'\/role-star-green\.svg'/);
+  assert.match(code,/if\(base==='MUNICIPALITY'\)return'municipality'/);
+});
