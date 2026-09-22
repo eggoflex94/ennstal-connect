@@ -18,7 +18,7 @@ function go(page){document.body.classList.remove('ec-dock-open');window.dispatch
 function placeDockInPageFlow(){
   const dock=document.querySelector('.ec-right-dock'),main=document.querySelector('.modern-main');
   if(!dock||!main)return;
-  const compact=window.matchMedia('(max-width:900px)').matches;
+  const compact=window.matchMedia('(max-width:1050px)').matches;
   if(compact){
     dock.classList.remove('ec-document-flow-dock');
     if(dock.parentElement!==document.body)document.body.appendChild(dock);
