@@ -231,7 +231,7 @@ export default function App() {
         home: "home", members: "members", forum: "forum", groups: "groups", photos: "photos",
         community: "community", events: "community", news: "news", ads: "community", profile: "profile",
         messages: "messages", friends: "friends", requests: "friend-requests",
-        blocked: "blocked", admin: "admin"
+        blocked: "blocked", admin: "admin", municipality: "municipality"
       };
       if (pageMap[requested]) setPage(pageMap[requested]);
     };
