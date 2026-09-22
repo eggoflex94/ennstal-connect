@@ -67,6 +67,7 @@ async function applyProfileRoleContext() {
   const role = norm(profile.role);
   if (role === 'HEAD_ADMIN') return setFunctionPresentation(box, 'Hauptadmin', '/role-star-red.svg');
   if (role === 'ADMIN' || role === 'GLOBAL_ADMIN') return setFunctionPresentation(box, 'Global Admin', '/role-star-red.svg');
+  if (role === 'MUNICIPALITY') return setFunctionPresentation(box, 'Gemeinde', '/role-star-green.svg');
 
   const assignedIds = (assignments || []).map((assignment) => assignment.region_id).filter(Boolean);
   if (activeRegionId && assignedIds.includes(activeRegionId)) {

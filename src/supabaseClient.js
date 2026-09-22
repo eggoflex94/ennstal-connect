@@ -227,7 +227,7 @@ supabase.rpc = async (fn, args = {}, options) => {
     let changes;
     if (fn === "admin_set_role") {
       const nextRole = String(args?.new_role || "").trim().toUpperCase();
-      if (!["MEMBER", "SUPPORTER", "ADMIN"].includes(nextRole)) {
+      if (!["MEMBER", "SUPPORTER", "ADMIN", "MUNICIPALITY"].includes(nextRole)) {
         return { data: null, error: new Error("Ungültige Rolle. Bitte eine gültige Rolle auswählen.") };
       }
       changes = { role: nextRole };

@@ -1,4 +1,4 @@
-export const ROLE_ORDER = { HEAD_ADMIN: 1, ADMIN: 2, SUPPORTER: 3, MEMBER: 4 };
+export const ROLE_ORDER = { HEAD_ADMIN: 1, ADMIN: 2, MUNICIPALITY: 3, SUPPORTER: 4, MEMBER: 5 };
 
 export function roleIdentity(profile = {}) {
   const role = String(profile.role || "MEMBER").toUpperCase();
@@ -6,6 +6,7 @@ export function roleIdentity(profile = {}) {
   if (role === "HEAD_ADMIN") return { key:"head-admin", label:"Hauptadmin", mark:"", icon:"/role-star-red.svg", color:"#ef4444" };
   if (role === "ADMIN") return { key:"admin", label:"Admin", mark:"", icon:"/role-star-red.svg", color:"#ef4444" };
   if (role === "SUPPORTER") return { key:"supporter", label:"Supporter", mark:"", icon:"/supporter-star.svg", color:"#ffd400" };
+  if (role === "MUNICIPALITY") return { key:"municipality", label:"Gemeinde", mark:"", icon:"/role-star-green.svg", color:"#20a866" };
   if (badge === "BUSINESS" || badge.includes("UNTERNEHM")) return { key:"business", label:"Unternehmenskonto", mark:"", icon:"/role-star-blue.svg", color:"#45c7ff" };
   return { key:"member", label:"Mitglied", mark:"", icon:null, color:profile.nickname_color || "#f7fbff" };
 }

@@ -21,7 +21,7 @@ vm.runInNewContext(code,context);
 const Card=context.module.exports.default;
 
 test('directory roles render approved stars and no legacy card actions',()=>{
- for(const [role,account_badge,asset] of [['ADMIN',null,'role-star-red.svg'],['SUPPORTER',null,'supporter-star.svg'],['MEMBER','BUSINESS','role-star-blue.svg']]){
+ for(const [role,account_badge,asset] of [['ADMIN',null,'role-star-red.svg'],['MUNICIPALITY',null,'role-star-green.svg'],['SUPPORTER',null,'supporter-star.svg'],['MEMBER','BUSINESS','role-star-blue.svg']]){
   const html=renderToStaticMarkup(React.createElement(Card,{member:{id:'a',nickname:'Test',role,account_badge,is_verified:true},profile:{id:'b'},friendships:[],onOpen(){}}));
   assert.ok(html.includes(asset));
   assert.ok(!html.includes('badge-verified.svg'));
@@ -34,6 +34,7 @@ test('normal members render without a role star',()=>{
  assert.ok(!html.includes('role-star-red.svg'));
  assert.ok(!html.includes('supporter-star.svg'));
  assert.ok(!html.includes('role-star-blue.svg'));
+ assert.ok(!html.includes('role-star-green.svg'));
  assert.ok(html.includes('role-theme-member'));
 });
 

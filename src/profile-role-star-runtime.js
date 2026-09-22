@@ -1,12 +1,14 @@
 // Keep profile role stars deterministic without intercepting any interaction events.
 const ROLE_STAR_BY_TEXT = [
   { test: /betreiber|hauptadmin|community admin|global admin|\badmin\b/i, src: '/role-star-red.svg' },
+  { test: /gemeinde|municipality/i, src: '/role-star-green.svg' },
   { test: /supporter/i, src: '/supporter-star.svg' },
   { test: /unternehmenskonto|business/i, src: '/role-star-blue.svg' },
 ];
 
 function roleStarFor(node) {
   if (node.classList?.contains('head-admin') || node.classList?.contains('admin')) return '/role-star-red.svg';
+  if (node.classList?.contains('municipality')) return '/role-star-green.svg';
   if (node.classList?.contains('supporter')) return '/supporter-star.svg';
   if (node.classList?.contains('business')) return '/role-star-blue.svg';
   const text = String(node.textContent || '').trim();
@@ -31,7 +33,7 @@ function ensureRoleStar(node) {
     return;
   }
 
-  const anyRoleStar = node.querySelector('img[src*="role-star-red.svg"], img[src*="supporter-star.svg"], img[src*="role-star-blue.svg"]');
+  const anyRoleStar = node.querySelector('img[src*="role-star-red.svg"], img[src*="role-star-green.svg"], img[src*="supporter-star.svg"], img[src*="role-star-blue.svg"]');
   if (anyRoleStar) {
     anyRoleStar.classList.add('ec-profile-role-star-runtime');
     return;

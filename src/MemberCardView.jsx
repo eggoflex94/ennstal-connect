@@ -27,6 +27,7 @@ function rolePresentation(member) {
     return { key: role === "HEAD_ADMIN" ? "head-admin" : "admin", theme: "admin", label: role === "HEAD_ADMIN" ? "Hauptadmin" : "Admin", star: "/role-star-red.svg" };
   }
   if (role === "SUPPORTER") return { key: "supporter", theme: "supporter", label: "Supporter", star: "/supporter-star.svg" };
+  if (role === "MUNICIPALITY") return { key: "municipality", theme: "municipality", label: "Gemeinde", star: "/role-star-green.svg" };
   if (member?.account_badge === "BUSINESS") return { key: "business", theme: "business", label: "Unternehmer", star: "/role-star-blue.svg" };
   return { key: "member", theme: "member", label: "Mitglied", star: null };
 }
