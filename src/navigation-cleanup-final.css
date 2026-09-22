@@ -188,3 +188,56 @@ html,body,#root,.app,.dashboard-layout,.ec-regional-ui{
     max-width:100%!important;
   }
 }
+
+
+/* FINAL PERSONAL DOCK TEXT SAFETY.
+   Prevent compact dashboard labels from collapsing into one-character columns. */
+@media(min-width:901px){
+  .ec-right-dock{
+    min-width:300px!important;
+    width:300px!important;
+    max-width:300px!important;
+    box-sizing:border-box!important;
+  }
+  .ec-right-dock *{
+    writing-mode:horizontal-tb!important;
+    text-orientation:mixed!important;
+  }
+  .ec-right-dock .ec-admin-tools-label,
+  .ec-right-dock .ec-online-friends-head,
+  .ec-right-dock .ec-dock-head{
+    min-width:0!important;
+    width:100%!important;
+  }
+  .ec-right-dock .ec-admin-tools-label span,
+  .ec-right-dock .ec-admin-tools-label small,
+  .ec-right-dock .ec-dashboard-role-scope,
+  .ec-right-dock .ec-admin-visible-label,
+  .ec-right-dock .ec-online-friend-name{
+    word-break:normal!important;
+    overflow-wrap:normal!important;
+    hyphens:none!important;
+  }
+  .ec-right-dock .ec-admin-tools-label small{
+    max-width:150px!important;
+    white-space:normal!important;
+    line-height:1.2!important;
+  }
+  .ec-right-dock .ec-admin-visible-label{
+    display:block!important;
+    width:100%!important;
+    max-width:100%!important;
+    white-space:nowrap!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    line-height:1.1!important;
+  }
+  .ec-right-dock .ec-dock-admin-slot{
+    min-width:0!important;
+    width:100%!important;
+  }
+  .ec-right-dock .ec-admin-icon-button{
+    min-width:0!important;
+    overflow:hidden!important;
+  }
+}
