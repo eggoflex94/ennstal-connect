@@ -556,3 +556,15 @@ test("Head Admin can assign and filter municipality accounts", async()=>{
   assert.match(manager,/\['municipality','Gemeinden'\]/);
   assert.match(manager,/new_role:'MUNICIPALITY'|MUNICIPALITY/);
 });
+
+
+test("Head Admin has a dedicated municipality account quick action", async()=>{
+  const manager=await source("src/admin-role-manager.js");
+  const css=await source("src/admin-role-manager.css");
+  assert.match(manager,/head_admin_set_municipality_account/);
+  assert.match(manager,/Gemeindekonto vergeben/);
+  assert.match(manager,/Gemeindekonto entfernen/);
+  assert.match(manager,/Bitte zuerst die Gemeinde\/Region auswählen/);
+  assert.match(manager,/home_region_id/);
+  assert.match(css,/ec-municipality-quick-action/);
+});
