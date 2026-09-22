@@ -1,10 +1,11 @@
 import { supabase } from './supabaseClient';
 
-const ROLE_CLASSES=['head-admin','admin','supporter','business','member'];
+const ROLE_CLASSES=['head-admin','admin','municipality','supporter','business','member'];
 const roleMeta=(profile)=>{
   const badge=String(profile?.account_badge||'').toUpperCase();
   if(profile?.role==='HEAD_ADMIN')return{cls:'head-admin',mark:'♛',label:'Head Admin'};
   if(profile?.role==='ADMIN')return{cls:'admin',mark:'★',label:'Community Admin'};
+  if(profile?.role==='MUNICIPALITY')return{cls:'municipality',mark:'★',label:'Gemeinde'};
   if(profile?.role==='SUPPORTER')return{cls:'supporter',mark:'★',label:'Supporter'};
   if(badge==='BUSINESS'||badge.includes('UNTERNEHM'))return{cls:'business',mark:'★',label:'Unternehmenskonto'};
   return{cls:'member',mark:'',label:'Mitglied'};
