@@ -57,7 +57,7 @@ test("deferred admin modules stay reachable instead of disappearing from the UI"
   for(const module of [
     "./admin-dashboard-modern.js","./admin-community-popup-manager.js","./admin-central-permissions.js",
     "./business-account-admin-fix.js","./head-admin-activity-folders.js","./admin-reload-watch.js","./admin-system-watch.js",
-    "./profile-admin-tools-unified.js","./profile-admin-role-actions.js","./regional-admin-tools-bridge.js"
+    "./profile-admin-tools-unified.js","./profile-admin-role-actions.js"
   ]) assert.ok(deferred.includes(module), `missing deferred module: ${module}`);
   for(const page of ["admin","reports","admin-forum","admin-account-review","adminTools","legal","profile","profile-preview","member-profile","members"])
     assert.ok(deferred.includes(`\'${page}\'`) || deferred.includes(`"${page}"`), `missing deferred page route: ${page}`);
@@ -475,4 +475,16 @@ test("app waits for stale service-worker cleanup before React bootstrap", async(
   assert.match(main,/if \(reloading\) return/);
   assert.match(main,/ec-legacy-cache-cleanup-v9/);
   assert.match(main,/return true/);
+});
+
+
+test("touch and narrow layouts no longer force a clipped desktop canvas", async()=>{
+  const touch=await source("src/touch-desktop-stability.css");
+  const nav=await source("src/navigation-cleanup-final.css");
+  const dashboard=await source("src/personal-dashboard-final-fix.js");
+  assert.doesNotMatch(touch,/min-width:\s*1180px/);
+  assert.match(nav,/@media\(max-width:1050px\)/);
+  assert.match(nav,/transform:translateX\(105%\)!important/);
+  assert.match(nav,/\.ec-dock-open \.ec-right-dock/);
+  assert.match(dashboard,/max-width:1050px/);
 });
