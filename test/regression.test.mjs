@@ -572,3 +572,10 @@ test("regional shell base layout CSS is loaded before final navigation authority
   assert.match(main,/import "\.\/regional-shell\.css";\s*import "\.\/regional-shell\.js";/);
   assert.ok(main.indexOf('import "./regional-shell.css";') < main.indexOf('import "./navigation-cleanup-final.css";'));
 });
+
+
+test("layout integrity must not reset regional shell positioning", async()=>{
+  const css=await source("src/layout-integrity-final.css");
+  assert.doesNotMatch(css,/\.ec-brand-masthead,\.ec-top-nav,\.ec-region-picker,\.ec-dock-toggle\{position:relative/);
+  assert.match(css,/\.ec-brand-masthead,\.ec-top-nav,\.ec-region-picker,\.ec-dock-toggle\{z-index:300\}/);
+});
