@@ -16,6 +16,13 @@ test("profile admin tools expose the municipality role to head admins", async ()
   );
 });
 
+test("profile role action bridge accepts municipality instead of rejecting it", async () => {
+  const bridge = await source("src/profile-admin-role-actions.js");
+
+  assert.match(bridge, /\['MEMBER', 'SUPPORTER', 'ADMIN', 'MUNICIPALITY'\]/);
+  assert.match(bridge, /Gemeinderolle wurde erfolgreich vergeben/);
+});
+
 test("database migration allows municipality through admin_set_role", async () => {
   const migration = await source("supabase/migrations/20260922123000_municipality_account_role.sql");
 
