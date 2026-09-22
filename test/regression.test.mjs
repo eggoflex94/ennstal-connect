@@ -539,13 +539,21 @@ test("municipality accounts render green identity and immediate login benefits",
   assert.ok(main.indexOf('import "./municipality-role.css";') > main.indexOf('import "./member-card-exact-authority.css";'));
 });
 
-test("municipality area includes an official management cockpit", async()=>{
+test("municipality area includes navigation, introduction and official management cockpit", async()=>{
+  const app=await source("src/App.jsx");
   const module=await source("src/municipality-module.js");
   const css=await source("src/municipality-module.css");
+  assert.match(app,/municipality: "municipality"/);
+  assert.match(app,/page === "municipality"/);
+  assert.match(module,/GEMEINDE & SERVICE · EINFÜHRUNG/);
+  assert.match(module,/Offizielle Informationen und Bürgeranliegen/);
+  assert.match(module,/Willkommen im offiziellen Gemeindebereich/);
+  assert.match(module,/requestAnimationFrame\(\(\)=>void render\(\)\)/);
   assert.match(module,/GEMEINDE-COCKPIT/);
   assert.match(module,/ec_municipality_save_profile/);
   assert.match(module,/Gemeindeprofil & Kontaktdaten bearbeiten/);
   assert.match(module,/ec-municipality-profile-form/);
+  assert.match(css,/ec-municipality-intro/);
   assert.match(css,/ec-municipality-cockpit/);
   assert.match(css,/ec-municipality-profile-settings/);
 });
