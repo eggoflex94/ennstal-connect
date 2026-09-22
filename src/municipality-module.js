@@ -280,8 +280,11 @@ function wirePage(){
 function boot(){
   removeLegacyNavButton();
   window.addEventListener('ec:navigate',event=>{
-    if(event?.detail?.page==='municipality')void render();
-    else if(document.body.classList.contains('ec-municipality-open'))removePage();
+    if(event?.detail?.page==='municipality'){
+      window.requestAnimationFrame(()=>void render());
+      return;
+    }
+    if(document.body.classList.contains('ec-municipality-open'))removePage();
   });
   window.addEventListener('ec:region-change',()=>{
     if(document.body.classList.contains('ec-municipality-open'))void render();
