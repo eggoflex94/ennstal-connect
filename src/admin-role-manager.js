@@ -50,7 +50,7 @@ async function refresh(){
     if(!user)return;
     const [{data:v},{data:ms},{data:rs},{data:as},{data:mods}]=await Promise.all([
       supabase.from('profiles').select('id,role,account_status').eq('id',user.id).maybeSingle(),
-      supabase.from('profiles').select('id,nickname,role,account_badge,account_status').eq('account_status','ACTIVE'),
+      supabase.from('profiles').select('id,nickname,role,account_badge,account_status,home_region_id').eq('account_status','ACTIVE'),
       supabase.from('regions').select('id,slug,name').eq('is_active',true).order('sort_order'),
       supabase.from('regional_admin_assignments').select('user_id,region_id,active').eq('active',true),
       supabase.from('regional_moderation_assignments').select('user_id,region_id,permissions,active').eq('active',true)
@@ -65,6 +65,17 @@ async function ensureSupporter(member){
   if(String(member.role||'MEMBER').toUpperCase()!=='MEMBER')return;
   const {error}=await supabase.rpc('admin_set_role',{target_user:member.id,new_role:'SUPPORTER'});
   if(error)throw error;
+}
+
+async function setMunicipalityAccount(member,regionSlug,enabled,status){
+  if(enabled && !regionSlug)throw new Error('Bitte zuerst die Gemeinde/Region auswählen.');
+  const {error}=await supabase.rpc('head_admin_set_municipality_account',{
+    p_target:member.id,
+    p_region_slug:enabled?regionSlug:null,
+    p_enabled:enabled
+  });
+  if(error)throw error;
+  status.textContent=enabled?'Gemeindekonto vergeben. Grüner Stern, Rahmen und Gemeindebereich sind jetzt aktiv.':'Gemeindekonto entfernt.';
 }
 
 async function setBaseRole(member,role,status){
@@ -153,6 +164,10 @@ function buildManager(card,member,force=false){
       <label><span>Basisrolle</span><select class="ec-base-role"><option value="MEMBER">Mitglied</option><option value="MUNICIPALITY">Gemeinde</option><option value="SUPPORTER">Supporter</option><option value="ADMIN">Global Admin</option></select></label>
       <label><span>Region</span><select class="ec-region-role"><option value="">Region wählen</option>${regions.map(r=>`<option value="${r.slug}">${esc(r.name)}</option>`).join('')}</select></label>
     </div>
+    <div class="ec-municipality-quick-action">
+      <div><img src="${MUNICIPALITY_STAR}" alt="" aria-hidden="true"><span><strong>Gemeindekonto</strong><small>Offizielles Konto für genau eine Heimatregion vergeben.</small></span></div>
+      <button type="button" data-action="municipality-toggle">${String(member.role||'').toUpperCase()==='MUNICIPALITY'?'Gemeindekonto entfernen':'★ Gemeindekonto vergeben'}</button>
+    </div>
     <div class="ec-role-manager-actions ec-role-basic-actions"><button type="button" data-action="base">Basisrolle speichern</button><button type="button" data-action="regional-on">Regional Admin vergeben</button><button type="button" data-action="regional-off">Regional Admin entfernen</button></div>
     <div class="ec-role-manager-current">${assigned.length?`Regional Admin: ${assigned.map(regionName).join(', ')} · Standardrechte: Startseite, Neuigkeiten, Veranstaltungen`:'Keine regionale Adminrolle'}</div>
     <div class="ec-moderation-manager">
@@ -175,6 +190,9 @@ function buildManager(card,member,force=false){
   const base=wrap.querySelector('.ec-base-role');
   base.value=['MEMBER','MUNICIPALITY','SUPPORTER','ADMIN'].includes(String(member.role||'').toUpperCase())?String(member.role).toUpperCase():'MEMBER';
   const status=wrap.querySelector('.ec-role-manager-status');
+  const regionSelect=wrap.querySelector('.ec-region-role');
+  const homeRegion=regions.find(r=>r.id===member.home_region_id);
+  if(homeRegion)regionSelect.value=homeRegion.slug;
   const selectedPermissions=()=>[...wrap.querySelectorAll('.ec-moderation-permissions input:checked')].map(input=>input.value);
   const selectedRegion=()=>wrap.querySelector('.ec-region-role').value;
   wrap.querySelector('.ec-region-role').addEventListener('change',()=>{
@@ -188,6 +206,7 @@ function buildManager(card,member,force=false){
     try{
       const action=button.dataset.action;
       if(action==='base')await setBaseRole(member,base.value,status);
+      else if(action==='municipality-toggle')await setMunicipalityAccount(member,selectedRegion(),String(member.role||'').toUpperCase()!=='MUNICIPALITY',status);
       else if(action==='regional-on'||action==='regional-off')await setRegional(member,selectedRegion(),action==='regional-on',status);
       else {
         const global=action.includes('global');
