@@ -614,3 +614,16 @@ test("final regional header geometry keeps brand and picker inside viewport", as
   assert.match(css,/\.ec-top-nav\{[\s\S]*top:72px!important[\s\S]*height:56px!important/);
   assert.match(css,/\.ec-top-nav \.ec-region-picker\{[\s\S]*max-width:250px!important[\s\S]*margin-left:auto!important/);
 });
+
+
+test("native member directory owns region filtering without shell hiding cards", async()=>{
+  const shell=await source("src/regional-shell.js");
+  assert.match(shell,/if\(card\.closest\('\.native-members-directory'\)\)card\.hidden=false/);
+  assert.doesNotMatch(shell,/card\.hidden=!searching&&p\.home_region_id!==activeRegion\.id/);
+});
+
+test("online friends use municipality role star", async()=>{
+  const dash=await source("src/dashboard-top-polish.js");
+  assert.match(dash,/const MUNICIPALITY_STAR='\/role-star-green\.svg'/);
+  assert.match(dash,/if\(role\(p\)==='MUNICIPALITY'\)return MUNICIPALITY_STAR/);
+});
