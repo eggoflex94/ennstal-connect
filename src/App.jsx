@@ -848,7 +848,7 @@ export default function App() {
     if (!isHeadAdmin(profile?.role)) return showNotice("Nur der Global Admin darf Rollen ändern.");
     if (!m?.id || m.id === user.id || m.role === "HEAD_ADMIN") return showNotice("Der Global Admin kann nicht verändert werden.");
     const normalizedRole = String(newRole || "").trim().toUpperCase();
-    if (!["MEMBER", "SUPPORTER", "ADMIN"].includes(normalizedRole)) return showNotice("Bitte eine gültige Rolle auswählen.");
+    if (!["MEMBER", "SUPPORTER", "ADMIN", "MUNICIPALITY"].includes(normalizedRole)) return showNotice("Bitte eine gültige Rolle auswählen.");
     const { error } = await supabase.rpc("admin_set_role", { target_user: m.id, new_role: normalizedRole });
     if (error) return showNotice(error.message);
     const { data: changed, error: verifyError } = await supabase.from("profiles").select("id,role").eq("id", m.id).maybeSingle();
