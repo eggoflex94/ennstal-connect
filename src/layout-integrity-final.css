@@ -10,7 +10,7 @@ button,a,[role="button"]{touch-action:manipulation}
 button,a{overflow-wrap:anywhere}
 
 /* Navigation stays clickable above normal page content but below real dialogs. */
-.ec-brand-masthead,.ec-top-nav,.ec-region-picker,.ec-dock-toggle{position:relative;z-index:300}
+.ec-brand-masthead,.ec-top-nav,.ec-region-picker,.ec-dock-toggle{z-index:300}
 .ec-regional-shell{isolation:isolate}
 .modern-main,.content-root{position:relative;z-index:1}
 
