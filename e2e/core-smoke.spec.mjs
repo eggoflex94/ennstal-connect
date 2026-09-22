@@ -67,7 +67,9 @@ function jwt(userId, email) {
 
 async function installSupabaseMock(page, role) {
   const profile = profileFor(role);
-  const members = [profile, otherMember()];
+  const secondaryMember = otherMember();
+  const members = [profile, secondaryMember];
+  const rpcCalls = [];
   const email = role === "HEAD_ADMIN" ? "head-admin@example.test" : role === "ADMIN" ? "admin@example.test" : "member@example.test";
   const user = {
     id: MEMBER_ID,
@@ -129,6 +131,9 @@ async function installSupabaseMock(page, role) {
 
     if (path.startsWith("/rest/v1/rpc/")) {
       const fn = decodeURIComponent(path.split("/").pop());
+      let body = null;
+      try { body = request.postDataJSON(); } catch {}
+      rpcCalls.push({ fn, body });
       if (["community_member_directory", "admin_full_member_directory", "admin_member_directory"].includes(fn)) {
         return json(members);
       }
@@ -155,11 +160,20 @@ async function installSupabaseMock(page, role) {
         return json([{ completed: true }]);
       }
       if (fn === "record_online_time") return json({ rewards: 0 });
+      if (fn === "admin_get_permissions") return json({});
+      if (fn === "prepare_privileged_action") return json({});
+      if (fn === "admin_set_role") return json(null);
       return json([]);
     }
 
     if (path === "/rest/v1/profiles") {
-      return json(accept.includes("application/vnd.pgrst.object+json") ? profile : [profile]);
+      const idFilter = url.searchParams.get("id") || "";
+      const selected = idFilter.includes(OTHER_ID) ? secondaryMember : profile;
+      return json(accept.includes("application/vnd.pgrst.object+json") ? selected : [selected]);
+    }
+
+    if (path === "/rest/v1/user_permissions") {
+      return json(accept.includes("application/vnd.pgrst.object+json") ? {} : []);
     }
 
     if (path === "/rest/v1/community_rule_acceptances") {
@@ -189,10 +203,11 @@ async function installSupabaseMock(page, role) {
 
     return json({});
   });
+  return { rpcCalls };
 }
 
 async function login(page, role = "MEMBER") {
-  await installSupabaseMock(page, role);
+  const mock = await installSupabaseMock(page, role);
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Anmelden" })).toBeVisible();
   await page.locator('input[name="email"]').fill(role === "HEAD_ADMIN" ? "head-admin@example.test" : role === "ADMIN" ? "admin@example.test" : "member@example.test");
@@ -201,6 +216,7 @@ async function login(page, role = "MEMBER") {
   await expect(page.locator(".app")).toBeVisible();
   await expect(page.locator("button:visible").filter({ hasText: /Startseite/i }).first()).toBeVisible();
   await expect(page.locator(".app-recovery")).toHaveCount(0);
+  return mock;
 }
 
 async function visibleButton(page, label) {
