@@ -496,3 +496,15 @@ test("Admin Forum opens the host rendered by Admin Central", async()=>{
   assert.match(hub,/querySelector\('\.ec-admin-hub-forum-host'\)/);
   assert.doesNotMatch(hub,/querySelector\('\.ec-admin-forum-host'\)/);
 });
+
+
+test("Admin Forum visibility toggles never write to a missing node", async()=>{
+  const hub=await source("src/admin-central-hub.js");
+  assert.match(hub,/if \(!host \|\| !gridEl\) return/);
+});
+
+test("capture-phase lightweight dashboard navigation is not loaded", async()=>{
+  const html=await source("index.html");
+  assert.doesNotMatch(html,/lightweight-dashboard-nav\.js/);
+  assert.match(html,/width=device-width/);
+});
