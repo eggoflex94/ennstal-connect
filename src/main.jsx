@@ -223,8 +223,8 @@ class AppErrorBoundary extends React.Component {
 }
 
 async function removeLegacyAppShellOnce() {
-  const cleanupKey = "ec-legacy-cache-cleanup-v8";
-  const reloadKey = "ec-legacy-sw-reload-v8";
+  const cleanupKey = "ec-legacy-cache-cleanup-v9";
+  const reloadKey = "ec-legacy-sw-reload-v9";
   try {
     const wasControlled = Boolean(navigator.serviceWorker?.controller);
     let removedRegistration = false;
@@ -249,18 +249,26 @@ async function removeLegacyAppShellOnce() {
     if ((wasControlled || removedRegistration) && sessionStorage.getItem(reloadKey) !== "done") {
       sessionStorage.setItem(reloadKey, "done");
       window.location.reload();
+      return true;
     }
   } catch (error) {
     console.warn("Alter App-Cache konnte nicht vollständig entfernt werden:", error);
   }
+  return false;
 }
 
-void removeLegacyAppShellOnce();
+async function bootstrap() {
+  const reloading = await removeLegacyAppShellOnce();
+  if (reloading) return;
+  const root = document.getElementById("root");
+  if (!root) return;
+  createRoot(root).render(
+    <StrictMode>
+      <AppErrorBoundary>
+        <App />
+      </AppErrorBoundary>
+    </StrictMode>
+  );
+}
 
-createRoot(document.getElementById("root")).render(
-  <StrictMode>
-    <AppErrorBoundary>
-      <App />
-    </AppErrorBoundary>
-  </StrictMode>
-);
+void bootstrap();
