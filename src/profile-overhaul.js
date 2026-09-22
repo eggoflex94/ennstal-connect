@@ -124,7 +124,7 @@ async function buildContent(root,target){
 
   content.append(about,info,photos);
   const legacyDetails=root.querySelector('.integrated-profile-details');if(legacyDetails)legacyDetails.hidden=true;
-  const adminPanel=root.querySelector('.ec-profile-admin-panel');if(adminPanel)root.insertBefore(content,adminPanel);else root.appendChild(content);
+  const adminPanel=root.querySelector('.ec-profile-admin-panel');if(adminPanel?.parentElement===root)root.insertBefore(content,adminPanel);else if(root.isConnected)root.appendChild(content);
 }
 
 async function rebuild(root){
