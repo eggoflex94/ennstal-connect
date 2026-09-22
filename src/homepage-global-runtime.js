@@ -59,7 +59,8 @@ function addScope(){
     const label=document.createElement('label');
     label.className='ec-home-style-field';
     label.innerHTML='<span>Sichtbarkeit</span><select name="publication_scope"><option value="REGION">Nur diese Region</option><option value="GLOBAL">Global - alle Regionen</option></select>';
-    form.insertBefore(label,button);
+    if(button?.parentElement===form) form.insertBefore(label,button);
+    else if(form.isConnected) form.appendChild(label);
   });
 }
 
