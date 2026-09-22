@@ -565,3 +565,10 @@ test("Head Admin can assign and filter municipality accounts", async()=>{
   assert.match(manager,/\['municipality','Gemeinden'\]/);
   assert.match(manager,/new_role:'MUNICIPALITY'|MUNICIPALITY/);
 });
+
+
+test("regional shell base layout CSS is loaded before final navigation authority", async()=>{
+  const main=await source("src/main.jsx");
+  assert.match(main,/import "\.\/regional-shell\.css";\s*import "\.\/regional-shell\.js";/);
+  assert.ok(main.indexOf('import "./regional-shell.css";') < main.indexOf('import "./navigation-cleanup-final.css";'));
+});
