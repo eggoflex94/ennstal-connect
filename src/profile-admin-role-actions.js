@@ -17,7 +17,7 @@ async function handleRoleAction(button, action) {
   if (!supabase || roleActionBusy) return;
   const targetId = profileTargetId();
   const nextRole = String(action.split(':')[1] || '').toUpperCase();
-  if (!targetId || !['MEMBER', 'SUPPORTER', 'ADMIN'].includes(nextRole)) {
+  if (!targetId || !['MEMBER', 'SUPPORTER', 'ADMIN', 'MUNICIPALITY'].includes(nextRole)) {
     window.alert('Rollenänderung konnte nicht vorbereitet werden.');
     return;
   }
@@ -40,9 +40,11 @@ async function handleRoleAction(button, action) {
 
     window.alert(nextRole === 'ADMIN'
       ? 'Community Admin wurde erfolgreich vergeben.'
-      : nextRole === 'MEMBER'
-        ? 'Die Admin-/Supporter-Rolle wurde erfolgreich entfernt.'
-        : 'Supporter-Rolle wurde erfolgreich vergeben.');
+      : nextRole === 'MUNICIPALITY'
+        ? 'Gemeinderolle wurde erfolgreich vergeben.'
+        : nextRole === 'MEMBER'
+          ? 'Die Admin-/Supporter-/Gemeinderolle wurde erfolgreich entfernt.'
+          : 'Supporter-Rolle wurde erfolgreich vergeben.');
     window.location.reload();
   } catch (error) {
     console.error('Profilrolle konnte nicht aktualisiert werden:', error);
