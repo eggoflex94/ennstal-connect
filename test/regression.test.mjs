@@ -6,7 +6,7 @@ const source = async path => readFile(new URL(`../${path}`, import.meta.url), "u
 
 const requiredMainModules = ["./notification-center.js","./privacy-center.js","./account-deletion-admin.js","./legal-evidence-admin.js","./admin-workspace.js","./regional-shell.js","./clean-profile-runtime.js","./clean-layout.css","./clean-components.css","./role-region-polish.css","./sidebar-compact-polish.css","./global-role-identity-polish.css","./people-links-polish.css"];
 
-test("main entry keeps critical member/admin/regional modules wired without legacy layout stack", async () => {const main=await source("src/main.jsx");for(const module of requiredMainModules) assert.match(main,new RegExp(module.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")));for(const legacy of ["mobile-admin-production.css","member-grid-final.css","role-theme-lock.css","profile-simple.css","regional-shell.css"])assert.doesNotMatch(main,new RegExp(legacy.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")));assert.doesNotMatch(main,/live-notifications\.js/);});
+test("main entry keeps critical member/admin/regional modules wired without legacy layout stack", async () => {const main=await source("src/main.jsx");for(const module of requiredMainModules) assert.match(main,new RegExp(module.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")));for(const legacy of ["mobile-admin-production.css","member-grid-final.css","role-theme-lock.css","profile-simple.css"])assert.doesNotMatch(main,new RegExp(legacy.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")));assert.doesNotMatch(main,/live-notifications\.js/);});
 
 test("native member card renders role theme, identity and separated age/presence", async()=>{const card=await source("src/MemberCardView.jsx");assert.match(card,/data-member-id=\{member\.id\}/);assert.match(card,/data-home-region-id=\{member\.home_region_id/);assert.match(card,/data-role-theme=\{presentation\.theme\}/);for(const x of ['role-star-red.svg','supporter-star.svg','role-star-blue.svg'])assert.match(card,new RegExp(x.replace('.','\\.')));assert.doesNotMatch(card,/role-star-member\.svg/);assert.match(card,/presentation\.star &&/);assert.match(card,/className="ec-member-realname"/);assert.match(card,/className="ec-member-age"/);assert.match(card,/ec-member-presence-line/);assert.doesNotMatch(card,/isAdminCard && member\.last_active_at/);assert.match(card,/loading="lazy"/);assert.match(card,/tabIndex=\{0\}/);});
 
@@ -187,7 +187,7 @@ test("first-paint assets stay lightweight, cacheable and preloaded", async()=>{
   assert.match(index,/preload" as="image" href="\/community-default-avatar-fast\.svg"/);
   assert.match(headers,/\/\*\.svg[\s\S]*stale-while-revalidate=86400/);
   assert.match(headers,/\/\*\.png[\s\S]*stale-while-revalidate=86400/);
-  assert.match(main,/ec-legacy-cache-cleanup-v9/);
+  assert.match(main,/ec-app-shell-build/);
   assert.ok(avatar.length < 10000, "fallback avatar must remain lightweight");
 });
 
@@ -209,8 +209,8 @@ test("first-paint assets stay cacheable and legacy service workers self-heal", a
   assert.match(app,/community-default-avatar-fast\.svg/);
   assert.match(cards,/community-default-avatar-fast\.svg/);
   assert.match(shell,/community-default-avatar-fast\.svg/);
-  assert.match(main,/ec-legacy-cache-cleanup-v9/);
-  assert.match(main,/window\.location\.reload\(\)/);
+  assert.match(main,/ec-app-shell-build/);
+  assert.match(main,/window\.location\.replace\(url\.toString\(\)\)/);
 });
 
 
@@ -419,9 +419,9 @@ test("session bootstrap recovers without requiring a manual Ctrl+R", async()=>{
   assert.match(app,/addEventListener\("pageshow", handlePageShow\)/);
   assert.match(app,/visibilitychange/);
   assert.match(app,/15000/);
-  assert.match(main,/ec-legacy-cache-cleanup-v9/);
+  assert.match(main,/ec-app-shell-build/);
   assert.match(main,/getRegistrations\(\)/);
-  assert.match(main,/sessionStorage\.getItem\(reloadKey\)/);
+  assert.match(main,/url\.searchParams\.get\(reloadParam\) === buildId/);
 });
 
 
@@ -473,7 +473,7 @@ test("app waits for stale service-worker cleanup before React bootstrap", async(
   assert.match(main,/async function bootstrap\(\)/);
   assert.match(main,/await removeLegacyAppShellOnce\(\)/);
   assert.match(main,/if \(reloading\) return/);
-  assert.match(main,/ec-legacy-cache-cleanup-v9/);
+  assert.match(main,/ec-app-shell-build/);
   assert.match(main,/return true/);
 });
 
