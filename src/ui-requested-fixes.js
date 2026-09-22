@@ -6,7 +6,6 @@ import './head-admin-operator-label.js';
 import './role-star-authority.css';
 import './profile-role-star-runtime.js';
 import './global-admin-labels.js';
-import './react-navigation-bridge.js';
 import './head-admin-dock-cleanup.js';
 import './profile-all-groups.css';
 import './profile-all-groups.js';
