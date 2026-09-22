@@ -196,7 +196,9 @@ async function openHub() {
 
   document.body.insertAdjacentHTML('beforeend', `<div class="ec-admin-hub-overlay" role="dialog" aria-modal="true" aria-label="Admin-Zentrale"><section class="ec-admin-hub"><header><div><span>ADMIN-ZENTRALE</span><h2>${escapeHtml(roleName(ctx.profile.role))}</h2><p>Du siehst nur Bereiche, für die dein Konto freigeschaltet ist. Das Admin-Forum ist für das gesamte Admin- und Moderationsteam überregional.</p></div><button type="button" class="ec-admin-hub-close" aria-label="Schließen">×</button></header><div class="ec-admin-hub-grid">${tiles}</div><div class="ec-admin-hub-forum-host" hidden></div></section></div>`);
   const overlay = document.querySelector('.ec-admin-hub-overlay');
-  overlay.querySelector('.ec-admin-hub-close').onclick = () => overlay.remove();
+  if (!overlay) return;
+  const closeButton = overlay.querySelector('.ec-admin-hub-close');
+  if (closeButton) closeButton.onclick = () => overlay.remove();
   overlay.onclick = (event) => { if (event.target === overlay) overlay.remove(); };
   overlay.querySelectorAll('[data-admin-hub-action]').forEach((button) => {
     button.onclick = async () => {
@@ -217,6 +219,7 @@ async function openAdminForum(overlay, ctx) {
   host.innerHTML = '<div class="ec-admin-forum-loading">Admin-Forum wird geladen …</div>';
 
   const { data: posts, error } = await supabase.from('forum_posts').select('id,author_id,title,content,created_at,edited_at').eq('scope', 'ADMIN').order('created_at', { ascending: false }).limit(100);
+  if (!overlay?.isConnected || !host?.isConnected || !gridEl?.isConnected) return;
   if (error) { host.innerHTML = `<p class="ec-admin-forum-error">${escapeHtml(error.message)}</p>`; return; }
   const postIds = (posts || []).map((post) => post.id);
   const [{ data: replies }, { data: members }] = await Promise.all([
@@ -233,8 +236,14 @@ async function openAdminForum(overlay, ctx) {
   }).join('');
 
   host.innerHTML = `<div class="ec-admin-forum-head"><button type="button" class="ec-admin-forum-back">← Zur Admin-Zentrale</button><div><span>INTERN · ÜBERREGIONAL</span><h2>Admin-Forum</h2><p>Gemeinsamer interner Austausch für alle Admins und berechtigten Moderatorinnen und Moderatoren.</p></div></div><form class="ec-admin-forum-create"><input name="title" minlength="3" required placeholder="Überschrift"><textarea name="content" minlength="3" required placeholder="Beitrag für das Admin-Team …"></textarea><button type="submit">Beitrag veröffentlichen</button></form><div class="ec-admin-forum-list">${postHtml || '<p class="ec-admin-forum-empty">Noch keine Beiträge vorhanden.</p>'}</div>`;
-  host.querySelector('.ec-admin-forum-back').onclick = () => { host.hidden = true; gridEl.hidden = false; };
-  host.querySelector('.ec-admin-forum-create').onsubmit = async (event) => {
+  const backButton = host.querySelector('.ec-admin-forum-back');
+  if (backButton) backButton.onclick = () => {
+    if (!host.isConnected || !gridEl.isConnected) return;
+    host.hidden = true;
+    gridEl.hidden = false;
+  };
+  const createForm = host.querySelector('.ec-admin-forum-create');
+  if (createForm) createForm.onsubmit = async (event) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const title = String(form.get('title') || '').trim();
