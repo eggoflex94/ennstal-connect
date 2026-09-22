@@ -579,3 +579,14 @@ test("layout integrity must not reset regional shell positioning", async()=>{
   assert.doesNotMatch(css,/\.ec-brand-masthead,\.ec-top-nav,\.ec-region-picker,\.ec-dock-toggle\{position:relative/);
   assert.match(css,/\.ec-brand-masthead,\.ec-top-nav,\.ec-region-picker,\.ec-dock-toggle\{z-index:300\}/);
 });
+
+
+test("app shell cleanup is versioned by the deployed bundle", async()=>{
+  const main=await source("src/main.jsx");
+  assert.match(main,/const buildId = new URL\(import\.meta\.url\)\.pathname/);
+  assert.match(main,/const cleanupKey = "ec-app-shell-build"/);
+  assert.match(main,/navigator\.serviceWorker\?\.controller/);
+  assert.match(main,/window\.location\.replace\(url\.toString\(\)\)/);
+  assert.doesNotMatch(main,/ec-legacy-cache-cleanup-v9/);
+  assert.doesNotMatch(main,/ec-legacy-sw-reload-v9/);
+});
