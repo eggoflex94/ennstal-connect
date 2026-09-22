@@ -506,7 +506,8 @@ test("Admin Forum visibility toggles never write to a missing node", async()=>{
 test("capture-phase lightweight dashboard navigation is not loaded", async()=>{
   const html=await source("index.html");
   assert.doesNotMatch(html,/lightweight-dashboard-nav\.js/);
-  assert.match(html,/width=device-width/);
+  assert.match(html,/content="width=1180"/);
+  assert.doesNotMatch(html,/width=device-width/);
 });
 
 
