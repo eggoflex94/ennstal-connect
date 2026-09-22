@@ -64,3 +64,34 @@
   .ec-municipality-intro-icon{width:56px;height:56px}
   .ec-municipality-intro-steps{grid-template-columns:1fr}
 }
+
+
+/* Municipality page must always begin below the fixed regional masthead + nav.
+   This is intentionally scoped to the open municipality view so legacy page
+   geometry cannot pull the introduction underneath the shell. */
+body.ec-municipality-open .modern-main{
+  padding-top:var(--ec-page-top,154px)!important;
+}
+body.ec-municipality-open .modern-main>.content-root{
+  position:relative!important;
+  z-index:1!important;
+  padding-top:0!important;
+}
+body.ec-municipality-open .ec-municipality-page,
+body.ec-municipality-open .municipality-loading-host{
+  position:relative!important;
+  inset:auto!important;
+  top:auto!important;
+  margin-top:0!important;
+  transform:none!important;
+}
+body.ec-municipality-open .ec-municipality-page{
+  isolation:isolate;
+}
+
+@media(max-width:1050px){
+  body.ec-municipality-open .modern-main{padding-top:128px!important}
+}
+@media(max-width:700px){
+  body.ec-municipality-open .modern-main{padding-top:120px!important}
+}
