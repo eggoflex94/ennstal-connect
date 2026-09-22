@@ -97,11 +97,45 @@ function managerPanel(ctx){
   </section>`;
 }
 
+function introductionBlock(ctx){
+  const regionName=ctx?.region?.name||'deine Region';
+  if(ctx?.can_manage){
+    return `<section class="ec-municipality-intro ec-municipality-intro-manager">
+      <div class="ec-municipality-intro-icon"><img src="/role-star-green.svg" alt=""></div>
+      <div class="ec-municipality-intro-copy">
+        <span class="eyebrow">GEMEINDE & SERVICE · EINFÜHRUNG</span>
+        <h2>Willkommen im offiziellen Gemeindebereich</h2>
+        <p>Hier verwaltest du den offiziellen Auftritt deiner Gemeinde in ${esc(regionName)}. Dieser Bereich ist für Bürgerinformation, nachvollziehbare Anliegen und direkte Rückmeldungen gedacht.</p>
+        <div class="ec-municipality-intro-steps">
+          <article><b>1</b><div><strong>Gemeindeprofil pflegen</strong><span>Offiziellen Namen, Beschreibung, Website, Kontakt, Adresse und Logo aktuell halten.</span></div></article>
+          <article><b>2</b><div><strong>Hinweise veröffentlichen</strong><span>Wichtige Informationen, Verkehr, Wasser, Abfall, Veranstaltungen und dringende Meldungen veröffentlichen.</span></div></article>
+          <article><b>3</b><div><strong>Bürgeranliegen bearbeiten</strong><span>Anliegen prüfen, Status setzen und den Bürgern eine offizielle Rückmeldung geben.</span></div></article>
+        </div>
+        <p class="ec-municipality-intro-note">Dein Gemeindekonto ist mit dem grünen Rollenstern gekennzeichnet. Verwaltungsfunktionen gelten nur für die freigeschaltete Heimatregion.</p>
+      </div>
+    </section>`;
+  }
+  return `<section class="ec-municipality-intro">
+    <div class="ec-municipality-intro-icon"><span aria-hidden="true">🏛</span></div>
+    <div class="ec-municipality-intro-copy">
+      <span class="eyebrow">GEMEINDE & SERVICE · EINFÜHRUNG</span>
+      <h2>Offizielle Informationen und Bürgeranliegen</h2>
+      <p>Dieser Bereich verbindet dich direkt mit den offiziellen Gemeindeinformationen für ${esc(regionName)}.</p>
+      <div class="ec-municipality-intro-steps">
+        <article><b>1</b><div><strong>Informationen lesen</strong><span>Offizielle Hinweise deiner Gemeinde an einem zentralen Ort.</span></div></article>
+        <article><b>2</b><div><strong>Anliegen melden</strong><span>Straße, Beleuchtung, Abfall, Verkehr und weitere Themen direkt übermitteln.</span></div></article>
+        <article><b>3</b><div><strong>Status verfolgen</strong><span>Sieh, ob dein Anliegen neu, in Prüfung, in Bearbeitung oder erledigt ist.</span></div></article>
+      </div>
+    </div>
+  </section>`;
+}
+
 function pageMarkup(ctx){
   const notices=(ctx.notices||[]).map(n=>noticeCard(n,ctx.can_manage)).join('')||'<p class="ec-municipality-empty">Noch keine offiziellen Hinweise veröffentlicht.</p>';
   const requests=(ctx.my_requests||[]).map(r=>requestCard(r,false)).join('')||'<p class="ec-municipality-empty">Du hast noch keine Anliegen gemeldet.</p>';
   const counts=ctx.counts||{};
   return `<section class="ec-municipality-page">
+    ${introductionBlock(ctx)}
     ${profileBlock(ctx)}
     ${managerPanel(ctx)}
     <div class="ec-municipality-grid">
