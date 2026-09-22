@@ -6,13 +6,16 @@
   html,
   body,
   #root {
-    min-width: 1180px;
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
   }
 
   body {
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
     overscroll-behavior-x: none;
+    overflow-x: hidden;
   }
 
   button,

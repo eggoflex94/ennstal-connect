@@ -4,10 +4,10 @@ import { readFile } from "node:fs/promises";
 
 const source = async (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
-test("phones use the desktop viewport", async () => {
+test("phones use the responsive viewport", async () => {
   const html = await source("index.html");
-  assert.match(html, /content="width=1180"/);
-  assert.doesNotMatch(html, /width=device-width/);
+  assert.match(html, /width=device-width/);
+  assert.doesNotMatch(html, /content="width=1180"/);
 });
 
 test("touch phones keep navigation DOM ownership stable", async () => {
@@ -35,15 +35,15 @@ test("mobile layout override files stay disabled for desktop parity", async () =
   }
 });
 
-test("final touch layer keeps desktop width while improving tap targets", async () => {
+test("final touch layer keeps responsive width while improving tap targets", async () => {
   const main = await source("src/main.jsx");
   const css = await source("src/touch-desktop-stability.css");
   assert.match(main, /import "\.\/touch-desktop-stability\.css";/);
   assert.match(css, /@media \(pointer: coarse\)/);
-  assert.match(css, /min-width:\s*1180px/);
+  assert.doesNotMatch(css, /min-width:\s*1180px/);
+  assert.match(css, /min-width:\s*0/);
   assert.match(css, /min-height:\s*44px/);
   assert.match(css, /touch-action:\s*manipulation/);
-  assert.doesNotMatch(css, /@media\s*\(max-width:/);
 });
 
 test("profile upload remains React-owned on desktop and phones", async () => {
@@ -79,12 +79,11 @@ test("legacy clean profile runtime cannot replace React profile controls", async
   assert.doesNotMatch(code, /ec-clean-profile-hidden/);
 });
 
-test("visible shell navigation uses one direct React bridge", async () => {
-  const bridge = await source("src/react-navigation-bridge.js");
-  assert.match(bridge, /button\.onclick\s*=\s*null/);
-  assert.match(bridge, /new CustomEvent\(['"]ec:navigate['"]/);
-  assert.doesNotMatch(bridge, /stopImmediatePropagation/);
-  assert.doesNotMatch(bridge, /\.click\s*\(\s*\)/);
+test("visible shell navigation uses native handlers without capture bridges", async () => {
+  const html = await source("index.html");
+  const ui = await source("src/ui-requested-fixes.js");
+  assert.doesNotMatch(html, /lightweight-dashboard-nav\.js/);
+  assert.doesNotMatch(ui, /react-navigation-bridge\.js/);
 });
 
 test("member profile keeps identical desktop structure on touch devices", async () => {

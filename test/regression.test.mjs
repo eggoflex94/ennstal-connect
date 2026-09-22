@@ -57,7 +57,7 @@ test("deferred admin modules stay reachable instead of disappearing from the UI"
   for(const module of [
     "./admin-dashboard-modern.js","./admin-community-popup-manager.js","./admin-central-permissions.js",
     "./business-account-admin-fix.js","./head-admin-activity-folders.js","./admin-reload-watch.js","./admin-system-watch.js",
-    "./profile-admin-tools-unified.js","./profile-admin-role-actions.js","./regional-admin-tools-bridge.js"
+    "./profile-admin-tools-unified.js","./profile-admin-role-actions.js"
   ]) assert.ok(deferred.includes(module), `missing deferred module: ${module}`);
   for(const page of ["admin","reports","admin-forum","admin-account-review","adminTools","legal","profile","profile-preview","member-profile","members"])
     assert.ok(deferred.includes(`\'${page}\'`) || deferred.includes(`"${page}"`), `missing deferred page route: ${page}`);
@@ -187,7 +187,7 @@ test("first-paint assets stay lightweight, cacheable and preloaded", async()=>{
   assert.match(index,/preload" as="image" href="\/community-default-avatar-fast\.svg"/);
   assert.match(headers,/\/\*\.svg[\s\S]*stale-while-revalidate=86400/);
   assert.match(headers,/\/\*\.png[\s\S]*stale-while-revalidate=86400/);
-  assert.match(main,/ec-legacy-cache-cleanup-v8/);
+  assert.match(main,/ec-legacy-cache-cleanup-v9/);
   assert.ok(avatar.length < 10000, "fallback avatar must remain lightweight");
 });
 
@@ -209,7 +209,7 @@ test("first-paint assets stay cacheable and legacy service workers self-heal", a
   assert.match(app,/community-default-avatar-fast\.svg/);
   assert.match(cards,/community-default-avatar-fast\.svg/);
   assert.match(shell,/community-default-avatar-fast\.svg/);
-  assert.match(main,/ec-legacy-cache-cleanup-v8/);
+  assert.match(main,/ec-legacy-cache-cleanup-v9/);
   assert.match(main,/window\.location\.reload\(\)/);
 });
 
@@ -373,7 +373,7 @@ test("legacy duplicate friend and group blocks are removed from member profile",
 test("personal dashboard stays off-canvas on narrow screens", async()=>{
   const code=await source("src/personal-dashboard-final-fix.js");
   const css=await source("src/layout-overlap-authority.css");
-  assert.match(code,/max-width:900px/);
+  assert.match(code,/max-width:1050px/);
   assert.match(code,/classList\.remove\('ec-document-flow-dock'\)/);
   assert.match(code,/document\.body\.appendChild\(dock\)/);
   assert.match(code,/addEventListener\('resize',schedule/);
@@ -419,7 +419,7 @@ test("session bootstrap recovers without requiring a manual Ctrl+R", async()=>{
   assert.match(app,/addEventListener\("pageshow", handlePageShow\)/);
   assert.match(app,/visibilitychange/);
   assert.match(app,/15000/);
-  assert.match(main,/ec-legacy-cache-cleanup-v8/);
+  assert.match(main,/ec-legacy-cache-cleanup-v9/);
   assert.match(main,/getRegistrations\(\)/);
   assert.match(main,/sessionStorage\.getItem\(reloadKey\)/);
 });
@@ -456,4 +456,55 @@ test("secondary tools stay inside Community instead of crowding primary navigati
 test("dashboard utility shortcuts remain icon-only", async()=>{
   const css=await source("src/admin-central-hub.css");
   assert.match(css,/ec-dashboard-utility-button>\.ec-compact-menu-label[\s\S]*display:none!important/);
+});
+
+
+test("native regional-shell handlers remain authoritative for navigation", async()=>{
+  const ui=await source("src/ui-requested-fixes.js");
+  const shell=await source("src/regional-shell.js");
+  const deferred=await source("src/deferred-admin-enhancements.js");
+  assert.doesNotMatch(ui,/react-navigation-bridge\.js/);
+  assert.match(shell,/document\.querySelector\(\`\[data-ec-detail=/);
+  assert.doesNotMatch(deferred,/regional-admin-tools-bridge\.js/);
+});
+
+test("app waits for stale service-worker cleanup before React bootstrap", async()=>{
+  const main=await source("src/main.jsx");
+  assert.match(main,/async function bootstrap\(\)/);
+  assert.match(main,/await removeLegacyAppShellOnce\(\)/);
+  assert.match(main,/if \(reloading\) return/);
+  assert.match(main,/ec-legacy-cache-cleanup-v9/);
+  assert.match(main,/return true/);
+});
+
+
+test("touch and narrow layouts no longer force a clipped desktop canvas", async()=>{
+  const touch=await source("src/touch-desktop-stability.css");
+  const nav=await source("src/navigation-cleanup-final.css");
+  const dashboard=await source("src/personal-dashboard-final-fix.js");
+  assert.doesNotMatch(touch,/min-width:\s*1180px/);
+  assert.match(nav,/@media\(max-width:1050px\)/);
+  assert.match(nav,/transform:translateX\(105%\)!important/);
+  assert.match(nav,/\.ec-dock-open \.ec-right-dock/);
+  assert.match(dashboard,/max-width:1050px/);
+});
+
+
+test("Admin Forum opens the host rendered by Admin Central", async()=>{
+  const hub=await source("src/admin-central-hub.js");
+  assert.match(hub,/class="ec-admin-hub-forum-host"/);
+  assert.match(hub,/querySelector\?\.\('\.ec-admin-hub-forum-host'\)/);
+  assert.doesNotMatch(hub,/querySelector\('\.ec-admin-forum-host'\)/);
+});
+
+
+test("Admin Forum visibility toggles never write to a missing node", async()=>{
+  const hub=await source("src/admin-central-hub.js");
+  assert.match(hub,/if \(!host \|\| !gridEl\) return/);
+});
+
+test("capture-phase lightweight dashboard navigation is not loaded", async()=>{
+  const html=await source("index.html");
+  assert.doesNotMatch(html,/lightweight-dashboard-nav\.js/);
+  assert.match(html,/width=device-width/);
 });
