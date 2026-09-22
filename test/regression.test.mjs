@@ -605,3 +605,12 @@ test("municipality page stays below the fixed regional shell", async()=>{
   assert.match(css,/body\.ec-municipality-open \.ec-municipality-page[\s\S]*margin-top:0!important;/);
   assert.match(css,/@media\(max-width:1050px\)[\s\S]*body\.ec-municipality-open \.modern-main\{padding-top:128px!important\}/);
 });
+
+
+test("final regional header geometry keeps brand and picker inside viewport", async()=>{
+  const css=await source("src/navigation-cleanup-final.css");
+  assert.match(css,/\.ec-brand-masthead\{[\s\S]*height:72px!important/);
+  assert.match(css,/\.ec-brand-masthead \.ec-brand-logo\{[\s\S]*min-width:380px!important/);
+  assert.match(css,/\.ec-top-nav\{[\s\S]*top:72px!important[\s\S]*height:56px!important/);
+  assert.match(css,/\.ec-top-nav \.ec-region-picker\{[\s\S]*max-width:250px!important[\s\S]*margin-left:auto!important/);
+});
