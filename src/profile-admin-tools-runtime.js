@@ -7,7 +7,7 @@ const REGIONAL_LABELS={FORUM:'Forum',GROUPS:'Gruppen',EVENTS:'Events',NEWS:'Neui
 let busy=false;
 const esc=v=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
 const role=v=>String(v||'MEMBER').toUpperCase();
-const roleLabel=v=>({HEAD_ADMIN:'Hauptadmin',ADMIN:'Community Admin',SUPPORTER:'Supporter',MEMBER:'Mitglied'})[role(v)]||role(v);
+const roleLabel=v=>({HEAD_ADMIN:'Hauptadmin',ADMIN:'Community Admin',MUNICIPALITY:'Gemeinde',SUPPORTER:'Supporter',MEMBER:'Mitglied'})[role(v)]||role(v);
 const bool=v=>v===true;
 const notify=text=>window.alert(text);
 
@@ -69,7 +69,7 @@ function buildModal(ctx){
     const targetRegionalAdminIds=new Set(ctx.targetRegionalAdmins.map(x=>x.region_id));
     const targetRegionalModIds=new Set((ctx.targetRegionalMods||[]).filter(x=>x.active!==false).map(x=>x.region_id));
     const groupMod=bool(ctx.targetPermissions?.manage_groups)||(t.admin_responsibilities||[]).some(x=>/gruppen verwalten/i.test(String(x)));
-    blocks.push(section('★','Rolle & Zuständigkeiten','Nur Hauptadmin – Rollen, Moderatorstatus und Einzelrechte',`<div class="ec-profile-admin-grid">${toolButton('Rolle entfernen → Mitglied','role:MEMBER')}${toolButton('Zum Supporter machen','role:SUPPORTER')}${toolButton('Zum Community Admin machen','role:ADMIN')}${toolButton('Einzelrechte verwalten','permissions')}${toolButton(t.forum_moderator?'Forum-Moderation entfernen':'Forum-Moderator vergeben','forum-moderator')}${toolButton(groupMod?'Gruppenmoderation entfernen':role(t.role)==='SUPPORTER'?'Gruppenmoderator vergeben':'Supporter + Gruppenmoderation','group-moderator')}</div>`,'head-only'));
+    blocks.push(section('★','Rolle & Zuständigkeiten','Nur Hauptadmin – Rollen, Moderatorstatus und Einzelrechte',`<div class="ec-profile-admin-grid">${toolButton('Rolle entfernen → Mitglied','role:MEMBER')}${toolButton('Zum Gemeindekonto machen','role:MUNICIPALITY')}${toolButton('Zum Supporter machen','role:SUPPORTER')}${toolButton('Zum Community Admin machen','role:ADMIN')}${toolButton('Einzelrechte verwalten','permissions')}${toolButton(t.forum_moderator?'Forum-Moderation entfernen':'Forum-Moderator vergeben','forum-moderator')}${toolButton(groupMod?'Gruppenmoderation entfernen':role(t.role)==='SUPPORTER'?'Gruppenmoderator vergeben':'Supporter + Gruppenmoderation','group-moderator')}</div>`,'head-only'));
     blocks.push(section('⌖','Regionale Rollen','Nur Hauptadmin – Region auswählen und Rolle verwalten',`<label class="ec-profile-admin-region-picker">Region<select class="ec-admin-region-select">${regionOptions}</select></label><div class="ec-profile-admin-grid">${toolButton(homeRegion&&targetRegionalAdminIds.has(homeRegion.id)?'Regionaladmin entfernen':'Regionaladmin vergeben','regional-admin')}${toolButton(homeRegion&&targetRegionalModIds.has(homeRegion.id)?'Regionale Moderation entfernen':'Regionale Moderation vergeben','regional-moderator')}</div>`,'head-only'));
     blocks.push(section('⌖','Mitgliedsregion',`Aktuell: ${homeRegion?.name||'Keine Region'}`,`<label class="ec-profile-admin-region-picker">Neue Heimatregion<select class="ec-home-region-select">${regionOptions}</select></label><div class="ec-profile-admin-grid">${toolButton('Heimatregion speichern','home-region')}</div>`,'head-only'));
   }
