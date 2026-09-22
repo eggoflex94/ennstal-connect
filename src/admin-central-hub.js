@@ -209,8 +209,9 @@ async function openHub() {
 }
 
 async function openAdminForum(overlay, ctx) {
-  const host = overlay.querySelector('.ec-admin-hub-forum-host');
-  const gridEl = overlay.querySelector('.ec-admin-hub-grid');
+  const host = overlay?.querySelector?.('.ec-admin-hub-forum-host');
+  const gridEl = overlay?.querySelector?.('.ec-admin-hub-grid');
+  if (!host || !gridEl) return;
   gridEl.hidden = true;
   host.hidden = false;
   host.innerHTML = '<div class="ec-admin-forum-loading">Admin-Forum wird geladen …</div>';
