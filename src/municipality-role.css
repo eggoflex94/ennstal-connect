@@ -2,7 +2,8 @@
 
 /* Municipality uses the exact same member-card system as every other role.
    Only the role color palette changes. */
-article.member-card[data-role-theme="municipality"]{
+article.member-card[data-role-theme="municipality"],
+article.member-card.role-theme-municipality{
   --ec-card-border:#21c978!important;
   --ec-card-text:#fff!important;
   --ec-card-muted:rgba(255,255,255,.70)!important;
