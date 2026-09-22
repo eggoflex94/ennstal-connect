@@ -120,6 +120,16 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
     setPage(1);
   }, [query, regionId, onlineOnly, activeRegion?.id]);
 
+  // The native directory is the only authority for member filtering.
+  // Remove any regional context block left behind by an older shell build so
+  // "Alle Regionen" can never look or behave like an active-region filter.
+  useEffect(() => {
+    const root = document.querySelector(".native-members-directory");
+    if (!root) return;
+    root.querySelectorAll(".ec-region-context").forEach((node) => node.remove());
+    root.dataset.regionMode = regionId === "ALL" ? "all" : "region";
+  }, [regionId, visible.length]); // native directory removes stale regional shell context
+
   useEffect(() => {
     if (page > pageCount) setPage(pageCount);
   }, [page, pageCount]);
