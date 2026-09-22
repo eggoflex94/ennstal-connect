@@ -6,8 +6,8 @@ const source = async (path) => readFile(new URL(`../${path}`, import.meta.url), 
 
 test("phones keep the desktop viewport", async () => {
   const html = await source("index.html");
-  assert.match(html, /width=device-width/);
-  assert.doesNotMatch(html, /content="width=1180"/);
+  assert.match(html, /content="width=1180"/);
+  assert.doesNotMatch(html, /width=device-width/);
 });
 
 test("touch phones keep navigation DOM ownership stable", async () => {
