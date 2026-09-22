@@ -46,8 +46,7 @@ export function loadDeferredProfileAdminEnhancements() {
   if (!profileAdminPromise) {
     profileAdminPromise = Promise.all([
       import('./profile-admin-tools-unified.js'),
-      import('./profile-admin-role-actions.js'),
-      import('./regional-admin-tools-bridge.js')
+      import('./profile-admin-role-actions.js')
     ]).catch((error) => {
       profileAdminPromise = null;
       reportLoadError('Profil-Admin-Erweiterungen', error);
