@@ -37,6 +37,7 @@ import "./sidebar-news-popup.js";
 import "./municipality-module.css";
 import "./municipality-module.js";
 
+import "./regional-shell.css";
 import "./regional-shell.js";
 import "./deferred-admin-enhancements.js";
 // Deferred admin wiring remains explicit for regression visibility:
