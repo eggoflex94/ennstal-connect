@@ -1,4 +1,6 @@
 const DEFAULT_AVATAR = "/community-default-avatar-fast.svg";
+const ROLE_STAR_VERSION = "20260922a";
+const roleStarAsset = (path) => `${path}?v=${ROLE_STAR_VERSION}`;
 
 function getAge(date) {
   if (!date) return null;
@@ -24,11 +26,11 @@ function rolePresentation(member) {
   const role = String(member?.role || "MEMBER").toUpperCase();
   const adminPresentation = ["HEAD_ADMIN", "ADMIN", "GLOBAL_ADMIN", "REGIONAL_ADMIN"].includes(role) || member?.directory_admin === true;
   if (adminPresentation) {
-    return { key: role === "HEAD_ADMIN" ? "head-admin" : "admin", theme: "admin", label: role === "HEAD_ADMIN" ? "Hauptadmin" : "Admin", star: "/role-star-red.svg" };
+    return { key: role === "HEAD_ADMIN" ? "head-admin" : "admin", theme: "admin", label: role === "HEAD_ADMIN" ? "Hauptadmin" : "Admin", star: roleStarAsset("/role-star-red.svg") };
   }
-  if (role === "SUPPORTER") return { key: "supporter", theme: "supporter", label: "Supporter", star: "/supporter-star.svg" };
-  if (role === "MUNICIPALITY") return { key: "municipality", theme: "municipality", label: "Gemeinde", star: "/role-star-green.svg" };
-  if (member?.account_badge === "BUSINESS") return { key: "business", theme: "business", label: "Unternehmer", star: "/role-star-blue.svg" };
+  if (role === "SUPPORTER") return { key: "supporter", theme: "supporter", label: "Supporter", star: roleStarAsset("/supporter-star.svg") };
+  if (role === "MUNICIPALITY") return { key: "municipality", theme: "municipality", label: "Gemeinde", star: roleStarAsset("/role-star-green.svg") };
+  if (member?.account_badge === "BUSINESS") return { key: "business", theme: "business", label: "Unternehmer", star: roleStarAsset("/role-star-blue.svg") };
   return { key: "member", theme: "member", label: "Mitglied", star: null };
 }
 
