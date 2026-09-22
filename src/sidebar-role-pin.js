@@ -1,6 +1,6 @@
 import { supabase } from './supabaseClient';
 
-const STAR_BY_THEME={admin:'/role-star-red.svg',supporter:'/supporter-star.svg',business:'/role-star-blue.svg'};
+const STAR_BY_THEME={admin:'/role-star-red.svg',municipality:'/role-star-green.svg',supporter:'/supporter-star.svg',business:'/role-star-blue.svg'};
 let state={userId:null,profile:null,regions:[],regionalAdmins:[]};
 let busy=false;
 
@@ -13,6 +13,7 @@ const themeFor=(p,regionId)=>{
   const base=role(p);
   if(base==='HEAD_ADMIN'||base==='ADMIN')return'admin';
   if(regionId&&state.regionalAdmins.some(a=>a.user_id===p?.id&&a.region_id===regionId&&a.active))return'admin';
+  if(base==='MUNICIPALITY')return'municipality';
   if(base==='SUPPORTER')return'supporter';
   if(String(p?.account_badge||'').toUpperCase()==='BUSINESS')return'business';
   return'member';
