@@ -209,7 +209,7 @@ async function openHub() {
 }
 
 async function openAdminForum(overlay, ctx) {
-  const host = overlay.querySelector('.ec-admin-forum-host');
+  const host = overlay.querySelector('.ec-admin-hub-forum-host');
   const gridEl = overlay.querySelector('.ec-admin-hub-grid');
   gridEl.hidden = true;
   host.hidden = false;
