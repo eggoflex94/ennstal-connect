@@ -17,7 +17,21 @@ export default defineConfig({
     video: "retain-on-failure"
   },
   projects: [
-    { name: "chromium", use: { browserName: "chromium" } }
+    {
+      name: "desktop-chromium",
+      use: { browserName: "chromium", viewport: { width: 1600, height: 1000 } }
+    },
+    {
+      name: "mobile-touch-chromium",
+      use: {
+        browserName: "chromium",
+        viewport: { width: 390, height: 844 },
+        screen: { width: 390, height: 844 },
+        isMobile: true,
+        hasTouch: true,
+        deviceScaleFactor: 3
+      }
+    }
   ],
   webServer: {
     command: "npm run build && npm run preview -- --host 127.0.0.1",
