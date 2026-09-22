@@ -493,7 +493,7 @@ test("touch and narrow layouts no longer force a clipped desktop canvas", async(
 test("Admin Forum opens the host rendered by Admin Central", async()=>{
   const hub=await source("src/admin-central-hub.js");
   assert.match(hub,/class="ec-admin-hub-forum-host"/);
-  assert.match(hub,/querySelector\('\.ec-admin-hub-forum-host'\)/);
+  assert.match(hub,/querySelector\?\.\('\.ec-admin-hub-forum-host'\)/);
   assert.doesNotMatch(hub,/querySelector\('\.ec-admin-forum-host'\)/);
 });
 
