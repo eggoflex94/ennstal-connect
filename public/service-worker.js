@@ -1,4 +1,4 @@
-const CACHE = "ennstal-connect-shell-v6";
+const CACHE = "ennstal-connect-shell-v7";
 const OFFLINE_SHELL = ["/", "/manifest.webmanifest", "/ennstal-connect-logo-v2.png"];
 
 self.addEventListener("install", (event) => {
@@ -20,6 +20,7 @@ self.addEventListener("fetch", (event) => {
 
   const isNavigation = event.request.mode === "navigate";
   const isVersionedAsset = url.pathname.startsWith("/assets/") || /\.(css|js)$/i.test(url.pathname);
+  const isRoleIdentityAsset = /\/(?:role-star-(?:red|green|blue|member)|supporter-star)\.(?:svg|png)$/i.test(url.pathname);
 
   if (isNavigation) {
     event.respondWith(
@@ -29,8 +30,8 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  if (isVersionedAsset) {
-    event.respondWith(fetch(event.request));
+  if (isVersionedAsset || isRoleIdentityAsset) {
+    event.respondWith(fetch(event.request, { cache: "no-store" }));
     return;
   }
 
