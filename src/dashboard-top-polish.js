@@ -12,7 +12,8 @@ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const role=p=>String(p?.role||'MEMBER').toUpperCase();
 const activeRegion=()=>{const slug=document.documentElement.dataset.ecRegion||localStorage.getItem('ec-active-region')||'';return state.regions.find(r=>r.slug===slug)||state.regions.find(r=>r.id===state.profile?.home_region_id)||state.regions[0]||null};
 const isRegionalAdmin=(p,regionId)=>state.regionalAdmins.some(a=>a.active&&a.user_id===p?.id&&a.region_id===regionId);
-const starFor=(p,regionId)=>{if(['HEAD_ADMIN','ADMIN'].includes(role(p))||isRegionalAdmin(p,regionId))return ADMIN_STAR;if(role(p)==='MUNICIPALITY'&&!p?.role_star_url)return MUNICIPALITY_STAR;if(role(p)==='MUNICIPALITY')return p.role_star_url;if(role(p)==='SUPPORTER')return SUPPORTER_STAR;if(String(p?.account_badge||'').toUpperCase()==='BUSINESS')return BUSINESS_STAR;return''};
+const defaultMunicipalityStar=p=>{if(role(p)==='MUNICIPALITY')return MUNICIPALITY_STAR;return''};
+const starFor=(p,regionId)=>{if(['HEAD_ADMIN','ADMIN'].includes(role(p))||isRegionalAdmin(p,regionId))return ADMIN_STAR;if(role(p)==='MUNICIPALITY')return p?.role_star_url||defaultMunicipalityStar(p);if(role(p)==='SUPPORTER')return SUPPORTER_STAR;if(String(p?.account_badge||'').toUpperCase()==='BUSINESS')return BUSINESS_STAR;return''};
 const presenceTime=p=>{const raw=p?.last_active_at||p?.last_seen_at;if(!raw)return 0;const time=new Date(raw).getTime();return Number.isFinite(time)?time:0};
 const isActuallyOnline=p=>!p?.hide_online_status&&presenceTime(p)>0&&Date.now()-presenceTime(p)<=ONLINE_WINDOW_MS;
 
