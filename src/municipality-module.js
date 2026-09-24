@@ -32,8 +32,14 @@ async function loadContext(){
   return currentContext;
 }
 
+function runtimeHost(){
+  return document.querySelector('#ec-municipality-runtime-host');
+}
+
 function removePage(){
-  document.querySelector('.ec-municipality-page')?.remove();
+  const host=runtimeHost();
+  if(host)host.replaceChildren();
+  else document.querySelector('.ec-municipality-page')?.remove();
   document.body.classList.remove('ec-municipality-open');
   pageRoot=null;
 }
@@ -173,7 +179,8 @@ async function render(){
   loading=true;
   try{
     const ctx=await loadContext();
-    const host=document.querySelector('.content-root')||document.querySelector('main')||document.body;
+    const host=runtimeHost();
+    if(!host)throw new Error('Gemeinde-Bereich ist noch nicht bereit.');
     removePage();
     const wrap=document.createElement('div');
     wrap.innerHTML=pageMarkup(ctx);
@@ -183,9 +190,15 @@ async function render(){
     wirePage();
     if(ctx.can_manage)void loadStaffRequests();
   }catch(error){
-    const host=document.querySelector('.content-root')||document.querySelector('main')||document.body;
+    const host=runtimeHost();
     removePage();
-    const p=document.createElement('section');p.className='ec-municipality-page ec-municipality-error';p.innerHTML=`<h2>Gemeindebereich nicht verfügbar</h2><p>${esc(error.message||error)}</p>`;host.appendChild(p);pageRoot=p;
+    if(host){
+      const p=document.createElement('section');
+      p.className='ec-municipality-page ec-municipality-error';
+      p.innerHTML=`<h2>Gemeindebereich nicht verfügbar</h2><p>${esc(error.message||error)}</p>`;
+      host.appendChild(p);
+      pageRoot=p;
+    }
   }finally{loading=false}
 }
 
