@@ -11,7 +11,7 @@ test('runtime modules gate protected Supabase calls behind a session', async () 
   const adminPolish = await source('src/admin-rights-region-polish.js');
   const automated = await source('src/automated-message-modern.js');
 
-  assert.ok(status.indexOf('const user=await getViewer();if(!user)return;') < status.indexOf("cleanupExpired()"));
+  assert.match(status, /async function renderStrip[\s\S]*const user=await getViewer\(\);if\(!user\)return;[\s\S]*await cleanupExpired\(\);/);
   assert.match(online, /getSession\(\)[\s\S]*if \(!session\?\.user\) return;[\s\S]*community_member_directory/);
   assert.match(regional, /getSession\(\)[\s\S]*if\(!user\)return;[\s\S]*from\('profiles'\)/);
   assert.match(adminPolish, /getSession\(\)[\s\S]*if\(!session\?\.user\)return;[\s\S]*from\('profiles'\)/);
