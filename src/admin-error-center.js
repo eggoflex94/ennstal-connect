@@ -11,9 +11,20 @@ const fmt = (value) => value ? new Date(value).toLocaleString("de-AT") : "–";
 async function canUse() {
   if (Date.now() - accessCache.checkedAt < 15_000) return accessCache.allowed;
   try {
-    // The backend RPC is the authorization source of truth. Avoid auth.getUser()
-    // here because it adds an extra /auth/v1/user network request and can block
-    // the error center precisely when the auth endpoint is slow.
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) {
+      accessCache = { allowed: false, checkedAt: Date.now() };
+      return false;
+    }
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("role,account_status")
+      .eq("id", session.user.id)
+      .maybeSingle();
+    if (profileError || profile?.role !== "HEAD_ADMIN" || profile?.account_status !== "ACTIVE") {
+      accessCache = { allowed: false, checkedAt: Date.now() };
+      return false;
+    }
     await summary();
     accessCache = { allowed: true, checkedAt: Date.now() };
     return true;

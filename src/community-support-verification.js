@@ -46,8 +46,11 @@ async function loadIdentity() {
     currentProfile = null;
     return;
   }
-  const result = await supabase.from("profiles").select("id,nickname,first_name,last_name,role,is_verified,home_region_id,admin_responsibilities,forum_moderator,group_moderator").eq("id", currentUser.id).maybeSingle();
-  if (!result.error) currentProfile = result.data || null;
+  const [profileResult, permissionResult] = await Promise.all([
+    supabase.from("profiles").select("id,nickname,first_name,last_name,role,is_verified,home_region_id,admin_responsibilities,forum_moderator").eq("id", currentUser.id).maybeSingle(),
+    supabase.from("user_permissions").select("manage_groups").eq("user_id", currentUser.id).maybeSingle()
+  ]);
+  if (!profileResult.error) currentProfile = profileResult.data ? { ...profileResult.data, group_moderator: Boolean(permissionResult.data?.manage_groups) } : null;
 }
 
 function closeSupport() {

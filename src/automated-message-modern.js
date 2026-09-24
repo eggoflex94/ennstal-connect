@@ -47,12 +47,16 @@ function starFor(profile){
 async function loadPeople(){
   if(!supabase) return;
   try{
-    const [{ data: authData }, { data, error }] = await Promise.all([
-      supabase.auth.getUser(),
-      supabase.from("profiles").select("id,nickname,first_name,last_name,role,account_badge")
-    ]);
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
+    if(!user){
+      currentUserId = "";
+      profiles = [];
+      return;
+    }
+    const { data, error } = await supabase.from("profiles").select("id,nickname,first_name,last_name,role,account_badge");
     if(error) throw error;
-    currentUserId = authData?.user?.id || "";
+    currentUserId = user.id;
     profiles = data || [];
   }catch(error){
     console.warn("Rollensterne für automatische Nachrichten konnten nicht vorgeladen werden:", error);

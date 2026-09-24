@@ -25,9 +25,10 @@ function findProfileRoot(){return document.querySelector('.integrated-profile-vi
 async function getViewer(){const {data:{user}}=await supabase.auth.getUser();return user;}
 
 async function renderStrip(retries=6){
-  ensureStyle();await cleanupExpired();
+  ensureStyle();
   const root=findProfileRoot();if(!root){if(retries>0)timer=setTimeout(()=>renderStrip(retries-1),180);return;}
   const user=await getViewer();if(!user)return;
+  await cleanupExpired();
   const profileId=currentProfileId()||user.id;activeProfileId=profileId;
   const statuses=await loadStatuses(profileId);
   let strip=root.querySelector('.ec-status-strip');if(!strip){strip=document.createElement('div');strip.className='ec-status-strip';const hero=root.querySelector('.integrated-profile-hero,.member-profile-hero');hero?.insertAdjacentElement('afterend',strip);}

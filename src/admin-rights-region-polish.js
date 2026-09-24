@@ -67,6 +67,8 @@ async function load(){
   if(loading||!supabase)return;
   loading=true;
   try{
+    const {data:{session}}=await supabase.auth.getSession();
+    if(!session?.user)return;
     const [{data:ms},{data:rs},{data:as}]=await Promise.all([
       supabase.from('profiles').select('id,nickname,role,account_badge,account_status,is_test_account').eq('account_status','ACTIVE'),
       supabase.from('regions').select('id,slug,name').eq('is_active',true),

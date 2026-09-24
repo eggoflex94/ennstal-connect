@@ -34,7 +34,7 @@ async function load(){
       const {data:friends}=await supabase.from('profiles').select('id,nickname,role,account_badge,is_online,hide_online_status,last_active_at,last_seen_at,home_region_id,account_status').in('id',friendIds).eq('account_status','ACTIVE');
       state.friends=(friends||[]).filter(isActuallyOnline).sort((a,b)=>String(a.nickname||'').localeCompare(String(b.nickname||''),'de'));
     }else state.friends=[];
-    if(['HEAD_ADMIN','ADMIN'].includes(role(profile))){const [reports,verifications,deletions,groupChanges]=await Promise.all([count('user_reports',q=>q.not('status','in','(RESOLVED,CLOSED,REJECTED,UNFOUNDED)')),count('verification_requests',q=>q.not('status','in','(APPROVED,REJECTED)')),count('account_deletion_requests',q=>q.in('status',['PENDING','ON_HOLD','READY_FOR_REVIEW'])),count('community_group_owner_change_requests',q=>q.eq('status','PENDING'))]);state.adminAlerts=reports+verifications+deletions+groupChanges}else state.adminAlerts=0;
+    if(['HEAD_ADMIN','ADMIN'].includes(role(profile))){const {data:attention,error:attentionError}=await supabase.rpc('admin_attention_summary');state.adminAlerts=attentionError?0:Number(attention?.total||0)}else state.adminAlerts=0;
     render();
   }catch(error){console.warn('Dashboard-Zusatzdaten konnten nicht geladen werden:',error)}finally{loading=false}
 }

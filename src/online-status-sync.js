@@ -36,6 +36,8 @@ async function refresh() {
   if (!supabase || running) return;
   running = true;
   try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) return;
     const { data, error } = await supabase.rpc("community_member_directory");
     if (error) return;
     cache = new Map(parseRows(data).filter((member) => member?.id).map((member) => [String(member.id), member]));
