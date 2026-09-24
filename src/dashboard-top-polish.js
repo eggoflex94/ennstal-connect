@@ -12,7 +12,7 @@ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const role=p=>String(p?.role||'MEMBER').toUpperCase();
 const activeRegion=()=>{const slug=document.documentElement.dataset.ecRegion||localStorage.getItem('ec-active-region')||'';return state.regions.find(r=>r.slug===slug)||state.regions.find(r=>r.id===state.profile?.home_region_id)||state.regions[0]||null};
 const isRegionalAdmin=(p,regionId)=>state.regionalAdmins.some(a=>a.active&&a.user_id===p?.id&&a.region_id===regionId);
-const starFor=(p,regionId)=>{if(['HEAD_ADMIN','ADMIN'].includes(role(p))||isRegionalAdmin(p,regionId))return ADMIN_STAR;if(role(p)==='MUNICIPALITY')return MUNICIPALITY_STAR;if(role(p)==='SUPPORTER')return SUPPORTER_STAR;if(String(p?.account_badge||'').toUpperCase()==='BUSINESS')return BUSINESS_STAR;return''};
+const starFor=(p,regionId)=>{if(['HEAD_ADMIN','ADMIN'].includes(role(p))||isRegionalAdmin(p,regionId))return ADMIN_STAR;if(role(p)==='MUNICIPALITY')return p?.role_star_url||MUNICIPALITY_STAR;if(role(p)==='SUPPORTER')return SUPPORTER_STAR;if(String(p?.account_badge||'').toUpperCase()==='BUSINESS')return BUSINESS_STAR;return''};
 const presenceTime=p=>{const raw=p?.last_active_at||p?.last_seen_at;if(!raw)return 0;const time=new Date(raw).getTime();return Number.isFinite(time)?time:0};
 const isActuallyOnline=p=>!p?.hide_online_status&&presenceTime(p)>0&&Date.now()-presenceTime(p)<=ONLINE_WINDOW_MS;
 
@@ -31,7 +31,7 @@ async function load(){
     state.profile=profile||null;state.regions=regions||[];state.regionalAdmins=assignments||[];
     const friendIds=(friendships||[]).map(f=>f.requester_id===user.id?f.receiver_id:f.requester_id).filter(Boolean);
     if(friendIds.length){
-      const {data:friends}=await supabase.from('profiles').select('id,nickname,role,account_badge,is_online,hide_online_status,last_active_at,last_seen_at,home_region_id,account_status').in('id',friendIds).eq('account_status','ACTIVE');
+      const {data:friends}=await supabase.from('profiles').select('id,nickname,role,account_badge,is_online,hide_online_status,last_active_at,last_seen_at,home_region_id,account_status,role_display_label,role_star_url,role_accent_color').in('id',friendIds).eq('account_status','ACTIVE');
       state.friends=(friends||[]).filter(isActuallyOnline).sort((a,b)=>String(a.nickname||'').localeCompare(String(b.nickname||''),'de'));
     }else state.friends=[];
     if(['HEAD_ADMIN','ADMIN'].includes(role(profile))){const {data:attention,error:attentionError}=await supabase.rpc('admin_attention_summary');state.adminAlerts=attentionError?0:Number(attention?.total||0)}else state.adminAlerts=0;

@@ -29,7 +29,7 @@ function rolePresentation(member) {
     return { key: role === "HEAD_ADMIN" ? "head-admin" : "admin", theme: "admin", label: role === "HEAD_ADMIN" ? "Hauptadmin" : "Admin", star: roleStarAsset("/role-star-red.svg") };
   }
   if (role === "SUPPORTER") return { key: "supporter", theme: "supporter", label: "Supporter", star: roleStarAsset("/supporter-star.svg") };
-  if (role === "MUNICIPALITY") return { key: "municipality", theme: "municipality", label: "Gemeinde", star: roleStarAsset("/role-star-green.svg") };
+  if (role === "MUNICIPALITY") return { key: "municipality", theme: "municipality", label: member?.role_display_label || "Gemeinde", star: member?.role_star_url || roleStarAsset("/role-star-green.svg"), color: member?.role_accent_color || "#20a866" };
   if (member?.account_badge === "BUSINESS") return { key: "business", theme: "business", label: "Unternehmer", star: roleStarAsset("/role-star-blue.svg") };
   return { key: "member", theme: "member", label: "Mitglied", star: null };
 }
@@ -69,6 +69,7 @@ export default function MemberCardView({ member, profile, friendships, onOpen, i
       tabIndex={0}
       aria-disabled={!interactive || undefined}
       aria-label={interactive ? `Profil von ${getName(member)} öffnen` : `Vorschau der Mitgliederkarte von ${getName(member)}`}
+      style={presentation.theme === "municipality" ? { "--ec-municipality-role-accent": presentation.color } : undefined}
     >
       <span className={`ec-role-surface ec-role-surface-${presentation.theme}`} aria-hidden="true" />
 

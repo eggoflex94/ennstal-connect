@@ -42,3 +42,14 @@ article.member-card[data-role-theme="municipality"]>.member-status{
 .ec-municipality-welcome button{min-height:44px!important;padding:10px 15px!important;border:0!important;border-radius:12px!important;background:#168b54!important;color:#fff!important;font-weight:900!important}
 .community-section-links>.municipality-primary{border:2px solid rgba(32,168,102,.36)!important;background:linear-gradient(135deg,#f4fcf7,#e8f7ef)!important}.community-section-links>.municipality-primary b{color:#0f5c37!important}.community-section-links>.municipality-primary span{color:#49715c!important}
 @media(max-width:760px){.ec-municipality-welcome{grid-template-columns:auto minmax(0,1fr)!important}.ec-municipality-welcome button{grid-column:1/-1!important;width:100%!important}}
+
+
+/* Head Admin can customize municipality account accent per profile. */
+article.member-card[data-role-theme="municipality"],
+article.member-card.role-theme-municipality{
+  --ec-card-border:var(--ec-municipality-role-accent,#21c978)!important;
+  border-color:var(--ec-municipality-role-accent,#21c978)!important;
+}
+.member-profile-page .member-profile-hero.municipality{
+  border-color:var(--ec-municipality-role-accent,#20a866)!important;
+}

@@ -27,7 +27,7 @@ async function load(){
     const uid=auth?.session?.user?.id||null;
     if(!uid)return;
     const [{data:profile},{data:regions},{data:assignments}]=await Promise.all([
-      supabase.from('profiles').select('id,nickname,role,account_badge,home_region_id').eq('id',uid).maybeSingle(),
+      supabase.from('profiles').select('id,nickname,role,account_badge,home_region_id,role_display_label,role_star_url,role_accent_color').eq('id',uid).maybeSingle(),
       supabase.from('regions').select('id,slug,name,is_active').eq('is_active',true),
       supabase.from('regional_admin_assignments').select('user_id,region_id,active').eq('user_id',uid).eq('active',true)
     ]);
@@ -55,7 +55,7 @@ function apply(){
   if(label!==heading&&label.textContent!==(profile.nickname||'Mitglied'))label.textContent=profile.nickname||'Mitglied';
   if(label===heading&&heading.textContent!==(profile.nickname||'Mitglied'))heading.textContent=profile.nickname||'Mitglied';
 
-  const star=STAR_BY_THEME[theme]||'';
+  const star=theme==='municipality'?(profile.role_star_url||STAR_BY_THEME.municipality):(STAR_BY_THEME[theme]||'');
   if(star)dock.style.setProperty('--ec-sidebar-role-star',`url("${star}")`);
   else dock.style.removeProperty('--ec-sidebar-role-star');
 }
