@@ -8,3 +8,19 @@
 .ec-municipality-nav-badge{display:grid;place-items:center;min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:#ef4b1f;color:#fff;font:900 9px/1 system-ui;font-style:normal;box-shadow:0 2px 7px rgba(239,75,31,.28)}
 @media(max-width:1050px){.ec-top-nav .ec-municipality-nav{max-width:44vw}.ec-top-nav .ec-municipality-nav-button{height:36px!important;max-width:145px}.ec-municipality-nav-label{max-width:96px}}
 @media(max-width:700px){.ec-top-nav .ec-municipality-nav{order:20;position:fixed;left:6px;right:108px;top:112px;max-width:none;height:42px;padding:4px 0;background:rgba(255,255,255,.97);border-bottom:1px solid #e6ece8}.ec-regional-ui .modern-main{padding-top:158px!important}.ec-top-nav .ec-municipality-nav-button{height:34px!important}}
+
+
+.ec-top-nav .ec-municipality-nav{position:relative;overflow:visible!important;max-width:none!important}
+.ec-municipality-nav-trigger{display:flex!important;align-items:center!important;gap:6px!important;height:40px!important;padding:0 10px!important;border:1px solid #b9dcca!important;border-radius:11px!important;background:#f3fbf7!important;color:#173a2b!important;font-weight:900!important}
+.ec-municipality-nav-trigger:hover,.ec-municipality-nav-trigger:focus-visible{background:#e9f8f0!important;outline:2px solid #20a866!important}
+.ec-municipality-nav-trigger-icon{color:#20a866;font-size:12px}
+.ec-municipality-nav-trigger-label{font-size:11px!important;font-weight:900!important;white-space:nowrap}
+.ec-municipality-nav-chevron{font-size:10px;opacity:.75}
+.ec-municipality-nav-menu{position:absolute;top:calc(100% + 7px);left:0;z-index:9999;display:grid;gap:6px;width:min(340px,calc(100vw - 24px));max-height:60vh;overflow:auto;padding:8px;border:1px solid #d9e6df;border-radius:14px;background:#fff;box-shadow:0 18px 50px rgba(25,55,42,.18)}
+.ec-municipality-nav-menu[hidden]{display:none!important}
+.ec-municipality-nav-menu .ec-municipality-nav-button{width:100%!important;max-width:none!important;justify-content:flex-start!important;height:auto!important;min-height:48px!important;padding:8px 10px!important;text-align:left!important}
+.ec-municipality-nav-copy{display:grid;gap:1px;min-width:0;flex:1}
+.ec-municipality-nav-copy small{font-size:9px;color:#6b7d73;font-weight:700}
+.ec-municipality-nav-empty{display:grid;gap:3px;padding:10px 12px;color:#355447}
+.ec-municipality-nav-empty strong{font-size:12px}.ec-municipality-nav-empty small{font-size:10px;color:#71847a}
+@media(max-width:700px){.ec-top-nav .ec-municipality-nav{position:relative!important;left:auto!important;right:auto!important;top:auto!important;max-width:none!important;height:auto!important;padding:0!important;background:transparent!important;border:0!important}.ec-regional-ui .modern-main{padding-top:128px!important}.ec-municipality-nav-trigger{height:34px!important}.ec-municipality-nav-menu{position:fixed;top:132px;left:10px;right:10px;width:auto;max-height:55vh}}
