@@ -6,6 +6,7 @@ let municipalities = [];
 let members = [];
 let busy = false;
 let timer = null;
+let observedAdminPage = null;
 
 function text(value) {
   return String(value ?? '').trim();
@@ -419,7 +420,12 @@ function schedule(delay = 100) {
 function boot() {
   void loadAll();
   new MutationObserver(() => {
-    if (document.querySelector('.admin-page')) schedule(120);
+    const root = document.querySelector('.admin-page');
+    if (root && root !== observedAdminPage) {
+      observedAdminPage = root;
+      schedule(120);
+    }
+    if (!root) observedAdminPage = null;
   }).observe(document.documentElement, { childList: true, subtree: true });
   window.addEventListener('ec:navigate', (event) => {
     if (event.detail?.page === 'admin') schedule(80);
