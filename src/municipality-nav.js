@@ -4,6 +4,7 @@ let items = [];
 let loading = false;
 let timer = null;
 let channel = null;
+let menuOpen = false;
 
 const activeRegionSlug = () =>
   document.querySelector('.ec-region-picker select')?.value ||
@@ -29,45 +30,106 @@ function render() {
   const host = ensureHost();
   if (!host) return;
   host.replaceChildren();
-  if (!items.length) {
-    host.hidden = true;
-    return;
-  }
   host.hidden = false;
-  items.forEach((item) => {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'ec-municipality-nav-button';
-    button.dataset.municipalityId = item.id;
-    button.style.setProperty('--ec-municipality-accent', item.accent_color || '#20a866');
-    const total = Number(item.new_total || 0);
-    button.title = total ? (item.official_name + ' · ' + total + ' neu') : item.official_name;
 
-    const mark = document.createElement('span');
-    mark.className = 'ec-municipality-nav-mark';
-    mark.textContent = '◆';
+  const totalNew = items.reduce((sum, item) => sum + Number(item.new_total || 0), 0);
 
-    const label = document.createElement('span');
-    label.className = 'ec-municipality-nav-label';
-    label.textContent = item.nav_label || item.official_name || 'Gemeinde';
+  const trigger = document.createElement('button');
+  trigger.type = 'button';
+  trigger.className = 'ec-municipality-nav-trigger';
+  trigger.setAttribute('aria-haspopup', 'menu');
+  trigger.setAttribute('aria-expanded', menuOpen ? 'true' : 'false');
 
-    button.append(mark, label);
+  const icon = document.createElement('span');
+  icon.className = 'ec-municipality-nav-trigger-icon';
+  icon.textContent = '◆';
 
-    if (total > 0) {
-      const badge = document.createElement('em');
-      badge.className = 'ec-municipality-nav-badge';
-      badge.textContent = total > 99 ? '99+' : String(total);
-      badge.setAttribute('aria-label', total + ' neue Gemeinde-Aktivitäten');
-      button.appendChild(badge);
-    }
+  const label = document.createElement('span');
+  label.className = 'ec-municipality-nav-trigger-label';
+  label.textContent = 'Gemeinden';
 
-    button.addEventListener('click', () => {
-      window.dispatchEvent(new CustomEvent('ec:navigate', {
-        detail: { page: 'municipality', municipalityId: item.id }
-      }));
+  const chevron = document.createElement('span');
+  chevron.className = 'ec-municipality-nav-chevron';
+  chevron.textContent = '▾';
+
+  trigger.append(icon, label);
+
+  if (totalNew > 0) {
+    const badge = document.createElement('em');
+    badge.className = 'ec-municipality-nav-badge';
+    badge.textContent = totalNew > 99 ? '99+' : String(totalNew);
+    badge.setAttribute('aria-label', totalNew + ' neue Gemeinde-Aktivitäten');
+    trigger.appendChild(badge);
+  }
+
+  trigger.appendChild(chevron);
+
+  const menu = document.createElement('div');
+  menu.className = 'ec-municipality-nav-menu';
+  menu.hidden = !menuOpen;
+  menu.setAttribute('role', 'menu');
+
+  if (!items.length) {
+    const empty = document.createElement('div');
+    empty.className = 'ec-municipality-nav-empty';
+    const strong = document.createElement('strong');
+    strong.textContent = 'Noch keine Gemeinden';
+    const small = document.createElement('small');
+    small.textContent = 'Für diese Region wurde noch kein Gemeindebereich angelegt.';
+    empty.append(strong, small);
+    menu.appendChild(empty);
+  } else {
+    items.forEach((item) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'ec-municipality-nav-button';
+      button.dataset.municipalityId = item.id;
+      button.style.setProperty('--ec-municipality-accent', item.accent_color || '#20a866');
+      button.setAttribute('role', 'menuitem');
+
+      const mark = document.createElement('span');
+      mark.className = 'ec-municipality-nav-mark';
+      mark.textContent = '◆';
+
+      const copy = document.createElement('span');
+      copy.className = 'ec-municipality-nav-copy';
+
+      const name = document.createElement('strong');
+      name.className = 'ec-municipality-nav-label';
+      name.textContent = item.nav_label || item.official_name || 'Gemeinde';
+
+      const detail = document.createElement('small');
+      detail.textContent = item.verified ? 'Verifizierter Gemeindebereich' : 'Gemeindebereich';
+
+      copy.append(name, detail);
+      button.append(mark, copy);
+
+      const total = Number(item.new_total || 0);
+      if (total > 0) {
+        const badge = document.createElement('em');
+        badge.className = 'ec-municipality-nav-badge';
+        badge.textContent = total > 99 ? '99+' : String(total);
+        badge.setAttribute('aria-label', total + ' neue Gemeinde-Aktivitäten');
+        button.appendChild(badge);
+      }
+
+      button.addEventListener('click', () => {
+        menuOpen = false;
+        window.dispatchEvent(new CustomEvent('ec:navigate', {
+          detail: { page: 'municipality', municipalityId: item.id }
+        }));
+      });
+      menu.appendChild(button);
     });
-    host.appendChild(button);
+  }
+
+  trigger.addEventListener('click', (event) => {
+    event.stopPropagation();
+    menuOpen = !menuOpen;
+    render();
   });
+
+  host.append(trigger, menu);
 }
 
 async function refresh() {
@@ -112,11 +174,21 @@ function startRealtime() {
 
 function boot() {
   ensureHost();
+  render();
   void refresh();
   startRealtime();
-  window.addEventListener('ec:region-change', () => schedule(40));
+  window.addEventListener('ec:region-change', () => {
+    menuOpen = false;
+    schedule(40);
+  });
   window.addEventListener('ec:municipality-seen', () => schedule(40));
   window.addEventListener('focus', () => schedule(40));
+  document.addEventListener('click', (event) => {
+    if (!event.target.closest('.ec-municipality-nav') && menuOpen) {
+      menuOpen = false;
+      render();
+    }
+  });
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) schedule(40);
   });
