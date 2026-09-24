@@ -131,6 +131,27 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
   }, [regionId, visible.length]); // native directory removes stale regional shell context
 
   useEffect(() => {
+    const root = document.querySelector(".native-members-directory");
+    if (!root) return undefined;
+
+    const removeLiteralNewlineArtifacts = () => {
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      const stale = [];
+      let node = walker.nextNode();
+      while (node) {
+        if (String(node.nodeValue || "").trim() === "\\n") stale.push(node);
+        node = walker.nextNode();
+      }
+      stale.forEach((textNode) => textNode.remove());
+    };
+
+    removeLiteralNewlineArtifacts();
+    const observer = new MutationObserver(removeLiteralNewlineArtifacts);
+    observer.observe(root, { childList: true, subtree: true, characterData: true });
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
     if (page > pageCount) setPage(pageCount);
   }, [page, pageCount]);
 
