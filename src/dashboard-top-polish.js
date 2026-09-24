@@ -5,7 +5,7 @@ const SUPPORTER_STAR='/supporter-star.svg';
 const BUSINESS_STAR='/role-star-blue.svg';
 const MUNICIPALITY_STAR='/role-star-green.svg';
 const ONLINE_WINDOW_MS=5*60*1000;
-let state={profile:null,regions:[],regionalAdmins:[],friends:[],adminAlerts:0};
+let state={profile:null,regions:[],regionalAdmins:[],friends:[],adminAlerts:0,municipalities:[]};
 let loading=false;
 
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -36,6 +36,15 @@ async function load(){
       state.friends=(friends||[]).filter(isActuallyOnline).sort((a,b)=>String(a.nickname||'').localeCompare(String(b.nickname||''),'de'));
     }else state.friends=[];
     if(['HEAD_ADMIN','ADMIN'].includes(role(profile))){const {data:attention,error:attentionError}=await supabase.rpc('admin_attention_summary');state.adminAlerts=attentionError?0:Number(attention?.total||0)}else state.adminAlerts=0;
+    state.municipalities=[];
+    if(!['HEAD_ADMIN','ADMIN'].includes(role(profile))){
+      const municipalityResults=await Promise.all((state.regions||[]).map(async region=>{
+        const {data,error}=await supabase.rpc('ec_municipality_directory',{p_region_slug:region.slug});
+        if(error)return[];
+        return (Array.isArray(data)?data:[]).filter(item=>item?.can_manage).map(item=>({...item,region_name:region.name,region_slug:region.slug}));
+      }));
+      state.municipalities=municipalityResults.flat();
+    }
     render();
   }catch(error){console.warn('Dashboard-Zusatzdaten konnten nicht geladen werden:',error)}finally{loading=false}
 }
@@ -59,6 +68,41 @@ function ensureOnlineFriends(dock){
   panel.querySelectorAll('[data-profile-id]').forEach(btn=>btn.onclick=()=>window.dispatchEvent(new CustomEvent('ec:open-profile',{detail:{profileId:btn.dataset.profileId}})));
 }
 
-function render(){const dock=document.querySelector('.ec-right-dock');if(!dock)return;dock.classList.add('ec-dashboard-top-integrated');ensureRoleScope(dock);ensureOnlineFriends(dock);ensureAdminLabel(dock);ensureAdminBadge(dock)}
+function ensureMunicipalityPanel(dock){
+  let panel=dock.querySelector('.ec-dashboard-municipality-panel');
+  const items=state.municipalities||[];
+  if(!items.length){panel?.remove();return}
+  if(!panel){
+    panel=document.createElement('section');
+    panel.className='ec-dashboard-municipality-panel';
+    const friends=dock.querySelector('.ec-online-friends-panel');
+    if(friends)friends.insertAdjacentElement('afterend',panel);
+    else dock.appendChild(panel);
+  }
+  const selected=items.find(item=>item.region_id===activeRegion()?.id)||items[0];
+  const total=items.reduce((sum,item)=>sum+Number(item.new_total||0),0);
+  const star=state.profile?.role_star_url||selected?.role_star_url||MUNICIPALITY_STAR;
+  const color=state.profile?.role_accent_color||selected?.accent_color||'#20a866';
+  panel.style.setProperty('--ec-municipality-dashboard-accent',color);
+  panel.innerHTML=`<div class="ec-dashboard-municipality-head">
+    <div class="ec-dashboard-municipality-title"><img src="${esc(star)}" alt="" aria-hidden="true"><div><span>GEMEINDE</span><strong>${esc(selected?.nav_label||selected?.official_name||'Gemeindebereich')}</strong><small>${esc(selected?.region_name||'')}</small></div></div>
+    ${total?`<em class="ec-dashboard-municipality-alert">${total>99?'99+':total}</em>`:''}
+  </div>
+  ${items.length>1?`<label class="ec-dashboard-municipality-switch"><span>Gemeinde</span><select>${items.map(item=>`<option value="${esc(item.id)}" ${item.id===selected.id?'selected':''}>${esc(item.official_name||item.nav_label||'Gemeinde')}</option>`).join('')}</select></label>`:''}
+  <div class="ec-dashboard-municipality-actions">
+    <button type="button" data-municipality-action="overview"><b>⌂</b><span>Übersicht</span></button>
+    <button type="button" data-municipality-action="profile"><b>✎</b><span>Profil</span></button>
+    <button type="button" data-municipality-action="notices"><b>▣</b><span>Hinweise</span></button>
+    <button type="button" data-municipality-action="requests"><b>!</b><span>Anliegen</span>${Number(selected?.new_requests||0)?`<em>${Number(selected.new_requests)>99?'99+':Number(selected.new_requests)}</em>`:''}</button>
+  </div>
+  <button type="button" class="ec-dashboard-municipality-open" data-municipality-action="manage">Gemeinde-Verwaltung öffnen</button>`;
+  const selectedId=()=>panel.querySelector('select')?.value||selected.id;
+  panel.querySelector('select')?.addEventListener('change',()=>ensureMunicipalityPanel(dock));
+  panel.querySelectorAll('[data-municipality-action]').forEach(button=>button.addEventListener('click',()=>{
+    window.dispatchEvent(new CustomEvent('ec:open-municipality-manager',{detail:{municipalityId:selectedId(),action:button.dataset.municipalityAction}}));
+  }));
+}
+
+function render(){const dock=document.querySelector('.ec-right-dock');if(!dock)return;dock.classList.add('ec-dashboard-top-integrated');ensureRoleScope(dock);ensureOnlineFriends(dock);ensureMunicipalityPanel(dock);ensureAdminLabel(dock);ensureAdminBadge(dock)}
 function boot(){render();void load();const observer=new MutationObserver(()=>{clearTimeout(window.__ecDashboardTopPolish);window.__ecDashboardTopPolish=setTimeout(render,70)});observer.observe(document.documentElement,{childList:true,subtree:true});window.addEventListener('ec:region-change',()=>setTimeout(()=>{render();void load()},80));window.addEventListener('focus',()=>void load());document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')void load()});setInterval(()=>void load(),30000)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();

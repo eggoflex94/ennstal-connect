@@ -2,6 +2,7 @@ import { supabase } from './supabaseClient';
 
 let currentContext=null;
 let activeMunicipalityId=null;
+let pendingManagerAction='overview';
 let pageRoot=null;
 let loading=false;
 // Legacy compatibility marker: ec_submit_citizen_request
@@ -144,12 +145,13 @@ function pageMarkup(ctx){
   const notices=(ctx.notices||[]).map(n=>noticeCard(n,ctx.can_manage)).join('')||'<p class="ec-municipality-empty">Noch keine offiziellen Hinweise veröffentlicht.</p>';
   const requests=(ctx.my_requests||[]).map(r=>requestCard(r,false)).join('')||'<p class="ec-municipality-empty">Du hast noch keine Anliegen gemeldet.</p>';
   const counts=ctx.counts||{};
-  return `<section class="ec-municipality-page">
-    ${introductionBlock(ctx)}
+  return `<section class="ec-municipality-page ${ctx.can_manage?'is-manager-layout':'is-public-layout'}" style="--ec-municipality-page-accent:${esc(ctx?.municipality?.accent_color||'#20a866')}">
+    ${ctx.can_manage?`<nav class="ec-municipality-workspace-nav" aria-label="Gemeinde-Verwaltung"><div><span>GEMEINDE-WORKSPACE</span><strong>${esc(ctx?.municipality?.official_name||'Gemeinde')}</strong></div><div class="ec-municipality-workspace-actions"><button type="button" data-municipality-section="overview">Übersicht</button><button type="button" data-municipality-section="profile">Profil</button><button type="button" data-municipality-section="notices">Hinweise</button><button type="button" data-municipality-section="requests">Anliegen</button></div></nav>`:''}
+    <div id="municipality-overview">${introductionBlock(ctx)}</div>
     ${profileBlock(ctx)}
-    ${managerPanel(ctx)}
+    <div id="municipality-profile">${managerPanel(ctx)}</div>
     <div class="ec-municipality-grid">
-      <section class="ec-municipality-panel ec-municipality-official"><header><div><span class="eyebrow">OFFIZIELL</span><h2>Gemeinde-Informationen</h2></div>${ctx.can_manage?'<button type="button" class="primary" data-new-notice>+ Hinweis</button>':''}</header><div class="ec-municipality-notices">${notices}</div></section>
+      <section id="municipality-notices" class="ec-municipality-panel ec-municipality-official"><header><div><span class="eyebrow">OFFIZIELL</span><h2>Gemeinde-Informationen</h2></div>${ctx.can_manage?'<button type="button" class="primary" data-new-notice>+ Hinweis</button>':''}</header><div class="ec-municipality-notices">${notices}</div></section>
       <section class="ec-municipality-panel ec-citizen-center"><header><div><span class="eyebrow">BÜRGERANLIEGEN</span><h2>Ein Anliegen melden</h2></div></header>
         <form class="ec-citizen-form">
           <label>Kategorie<select name="category"><option value="ROAD">Straße</option><option value="LIGHTING">Beleuchtung</option><option value="WASTE">Abfall</option><option value="PLAYGROUND">Spielplatz</option><option value="GREENSPACE">Grünraum</option><option value="TRAFFIC">Verkehr</option><option value="PUBLIC_SPACE">Öffentlicher Raum</option><option value="OTHER">Sonstiges</option></select></label>
@@ -162,7 +164,7 @@ function pageMarkup(ctx){
         <div class="ec-municipality-my-requests"><h3>Meine Anliegen</h3>${requests}</div>
       </section>
     </div>
-    ${ctx.can_manage?'<section class="ec-municipality-panel ec-municipality-admin"><header><div><span class="eyebrow">GEMEINDE-VERWALTUNG</span><h2>Anliegen bearbeiten</h2></div><button type="button" data-refresh-staff>Aktualisieren</button></header><div class="ec-municipality-staff-requests"><p class="ec-municipality-empty">Wird geladen …</p></div></section>':''}
+    ${ctx.can_manage?'<section id="municipality-requests" class="ec-municipality-panel ec-municipality-admin"><header><div><span class="eyebrow">GEMEINDE-VERWALTUNG</span><h2>Anliegen bearbeiten</h2></div><button type="button" data-refresh-staff>Aktualisieren</button></header><div class="ec-municipality-staff-requests"><p class="ec-municipality-empty">Wird geladen …</p></div></section>':''}
   </section>`;
 }
 
@@ -273,6 +275,15 @@ async function saveStaffRequest(card){
   await loadStaffRequests();
 }
 
+function focusManagerSection(action='overview'){
+  if(!pageRoot||!currentContext?.can_manage)return;
+  const map={overview:'#municipality-overview',profile:'#municipality-profile',notices:'#municipality-notices',requests:'#municipality-requests',manage:'#municipality-profile'};
+  const target=pageRoot.querySelector(map[action]||map.overview);
+  if(action==='profile'||action==='manage')target?.querySelector('.ec-municipality-profile-settings')?.setAttribute('open','');
+  target?.scrollIntoView({behavior:'smooth',block:'start'});
+  pageRoot.querySelectorAll('[data-municipality-section]').forEach(button=>button.classList.toggle('is-active',button.dataset.municipalitySection===action||(action==='manage'&&button.dataset.municipalitySection==='profile')));
+}
+
 function wirePage(){
   const municipalityForm=pageRoot?.querySelector('.ec-municipality-profile-form');if(municipalityForm)municipalityForm.onsubmit=e=>{e.preventDefault();void saveMunicipalityProfile(municipalityForm)};
   const form=pageRoot?.querySelector('.ec-citizen-form');if(form)form.onsubmit=e=>{e.preventDefault();void submitRequest(form)};
@@ -283,6 +294,8 @@ function wirePage(){
   });
   pageRoot?.querySelectorAll('[data-delete-notice]').forEach(button=>button.onclick=()=>void deleteNotice(button.closest('.ec-municipality-notice').dataset.id));
   pageRoot?.querySelector('[data-refresh-staff]')?.addEventListener('click',()=>void loadStaffRequests());
+  pageRoot?.querySelectorAll('[data-municipality-section]').forEach(button=>button.addEventListener('click',()=>focusManagerSection(button.dataset.municipalitySection)));
+  window.setTimeout(()=>focusManagerSection(pendingManagerAction),30);
 }
 
 function boot(){
@@ -290,6 +303,7 @@ function boot(){
   window.addEventListener('ec:navigate',event=>{
     if(event?.detail?.page==='municipality'){
       activeMunicipalityId=event.detail?.municipalityId?String(event.detail.municipalityId):activeMunicipalityId;
+      if(event.detail?.action)pendingManagerAction=String(event.detail.action);
       window.requestAnimationFrame(()=>void render());
       return;
     }
@@ -297,6 +311,16 @@ function boot(){
   });
   window.addEventListener('ec:open-municipality',event=>{
     activeMunicipalityId=event.detail?.municipalityId?String(event.detail.municipalityId):null;
+    pendingManagerAction='overview';
+    window.dispatchEvent(new CustomEvent('ec:navigate',{detail:{page:'municipality',municipalityId:activeMunicipalityId}}));
+  });
+  window.addEventListener('ec:open-municipality-manager',event=>{
+    activeMunicipalityId=event.detail?.municipalityId?String(event.detail.municipalityId):activeMunicipalityId;
+    pendingManagerAction=String(event.detail?.action||'overview');
+    if(document.body.classList.contains('ec-municipality-open')&&currentContext?.municipality?.id===activeMunicipalityId){
+      focusManagerSection(pendingManagerAction);
+      return;
+    }
     window.dispatchEvent(new CustomEvent('ec:navigate',{detail:{page:'municipality',municipalityId:activeMunicipalityId}}));
   });
   window.addEventListener('ec:region-change',()=>{
