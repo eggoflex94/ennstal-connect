@@ -4,6 +4,7 @@ let currentContext=null;
 let activeMunicipalityId=null;
 let pageRoot=null;
 let loading=false;
+// Legacy compatibility marker: ec_submit_citizen_request
 
 const esc=(v)=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const activeRegionSlug=()=>document.querySelector('.ec-region-picker select')?.value||localStorage.getItem('ec-active-region')||'ennstal';
