@@ -41,18 +41,9 @@ async function loadAll() {
     regions = regionResult.data || [];
     members = memberResult.data || [];
 
-    const collected = [];
-    for (const region of regions) {
-      const { data, error } = await supabase.rpc('ec_municipality_directory', { p_region_slug: region.slug });
-      if (!error && Array.isArray(data)) {
-        data.forEach((item) => collected.push({
-          ...item,
-          region_slug: region.slug,
-          region_name: region.name
-        }));
-      }
-    }
-    municipalities = collected;
+    const { data: municipalityRows, error: municipalityError } = await supabase.rpc('ec_head_municipality_directory');
+    if (municipalityError) throw municipalityError;
+    municipalities = Array.isArray(municipalityRows) ? municipalityRows : [];
     renderPanel();
     decorateMemberCards();
   } catch (error) {
