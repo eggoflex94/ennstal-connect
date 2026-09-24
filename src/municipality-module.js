@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient';
 
 let currentContext=null;
+let activeMunicipalityId=null;
 let pageRoot=null;
 let loading=false;
 
@@ -15,9 +16,17 @@ const date=(v)=>v?new Date(v).toLocaleString('de-AT',{dateStyle:'medium',timeSty
 
 async function loadContext(){
   if(!supabase)return null;
-  const {data,error}=await supabase.rpc('ec_municipality_context',{p_region_slug:activeRegionSlug()});
+  if(!activeMunicipalityId){
+    const {data:list,error:listError}=await supabase.rpc('ec_municipality_directory',{p_region_slug:activeRegionSlug()});
+    if(listError)throw listError;
+    activeMunicipalityId=Array.isArray(list)&&list[0]?.id?String(list[0].id):null;
+  }
+  if(!activeMunicipalityId)throw new Error('Für diese Region ist noch keine Gemeinde angelegt.');
+  const {data,error}=await supabase.rpc('ec_municipality_context_v2',{p_municipality_id:activeMunicipalityId});
   if(error)throw error;
   currentContext=data||null;
+  await supabase.rpc('ec_municipality_mark_seen',{p_municipality_id:activeMunicipalityId});
+  window.dispatchEvent(new CustomEvent('ec:municipality-seen',{detail:{municipalityId:activeMunicipalityId}}));
   return currentContext;
 }
 
@@ -182,17 +191,15 @@ async function saveMunicipalityProfile(form){
   const button=form.querySelector('[type="submit"]');
   button.disabled=true;status.textContent='Wird gespeichert …';
   try{
-    const {error}=await supabase.rpc('ec_municipality_save_profile',{
-      p_region_slug:activeRegionSlug(),
+    const {error}=await supabase.rpc('ec_municipality_save_profile_v2',{
+      p_municipality_id:activeMunicipalityId,
       p_official_name:form.official_name.value,
       p_short_description:form.short_description.value||'',
       p_website:form.website.value||null,
       p_contact_email:form.contact_email.value||null,
       p_phone:form.phone.value||null,
       p_address:form.address.value||null,
-      p_logo_url:form.logo_url.value||null,
-      p_active:true,
-      p_verified:Boolean(currentContext?.municipality?.verified)
+      p_logo_url:form.logo_url.value||null
     });
     if(error)throw error;
     status.textContent='Gemeindeprofil gespeichert.';
@@ -206,9 +213,9 @@ async function submitRequest(form){
   const submit=form.querySelector('[type="submit"]');
   submit.disabled=true;status.textContent='Wird gesendet …';
   try{
-    const {error}=await supabase.rpc('ec_submit_citizen_request',{
-      p_region_slug:activeRegionSlug(),p_category:form.category.value,p_title:form.title.value,
-      p_description:form.description.value,p_location_text:form.location.value||null
+    const {error}=await supabase.rpc('ec_municipality_create_request_v2',{
+      p_municipality_id:activeMunicipalityId,p_category:form.category.value,p_title:form.title.value,
+      p_description:form.description.value,p_location:form.location.value||null
     });
     if(error)throw error;
     form.reset();status.textContent='Anliegen wurde übermittelt.';await render();
@@ -231,8 +238,8 @@ function openNoticeEditor(item=null){
   const close=()=>overlay.remove();overlay.querySelectorAll('[data-close]').forEach(b=>b.onclick=close);overlay.onclick=e=>{if(e.target===overlay)close()};
   const form=overlay.querySelector('form');
   form.onsubmit=async e=>{e.preventDefault();const status=form.querySelector('.ec-municipality-form-status'),btn=form.querySelector('[type="submit"]');btn.disabled=true;status.textContent='Wird gespeichert …';try{
-    const {error}=await supabase.rpc('ec_municipality_save_notice',{
-      p_region_slug:activeRegionSlug(),p_id:item?.id||null,p_title:form.title.value,p_body:form.body.value,
+    const {error}=await supabase.rpc('ec_municipality_save_notice_v2',{
+      p_municipality_id:activeMunicipalityId,p_id:item?.id||null,p_title:form.title.value,p_body:form.body.value,
       p_category:form.category.value,p_priority:form.priority.value,p_pinned:form.pinned.checked,p_published:form.published.checked
     });
     if(error)throw error;close();await render();
@@ -241,7 +248,7 @@ function openNoticeEditor(item=null){
 
 async function deleteNotice(id){
   if(!confirm('Diesen offiziellen Hinweis wirklich löschen?'))return;
-  const {error}=await supabase.rpc('ec_municipality_delete_notice',{p_id:id});
+  const {error}=await supabase.rpc('ec_municipality_delete_notice_v2',{p_municipality_id:activeMunicipalityId,p_id:id});
   if(error)return alert(error.message);
   await render();
 }
@@ -249,7 +256,7 @@ async function deleteNotice(id){
 async function loadStaffRequests(){
   const host=pageRoot?.querySelector('.ec-municipality-staff-requests');if(!host)return;
   host.innerHTML='<p class="ec-municipality-empty">Wird geladen …</p>';
-  const {data,error}=await supabase.rpc('ec_municipality_staff_requests',{p_region_slug:activeRegionSlug(),p_status:'ALL'});
+  const {data,error}=await supabase.rpc('ec_municipality_staff_requests_v2',{p_municipality_id:activeMunicipalityId,p_status:null});
   if(error){host.innerHTML=`<p class="ec-municipality-empty">${esc(error.message)}</p>`;return}
   host.innerHTML=(data||[]).map(r=>requestCard(r,true)).join('')||'<p class="ec-municipality-empty">Keine Bürgeranliegen vorhanden.</p>';
   host.querySelectorAll('[data-save-request]').forEach(button=>button.onclick=()=>void saveStaffRequest(button.closest('.ec-citizen-request')));
@@ -257,8 +264,8 @@ async function loadStaffRequests(){
 
 async function saveStaffRequest(card){
   const button=card.querySelector('[data-save-request]');button.disabled=true;
-  const {error}=await supabase.rpc('ec_municipality_update_request',{
-    p_id:card.dataset.id,p_status:card.querySelector('[data-request-status]').value,p_note:card.querySelector('[data-request-note]').value||null
+  const {error}=await supabase.rpc('ec_municipality_update_request_v2',{
+    p_municipality_id:activeMunicipalityId,p_id:card.dataset.id,p_status:card.querySelector('[data-request-status]').value,p_note:card.querySelector('[data-request-note]').value||null
   });
   button.disabled=false;
   if(error)return alert(error.message);
@@ -281,12 +288,18 @@ function boot(){
   removeLegacyNavButton();
   window.addEventListener('ec:navigate',event=>{
     if(event?.detail?.page==='municipality'){
+      activeMunicipalityId=event.detail?.municipalityId?String(event.detail.municipalityId):activeMunicipalityId;
       window.requestAnimationFrame(()=>void render());
       return;
     }
     if(document.body.classList.contains('ec-municipality-open'))removePage();
   });
+  window.addEventListener('ec:open-municipality',event=>{
+    activeMunicipalityId=event.detail?.municipalityId?String(event.detail.municipalityId):null;
+    window.dispatchEvent(new CustomEvent('ec:navigate',{detail:{page:'municipality',municipalityId:activeMunicipalityId}}));
+  });
   window.addEventListener('ec:region-change',()=>{
+    activeMunicipalityId=null;
     if(document.body.classList.contains('ec-municipality-open'))void render();
   });
 }
