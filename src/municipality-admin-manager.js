@@ -63,15 +63,14 @@ function makeButton(label, className) {
 
 function renderPanel() {
   const root = document.querySelector('.admin-page');
-  if (!root || String(viewer?.role || '').toUpperCase() !== 'HEAD_ADMIN') return;
+  const host = document.querySelector('#ec-head-municipality-manager-host');
+  if (!root || !host || String(viewer?.role || '').toUpperCase() !== 'HEAD_ADMIN') return;
 
-  let panel = root.querySelector('.ec-head-municipality-manager');
+  let panel = host.querySelector('.ec-head-municipality-manager');
   if (!panel) {
     panel = document.createElement('section');
     panel.className = 'ec-head-municipality-manager panel';
-    const cards = root.querySelector('.admin-member-cards');
-    if (cards) cards.before(panel);
-    else root.appendChild(panel);
+    host.appendChild(panel);
   }
 
   panel.replaceChildren();
