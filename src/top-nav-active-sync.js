@@ -36,7 +36,10 @@ function setActive(page,persist=true){
 }
 
 function inferFromDom(){
-  if(document.querySelector('.community-hub'))return'community';
+  if(document.querySelector('.community-hub')){
+    const saved=sessionStorage.getItem(PAGE_KEY);
+    return saved==='events'?'events':'community';
+  }
   if(document.querySelector('.forum-page,.forum-layout,.forum-board'))return'forum';
   if(document.querySelector('.groups-page,.groups-grid,.community-groups-page'))return'groups';
   if(document.querySelector('.events-page,.events-grid,.community-events-page'))return'events';
