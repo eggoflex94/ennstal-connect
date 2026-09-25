@@ -636,3 +636,11 @@ test("community event image field uses a direct-child DOM anchor", async()=>{
   assert.match(app,/else if \(eventForm\.isConnected\) eventForm\.appendChild\(label\)/);
   assert.doesNotMatch(app,/eventForm\.insertBefore\(label, eventForm\.querySelector\("button"\)\)/);
 });
+
+
+test("dock admin shortcuts stay icon-only", async()=>{
+  const css=await source("src/navigation-cleanup-final.css");
+  assert.match(css,/FINAL ADMIN SHORTCUT ICON-ONLY/);
+  assert.match(css,/\.ec-admin-primary-shortcut \.ec-compact-menu-label[\s\S]*display:none!important/);
+  assert.match(css,/\[data-ec-admin-central-hub="1"\] \.ec-compact-menu-label[\s\S]*display:none!important/);
+});
