@@ -840,3 +840,26 @@ test("profile photo crop drag never changes zoom automatically", async()=>{
   assert.match(editor,/const minZoom = Math\.max\(0\.08, fitZoom \* EXTRA_ZOOM_OUT_FACTOR\)/);
   assert.match(editor,/onClick=\{zoomFurtherOut\}>Weiter raus<\/button>/);
 });
+
+
+test("delegated Head Admins require explicit permissions", async()=>{
+  const app=await source("src/App.jsx");
+  const selfControls=await source("src/HeadAdminSelfControls.jsx");
+  const migration=await source("supabase/migrations/20260926113000_delegated_head_admin_permissions.sql");
+
+  assert.match(app,/updateMemberRole\(m, m\.role === "HEAD_ADMIN" \? "MEMBER" : "HEAD_ADMIN"\)/);
+  assert.match(app,/profile\?\.is_primary_head_admin/);
+  assert.match(app,/p_manage_community_photographers/);
+  assert.match(app,/p_view_personal_data/);
+  assert.match(app,/if \(normalizedRole === "HEAD_ADMIN"\) await loadPermissions\(m\.id\)/);
+
+  assert.match(selfControls,/permissions\?\.manage_points/);
+  assert.match(selfControls,/permissions\?\.manage_community_photographers/);
+
+  assert.match(migration,/is_primary_head_admin boolean not null default false/);
+  assert.match(migration,/profiles_one_primary_head_admin/);
+  assert.match(migration,/new_role='HEAD_ADMIN' and not v_primary/);
+  assert.match(migration,/Alle Verwaltungsrechte sind zunächst deaktiviert/);
+  assert.match(migration,/ec_has_admin_permission\('manage_roles'\)/);
+  assert.match(migration,/ec_has_admin_permission\('manage_members'\)/);
+});
