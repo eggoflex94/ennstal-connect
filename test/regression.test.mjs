@@ -790,3 +790,21 @@ test("personal dock compact grid is strictly icon-only", async()=>{
   assert.match(css,/display:none!important/);
   assert.doesNotMatch(css,/\n}\n\n\n\/\* FINAL REGIONAL HEADER GEOMETRY/);
 });
+
+
+test("error-center regressions: cover save, DOM insertion and verification lock order", async()=>{
+  const app=await source("src/App.jsx");
+  const migration=await source("supabase/migrations/20260925213500_fix_profile_verification_deadlock.sql");
+
+  assert.match(app,/async function saveEditedProfileCover/);
+  assert.match(app,/return backgroundUrl;/);
+  assert.doesNotMatch(app,/return publicUrl;\s*\n\s*}\s*\n\s*async function removeProfileCover/);
+
+  const communityEffect=app.slice(app.indexOf('if \(page !== "community"'), app.indexOf('}, \[page, profile\?\.role, communityEvents\.length\]\);')+60);
+  assert.doesNotMatch(communityEffect,/insertBefore\(/);
+  assert.match(communityEffect,/appendChild\(label\)/);
+
+  const actorLock=migration.indexOf("where id = auth.uid()\n  for update");
+  const targetLock=migration.indexOf("where id = p_user_id\n  for update");
+  assert.ok(actorLock >= 0 && targetLock > actorLock);
+});
