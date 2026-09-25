@@ -29,6 +29,29 @@ async function resolveRegion(){
   return data || null;
 }
 
+function renderWeeklyRecap(region, counts){
+  const recap = document.querySelector('#ec-home-activation .ec-weekly-region-recap');
+  if(!recap) return;
+  const title = recap.querySelector('h3');
+  const copy = recap.querySelector('p');
+  const total = Object.values(counts).reduce((sum,value)=>sum+Number(value||0),0);
+  const labels = {
+    municipality:'Gemeinde-Hinweise',
+    events:'Veranstaltungen',
+    requests:'Gesuche',
+    members:'neue Mitglieder',
+    forum:'Diskussionen',
+    business:'lokale Angebote'
+  };
+  const [topKey, topValue] = Object.entries(counts).sort((a,b)=>Number(b[1]||0)-Number(a[1]||0))[0] || ['',0];
+  if(title) title.textContent = total
+    ? `${total} neue regionale Signale in ${region.name}`
+    : `Ruhige Woche in ${region.name}`;
+  if(copy) copy.textContent = total
+    ? `Am meisten bewegt sich gerade bei ${labels[topKey] || 'deiner Community'} (${Number(topValue)||0}). Schau rein und sei dabei.`
+    : 'Aktuell gibt es wenig neue Aktivität. Ein Beitrag, Gesuch oder Event kann der nächste Impuls sein.';
+}
+
 function setCount(kind, count, detail){
   const card = document.querySelector(`#ec-home-activation [data-ec-today-kind="${kind}"]`);
   if(!card) return;
@@ -117,6 +140,7 @@ async function refreshToday(force=false){
   setCount('members',members,members===1?'1 neues Mitglied in den letzten 7 Tagen.':members?`${members} neue Mitglieder in den letzten 7 Tagen.`:'Keine neuen Mitglieder in den letzten 7 Tagen.');
   setCount('forum',forum,forum===1?'1 neue Diskussion in den letzten 7 Tagen.':forum?`${forum} neue Diskussionen in den letzten 7 Tagen.`:'Keine neuen Diskussionen in den letzten 7 Tagen.');
   setCount('business',business,business===1?'1 aktives lokales Angebot.':business?`${business} aktive lokale Angebote.`:'Aktuell keine lokalen Angebote.');
+  renderWeeklyRecap(region,{municipality,events,requests,members,forum,business});
 }
 
 function schedule(delay=180,force=false){
