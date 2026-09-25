@@ -867,7 +867,9 @@ export default function App() {
     if (error) return showNotice(error.message);
     const { data: changed, error: verifyError } = await supabase.from("profiles").select("id,role").eq("id", m.id).maybeSingle();
     if (verifyError || !changed || changed.role !== normalizedRole) return showNotice("Die Rolle wurde nicht bestätigt. Bitte führe den Datenbank-Fix aus und versuche es erneut.");
-    showNotice(`${getName(m)} ist jetzt ${roleLabel(normalizedRole)}.`); await loadAll();
+    showNotice(normalizedRole === "HEAD_ADMIN" ? `${getName(m)} ist jetzt Head Admin. Vergib jetzt die Rechte einzeln.` : `${getName(m)} ist jetzt ${roleLabel(normalizedRole)}.`);
+    await loadAll();
+    if (normalizedRole === "HEAD_ADMIN") await loadPermissions(m.id);
   }
 
   async function toggleSuspension(m) {
