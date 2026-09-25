@@ -6,6 +6,7 @@ const PREVIEW_SIZE = 720;
 const PAN_X_LIMIT = 120;
 const PAN_Y_UP_LIMIT = 260;
 const PAN_Y_DOWN_LIMIT = 160;
+const MAX_ZOOM = 2.8;
 
 function loadImage(file) {
   return new Promise((resolve, reject) => {
@@ -117,6 +118,13 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
   }, [source, zoom, x, y, rotation]);
 
   const fitZoom = source ? cropGeometry(source, rotation, PREVIEW_SIZE).fitZoom : 0.5;
+  const zoomSliderValue = Math.max(0, Math.min(100,
+    ((zoom - fitZoom) / Math.max(0.0001, MAX_ZOOM - fitZoom)) * 100
+  ));
+  const zoomFromSlider = (value) => {
+    const position = Math.max(0, Math.min(100, Number(value))) / 100;
+    return fitZoom + (MAX_ZOOM - fitZoom) * position;
+  };
   const clampPanX = (value) => Math.max(-PAN_X_LIMIT, Math.min(PAN_X_LIMIT, value));
   const clampPanY = (value) => Math.max(-PAN_Y_UP_LIMIT, Math.min(PAN_Y_DOWN_LIMIT, value));
 
@@ -229,8 +237,17 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
         <div className="ec-photo-editor-controls">
           <label>
             <span>Zoom</span>
-            <input type="range" min={fitZoom} max="2.8" step="0.01" value={zoom} onChange={e => setZoom(Number(e.target.value))}/>
-            <b>{Math.round(zoom * 100)}%</b>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              step="1"
+              value={zoomSliderValue}
+              onInput={e => setZoom(zoomFromSlider(e.currentTarget.value))}
+              onChange={e => setZoom(zoomFromSlider(e.currentTarget.value))}
+              aria-label="Profilbild Zoom"
+            />
+            <b>{zoomSliderValue <= 1 ? "Ganz" : Math.round(zoom * 100) + "%"}</b>
           </label>
           <label>
             <span>Links / rechts</span>
