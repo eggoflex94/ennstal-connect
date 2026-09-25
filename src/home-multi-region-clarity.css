@@ -129,3 +129,20 @@
 .ec-weekly-goal[data-done="1"]>b{color:#168b54}
 @media(max-width:900px){.ec-weekly-goals-grid{grid-template-columns:1fr}}
 @media(max-width:640px){.ec-weekly-goals-head{flex-direction:column}.ec-weekly-goals-score{align-self:flex-start}.ec-weekly-goal{grid-template-columns:34px minmax(0,1fr) auto}}
+
+
+.ec-local-opportunities{display:grid;gap:14px;padding:18px;border:1px solid rgba(28,50,68,.12);border-radius:20px;background:#fff;box-shadow:0 12px 30px rgba(20,39,56,.06)}
+.ec-local-opportunities-head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px}
+.ec-local-opportunities-head h2{margin:3px 0 4px;color:#172635}
+.ec-local-opportunities-head p{margin:0;color:#687580;font-size:.88rem;line-height:1.45}
+.ec-local-opportunities-head>button{border:0;background:transparent;color:#d7541d;font-weight:850;cursor:pointer;white-space:nowrap}
+.ec-local-opportunities-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.ec-local-opportunity-card{display:flex;flex-direction:column;align-items:flex-start;min-height:150px;padding:15px;border:1px solid #e3e8ec;border-radius:16px;background:linear-gradient(180deg,#fff,#fafcfd);color:inherit;text-align:left;text-decoration:none;cursor:pointer}
+.ec-local-opportunity-card:hover,.ec-local-opportunity-card:focus-visible{border-color:rgba(236,120,37,.42);box-shadow:0 9px 24px rgba(24,43,60,.08);outline:0}
+.ec-local-opportunity-type{display:inline-flex;padding:4px 8px;border-radius:999px;background:#fff2eb;color:#b54d1d;font-size:10px;font-weight:950;letter-spacing:.05em}
+.ec-local-opportunity-card strong{margin-top:10px;color:#203748;font-size:.95rem}
+.ec-local-opportunity-card small{margin-top:6px;color:#687580;font-size:.78rem;line-height:1.45}
+.ec-local-opportunity-card em{margin-top:auto;padding-top:13px;color:#d7541d;font-size:12px;font-style:normal;font-weight:900}
+.ec-local-business-card .ec-local-opportunity-type{background:#edf4ff;color:#245fbd}
+@media(max-width:900px){.ec-local-opportunities-grid{grid-template-columns:1fr}}
+@media(max-width:700px){.ec-local-opportunities{padding:16px}.ec-local-opportunities-head{align-items:flex-start;flex-direction:column}.ec-local-opportunities-head>button{padding:0}}
