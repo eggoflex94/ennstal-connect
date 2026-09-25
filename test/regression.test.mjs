@@ -780,3 +780,13 @@ test("regional weekly poll is presented as a practical community pulse", async()
   assert.match(css,/\.regional-pulse-total/);
   assert.match(css,/\.regional-pulse-empty/);
 });
+
+
+test("personal dock compact grid is strictly icon-only", async()=>{
+  const css=await source("src/navigation-cleanup-final.css");
+  assert.match(css,/FINAL COMPACT GRID ICON-ONLY AUTHORITY/);
+  assert.match(css,/font-size:0!important/);
+  assert.match(css,/\.ec-compact-menu-label\{/);
+  assert.match(css,/display:none!important/);
+  assert.doesNotMatch(css,/\n}\n\n\n\/\* FINAL REGIONAL HEADER GEOMETRY/);
+});
