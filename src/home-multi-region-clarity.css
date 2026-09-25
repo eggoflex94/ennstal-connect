@@ -146,3 +146,21 @@
 .ec-local-business-card .ec-local-opportunity-type{background:#edf4ff;color:#245fbd}
 @media(max-width:900px){.ec-local-opportunities-grid{grid-template-columns:1fr}}
 @media(max-width:700px){.ec-local-opportunities{padding:16px}.ec-local-opportunities-head{align-items:flex-start;flex-direction:column}.ec-local-opportunities-head>button{padding:0}}
+
+
+.ec-help-now{display:grid;gap:14px;padding:18px;border:1px solid rgba(28,50,68,.12);border-radius:20px;background:#fff;box-shadow:0 12px 30px rgba(20,39,56,.06)}
+.ec-help-now-head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px}
+.ec-help-now-head h2,.ec-help-now-empty h2{margin:3px 0 4px;color:#172635}
+.ec-help-now-head p,.ec-help-now-empty p{margin:0;color:#687580;font-size:.88rem;line-height:1.45}
+.ec-help-now-head>button,.ec-help-now-empty>button{border:0;background:transparent;color:#d7541d;font-weight:850;cursor:pointer;white-space:nowrap}
+.ec-help-now-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.ec-help-now-card{display:flex;flex-direction:column;align-items:flex-start;min-height:155px;padding:15px;border:1px solid #e3e8ec;border-radius:16px;background:linear-gradient(180deg,#fff,#fafcfd);color:inherit;text-align:left;cursor:pointer}
+.ec-help-now-card:hover,.ec-help-now-card:focus-visible{border-color:#b7d8c4;box-shadow:0 9px 24px rgba(24,43,60,.08);outline:0}
+.ec-help-now-category{display:inline-flex;padding:4px 8px;border-radius:999px;background:#eef8f2;color:#168b54;font-size:10px;font-weight:950;letter-spacing:.05em}
+.ec-help-now-card strong{margin-top:10px;color:#203748;font-size:.95rem}
+.ec-help-now-card small{margin-top:6px;color:#687580;font-size:.78rem;line-height:1.45}
+.ec-help-now-card em{margin-top:auto;padding-top:13px;color:#168b54;font-size:12px;font-style:normal;font-weight:900}
+.ec-help-now-empty{display:grid;grid-template-columns:44px minmax(0,1fr) auto;align-items:center;gap:14px;padding:4px}
+.ec-help-now-empty>span{display:grid;place-items:center;width:42px;height:42px;border-radius:13px;background:#eef8f2;font-size:20px}
+@media(max-width:900px){.ec-help-now-grid{grid-template-columns:1fr}.ec-help-now-empty{grid-template-columns:42px minmax(0,1fr)}.ec-help-now-empty>button{grid-column:1/-1;justify-self:start}}
+@media(max-width:700px){.ec-help-now{padding:16px}.ec-help-now-head{align-items:flex-start;flex-direction:column}.ec-help-now-head>button{padding:0}}
