@@ -16,6 +16,25 @@ const interestsOf = (value) => {
 };
 const normalize = (value) => clean(value).toLocaleLowerCase('de-AT');
 const displayName = (member) => clean(member?.nickname || member?.first_name || 'Mitglied');
+const roleStar = (member) => {
+  const role = clean(member?.role).toUpperCase();
+  if (role === 'HEAD_ADMIN' || role === 'ADMIN' || (Array.isArray(member?.regional_admin_region_ids) && member.regional_admin_region_ids.length)) return '/role-star-red.svg';
+  if (role === 'MUNICIPALITY') return member?.role_star_url || '/role-star-green.svg';
+  if (clean(member?.account_badge).toUpperCase() === 'BUSINESS') return '/role-star-blue.svg';
+  if (role === 'SUPPORTER') return '/supporter-star.svg';
+  return '';
+};
+const isNewMember = (member) => {
+  const created = new Date(member?.created_at || 0).getTime();
+  return created > 0 && Date.now() - created <= 7 * 24 * 60 * 60 * 1000;
+};
+const dayKey = () => new Date().toISOString().slice(0, 10);
+const stableDailyValue = (member) => {
+  const value = `${dayKey()}:${member?.id || ''}`;
+  let hash = 2166136261;
+  for (let i = 0; i < value.length; i += 1) hash = Math.imul(hash ^ value.charCodeAt(i), 16777619);
+  return hash >>> 0;
+};
 
 function currentRegionSlug() {
   const picker = document.querySelector('.ec-region-picker select');
@@ -53,19 +72,31 @@ function memberCard(member, shared) {
   button.className = 'ec-member-suggestion';
   button.addEventListener('click', () => openProfile(member));
 
+  const avatar = document.createElement('span');
+  avatar.className = 'ec-member-suggestion-avatar';
   if (member.avatar_url) {
     const image = document.createElement('img');
     image.src = member.avatar_url;
     image.alt = '';
     image.loading = 'lazy';
     image.decoding = 'async';
-    button.appendChild(image);
+    avatar.appendChild(image);
   } else {
     const fallback = document.createElement('span');
     fallback.className = 'ec-member-suggestion-avatar-fallback';
     fallback.textContent = displayName(member).slice(0, 1).toUpperCase() || '•';
-    button.appendChild(fallback);
+    avatar.appendChild(fallback);
   }
+  const starSrc = roleStar(member);
+  if (starSrc) {
+    const star = document.createElement('img');
+    star.className = 'ec-member-suggestion-role-star';
+    star.src = starSrc;
+    star.alt = '';
+    star.setAttribute('aria-hidden', 'true');
+    avatar.appendChild(star);
+  }
+  button.appendChild(avatar);
 
   const copy = document.createElement('span');
   copy.className = 'ec-member-suggestion-copy';
@@ -74,6 +105,13 @@ function memberCard(member, shared) {
   const location = document.createElement('small');
   location.textContent = clean(member.location) || 'Aus deiner Region';
   copy.append(name, location);
+
+  if (isNewMember(member)) {
+    const newcomer = document.createElement('span');
+    newcomer.className = 'ec-member-suggestion-new';
+    newcomer.textContent = 'Neu in deiner Region';
+    copy.appendChild(newcomer);
+  }
 
   if (shared.length) {
     const tags = document.createElement('span');
@@ -110,7 +148,7 @@ function renderPanel(region, suggestions) {
   const title = document.createElement('h2');
   title.textContent = 'Menschen, die du kennenlernen könntest';
   const subtitle = document.createElement('p');
-  subtitle.textContent = `Aus ${clean(region.name)} – bevorzugt nach gemeinsamen Interessen.`;
+  subtitle.textContent = `Aus ${clean(region.name)} – täglich neu gemischt, bevorzugt nach gemeinsamen Interessen und neuen Mitgliedern.`;
   intro.append(eyebrow, title, subtitle);
   const all = document.createElement('button');
   all.type = 'button';
@@ -165,8 +203,10 @@ async function refreshSuggestions(force = false) {
 
   const ranked = members.map((member) => {
     const shared = commonInterests(interestsOf(member.interests), ownInterests);
-    return { member, shared, score: shared.length };
-  }).sort((a, b) => b.score - a.score || displayName(a.member).localeCompare(displayName(b.member), 'de-AT'));
+    const newcomerBonus = isNewMember(member) ? 2 : 0;
+    const roleBonus = clean(member.role).toUpperCase() === 'MUNICIPALITY' ? 1 : 0;
+    return { member, shared, score: shared.length * 3 + newcomerBonus + roleBonus, daily: stableDailyValue(member) };
+  }).sort((a, b) => b.score - a.score || a.daily - b.daily || displayName(a.member).localeCompare(displayName(b.member), 'de-AT'));
 
   lastRegionId = region.id;
   lastCompletedAt = Date.now();
