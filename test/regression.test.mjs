@@ -644,3 +644,24 @@ test("dock admin shortcuts stay icon-only", async()=>{
   assert.match(css,/\.ec-admin-primary-shortcut \.ec-compact-menu-label[\s\S]*display:none!important/);
   assert.match(css,/\[data-ec-admin-central-hub="1"\] \.ec-compact-menu-label[\s\S]*display:none!important/);
 });
+
+
+test("today-in-region dashboard exposes six live regional signals", async()=>{
+  const base=await source("src/home-multi-region-clarity-base.js");
+  const live=await source("src/home-today-live.js");
+  const loader=await source("src/home-multi-region-clarity.js");
+  const css=await source("src/home-multi-region-clarity.css");
+
+  for(const kind of ["municipality","events","requests","members","forum","business"]){
+    assert.match(base,new RegExp('data-ec-today-kind="'+kind+'"'));
+  }
+  assert.match(loader,/home-today-live\.js/);
+  assert.match(live,/municipality_notices/);
+  assert.match(live,/community_events/);
+  assert.match(live,/community_requests/);
+  assert.match(live,/forum_posts/);
+  assert.match(live,/business_listings/);
+  assert.match(live,/profiles/);
+  assert.match(css,/\.ec-today-count/);
+  assert.match(css,/grid-template-columns: repeat\(3,minmax\(0,1fr\)\)/);
+});
