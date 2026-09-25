@@ -808,3 +808,22 @@ test("error-center regressions: cover save, DOM insertion and verification lock 
   const targetLock=migration.indexOf("where id = p_user_id\n  for update");
   assert.ok(actorLock >= 0 && targetLock > actorLock);
 });
+
+
+test("admin personal data requires explicit Head Admin permission", async()=>{
+  const app=await source("src/App.jsx");
+  const dashboard=await source("src/admin-dashboard-modern.js");
+  const migration=await source("supabase/migrations/20260925233500_restrict_admin_personal_data_access.sql");
+
+  assert.match(app,/\["view_personal_data", "Persönliche Daten einsehen"\]/);
+  assert.match(app,/supabase\.rpc\("ec_can_view_personal_data"\)/);
+  assert.match(app,/if \(personalDataAllowed\)/);
+  assert.match(app,/canViewPersonalData && <section className="admin-email-directory panel"/);
+  assert.match(app,/personalDataAllowed \? \(\{ \.\.\.\(membersRef\.current\.find/);
+  assert.match(dashboard,/canViewPersonalData&&\["✉ Registrierte E-Mails"/);
+
+  assert.match(migration,/add column if not exists view_personal_data boolean not null default false/);
+  assert.match(migration,/create or replace function public\.ec_can_view_personal_data/);
+  assert.match(migration,/if not public\.ec_can_view_personal_data\(\) then/);
+  assert.match(migration,/p_view_personal_data boolean default false/);
+});
