@@ -662,7 +662,7 @@ export default function App() {
       box.replaceChildren();
       const heading = document.createElement("h3"); heading.textContent = `Antworten (${forumReplies.filter((reply) => reply.post_id === post.id).length})`; box.appendChild(heading);
       forumReplies.filter((reply) => reply.post_id === post.id).forEach((reply) => {
-        const item = document.createElement("article"); item.className = "forum-reply";
+        const item = document.createElement("article"); item.className = "forum-reply"; item.dataset.replyId = reply.id; item.dataset.authorId = reply.author_id;
         const author = members.find((member) => member.id === reply.author_id); const business = author?.account_badge === "BUSINESS";
         const moderator = author?.forum_moderator; const meta = document.createElement("small"); meta.className = `role-author ${business ? "business" : roleClass(author?.role)}`; meta.textContent = `${business ? "★" : roleMark(author?.role)} ${getName(author)}${business ? " · Unternehmenskonto" : moderator ? " · Forum-Moderator" : ""} · ${new Date(reply.created_at).toLocaleString("de-AT")}${reply.edited_at ? ` · bearbeitet${reply.edit_reason ? `: ${reply.edit_reason}` : ""}` : ""}`.trim(); item.appendChild(meta);
         const content = document.createElement("p"); content.textContent = reply.content; item.appendChild(content);
