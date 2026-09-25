@@ -677,3 +677,21 @@ test("weekly regional recap summarizes live signals", async()=>{
   assert.match(live,/renderWeeklyRecap\(region,\{municipality,events,requests,members,forum,business\}\)/);
   assert.match(css,/\.ec-weekly-region-recap/);
 });
+
+
+test("seven-day new member journey tracks four starter tasks", async()=>{
+  const journey=await source("src/home-new-member-journey.js");
+  const loader=await source("src/home-multi-region-clarity.js");
+  const css=await source("src/home-multi-region-clarity.css");
+  assert.match(loader,/home-new-member-journey\.js/);
+  assert.match(journey,/SEVEN_DAYS = 7 \* 24 \* 60 \* 60 \* 1000/);
+  assert.match(journey,/Profil persönlich machen/);
+  assert.match(journey,/Erste Gruppe finden/);
+  assert.match(journey,/Ein erstes Servus schreiben/);
+  assert.match(journey,/Ersten Kontakt knüpfen/);
+  assert.match(journey,/community_group_members/);
+  assert.match(journey,/forum_posts/);
+  assert.match(journey,/friendships/);
+  assert.match(css,/\.ec-starter-task/);
+  assert.match(css,/ec-starter-progress/);
+});
