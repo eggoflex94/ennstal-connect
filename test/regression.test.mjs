@@ -627,3 +627,12 @@ test("online friends use municipality role star", async()=>{
   assert.match(dash,/const MUNICIPALITY_STAR='\/role-star-green\.svg'/);
   assert.match(dash,/if\(role\(p\)==='MUNICIPALITY'\)return MUNICIPALITY_STAR/);
 });
+
+
+test("community event image field uses a direct-child DOM anchor", async()=>{
+  const app=await source("src/App.jsx");
+  assert.match(app,/const directAction = \[\.\.\.eventForm\.children\]/);
+  assert.match(app,/directAction\?\.parentElement === eventForm/);
+  assert.match(app,/else if \(eventForm\.isConnected\) eventForm\.appendChild\(label\)/);
+  assert.doesNotMatch(app,/eventForm\.insertBefore\(label, eventForm\.querySelector\("button"\)\)/);
+});
