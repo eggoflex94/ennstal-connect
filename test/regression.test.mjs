@@ -723,3 +723,17 @@ test("daily member suggestions show role stars and newcomer labels", async()=>{
   assert.match(css,/\.ec-member-suggestion-role-star/);
   assert.match(css,/\.ec-member-suggestion-new/);
 });
+
+
+test("local opportunities prefer listings and fall back to regional business accounts", async()=>{
+  const code=await source("src/home-local-opportunities.js");
+  const loader=await source("src/home-multi-region-clarity.js");
+  const css=await source("src/home-multi-region-clarity.css");
+  assert.match(loader,/home-local-opportunities\.js/);
+  assert.match(code,/business_listings/);
+  assert.match(code,/community_member_directory/);
+  assert.match(code,/account_badge/);
+  assert.match(code,/LOKALE CHANCEN/);
+  assert.match(css,/\.ec-local-opportunities/);
+  assert.match(css,/\.ec-local-opportunity-card/);
+});
