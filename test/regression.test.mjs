@@ -22,7 +22,7 @@ test("native directory owns all-region and active-region filtering",async()=>{co
 
 test("every region reloads its own homepage and regional community content",async()=>{const app=await source("src/App.jsx");assert.match(app,/const activeRegionId = activeRegion\?\.id \|\| profile\?\.home_region_id \|\| null/);assert.match(app,/const regionFilter = \(entries\) => activeRegionId \? entries\.filter\(\(entry\) => entry\.region_id === activeRegionId\) : entries/);for(const table of ["homepage_sections","news","community_events","community_ads","forum_posts","community_requests"]){assert.match(app,new RegExp(`from\\(\\"${table}\\"\\)[\\s\\S]{0,220}eq\\(\\"region_id\\", activeRegionId\\)`));}assert.match(app,/ec_region_group_directory/);assert.match(app,/ec_region_weekly_poll_current/);assert.match(app,/ec_region_featured_community_group/);assert.match(app,/\}, \[user\?\.id, activeRegionId\]\);/);assert.match(app,/homepageSections=\{regionFilter\(homepageSections\)\}/);assert.match(app,/groups=\{regionFilter\(groups\)\}/);assert.match(app,/events=\{regionFilter\(communityEvents\)\}/);assert.match(app,/ads=\{regionFilter\(communityAds\)\}/);assert.match(app,/posts=\{regionFilter\(forumPosts\)\}/);});
 
-test("regional management rights are limited to the active assignment while global admins remain global",async()=>{const app=await source("src/App.jsx");assert.match(app,/regionalAssignments\.some\(\(assignment\) => assignment\.user_id === profile\?\.id && assignment\.region_id === activeRegionId && assignment\.active\)/);assert.match(app,/const canManageActiveRegion = isAdmin\(profile\?\.role\) \|\| isRegionalAdminHere/);assert.match(app,/canManage=\{canManageActiveRegion\}/);});
+test("regional management rights are limited to the active assignment while global admins remain global",async()=>{const app=await source("src/App.jsx");assert.match(app,/regionalAssignments\.some\(\(assignment\) => assignment\.user_id === profile\?\.id && assignment\.region_id === activeRegionId && assignment\.active\)/);assert.match(app,/const canManageActiveRegion = profile\?\.is_primary_head_admin \|\| isRegionalAdminHere \|\| hasAdminPermission\("manage_news"\) \|\| hasAdminPermission\("manage_groups"\) \|\| hasAdminPermission\("manage_events"\)/);assert.match(app,/canManage=\{canManageActiveRegion\}/);});
 
 test("profile visits use their real timestamp and open the visitor profile",async()=>{const code=await source("src/regional-shell.js");assert.match(code,/order\('visited_at'/);assert.match(code,/row\.visited_at\|\|row\.created_at/);assert.match(code,/ec:open-profile/);assert.match(code,/avatar_url/);});
 
@@ -629,12 +629,11 @@ test("online friends use municipality role star", async()=>{
 });
 
 
-test("community event image field uses a direct-child DOM anchor", async()=>{
+test("community event image field avoids unsafe React DOM insertion", async()=>{
   const app=await source("src/App.jsx");
-  assert.match(app,/const directAction = \[\.\.\.eventForm\.children\]/);
-  assert.match(app,/directAction\?\.parentElement === eventForm/);
-  assert.match(app,/else if \(eventForm\.isConnected\) eventForm\.appendChild\(label\)/);
-  assert.doesNotMatch(app,/eventForm\.insertBefore\(label, eventForm\.querySelector\("button"\)\)/);
+  const communityEffect=app.slice(app.indexOf('if \\(page !== "community"'), app.indexOf('}, \\[page, profile\\?\\.role, communityEvents\\.length\\]\\);')+60);
+  assert.doesNotMatch(communityEffect,/insertBefore\(/);
+  assert.match(communityEffect,/appendChild\(label\)/);
 });
 
 
@@ -788,7 +787,7 @@ test("personal dock compact grid is strictly icon-only", async()=>{
   assert.match(css,/font-size:0!important/);
   assert.match(css,/\.ec-compact-menu-label\{/);
   assert.match(css,/display:none!important/);
-  assert.doesNotMatch(css,/\n}\n\n\n\/\* FINAL REGIONAL HEADER GEOMETRY/);
+  assert.match(css,/\.ec-right-dock \.ec-compact-menu-grid > button \.ec-compact-menu-label,[\s\S]*display:none!important/);
 });
 
 
