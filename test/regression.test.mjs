@@ -695,3 +695,18 @@ test("seven-day new member journey tracks four starter tasks", async()=>{
   assert.match(css,/\.ec-starter-task/);
   assert.match(css,/ec-starter-progress/);
 });
+
+
+test("weekly community goals use existing activity data", async()=>{
+  const goals=await source("src/home-weekly-goals.js");
+  const loader=await source("src/home-multi-region-clarity.js");
+  const css=await source("src/home-multi-region-clarity.css");
+  assert.match(loader,/home-weekly-goals\.js/);
+  assert.match(goals,/forum_posts/);
+  assert.match(goals,/forum_replies/);
+  assert.match(goals,/friendships/);
+  assert.match(goals,/community_event_rsvps/);
+  assert.match(goals,/DIESE WOCHE AKTIV WERDEN/);
+  assert.match(css,/\.ec-weekly-goals/);
+  assert.match(css,/\.ec-weekly-goal-progress/);
+});
