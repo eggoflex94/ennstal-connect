@@ -108,3 +108,24 @@
 .ec-starter-progress span{font-size:12px;font-weight:900;color:#627386}
 .ec-first-steps[data-ec-starter-journey="expired"]{display:none!important}
 @media(max-width:760px){.ec-first-steps[data-ec-starter-journey="active"] .ec-first-steps-grid{grid-template-columns:1fr}.ec-starter-task{grid-template-columns:34px minmax(0,1fr) auto!important}}
+
+
+.ec-weekly-goals{display:grid;gap:14px;padding:18px;border:1px solid #e2e8f0;border-radius:18px;background:#fff}
+.ec-weekly-goals-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.ec-weekly-goals-head h3{margin:3px 0 5px;font-size:1.05rem;color:#172635}
+.ec-weekly-goals-head p{margin:0;color:#66737f;font-size:.87rem;line-height:1.45;max-width:760px}
+.ec-weekly-goals-score{display:grid;place-items:center;flex:0 0 52px;height:36px;border-radius:999px;background:#172635;color:#fff;font-size:13px;font-weight:950}
+.ec-weekly-goals-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.ec-weekly-goal{display:grid;grid-template-columns:38px minmax(0,1fr) auto;align-items:center;gap:10px;padding:13px;border:1px solid #e2e8f0;border-radius:14px;background:#f9fbfc;color:inherit;text-align:left;cursor:pointer}
+.ec-weekly-goal:hover,.ec-weekly-goal:focus-visible{border-color:rgba(236,120,37,.42);box-shadow:0 8px 20px rgba(20,39,56,.07);outline:0}
+.ec-weekly-goal[data-done="1"]{background:#f2fbf6;border-color:#bfe5ce}
+.ec-weekly-goal-icon{display:grid;place-items:center;width:34px;height:34px;border-radius:11px;background:#fff;font-size:18px}
+.ec-weekly-goal-copy{display:grid;gap:3px;min-width:0}
+.ec-weekly-goal-copy strong{font-size:.83rem;color:#172635}
+.ec-weekly-goal-copy small{font-size:.72rem;color:#72808c;line-height:1.35}
+.ec-weekly-goal-progress{height:6px;margin-top:4px;border-radius:999px;background:#e6ecf1;overflow:hidden}
+.ec-weekly-goal-progress i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#0c6ed1,#168b54)}
+.ec-weekly-goal>b{font-size:.74rem;color:#5f7182}
+.ec-weekly-goal[data-done="1"]>b{color:#168b54}
+@media(max-width:900px){.ec-weekly-goals-grid{grid-template-columns:1fr}}
+@media(max-width:640px){.ec-weekly-goals-head{flex-direction:column}.ec-weekly-goals-score{align-self:flex-start}.ec-weekly-goal{grid-template-columns:34px minmax(0,1fr) auto}}
