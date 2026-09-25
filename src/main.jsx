@@ -50,6 +50,8 @@ import "./profile-visits-realtime.js";
 import "./navigation-stability.js";
 import "./admin-forum-cross-region.js";
 import "./community-engagement-upgrade.js";
+import "./forum-helpful.css";
+import "./forum-helpful.js";
 import "./event-editor-enhancement.js";
 import "./today-updates-popup.js";
 import "./sidebar-friends-newsfeed.js";
