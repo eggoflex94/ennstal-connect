@@ -35,7 +35,9 @@ function cropGeometry(source, rotation, size) {
   const rotatedWidth = quarterTurn ? source.naturalHeight : source.naturalWidth;
   const rotatedHeight = quarterTurn ? source.naturalWidth : source.naturalHeight;
   const coverScale = Math.max(size / rotatedWidth, size / rotatedHeight);
-  return { quarterTurn, coverScale };
+  const containScale = Math.min(size / rotatedWidth, size / rotatedHeight);
+  const fitZoom = Math.max(0.25, containScale / Math.max(coverScale, 0.0001));
+  return { quarterTurn, coverScale, fitZoom };
 }
 
 function drawEditedImage(canvas, source, { zoom, x, y, rotation }, size) {
@@ -46,7 +48,7 @@ function drawEditedImage(canvas, source, { zoom, x, y, rotation }, size) {
   const ctx = canvas.getContext("2d", { alpha: false });
   if (!ctx) return;
 
-  ctx.fillStyle = "#ffffff";
+  ctx.fillStyle = "#f3f6f8";
   ctx.fillRect(0, 0, size, size);
 
   const { quarterTurn, coverScale } = cropGeometry(source, rotation, size);
@@ -114,6 +116,7 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
     );
   }, [source, zoom, x, y, rotation]);
 
+  const fitZoom = source ? cropGeometry(source, rotation, PREVIEW_SIZE).fitZoom : 0.5;
   const clampPanX = (value) => Math.max(-PAN_X_LIMIT, Math.min(PAN_X_LIMIT, value));
   const clampPanY = (value) => Math.max(-PAN_Y_UP_LIMIT, Math.min(PAN_Y_DOWN_LIMIT, value));
 
@@ -123,7 +126,8 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
   };
 
   const startDrag = (event) => {
-    if (!source || busy) return;
+    if (!source || busy || dragRef.current) return;
+    event.preventDefault();
     event.currentTarget.setPointerCapture?.(event.pointerId);
     dragRef.current = {
       pointerId: event.pointerId,
@@ -160,6 +164,12 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
     setRotation(0);
   };
 
+  const showWholeImage = () => {
+    setZoom(fitZoom);
+    setX(0);
+    setY(0);
+  };
+
   const exportImage = async () => {
     if (!source || busy) return;
     setBusy(true);
@@ -191,7 +201,7 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
         <div>
           <span className="eyebrow">PROFILBILD</span>
           <h2>Foto anpassen</h2>
-          <p>Ziehe das Bild direkt mit Finger oder Maus. Verschieben und Zoom sind getrennt: Der Zoom ändert sich nur, wenn du den Zoom-Regler selbst bewegst.</p>
+          <p>Ziehe das Bild mit Finger oder Maus. Der Zoom bleibt dabei unverändert. Mit „Ganzes Bild“ kannst du auf dem Handy vollständig herauszoomen.</p>
         </div>
         <button type="button" className="ec-photo-editor-close" onClick={onCancel} aria-label="Schließen">×</button>
       </header>
@@ -204,6 +214,8 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
           onPointerUp={endDrag}
           onPointerCancel={endDrag}
           onLostPointerCapture={() => { dragRef.current = null; }}
+          onTouchStart={event => { if (event.touches.length > 1) event.preventDefault(); }}
+          onTouchMove={event => { if (event.touches.length > 1) event.preventDefault(); }}
           aria-label={source ? "Profilbild-Vorschau. Bild mit Finger oder Maus verschieben." : undefined}
         >
           {source
@@ -217,7 +229,7 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
         <div className="ec-photo-editor-controls">
           <label>
             <span>Zoom</span>
-            <input type="range" min="1" max="2.8" step="0.01" value={zoom} onChange={e => setZoom(Number(e.target.value))}/>
+            <input type="range" min={fitZoom} max="2.8" step="0.01" value={zoom} onChange={e => setZoom(Number(e.target.value))}/>
             <b>{Math.round(zoom * 100)}%</b>
           </label>
           <label>
@@ -231,6 +243,7 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
             <b>{y}</b>
           </label>
           <div className="ec-photo-editor-rotate">
+            <button type="button" onClick={showWholeImage}>Ganzes Bild</button>
             <button type="button" onClick={() => setRotation(v => v - 90)}>↶ Links drehen</button>
             <button type="button" onClick={() => setRotation(v => v + 90)}>↷ Rechts drehen</button>
             <button type="button" onClick={reset}>Zurücksetzen</button>
