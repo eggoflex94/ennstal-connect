@@ -101,11 +101,8 @@ export default function HeadAdminSelfControls({ profile, user, regions = [], onC
     if (busy) return;
     const delta = Number(pointDelta);
     const reason = pointReason.trim();
-    if (!Number.isInteger(delta) || delta === 0 || Math.abs(delta) > 100) {
-      return showNotice?.("Bitte eine ganze Punktezahl zwischen -100 und +100 eingeben.");
-    }
-    if (reason.length < 10) {
-      return showNotice?.("Bitte eine Begründung mit mindestens 10 Zeichen eingeben.");
+    if (!Number.isInteger(delta) || delta === 0) {
+      return showNotice?.("Bitte eine ganze Punktezahl ungleich 0 eingeben.");
     }
 
     setBusy(true);
@@ -159,16 +156,16 @@ export default function HeadAdminSelfControls({ profile, user, regions = [], onC
       <section>
         <div className="head-admin-self-title">
           <span className="head-admin-self-points-icon" aria-hidden="true">★</span>
-          <div><strong>Eigene Punkte</strong><small>Manuelle Plus- oder Minuspunkte · max. ±100 pro Vorgang</small></div>
+          <div><strong>Eigene Punkte</strong><small>Manuelle Plus- oder Minuspunkte · ohne Punkteobergrenze · Begründung optional</small></div>
         </div>
         <form className="head-admin-self-points-form" onSubmit={adjustOwnPoints}>
           <label>
             <span>Punkteänderung</span>
-            <input type="number" min="-100" max="100" step="1" value={pointDelta} onChange={(event) => setPointDelta(event.target.value)} placeholder="+10 oder -5" disabled={busy}/>
+            <input type="number" step="1" value={pointDelta} onChange={(event) => setPointDelta(event.target.value)} placeholder="+250 oder -150" disabled={busy}/>
           </label>
           <label className="head-admin-self-reason">
-            <span>Begründung</span>
-            <input maxLength="500" value={pointReason} onChange={(event) => setPointReason(event.target.value)} placeholder="Warum werden die Punkte geändert?" disabled={busy}/>
+            <span>Begründung (optional)</span>
+            <input maxLength="500" value={pointReason} onChange={(event) => setPointReason(event.target.value)} placeholder="Optionaler Grund" disabled={busy}/>
           </label>
           <button type="submit" className="primary-button" disabled={busy}>{busy ? "Wird gespeichert …" : "Punkte buchen"}</button>
         </form>
