@@ -25,15 +25,17 @@ test("Head Admin can assign own Community Photographer scope", async () => {
 
 test("Head Admin own points use dedicated audited RPC", async () => {
   const controls = await source("src/HeadAdminSelfControls.jsx");
-  const migration = await source("supabase/migrations/20260919174500_head_admin_self_points.sql");
+  const migration = await source("supabase/migrations/20260925222000_head_admin_unlimited_points_optional_reason.sql");
 
   assert.match(controls, /head_admin_adjust_own_points/);
   assert.doesNotMatch(controls, /Math\.abs\(delta\) > 100/);
   assert.doesNotMatch(controls, /reason\.length < 10/);
 
   assert.match(migration, /upper\(role::text\)='HEAD_ADMIN'/);
-  assert.doesNotMatch(migration, /abs\(p_delta\)>100/);
-  assert.doesNotMatch(migration, /char_length\(v_reason\)<10/);
+  assert.match(migration, /if not v_is_head_admin and abs\(point_delta\) > 100/);
+  assert.match(migration, /if not v_is_head_admin and length\(v_reason\) < 10/);
+  assert.doesNotMatch(migration, /if abs\(p_delta\)>100/);
+  assert.doesNotMatch(migration, /if char_length\(v_reason\)<10/);
   assert.match(migration, /point_transactions/);
   assert.match(migration, /point_history/);
   assert.match(migration, /admin_logs/);
