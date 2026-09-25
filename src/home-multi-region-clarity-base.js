@@ -87,10 +87,12 @@ function buildActivation(regionName) {
     <section class="ec-today-region">
       <div class="ec-today-region-head"><div><span class="eyebrow">HEUTE IN DEINER REGION</span><h2>Was passiert gerade in ${escapeHtml(regionName)}?</h2></div><button type="button" data-ec-activation="region">Region wechseln</button></div>
       <div class="ec-today-region-grid">
-        <button type="button" data-ec-activation="members"><span>🤝</span><strong>Menschen</strong><small>Mitglieder aus ${escapeHtml(regionName)} entdecken.</small><em>Jetzt ansehen →</em></button>
-        <button type="button" data-ec-activation="events"><span>🎉</span><strong>Was ist los?</strong><small>Events und gemeinsame Aktivitäten finden.</small><em>Events entdecken →</em></button>
-        <button type="button" data-ec-activation="community"><span>🔎</span><strong>Gesucht &amp; gefunden</strong><small>Hilfe, Empfehlungen und regionale Kontakte.</small><em>Community öffnen →</em></button>
-        <button type="button" data-ec-activation="forum"><span>💬</span><strong>Diskussion</strong><small>Fragen stellen und bei regionalen Themen mitreden.</small><em>Mitreden →</em></button>
+        <button type="button" data-ec-today-kind="municipality" data-ec-today-nav="municipality"><span>🏛</span><b class="ec-today-count" aria-label="Anzahl">–</b><strong>Gemeinde-Hinweise</strong><small>Offizielle Informationen und Services deiner Region.</small><em>Gemeinde &amp; Service →</em></button>
+        <button type="button" data-ec-activation="events" data-ec-today-kind="events"><span>🎉</span><b class="ec-today-count" aria-label="Anzahl">–</b><strong>Veranstaltungen</strong><small>Was heute und in den nächsten Tagen los ist.</small><em>Events entdecken →</em></button>
+        <button type="button" data-ec-activation="community" data-ec-today-kind="requests"><span>🤝</span><b class="ec-today-count" aria-label="Anzahl">–</b><strong>Gesuche &amp; Hilfe</strong><small>Offene regionale Anliegen, Empfehlungen und Hilfe.</small><em>Helfen oder suchen →</em></button>
+        <button type="button" data-ec-activation="members" data-ec-today-kind="members"><span>👋</span><b class="ec-today-count" aria-label="Anzahl">–</b><strong>Neue Mitglieder</strong><small>Neue Menschen aus ${escapeHtml(regionName)} kennenlernen.</small><em>Mitglieder ansehen →</em></button>
+        <button type="button" data-ec-activation="forum" data-ec-today-kind="forum"><span>💬</span><b class="ec-today-count" aria-label="Anzahl">–</b><strong>Diskussionen</strong><small>Neue regionale Themen und Gespräche der letzten Tage.</small><em>Jetzt mitreden →</em></button>
+        <button type="button" data-ec-today-kind="business" data-ec-today-nav="community"><span>🏢</span><b class="ec-today-count" aria-label="Anzahl">–</b><strong>Lokale Angebote</strong><small>Aktuelle Angebote, Jobs und Chancen von Unternehmen.</small><em>Regional entdecken →</em></button>
       </div>
     </section>
 
@@ -100,6 +102,7 @@ function buildActivation(regionName) {
   for (const page of ['profile', 'groups', 'members', 'events', 'community', 'forum']) {
     bindNavigation(section, `[data-ec-activation="${page}"]`, page);
   }
+  section.querySelectorAll('[data-ec-today-nav]').forEach((button) => button.addEventListener('click', () => navigateTo(button.dataset.ecTodayNav)));
   return section;
 }
 
@@ -130,8 +133,8 @@ function syncHomeIntro() {
   } else {
     const heading = activation.querySelector('.ec-today-region-head h2');
     if (heading) heading.textContent = `Was passiert gerade in ${regionName}?`;
-    const people = activation.querySelector('[data-ec-activation="members"] small');
-    if (people) people.textContent = `Mitglieder aus ${regionName} entdecken.`;
+    const people = activation.querySelector('[data-ec-today-kind="members"] small');
+    if (people) people.textContent = `Neue Menschen aus ${regionName} kennenlernen.`;
   }
 }
 
