@@ -160,6 +160,7 @@ export default function App() {
   const [adminTarget, setAdminTarget] = useState("");
   const [permissionDraft, setPermissionDraft] = useState({});
   const [savingPermissions, setSavingPermissions] = useState(false);
+  const [canViewPersonalData, setCanViewPersonalData] = useState(false);
   const [editingMember, setEditingMember] = useState(null);
   const [accountReviewQueue, setAccountReviewQueue] = useState([]);
   const [groupOwnerChanges, setGroupOwnerChanges] = useState([]);
@@ -177,7 +178,7 @@ export default function App() {
     initializedProfileUser.current = null;
     setSectionStatus({ pending: [], failed: [] });
     setUser(null); setProfile(null); setMembers([]); setFriendships([]);
-    setMessages([]); setAdminMembers([]); setAdminLog([]); setMemberEmails({});
+    setMessages([]); setAdminMembers([]); setAdminLog([]); setMemberEmails({}); setCanViewPersonalData(false);
     setReports([]); setBlockedUsers([]); setFeatureLocks([]); setProfileVisits([]);
     setProfileActivities([]); setRulesAccepted(null); setViewingMember(null);
     setViewingFriends([]); setChatMember(null); setSelectedMember(null);
@@ -350,11 +351,12 @@ export default function App() {
         return data ?? fallback;
       };
       // Access-sensitive state is ready before publishing directory content.
-      const [p, bs, locks, ruleAcceptance] = await Promise.all([
+      const [p, bs, locks, ruleAcceptance, personalDataAllowed] = await Promise.all([
         read(supabase.from("profiles").select("*").eq("id", currentUser.id).maybeSingle(), null),
         read(supabase.from("user_blocks").select("*").eq("blocker_id", currentUser.id)),
         read(supabase.from("user_feature_locks").select("*").eq("user_id", currentUser.id)),
-        read(supabase.from("community_rule_acceptances").select("rules_version,accepted_at").eq("user_id", currentUser.id).eq("rules_version", COMMUNITY_RULES_VERSION).maybeSingle(), null)
+        read(supabase.from("community_rule_acceptances").select("rules_version,accepted_at").eq("user_id", currentUser.id).eq("rules_version", COMMUNITY_RULES_VERSION).maybeSingle(), null),
+        read(supabase.rpc("ec_can_view_personal_data"), false)
       ]);
       if (!isCurrent()) return;
       if (!p) throw new Error("Dein Profil konnte nicht geladen werden. Bitte versuche es erneut.");
@@ -368,7 +370,7 @@ export default function App() {
       bootstrapRetry.current.count = 0;
       window.clearTimeout(bootstrapRetry.current.timer);
       bootstrapRetry.current.timer = null;
-      setProfile(p); setBlockedUsers(bs); setFeatureLocks(locks); setRulesAccepted(Boolean(ruleAcceptance));
+      setProfile(p); setBlockedUsers(bs); setFeatureLocks(locks); setRulesAccepted(Boolean(ruleAcceptance)); setCanViewPersonalData(Boolean(personalDataAllowed));
       const readMemberDirectory = async () => {
         const { data, error } = await supabase.rpc("community_member_directory");
         if (error) throw error;
@@ -397,9 +399,13 @@ export default function App() {
       if (isAdmin(p.role)) {
         tasks.push(
           { name: "Admin-Mitglieder", load: () => read(supabase.rpc("admin_full_member_directory")), commit: data => setAdminMembers(data.map(summary => ({ ...(membersRef.current.find(member => member.id === summary.id) || {}), ...summary }))) },
-          { name: "Admin-Kontaktdaten", load: () => read(supabase.rpc("admin_member_directory")), commit: data => setMemberEmails(Object.fromEntries(data.map(entry => [entry.id, entry.email]))) },
           { name: "Admin-Logbuch", load: () => isHeadAdmin(p.role) ? read(supabase.rpc("get_admin_log", { p_limit: 500 })) : Promise.resolve([]), commit: setAdminLog }
         );
+        if (personalDataAllowed) {
+          tasks.push({ name: "Admin-Kontaktdaten", load: () => read(supabase.rpc("admin_member_directory")), commit: data => setMemberEmails(Object.fromEntries(data.map(entry => [entry.id, entry.email]))) });
+        } else {
+          setMemberEmails({});
+        }
       } else { setMemberEmails({}); setAdminMembers([]); setAdminLog([]); }
       setSectionStatus({ pending: tasks.map(task => task.name), failed: [] });
       await loadSections(tasks, {
@@ -934,7 +940,7 @@ export default function App() {
     if (!adminTarget || !isHeadAdmin(profile?.role)) return;
     setSavingPermissions(true);
     const p = permissionDraft;
-    let { error } = await supabase.rpc("admin_set_permissions", { target_user: adminTarget, p_manage_members: !!p.manage_members, p_manage_points: !!p.manage_points, p_manage_messages: !!p.manage_messages, p_manage_media: !!p.manage_media, p_manage_roles: !!p.manage_roles, p_manage_admins: !!p.manage_admins, p_view_profile_visits: !!p.view_profile_visits, p_manage_news: !!p.manage_news, p_manage_groups: !!p.manage_groups, p_manage_events: !!p.manage_events, p_manage_marketplace: !!p.manage_marketplace, p_manage_friend_requests: !!p.manage_friend_requests, p_manage_homepage: !!p.manage_homepage, p_manage_reports: !!p.manage_reports });
+    let { error } = await supabase.rpc("admin_set_permissions", { target_user: adminTarget, p_manage_members: !!p.manage_members, p_manage_points: !!p.manage_points, p_manage_messages: !!p.manage_messages, p_manage_media: !!p.manage_media, p_manage_roles: !!p.manage_roles, p_manage_admins: !!p.manage_admins, p_view_profile_visits: !!p.view_profile_visits, p_manage_news: !!p.manage_news, p_manage_groups: !!p.manage_groups, p_manage_events: !!p.manage_events, p_manage_marketplace: !!p.manage_marketplace, p_manage_friend_requests: !!p.manage_friend_requests, p_manage_homepage: !!p.manage_homepage, p_manage_reports: !!p.manage_reports, p_view_personal_data: !!p.view_personal_data });
     const responsibilities = PERMISSIONS.filter(([key]) => p[key]).map(([, label]) => label);
     if (!error) ({ error } = await supabase.rpc("admin_set_responsibilities", { p_target_user: adminTarget, p_responsibilities: responsibilities }));
     setSavingPermissions(false);
@@ -1381,7 +1387,7 @@ export default function App() {
         {page === "reports" && isAdmin(profile?.role) && <Reports reports={reports} memberById={memberById} resolveReport={resolveReport}/>} 
         {page === "fake-accounts" && isHeadAdmin(profile?.role) && profile?.account_status === "ACTIVE" && <section className="fake-account-page head-admin-tools-page"><div className="page-heading"><div><span className="eyebrow">NUR HEAD ADMIN</span><h1>Fake-Erkennung</h1></div></div></section>}
         {page === "admin-log" && isHeadAdmin(profile?.role) && profile?.account_status === "ACTIVE" && <section className="admin-log-page head-admin-tools-page"><div className="page-heading"><div><span className="eyebrow">NUR HEAD ADMIN</span><h1>Admin-Logbuch</h1></div><button className="secondary-button" onClick={loadAll}>Aktualisieren</button></div><AdminLogPage adminLog={adminLog} members={adminMembers.length ? adminMembers : members}/></section>}
-        {page === "admin" && isAdmin(profile?.role) && <AdminPanel members={adminMembers.length ? adminMembers : members} memberEmails={memberEmails} adminLog={adminLog} profile={profile} user={user} onOpen={openMember} updateMemberRole={updateMemberRole} toggleSuspension={toggleSuspension} setBusinessAccount={setBusinessAccount} editingMember={editingMember} setEditingMember={setEditingMember} saveMemberData={saveMemberData} adminTarget={adminTarget} loadPermissions={loadPermissions} permissionDraft={permissionDraft} setPermissionDraft={setPermissionDraft} savePermissions={savePermissions} savingPermissions={savingPermissions} openAccountReview={openAccountReview}/>}
+        {page === "admin" && isAdmin(profile?.role) && <AdminPanel members={adminMembers.length ? adminMembers : members} memberEmails={memberEmails} adminLog={adminLog} profile={profile} user={user} canViewPersonalData={canViewPersonalData} onOpen={openMember} updateMemberRole={updateMemberRole} toggleSuspension={toggleSuspension} setBusinessAccount={setBusinessAccount} editingMember={editingMember} setEditingMember={setEditingMember} saveMemberData={saveMemberData} adminTarget={adminTarget} loadPermissions={loadPermissions} permissionDraft={permissionDraft} setPermissionDraft={setPermissionDraft} savePermissions={savePermissions} savingPermissions={savingPermissions} openAccountReview={openAccountReview}/>}
         {page === "admin-account-review" && isAdmin(profile?.role) && <AccountReview queue={accountReviewQueue} members={members} canReview={isHeadAdmin(profile?.role)} onBack={() => setPage("admin")} onOpen={openMember} onReview={reviewProfileVerification}/>}
         {page === "impressum" && <LegalPage type="impressum"/>}
         {page === "privacy" && <LegalPage type="privacy"/>}
@@ -1495,7 +1501,7 @@ function AccountReview({ queue, members, canReview, onBack, onOpen, onReview }) 
 
 function AdminLogPage({ adminLog, members }) { return <section className="admin-log-panel panel"><span className="eyebrow">VERTRAULICH · NUR GLOBAL ADMIN</span><h2>Admin-Logbuch</h2><p>Begründete Rechte- und Moderationsaktionen von Admins und Supportern.</p><div className="admin-log-list">{adminLog.map((entry) => { const actor = members.find((m) => m.id === entry.actor_id); const target = members.find((m) => m.id === entry.target_id); const detailText = entry.details?.old_role && entry.details?.new_role ? `Rolle: ${entry.details.old_role} → ${entry.details.new_role}${entry.details.reason ? ` · Begründung: ${entry.details.reason}` : ""}` : formatAdminLogDetails(entry.details); return <article className="admin-log-row" key={entry.id}><div><strong>{ADMIN_LOG_LABELS[entry.action] || entry.details?.action_name || entry.action}</strong><span>Ausgeführt von: {getName(actor) || "System"}{entry.details?.actor_role ? ` (${roleLabel(entry.details.actor_role)})` : ""}{target ? ` · Betroffen: ${getName(target)}` : ""}</span>{detailText && <small>{detailText}</small>}</div><time dateTime={entry.created_at}>{new Date(entry.created_at).toLocaleString("de-AT")}</time></article>; })}{!adminLog.length && <div className="empty-card">Noch keine begründeten Verwaltungsaktionen protokolliert.</div>}</div></section>; }
 
-function AdminPanel({ members, memberEmails, adminLog, profile, user, onOpen, updateMemberRole, toggleSuspension, setBusinessAccount, editingMember, setEditingMember, saveMemberData, adminTarget, loadPermissions, permissionDraft, setPermissionDraft, savePermissions, savingPermissions, openAccountReview }) {
+function AdminPanel({ members, memberEmails, adminLog, profile, user, canViewPersonalData, onOpen, updateMemberRole, toggleSuspension, setBusinessAccount, editingMember, setEditingMember, saveMemberData, adminTarget, loadPermissions, permissionDraft, setPermissionDraft, savePermissions, savingPermissions, openAccountReview }) {
   const admins = members.filter((m) => isAdmin(m.role));
   useEffect(() => { const heading = document.querySelector(".admin-page > .page-heading"); if (!heading || heading.querySelector(".admin-review-button")) return; const button = document.createElement("button"); button.className = "primary-button admin-review-button"; button.type = "button"; button.textContent = "✓ Verifizierungen prüfen"; button.onclick = openAccountReview; heading.appendChild(button); }, [openAccountReview]);
   useEffect(() => { if (!isHeadAdmin(profile?.role)) return; document.querySelectorAll(".admin-member-card").forEach((card) => { const name = card.querySelector(".admin-member-person-button strong")?.textContent; const member = members.find((item) => getName(item) === name); if (!member || member.role === "HEAD_ADMIN") return; if (member.account_badge === "BUSINESS") { const role = card.querySelector(".admin-member-card-info strong"); if (role) role.textContent = "★ Unternehmenskonto"; card.classList.add("business-card"); } if (card.querySelector(".business-account-button")) return; const button = document.createElement("button"); button.className = "profile-admin-button business-account-button"; button.textContent = member.account_badge === "BUSINESS" ? "★ Unternehmenskonto entfernen" : "★ Unternehmenskonto"; button.onclick = () => setBusinessAccount(member.id, member.account_badge !== "BUSINESS"); card.querySelector(".admin-member-card-actions")?.appendChild(button); }); }, [members, profile?.role, setBusinessAccount]);
@@ -1505,7 +1511,7 @@ function AdminPanel({ members, memberEmails, adminLog, profile, user, onOpen, up
     <div className="admin-member-cards">{members.slice().sort((a,b) => (a.role === "HEAD_ADMIN" ? 1 : a.role === "ADMIN" ? 2 : a.role === "SUPPORTER" ? 3 : 4) - (b.role === "HEAD_ADMIN" ? 1 : b.role === "ADMIN" ? 2 : b.role === "SUPPORTER" ? 3 : 4) || getName(a).localeCompare(getName(b), "de")).map((m) => <article className={`admin-member-card ${roleClass(m.role)} ${m.is_test_account ? "hidden-account" : ""}`} key={m.id}><button className="admin-member-person-button" onClick={() => onOpen(m)}><img src={m.avatar_url || DEFAULT_AVATAR} alt=""/><span><strong>{getName(m)}</strong><small>{roleLabel(m.role)}{m.is_test_account ? " · Verborgenes Konto" : ""}{m.account_status === "SUSPENDED" ? " · Gesperrt" : ""}</small></span></button><div className="admin-member-card-info"><div><span>Rolle</span><strong>{roleLabel(m.role)}</strong></div><div><span>Status</span><strong>{m.is_test_account ? "Verborgen" : m.account_status === "SUSPENDED" ? "Gesperrt" : "Sichtbar"}</strong></div><div><span>Community-Regeln</span><strong>{m.rules_accepted_at ? `Bestätigt · ${new Date(m.rules_accepted_at).toLocaleDateString("de-AT")}` : "Noch nicht bestätigt"}</strong></div></div>{isHeadAdmin(profile?.role) && m.role !== "HEAD_ADMIN" && <div className="admin-member-card-actions"><button className="profile-admin-button supporter" onClick={() => updateMemberRole(m, "SUPPORTER")}>🟢 Supporter</button><button className="profile-admin-button admin" onClick={() => updateMemberRole(m, m.role === "ADMIN" ? "MEMBER" : "ADMIN")}>{m.role === "ADMIN" ? "✕ Community Admin entfernen" : "★ Community Admin"}</button>{m.role !== "MEMBER" && <button className="profile-admin-button remove-role" onClick={() => updateMemberRole(m, "MEMBER")}>↩ Rolle entfernen</button>}<button className="profile-admin-button" onClick={() => setEditingMember(m)}>✎ Name / Geburtsdatum</button><button className="profile-admin-button" onClick={() => loadPermissions(m.id)}>⚙ Rechte</button><button className="profile-admin-button danger" onClick={() => toggleSuspension(m)}>{m.account_status === "SUSPENDED" ? "🔓 Freischalten" : "🔒 Sperren"}</button></div>}</article>)}</div>
     {editingMember && <section className="profile-admin-edit-form panel"><div className="panel-title-row"><h2>Mitgliedsdaten ändern</h2><button className="modal-close-inline" onClick={() => setEditingMember(null)}>×</button></div><form onSubmit={saveMemberData} className="profile-admin-edit-grid"><label>Nickname<input name="nickname" defaultValue={editingMember.nickname || ""}/></label><label>Vorname<input name="first_name" defaultValue={editingMember.first_name || ""} required/></label><label>Nachname<input name="last_name" defaultValue={editingMember.last_name || ""} required/></label><label>Geburtsdatum<input type="date" name="birth_date" defaultValue={editingMember.birth_date || ""} required/></label><label>Geschlecht<select name="gender" defaultValue={editingMember.gender || ""}><option value="">Nicht angegeben</option><option value="männlich">Männlich</option><option value="weiblich">Weiblich</option><option value="divers">Divers</option></select></label><div className="edit-actions"><button className="primary-button">💾 Speichern</button></div></form></section>}
     {isHeadAdmin(profile?.role) && adminTarget && <section className="permissions-panel panel"><div className="panel-title-row"><div><span className="eyebrow">RECHTE</span><h2>Einzelne Berechtigungen</h2><p>{getName(members.find((m) => m.id === adminTarget))} – jede Berechtigung kann unabhängig aktiviert werden.</p></div><button className="modal-close-inline" onClick={() => setAdminTarget?.("")}>×</button></div><div className="permissions-grid">{PERMISSIONS.map(([key,label]) => <label className="permission-row" key={key}><input type="checkbox" checked={!!permissionDraft[key]} onChange={(e) => setPermissionDraft((x) => ({...x, [key]: e.target.checked}))}/><span>{label}</span></label>)}</div><button className="primary-button" disabled={savingPermissions} onClick={savePermissions}>{savingPermissions ? "Speichere …" : "Berechtigungen speichern"}</button></section>}
-    <section className="admin-email-directory panel"><span className="eyebrow">VERTRAULICH · NUR ADMINISTRATION</span><h2>Registrierte E-Mail-Adressen</h2><div>{members.map((member) => <p key={member.id}><strong>{roleMark(member.role)} {getName(member)}</strong><span>{memberEmails[member.id] || "Wird geladen …"}</span></p>)}</div></section>
+    {canViewPersonalData && <section className="admin-email-directory panel"><span className="eyebrow">VERTRAULICH · FREIGEGEBENE PERSÖNLICHE DATEN</span><h2>Registrierte E-Mail-Adressen</h2><div>{members.map((member) => <p key={member.id}><strong>{roleMark(member.role)} {getName(member)}</strong><span>{memberEmails[member.id] || "Nicht verfügbar"}</span></p>)}</div></section>}
 
   </section>;
 }
