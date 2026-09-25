@@ -38,23 +38,6 @@ function cropGeometry(source, rotation, size) {
   return { quarterTurn, coverScale };
 }
 
-function minimumZoomForPan(source, rotation, x, y, size) {
-  if (!source) return 1;
-  const { quarterTurn, coverScale } = cropGeometry(source, rotation, size);
-  const baseDrawW = source.naturalWidth * coverScale;
-  const baseDrawH = source.naturalHeight * coverScale;
-  const baseRenderedW = quarterTurn ? baseDrawH : baseDrawW;
-  const baseRenderedH = quarterTurn ? baseDrawW : baseDrawH;
-  const requested = panOffsets(x, y, size);
-  const requiredRenderedW = size + Math.abs(requested.x) * 2;
-  const requiredRenderedH = size + Math.abs(requested.y) * 2;
-  return Math.max(
-    1,
-    requiredRenderedW / Math.max(1, baseRenderedW),
-    requiredRenderedH / Math.max(1, baseRenderedH)
-  );
-}
-
 function drawEditedImage(canvas, source, { zoom, x, y, rotation }, size) {
   if (!canvas || !source) return;
   canvas.width = size;
@@ -135,12 +118,8 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
   const clampPanY = (value) => Math.max(-PAN_Y_UP_LIMIT, Math.min(PAN_Y_DOWN_LIMIT, value));
 
   const applyPan = (nextX, nextY) => {
-    const clampedX = clampPanX(nextX);
-    const clampedY = clampPanY(nextY);
-    const requiredZoom = minimumZoomForPan(source, rotation, clampedX, clampedY, PREVIEW_SIZE);
-    setZoom((current) => Math.max(current, requiredZoom));
-    setX(clampedX);
-    setY(clampedY);
+    setX(clampPanX(nextX));
+    setY(clampPanY(nextY));
   };
 
   const startDrag = (event) => {
@@ -212,7 +191,7 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
         <div>
           <span className="eyebrow">PROFILBILD</span>
           <h2>Foto anpassen</h2>
-          <p>Ziehe das Bild direkt mit Finger oder Maus. Der nötige Zusatz-Zoom wird einmal übernommen und bleibt bestehen, damit das Foto deiner Bewegung wirklich folgt.</p>
+          <p>Ziehe das Bild direkt mit Finger oder Maus. Verschieben und Zoom sind getrennt: Der Zoom ändert sich nur, wenn du den Zoom-Regler selbst bewegst.</p>
         </div>
         <button type="button" className="ec-photo-editor-close" onClick={onCancel} aria-label="Schließen">×</button>
       </header>
@@ -238,11 +217,7 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
         <div className="ec-photo-editor-controls">
           <label>
             <span>Zoom</span>
-            <input type="range" min="1" max="2.8" step="0.01" value={zoom} onChange={e => {
-              const requested = Number(e.target.value);
-              const minimum = minimumZoomForPan(source, rotation, x, y, PREVIEW_SIZE);
-              setZoom(Math.max(requested, minimum));
-            }}/>
+            <input type="range" min="1" max="2.8" step="0.01" value={zoom} onChange={e => setZoom(Number(e.target.value))}/>
             <b>{Math.round(zoom * 100)}%</b>
           </label>
           <label>
