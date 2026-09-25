@@ -710,3 +710,16 @@ test("weekly community goals use existing activity data", async()=>{
   assert.match(css,/\.ec-weekly-goals/);
   assert.match(css,/\.ec-weekly-goal-progress/);
 });
+
+
+test("daily member suggestions show role stars and newcomer labels", async()=>{
+  const code=await source("src/home-member-suggestions.js");
+  const css=await source("src/home-member-suggestions.css");
+  assert.match(code,/roleStar = \(member\)/);
+  assert.match(code,/role === 'MUNICIPALITY'/);
+  assert.match(code,/role-star-green\.svg/);
+  assert.match(code,/stableDailyValue/);
+  assert.match(code,/Neu in deiner Region/);
+  assert.match(css,/\.ec-member-suggestion-role-star/);
+  assert.match(css,/\.ec-member-suggestion-new/);
+});
