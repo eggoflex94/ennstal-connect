@@ -87,8 +87,6 @@ html,body,#root,.app,.dashboard-layout,.ec-regional-ui{
   }
 }
 
-}
-
 
 /* FINAL REGIONAL HEADER GEOMETRY.
    Older shell/clean layers define different masthead/nav heights. Keep one
@@ -307,4 +305,39 @@ html,body,#root,.app,.dashboard-layout,.ec-regional-ui{
   margin:0!important;
   width:auto!important;
   min-width:0!important;
+}
+
+
+/* FINAL COMPACT GRID ICON-ONLY AUTHORITY.
+   The personal dashboard grid is icon navigation. Hide every visible label,
+   including raw text nodes from legacy/dynamic shortcuts, while preserving
+   icon SVGs and explicit counter badges. */
+.ec-right-dock .ec-compact-menu-grid > button,
+.ec-right-dock .ec-compact-menu-grid > a,
+.ec-right-dock .ec-compact-menu-grid > [role="button"]{
+  font-size:0!important;
+  line-height:0!important;
+  text-indent:0!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+}
+.ec-right-dock .ec-compact-menu-grid > button .ec-compact-menu-label,
+.ec-right-dock .ec-compact-menu-grid > a .ec-compact-menu-label,
+.ec-right-dock .ec-compact-menu-grid > [role="button"] .ec-compact-menu-label{
+  display:none!important;
+  width:0!important;
+  height:0!important;
+  margin:0!important;
+  padding:0!important;
+  overflow:hidden!important;
+}
+.ec-right-dock .ec-compact-menu-grid .ec-compact-menu-icon,
+.ec-right-dock .ec-compact-menu-grid .ec-compact-menu-icon svg{
+  font-size:initial!important;
+  line-height:normal!important;
+}
+.ec-right-dock .ec-compact-menu-grid .ec-admin-alert-badge,
+.ec-right-dock .ec-compact-menu-grid [class*="badge"]{
+  text-indent:0!important;
+  line-height:1!important;
 }
