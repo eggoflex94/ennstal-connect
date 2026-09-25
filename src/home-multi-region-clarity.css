@@ -90,3 +90,6 @@
   .ec-first-steps-head,.ec-today-region-head,.ec-introduce-nudge { align-items: flex-start; flex-direction: column; }
   .ec-introduce-nudge .primary-button { width: 100%; }
 }
+
+
+.ec-weekly-region-recap{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-top:14px;padding:16px 18px;border:1px solid #e2e8f0;border-radius:16px;background:linear-gradient(110deg,#f8fafc,#fff)}.ec-weekly-region-recap h3{margin:3px 0 4px;font-size:1rem;color:#172635}.ec-weekly-region-recap p{margin:0;color:#66737f;font-size:.88rem;line-height:1.45}.ec-weekly-region-recap>button{flex:0 0 auto;min-height:40px;padding:8px 12px;border:1px solid #d9e1e8;border-radius:11px;background:#fff;color:#172635;font-weight:850;cursor:pointer}@media(max-width:700px){.ec-weekly-region-recap{align-items:flex-start;flex-direction:column}.ec-weekly-region-recap>button{width:100%}}
