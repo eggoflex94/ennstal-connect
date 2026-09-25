@@ -12,8 +12,8 @@ test("profile photo editor supports direct drag positioning", async () => {
   assert.match(editor, /setPointerCapture/);
   assert.match(editor, /releasePointerCapture/);
   assert.match(editor, /applyPan\(nextX, nextY\)/);
-  assert.match(editor, /setX\(clampedX\)/);
-  assert.match(editor, /setY\(clampedY\)/);
+  assert.match(editor, /setX\(clampPanX\(nextX\)\)/);
+  assert.match(editor, /setY\(clampPanY\(nextY\)\)/);
 });
 
 test("profile photo drag blocks page scrolling on touch devices", async () => {
@@ -38,11 +38,11 @@ test("profile photo editor allows extended vertical positioning", async () => {
 
 
 
-test("profile photo editor uses persistent zoom for true panning", async () => {
+test("profile photo editor keeps panning independent from zoom", async () => {
   const editor = await source("src/ProfilePhotoEditor.jsx");
-  assert.match(editor, /minimumZoomForPan/);
+  assert.doesNotMatch(editor, /minimumZoomForPan/);
   assert.match(editor, /const applyPan =/);
-  assert.match(editor, /setZoom\(\(current\) => Math\.max\(current, requiredZoom\)\)/);
+  assert.doesNotMatch(editor, /setZoom\(\(current\) => Math\.max\(current, requiredZoom\)\)/);
   assert.match(editor, /applyPan\(nextX, nextY\)/);
   assert.match(editor, /applyPan\(Number\(e\.target\.value\), y\)/);
   assert.match(editor, /applyPan\(x, Number\(e\.target\.value\)\)/);
