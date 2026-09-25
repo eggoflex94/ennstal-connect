@@ -737,3 +737,17 @@ test("local opportunities prefer listings and fall back to regional business acc
   assert.match(css,/\.ec-local-opportunities/);
   assert.match(css,/\.ec-local-opportunity-card/);
 });
+
+
+test("regional help-now section shows open requests or a useful empty state", async()=>{
+  const code=await source("src/home-help-now.js");
+  const loader=await source("src/home-multi-region-clarity.js");
+  const css=await source("src/home-multi-region-clarity.css");
+  assert.match(loader,/home-help-now\.js/);
+  assert.match(code,/community_requests/);
+  assert.match(code,/\.neq\('status','CLOSED'\)/);
+  assert.match(code,/JETZT HELFEN/);
+  assert.match(code,/Gerade keine offenen Gesuche/);
+  assert.match(css,/\.ec-help-now/);
+  assert.match(css,/\.ec-help-now-card/);
+});
