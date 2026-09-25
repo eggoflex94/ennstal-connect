@@ -751,3 +751,19 @@ test("regional help-now section shows open requests or a useful empty state", as
   assert.match(css,/\.ec-help-now/);
   assert.match(css,/\.ec-help-now-card/);
 });
+
+
+test("forum replies support helpful community marks", async()=>{
+  const app=await source("src/App.jsx");
+  const runtime=await source("src/forum-helpful.js");
+  const css=await source("src/forum-helpful.css");
+  const migration=await source("supabase/migrations/20260925164500_forum_reply_helpful.sql");
+  assert.match(app,/item\.dataset\.replyId = reply\.id/);
+  assert.match(app,/item\.dataset\.authorId = reply\.author_id/);
+  assert.match(runtime,/forum_reply_helpful/);
+  assert.match(runtime,/Hilfreich/);
+  assert.match(runtime,/Eigene Antworten können nicht als hilfreich markiert werden/);
+  assert.match(css,/\.ec-forum-helpful-button/);
+  assert.match(migration,/enable row level security/);
+  assert.match(migration,/primary key \(reply_id, user_id\)/);
+});
