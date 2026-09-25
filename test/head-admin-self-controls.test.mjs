@@ -28,12 +28,12 @@ test("Head Admin own points use dedicated audited RPC", async () => {
   const migration = await source("supabase/migrations/20260919174500_head_admin_self_points.sql");
 
   assert.match(controls, /head_admin_adjust_own_points/);
-  assert.match(controls, /Math\.abs\(delta\) > 100/);
-  assert.match(controls, /reason\.length < 10/);
+  assert.doesNotMatch(controls, /Math\.abs\(delta\) > 100/);
+  assert.doesNotMatch(controls, /reason\.length < 10/);
 
   assert.match(migration, /upper\(role::text\)='HEAD_ADMIN'/);
-  assert.match(migration, /abs\(p_delta\)>100/);
-  assert.match(migration, /char_length\(v_reason\)<10/);
+  assert.doesNotMatch(migration, /abs\(p_delta\)>100/);
+  assert.doesNotMatch(migration, /char_length\(v_reason\)<10/);
   assert.match(migration, /point_transactions/);
   assert.match(migration, /point_history/);
   assert.match(migration, /admin_logs/);
