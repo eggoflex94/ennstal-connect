@@ -513,9 +513,10 @@ export default function App() {
     const input = document.createElement("input");
     input.name = "image"; input.type = "file"; input.accept = "image/*";
     label.appendChild(input);
-    const directAction = [...eventForm.children].find((child) => child.matches?.("button,.content-manage-actions,.admin-community-actions"));
-    if (directAction?.parentElement === eventForm) eventForm.insertBefore(label, directAction);
-    else if (eventForm.isConnected) eventForm.appendChild(label);
+    // React and legacy runtimes may rebuild this form while effects run.
+    // Appending is ownership-safe; insertBefore can throw NotFoundError when
+    // another renderer has just replaced the intended reference node.
+    if (eventForm.isConnected) eventForm.appendChild(label);
   }, [page, profile?.role, communityEvents.length]);
 
   useEffect(() => {
@@ -1151,7 +1152,7 @@ export default function App() {
     await logProfileActivity("Profil-Cover geändert");
     showNotice("Profil-Cover gespeichert.");
     await loadAll();
-    return publicUrl;
+    return backgroundUrl;
   }
 
   async function removeProfileCover() {
