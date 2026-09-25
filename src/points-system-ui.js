@@ -113,8 +113,8 @@ async function openPoints(targetUserId, { suspensionMode = false, focusAdminForm
       <div><span>ADMIN-ÄNDERUNGEN</span><strong>${Number(data.manual_adjustment || 0)}</strong></div>
     </div>
     ${canManage ? `<form class="ec-points-admin-form">
-      <div class="ec-points-form-title"><strong>Punkte vergeben oder abziehen</strong><span>Jede Änderung wird mit Begründung protokolliert und dem Mitglied automatisch mitgeteilt.</span></div>
-      <label>Änderung<input name="delta" type="number" min="-100" max="100" step="1" required placeholder="z. B. 5 oder -3"></label>
+      <div class="ec-points-form-title"><strong>Punkte vergeben oder abziehen</strong><span>${String(current?.role || '').toUpperCase() === 'HEAD_ADMIN' ? 'Als Head Admin sind Begründung und Punkteobergrenze optional bzw. unbegrenzt.' : 'Jede Änderung wird mit Begründung protokolliert und dem Mitglied automatisch mitgeteilt.'}</span></div>
+      <label>Änderung<input name="delta" type="number" ${String(current?.role || '').toUpperCase() === 'HEAD_ADMIN' ? '' : 'min="-100" max="100"'} step="1" required placeholder="z. B. 5 oder -3"></label>
       <label>Kategorie<select name="category">
         <option value="ADMIN_BONUS">Bonus</option>
         <option value="RULE_VIOLATION">Regelverstoß</option>
@@ -124,7 +124,7 @@ async function openPoints(targetUserId, { suspensionMode = false, focusAdminForm
         <option value="ADMIN_ADJUSTMENT">Admin-Anpassung</option>
         <option value="OTHER">Sonstiges</option>
       </select></label>
-      <label class="is-wide">Begründung<textarea name="reason" rows="3" minlength="3" maxlength="500" required placeholder="Begründung für die Punkteänderung"></textarea></label>
+      <label class="is-wide">Begründung<textarea name="reason" rows="3" ${String(current?.role || '').toUpperCase() === 'HEAD_ADMIN' ? '' : 'minlength="10" required'} maxlength="500" placeholder="${String(current?.role || '').toUpperCase() === 'HEAD_ADMIN' ? 'Optionaler Grund' : 'Begründung für die Punkteänderung'}"></textarea></label>
       <button type="submit">Punkte buchen</button>
       <div class="ec-points-form-status" aria-live="polite"></div>
     </form>` : ''}
@@ -154,7 +154,9 @@ async function openPoints(targetUserId, { suspensionMode = false, focusAdminForm
     const delta = Number(values.get('delta'));
     const reason = String(values.get('reason') || '').trim();
     const category = String(values.get('category') || 'ADMIN_ADJUSTMENT');
-    if (!Number.isInteger(delta) || delta === 0 || Math.abs(delta) > 100 || reason.length < 3) return;
+    const headAdmin = String(current?.role || '').toUpperCase() === 'HEAD_ADMIN';
+    if (!Number.isInteger(delta) || delta === 0) return;
+    if (!headAdmin && (Math.abs(delta) > 100 || reason.length < 10)) return;
     submit.disabled = true;
     status.textContent = 'Wird gespeichert …';
     const { data: result, error: awardError } = await supabase.rpc('award_member_points', {
