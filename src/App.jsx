@@ -50,7 +50,9 @@ const PERMISSIONS = [
   ["manage_marketplace", "Marktplatz verwalten"],
   ["manage_friend_requests", "Freundschaftsanfragen verwalten"],
   ["manage_homepage", "Startseite verwalten"],
-  ["manage_reports", "Meldungen verwalten"]
+  ["manage_reports", "Meldungen verwalten"],
+  ["manage_community_photographers", "Community-Fotografen verwalten"],
+  ["view_personal_data", "Persönliche Daten einsehen"]
 ];
 
 const roleLabel = (role) => role === "HEAD_ADMIN" ? "Hauptadmin" : role === "ADMIN" ? "Community Admin" : role === "MUNICIPALITY" ? "Gemeinde" : role === "SUPPORTER" ? "Supporter" : "Mitglied";
