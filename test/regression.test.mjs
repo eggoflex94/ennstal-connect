@@ -631,7 +631,10 @@ test("online friends use municipality role star", async()=>{
 
 test("community event image field avoids unsafe React DOM insertion", async()=>{
   const app=await source("src/App.jsx");
-  const communityEffect=app.slice(app.indexOf('if \\(page !== "community"'), app.indexOf('}, \\[page, profile\\?\\.role, communityEvents\\.length\\]\\);')+60);
+  const start=app.indexOf('if (page !== "community" || !isAdmin(profile?.role)) return;');
+  const end=app.indexOf('}, [page, profile?.role, communityEvents.length]);', start);
+  assert.ok(start >= 0 && end > start);
+  const communityEffect=app.slice(start,end);
   assert.doesNotMatch(communityEffect,/insertBefore\(/);
   assert.match(communityEffect,/appendChild\(label\)/);
 });
