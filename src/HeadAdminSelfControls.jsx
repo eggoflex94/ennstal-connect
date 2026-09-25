@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "./supabaseClient";
 
-export default function HeadAdminSelfControls({ profile, user, regions = [], onChanged, showNotice }) {
+export default function HeadAdminSelfControls({ profile, user, regions = [], permissions = {}, onChanged, showNotice }) {
   const [assignments, setAssignments] = useState([]);
   const [regionId, setRegionId] = useState("");
   const [pointDelta, setPointDelta] = useState("");
@@ -9,6 +9,8 @@ export default function HeadAdminSelfControls({ profile, user, regions = [], onC
   const [busy, setBusy] = useState(false);
 
   const isHeadAdmin = String(profile?.role || "").toUpperCase() === "HEAD_ADMIN";
+  const canManagePhotographer = Boolean(profile?.is_primary_head_admin || permissions?.manage_community_photographers);
+  const canManageOwnPoints = Boolean(profile?.is_primary_head_admin || permissions?.manage_points);
   const activeRegions = useMemo(() => regions.filter((region) => region?.id), [regions]);
   const globalEnabled = assignments.some((item) => item.scope === "GLOBAL" && item.active !== false);
   const regionalIds = useMemo(
@@ -17,7 +19,7 @@ export default function HeadAdminSelfControls({ profile, user, regions = [], onC
   );
 
   useEffect(() => {
-    if (!isHeadAdmin || !user?.id) return;
+    if (!isHeadAdmin || !user?.id || !canManagePhotographer) return;
     let cancelled = false;
     supabase
       .from("community_photographer_assignments")
@@ -30,7 +32,7 @@ export default function HeadAdminSelfControls({ profile, user, regions = [], onC
         setAssignments(data || []);
       });
     return () => { cancelled = true; };
-  }, [isHeadAdmin, user?.id]);
+  }, [isHeadAdmin, user?.id, canManagePhotographer]);
 
   useEffect(() => {
     if (!regionId && activeRegions.length) {
@@ -40,7 +42,7 @@ export default function HeadAdminSelfControls({ profile, user, regions = [], onC
     }
   }, [regionId, activeRegions, profile?.home_region_id]);
 
-  if (!isHeadAdmin || !user?.id || profile?.id !== user.id) return null;
+  if (!isHeadAdmin || !user?.id || profile?.id !== user.id || (!canManagePhotographer && !canManageOwnPoints)) return null;
 
   const reloadAssignments = async () => {
     const { data, error } = await supabase
@@ -132,7 +134,7 @@ export default function HeadAdminSelfControls({ profile, user, regions = [], onC
     </header>
 
     <div className="head-admin-self-grid">
-      <section>
+      {canManagePhotographer && <section>
         <div className="head-admin-self-title">
           <img src="/community-photographer-camera.svg" alt=""/>
           <div><strong>Community-Fotograf</strong><small>Global oder regional für dein eigenes Konto</small></div>
@@ -151,9 +153,9 @@ export default function HeadAdminSelfControls({ profile, user, regions = [], onC
             {regionalIds.has(regionId) ? "✓ Regional aktiv · entfernen" : "Für ausgewählte Region vergeben"}
           </button>
         </div>
-      </section>
+      </section>}
 
-      <section>
+      {canManageOwnPoints && <section>
         <div className="head-admin-self-title">
           <span className="head-admin-self-points-icon" aria-hidden="true">★</span>
           <div><strong>Eigene Punkte</strong><small>Manuelle Plus- oder Minuspunkte · ohne Punkteobergrenze · Begründung optional</small></div>
@@ -169,7 +171,7 @@ export default function HeadAdminSelfControls({ profile, user, regions = [], onC
           </label>
           <button type="submit" className="primary-button" disabled={busy}>{busy ? "Wird gespeichert …" : "Punkte buchen"}</button>
         </form>
-      </section>
+      </section>}
     </div>
   </section>;
 }
