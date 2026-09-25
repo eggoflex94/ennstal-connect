@@ -827,3 +827,12 @@ test("admin personal data requires explicit Head Admin permission", async()=>{
   assert.match(migration,/if not public\.ec_can_view_personal_data\(\) then/);
   assert.match(migration,/p_view_personal_data boolean default false/);
 });
+
+
+test("profile photo crop drag never changes zoom automatically", async()=>{
+  const editor=await source("src/ProfilePhotoEditor.jsx");
+  assert.doesNotMatch(editor,/minimumZoomForPan/);
+  assert.match(editor,/const applyPan = \(nextX, nextY\) => \{\s*setX\(clampPanX\(nextX\)\);\s*setY\(clampPanY\(nextY\)\);\s*\};/s);
+  assert.match(editor,/onChange=\{e => setZoom\(Number\(e\.target\.value\)\)\}/);
+  assert.match(editor,/Der Zoom ändert sich nur, wenn du den Zoom-Regler selbst bewegst/);
+});
