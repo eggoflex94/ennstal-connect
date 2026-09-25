@@ -94,6 +94,14 @@ function buildActivation(regionName) {
         <button type="button" data-ec-activation="forum" data-ec-today-kind="forum"><span>💬</span><b class="ec-today-count" aria-label="Anzahl">–</b><strong>Diskussionen</strong><small>Neue regionale Themen und Gespräche der letzten Tage.</small><em>Jetzt mitreden →</em></button>
         <button type="button" data-ec-today-kind="business" data-ec-today-nav="community"><span>🏢</span><b class="ec-today-count" aria-label="Anzahl">–</b><strong>Lokale Angebote</strong><small>Aktuelle Angebote, Jobs und Chancen von Unternehmen.</small><em>Regional entdecken →</em></button>
       </div>
+      <section class="ec-weekly-region-recap" aria-live="polite">
+        <div>
+          <span class="eyebrow">DIESE WOCHE</span>
+          <h3>Noch wird zusammengezählt …</h3>
+          <p>Der Wochenrückblick fasst die wichtigsten Aktivitäten deiner Region automatisch zusammen.</p>
+        </div>
+        <button type="button" data-ec-weekly-open="community">Alles entdecken →</button>
+      </section>
     </section>
 
     <section class="ec-introduce-nudge"><div><span class="eyebrow">NEU HIER?</span><h2>Ein „Servus“ reicht für den Anfang.</h2><p>Stell dich kurz vor und gib anderen einen einfachen Anlass, mit dir ins Gespräch zu kommen.</p></div><button type="button" class="primary-button" data-ec-activation="forum">👋 Kurz vorstellen</button></section>`;
@@ -103,6 +111,7 @@ function buildActivation(regionName) {
     bindNavigation(section, `[data-ec-activation="${page}"]`, page);
   }
   section.querySelectorAll('[data-ec-today-nav]').forEach((button) => button.addEventListener('click', () => navigateTo(button.dataset.ecTodayNav)));
+  section.querySelectorAll('[data-ec-weekly-open]').forEach((button) => button.addEventListener('click', () => navigateTo(button.dataset.ecWeeklyOpen)));
   return section;
 }
 
