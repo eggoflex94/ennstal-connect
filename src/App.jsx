@@ -513,7 +513,9 @@ export default function App() {
     const input = document.createElement("input");
     input.name = "image"; input.type = "file"; input.accept = "image/*";
     label.appendChild(input);
-    eventForm.insertBefore(label, eventForm.querySelector("button"));
+    const directAction = [...eventForm.children].find((child) => child.matches?.("button,.content-manage-actions,.admin-community-actions"));
+    if (directAction?.parentElement === eventForm) eventForm.insertBefore(label, directAction);
+    else if (eventForm.isConnected) eventForm.appendChild(label);
   }, [page, profile?.role, communityEvents.length]);
 
   useEffect(() => {
