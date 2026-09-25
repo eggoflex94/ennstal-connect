@@ -281,3 +281,30 @@ html,body,#root,.app,.dashboard-layout,.ec-regional-ui{
     margin-right:0!important;
   }
 }
+
+
+/* FINAL ADMIN SHORTCUT ICON-ONLY.
+   Admin shortcuts live in the compact icon grid. Their accessible names stay
+   on title/aria-label; visible text must never consume a narrow grid column. */
+.ec-right-dock .ec-compact-menu-grid .ec-admin-primary-shortcut .ec-compact-menu-label,
+.ec-right-dock .ec-compact-menu-grid .ec-admin-central-entry .ec-compact-menu-label,
+.ec-right-dock .ec-compact-menu-grid [data-ec-admin-primary="1"] .ec-compact-menu-label,
+.ec-right-dock .ec-compact-menu-grid [data-ec-admin-central-hub="1"] .ec-compact-menu-label{
+  display:none!important;
+}
+.ec-right-dock .ec-compact-menu-grid .ec-admin-primary-shortcut,
+.ec-right-dock .ec-compact-menu-grid .ec-admin-central-entry,
+.ec-right-dock .ec-compact-menu-grid [data-ec-admin-primary="1"],
+.ec-right-dock .ec-compact-menu-grid [data-ec-admin-central-hub="1"]{
+  display:grid!important;
+  place-items:center!important;
+  min-width:0!important;
+  overflow:hidden!important;
+  white-space:nowrap!important;
+}
+.ec-right-dock .ec-compact-menu-grid .ec-admin-primary-shortcut .ec-compact-menu-icon,
+.ec-right-dock .ec-compact-menu-grid .ec-admin-central-entry .ec-compact-menu-icon{
+  margin:0!important;
+  width:auto!important;
+  min-width:0!important;
+}
