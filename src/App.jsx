@@ -161,6 +161,7 @@ export default function App() {
   const [permissionDraft, setPermissionDraft] = useState({});
   const [savingPermissions, setSavingPermissions] = useState(false);
   const [canViewPersonalData, setCanViewPersonalData] = useState(false);
+  const [myAdminPermissions, setMyAdminPermissions] = useState({});
   const [editingMember, setEditingMember] = useState(null);
   const [accountReviewQueue, setAccountReviewQueue] = useState([]);
   const [groupOwnerChanges, setGroupOwnerChanges] = useState([]);
@@ -178,7 +179,7 @@ export default function App() {
     initializedProfileUser.current = null;
     setSectionStatus({ pending: [], failed: [] });
     setUser(null); setProfile(null); setMembers([]); setFriendships([]);
-    setMessages([]); setAdminMembers([]); setAdminLog([]); setMemberEmails({}); setCanViewPersonalData(false);
+    setMessages([]); setAdminMembers([]); setAdminLog([]); setMemberEmails({}); setCanViewPersonalData(false); setMyAdminPermissions({});
     setReports([]); setBlockedUsers([]); setFeatureLocks([]); setProfileVisits([]);
     setProfileActivities([]); setRulesAccepted(null); setViewingMember(null);
     setViewingFriends([]); setChatMember(null); setSelectedMember(null);
@@ -307,7 +308,9 @@ export default function App() {
   const regionFilter = (entries) => activeRegionId ? entries.filter((entry) => entry.region_id === activeRegionId) : entries;
   const regionalMembers = activeRegionId ? visibleMembers.filter((member) => member.home_region_id === activeRegionId) : visibleMembers;
   const isRegionalAdminHere = regionalAssignments.some((assignment) => assignment.user_id === profile?.id && assignment.region_id === activeRegionId && assignment.active);
-  const canManageActiveRegion = isAdmin(profile?.role) || isRegionalAdminHere;
+  const hasAdminPermission = (key) => Boolean(profile?.is_primary_head_admin || myAdminPermissions?.[key]);
+  const hasAnyAdminPermission = Boolean(profile?.is_primary_head_admin || PERMISSIONS.some(([key]) => myAdminPermissions?.[key]));
+  const canManageActiveRegion = profile?.is_primary_head_admin || isRegionalAdminHere || hasAdminPermission("manage_news") || hasAdminPermission("manage_groups") || hasAdminPermission("manage_events");
 
   const withTimeout = (promise, message) => new Promise((resolve, reject) => {
     const timer = window.setTimeout(() => reject(new Error(message)), 15000);
@@ -351,12 +354,13 @@ export default function App() {
         return data ?? fallback;
       };
       // Access-sensitive state is ready before publishing directory content.
-      const [p, bs, locks, ruleAcceptance, personalDataAllowed] = await Promise.all([
+      const [p, bs, locks, ruleAcceptance, personalDataAllowed, loadedAdminPermissions] = await Promise.all([
         read(supabase.from("profiles").select("*").eq("id", currentUser.id).maybeSingle(), null),
         read(supabase.from("user_blocks").select("*").eq("blocker_id", currentUser.id)),
         read(supabase.from("user_feature_locks").select("*").eq("user_id", currentUser.id)),
         read(supabase.from("community_rule_acceptances").select("rules_version,accepted_at").eq("user_id", currentUser.id).eq("rules_version", COMMUNITY_RULES_VERSION).maybeSingle(), null),
-        read(supabase.rpc("ec_can_view_personal_data"), false)
+        read(supabase.rpc("ec_can_view_personal_data"), false),
+        read(supabase.rpc("my_admin_permissions"), {})
       ]);
       if (!isCurrent()) return;
       if (!p) throw new Error("Dein Profil konnte nicht geladen werden. Bitte versuche es erneut.");
@@ -370,7 +374,7 @@ export default function App() {
       bootstrapRetry.current.count = 0;
       window.clearTimeout(bootstrapRetry.current.timer);
       bootstrapRetry.current.timer = null;
-      setProfile(p); setBlockedUsers(bs); setFeatureLocks(locks); setRulesAccepted(Boolean(ruleAcceptance)); setCanViewPersonalData(Boolean(personalDataAllowed));
+      setProfile(p); setBlockedUsers(bs); setFeatureLocks(locks); setRulesAccepted(Boolean(ruleAcceptance)); setCanViewPersonalData(Boolean(personalDataAllowed)); setMyAdminPermissions(loadedAdminPermissions || {});
       const readMemberDirectory = async () => {
         const { data, error } = await supabase.rpc("community_member_directory");
         if (error) throw error;
@@ -383,7 +387,7 @@ export default function App() {
         { name: "Freundschaften", load: () => read(supabase.from("friendships").select("*").or(`requester_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`)), commit: setFriendships },
         { name: "Nachrichten", load: () => read(supabase.from("messages").select("*").or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`).order("created_at", { ascending: false })), commit: setMessages },
         { name: "Startseite", load: () => read(activeRegionId ? supabase.from("homepage_sections").select("*").eq("is_visible", true).eq("region_id", activeRegionId).order("sort_order", { ascending: true }) : supabase.from("homepage_sections").select("*").eq("is_visible", true).order("sort_order", { ascending: true })), commit: setHomepageSections },
-        { name: "Meldungen", load: () => isAdmin(p.role) ? read(supabase.from("user_reports").select("*").order("created_at", { ascending: false })) : Promise.resolve([]), commit: setReports },
+        { name: "Meldungen", load: () => (p.is_primary_head_admin || loadedAdminPermissions?.manage_reports) ? read(supabase.from("user_reports").select("*").order("created_at", { ascending: false })) : Promise.resolve([]), commit: setReports },
         { name: "Neuigkeiten", load: () => read(activeRegionId ? supabase.from("news").select("*").eq("region_id", activeRegionId).order("created_at", { ascending: false }) : supabase.from("news").select("*").order("created_at", { ascending: false })), commit: setNews },
         { name: "Gruppen", load: () => read(activeRegionId ? supabase.rpc("ec_region_group_directory", { p_region: activeRegionId }) : supabase.rpc("community_group_directory")), commit: data => { loadedGroups = (data || []).map(row => typeof row === "string" ? JSON.parse(row) : row); setGroups(loadedGroups); updateLocalBadges(); } },
         { name: "Profil-Gruppen", load: () => read(supabase.rpc("community_group_directory")), commit: data => setAllGroups((data || []).map(row => typeof row === "string" ? JSON.parse(row) : row)) },
@@ -396,7 +400,7 @@ export default function App() {
         { name: "Gruppe der Woche", load: () => read(activeRegionId ? supabase.rpc("ec_region_featured_community_group", { p_region: activeRegionId }) : supabase.rpc("featured_community_group"), null), commit: data => setFeaturedGroup(Array.isArray(data) ? data[0] || null : data) },
         { name: "Community-Aufrufe", load: () => read(activeRegionId ? supabase.from("community_requests").select("*").eq("status", "ACTIVE").eq("region_id", activeRegionId).order("created_at", { ascending: false }).limit(8) : supabase.from("community_requests").select("*").eq("status", "ACTIVE").order("created_at", { ascending: false }).limit(8)), commit: setCommunityRequests },
       ];
-      if (isAdmin(p.role)) {
+      if (p.role === "ADMIN" || p.is_primary_head_admin || (p.role === "HEAD_ADMIN" && PERMISSIONS.some(([key]) => loadedAdminPermissions?.[key]))) {
         tasks.push(
           { name: "Admin-Mitglieder", load: () => read(supabase.rpc("admin_full_member_directory")), commit: data => setAdminMembers(data.map(summary => personalDataAllowed ? ({ ...(membersRef.current.find(member => member.id === summary.id) || {}), ...summary }) : summary)) },
           { name: "Admin-Logbuch", load: () => isHeadAdmin(p.role) ? read(supabase.rpc("get_admin_log", { p_limit: 500 })) : Promise.resolve([]), commit: setAdminLog }
@@ -1384,11 +1388,11 @@ export default function App() {
 
         {page === "member-profile" && viewingMember && <PublicProfilePhotoFolder member={viewingMember} photos={memberPhotos} canSeeFriends={isAdmin(profile?.role) || friendshipWith(viewingMember.id)?.status === "ACCEPTED"}/>} 
         {page === "member-profile" && viewingMember && isHeadAdmin(profile?.role) && viewingMember.role !== "HEAD_ADMIN" && <><FeatureUnlocks member={viewingMember} setMemberFeatureLock={setMemberFeatureLock}/><MemberBusinessTool member={viewingMember} setBusinessAccount={setBusinessAccount}/></>}
-        {page === "reports" && isAdmin(profile?.role) && <Reports reports={reports} memberById={memberById} resolveReport={resolveReport}/>} 
+        {page === "reports" && (profile?.is_primary_head_admin || hasAdminPermission("manage_reports")) && <Reports reports={reports} memberById={memberById} resolveReport={resolveReport}/>} 
         {page === "fake-accounts" && isHeadAdmin(profile?.role) && profile?.account_status === "ACTIVE" && <section className="fake-account-page head-admin-tools-page"><div className="page-heading"><div><span className="eyebrow">NUR HEAD ADMIN</span><h1>Fake-Erkennung</h1></div></div></section>}
         {page === "admin-log" && isHeadAdmin(profile?.role) && profile?.account_status === "ACTIVE" && <section className="admin-log-page head-admin-tools-page"><div className="page-heading"><div><span className="eyebrow">NUR HEAD ADMIN</span><h1>Admin-Logbuch</h1></div><button className="secondary-button" onClick={loadAll}>Aktualisieren</button></div><AdminLogPage adminLog={adminLog} members={adminMembers.length ? adminMembers : members}/></section>}
-        {page === "admin" && isAdmin(profile?.role) && <AdminPanel members={adminMembers.length ? adminMembers : members} memberEmails={memberEmails} adminLog={adminLog} profile={profile} user={user} canViewPersonalData={canViewPersonalData} onOpen={openMember} updateMemberRole={updateMemberRole} toggleSuspension={toggleSuspension} setBusinessAccount={setBusinessAccount} editingMember={editingMember} setEditingMember={setEditingMember} saveMemberData={saveMemberData} adminTarget={adminTarget} loadPermissions={loadPermissions} permissionDraft={permissionDraft} setPermissionDraft={setPermissionDraft} savePermissions={savePermissions} savingPermissions={savingPermissions} openAccountReview={openAccountReview}/>}
-        {page === "admin-account-review" && isAdmin(profile?.role) && <AccountReview queue={accountReviewQueue} members={members} canReview={isHeadAdmin(profile?.role)} onBack={() => setPage("admin")} onOpen={openMember} onReview={reviewProfileVerification}/>}
+        {page === "admin" && (profile?.role === "ADMIN" || profile?.is_primary_head_admin || (profile?.role === "HEAD_ADMIN" && hasAnyAdminPermission)) && <AdminPanel members={adminMembers.length ? adminMembers : members} memberEmails={memberEmails} adminLog={adminLog} profile={profile} user={user} canViewPersonalData={canViewPersonalData} onOpen={openMember} updateMemberRole={updateMemberRole} toggleSuspension={toggleSuspension} setBusinessAccount={setBusinessAccount} editingMember={editingMember} setEditingMember={setEditingMember} saveMemberData={saveMemberData} adminTarget={adminTarget} loadPermissions={loadPermissions} permissionDraft={permissionDraft} setPermissionDraft={setPermissionDraft} savePermissions={savePermissions} savingPermissions={savingPermissions} openAccountReview={openAccountReview}/>}
+        {page === "admin-account-review" && (profile?.is_primary_head_admin || hasAdminPermission("manage_members")) && <AccountReview queue={accountReviewQueue} members={members} canReview={Boolean(profile?.is_primary_head_admin || hasAdminPermission("manage_members"))} onBack={() => setPage("admin")} onOpen={openMember} onReview={reviewProfileVerification}/>}
         {page === "impressum" && <LegalPage type="impressum"/>}
         {page === "privacy" && <LegalPage type="privacy"/>}
         {page === "rules" && <CommunityRules/>}
