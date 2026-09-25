@@ -51,10 +51,18 @@
 .ec-today-region { padding: 22px; }
 .ec-today-region-head { margin-bottom: 16px; }
 .ec-today-region-head>button { border: 1px solid #e1e7eb; border-radius: 12px; background: #fff; padding: 9px 12px; font-weight: 850; cursor: pointer; }
-.ec-today-region-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; }
-.ec-today-region-grid button { display: flex; min-height: 160px; flex-direction: column; align-items: flex-start; padding: 17px; border: 1px solid #e4e9ed; border-radius: 18px; background: linear-gradient(180deg,#fff,#fafcfd); color: inherit; text-align: left; cursor: pointer; transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+.ec-today-region-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; }
+.ec-today-region-grid button { position:relative; display: flex; min-height: 176px; flex-direction: column; align-items: flex-start; padding: 17px; border: 1px solid #e4e9ed; border-radius: 18px; background: linear-gradient(180deg,#fff,#fafcfd); color: inherit; text-align: left; cursor: pointer; transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
 .ec-today-region-grid button:hover,.ec-today-region-grid button:focus-visible { transform: translateY(-2px); border-color: rgba(236,120,37,.42); box-shadow: 0 10px 26px rgba(20,39,56,.08); outline: 0; }
 .ec-today-region-grid button>span { margin-bottom: 12px; font-size: 24px; }
+.ec-today-count { position:absolute; top:14px; right:14px; display:grid; place-items:center; min-width:34px; height:34px; padding:0 9px; border-radius:999px; background:#172635; color:#fff; font-size:13px; font-weight:950; line-height:1; box-shadow:0 5px 14px rgba(23,38,53,.12); }
+.ec-today-count[data-empty="1"] { background:#eef2f5; color:#73808a; box-shadow:none; }
+.ec-today-region-grid button[data-ec-today-kind="municipality"] .ec-today-count { background:#168b54; }
+.ec-today-region-grid button[data-ec-today-kind="events"] .ec-today-count { background:#2563eb; }
+.ec-today-region-grid button[data-ec-today-kind="requests"] .ec-today-count { background:#c96a18; }
+.ec-today-region-grid button[data-ec-today-kind="members"] .ec-today-count { background:#7c3aed; }
+.ec-today-region-grid button[data-ec-today-kind="forum"] .ec-today-count { background:#0f766e; }
+.ec-today-region-grid button[data-ec-today-kind="business"] .ec-today-count { background:#9a5b08; }
 .ec-today-region-grid strong { font-size: 15px; }
 .ec-today-region-grid small { margin-top: 7px; color: #687580; line-height: 1.45; }
 .ec-today-region-grid em { margin-top: auto; padding-top: 13px; color: #d7541d; font-style: normal; font-size: 12px; font-weight: 900; }
