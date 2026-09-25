@@ -767,3 +767,16 @@ test("forum replies support helpful community marks", async()=>{
   assert.match(migration,/enable row level security/);
   assert.match(migration,/primary key \(reply_id, user_id\)/);
 });
+
+
+test("regional weekly poll is presented as a practical community pulse", async()=>{
+  const app=await source("src/App.jsx");
+  const css=await source("src/home-multi-region-clarity.css");
+  assert.match(app,/WAS BEWEGT DEINE REGION\?/);
+  assert.match(app,/Eine praktische Wochenfrage für Alltag, Freizeit und gemeinsames Miteinander/);
+  assert.match(app,/Du kannst deine Auswahl jederzeit ändern/);
+  assert.match(app,/praktische, nicht-personenbezogene Frage/);
+  assert.match(css,/\.regional-pulse/);
+  assert.match(css,/\.regional-pulse-total/);
+  assert.match(css,/\.regional-pulse-empty/);
+});
