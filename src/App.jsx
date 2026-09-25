@@ -398,7 +398,7 @@ export default function App() {
       ];
       if (isAdmin(p.role)) {
         tasks.push(
-          { name: "Admin-Mitglieder", load: () => read(supabase.rpc("admin_full_member_directory")), commit: data => setAdminMembers(data.map(summary => ({ ...(membersRef.current.find(member => member.id === summary.id) || {}), ...summary }))) },
+          { name: "Admin-Mitglieder", load: () => read(supabase.rpc("admin_full_member_directory")), commit: data => setAdminMembers(data.map(summary => personalDataAllowed ? ({ ...(membersRef.current.find(member => member.id === summary.id) || {}), ...summary }) : summary)) },
           { name: "Admin-Logbuch", load: () => isHeadAdmin(p.role) ? read(supabase.rpc("get_admin_log", { p_limit: 500 })) : Promise.resolve([]), commit: setAdminLog }
         );
         if (personalDataAllowed) {
