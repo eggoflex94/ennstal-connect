@@ -665,3 +665,15 @@ test("today-in-region dashboard exposes six live regional signals", async()=>{
   assert.match(css,/\.ec-today-count/);
   assert.match(css,/grid-template-columns: repeat\(3,minmax\(0,1fr\)\)/);
 });
+
+
+test("weekly regional recap summarizes live signals", async()=>{
+  const base=await source("src/home-multi-region-clarity-base.js");
+  const live=await source("src/home-today-live.js");
+  const css=await source("src/home-multi-region-clarity.css");
+  assert.match(base,/ec-weekly-region-recap/);
+  assert.match(base,/DIESE WOCHE/);
+  assert.match(live,/function renderWeeklyRecap/);
+  assert.match(live,/renderWeeklyRecap\(region,\{municipality,events,requests,members,forum,business\}\)/);
+  assert.match(css,/\.ec-weekly-region-recap/);
+});
