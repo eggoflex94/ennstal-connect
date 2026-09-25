@@ -7,6 +7,7 @@ const PAN_X_LIMIT = 120;
 const PAN_Y_UP_LIMIT = 260;
 const PAN_Y_DOWN_LIMIT = 160;
 const MAX_ZOOM = 2.8;
+const EXTRA_ZOOM_OUT_FACTOR = 0.55;
 
 function loadImage(file) {
   return new Promise((resolve, reject) => {
@@ -118,12 +119,13 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
   }, [source, zoom, x, y, rotation]);
 
   const fitZoom = source ? cropGeometry(source, rotation, PREVIEW_SIZE).fitZoom : 0.5;
+  const minZoom = Math.max(0.08, fitZoom * EXTRA_ZOOM_OUT_FACTOR);
   const zoomSliderValue = Math.max(0, Math.min(100,
-    ((zoom - fitZoom) / Math.max(0.0001, MAX_ZOOM - fitZoom)) * 100
+    ((zoom - minZoom) / Math.max(0.0001, MAX_ZOOM - minZoom)) * 100
   ));
   const zoomFromSlider = (value) => {
     const position = Math.max(0, Math.min(100, Number(value))) / 100;
-    return fitZoom + (MAX_ZOOM - fitZoom) * position;
+    return minZoom + (MAX_ZOOM - minZoom) * position;
   };
   const clampPanX = (value) => Math.max(-PAN_X_LIMIT, Math.min(PAN_X_LIMIT, value));
   const clampPanY = (value) => Math.max(-PAN_Y_UP_LIMIT, Math.min(PAN_Y_DOWN_LIMIT, value));
@@ -178,6 +180,12 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
     setY(0);
   };
 
+  const zoomFurtherOut = () => {
+    setZoom(minZoom);
+    setX(0);
+    setY(0);
+  };
+
   const exportImage = async () => {
     if (!source || busy) return;
     setBusy(true);
@@ -209,7 +217,7 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
         <div>
           <span className="eyebrow">PROFILBILD</span>
           <h2>Foto anpassen</h2>
-          <p>Ziehe das Bild mit Finger oder Maus. Der Zoom bleibt dabei unverändert. Mit „Ganzes Bild“ kannst du auf dem Handy vollständig herauszoomen.</p>
+          <p>Ziehe das Bild mit Finger oder Maus. Ganz links am Zoom-Regler kannst du jetzt weiter als das vollständige Foto herauszoomen.</p>
         </div>
         <button type="button" className="ec-photo-editor-close" onClick={onCancel} aria-label="Schließen">×</button>
       </header>
@@ -247,7 +255,7 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
               onChange={e => setZoom(zoomFromSlider(e.currentTarget.value))}
               aria-label="Profilbild Zoom"
             />
-            <b>{zoomSliderValue <= 1 ? "Ganz" : Math.round(zoom * 100) + "%"}</b>
+            <b>{zoomSliderValue <= 1 ? "Weit" : Math.round(zoom * 100) + "%"}</b>
           </label>
           <label>
             <span>Links / rechts</span>
@@ -260,6 +268,7 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
             <b>{y}</b>
           </label>
           <div className="ec-photo-editor-rotate">
+            <button type="button" onClick={zoomFurtherOut}>Weiter raus</button>
             <button type="button" onClick={showWholeImage}>Ganzes Bild</button>
             <button type="button" onClick={() => setRotation(v => v - 90)}>↶ Links drehen</button>
             <button type="button" onClick={() => setRotation(v => v + 90)}>↷ Rechts drehen</button>
