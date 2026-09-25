@@ -836,5 +836,7 @@ test("profile photo crop drag never changes zoom automatically", async()=>{
   assert.match(editor,/min="0"[\s\S]*max="100"/);
   assert.match(editor,/zoomFromSlider/);
   assert.match(editor,/onInput=\{e => setZoom\(zoomFromSlider\(e\.currentTarget\.value\)\)\}/);
-  assert.match(editor,/Der Zoom ändert sich nur, wenn du den Zoom-Regler selbst bewegst/);
+  assert.match(editor,/EXTRA_ZOOM_OUT_FACTOR = 0\.55/);
+  assert.match(editor,/const minZoom = Math\.max\(0\.08, fitZoom \* EXTRA_ZOOM_OUT_FACTOR\)/);
+  assert.match(editor,/onClick=\{zoomFurtherOut\}>Weiter raus<\/button>/);
 });
