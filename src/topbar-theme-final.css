@@ -398,3 +398,90 @@ html[data-ec-theme] .ec-regional-shell .ec-brand-masthead{
 html[data-ec-theme] .ec-regional-shell .ec-top-nav{
   z-index:9000!important;
 }
+
+
+/* Coherent shell authority.
+   Each layout uses the same logo geometry, but its own matching wordmark colors,
+   masthead tint, navigation accents and dock accents. */
+html[data-ec-theme] .ec-regional-shell .ec-brand-masthead{
+  background:linear-gradient(110deg,var(--ec-topbar-bg-1),var(--ec-topbar-bg-2))!important;
+  border-bottom:1px solid var(--ec-topbar-line)!important;
+  box-shadow:0 4px 16px color-mix(in srgb,var(--ec-topbar-accent) 10%,transparent)!important;
+  color:var(--ec-topbar-ink)!important;
+}
+html[data-ec-theme] .ec-regional-shell .ec-brand-logo{
+  background:color-mix(in srgb,var(--ec-topbar-bg-1) 88%,#fff)!important;
+  border:1px solid color-mix(in srgb,var(--ec-topbar-accent) 20%,transparent)!important;
+  border-radius:14px!important;
+}
+html[data-ec-theme] .ec-regional-shell .ec-brand-image{
+  filter:none!important;
+  opacity:1!important;
+}
+html[data-ec-theme] .ec-regional-shell .ec-brand-claim{
+  border-left-color:var(--ec-topbar-line)!important;
+  color:var(--ec-topbar-muted)!important;
+}
+html[data-ec-theme] .ec-regional-shell .ec-brand-claim b{
+  color:var(--ec-topbar-ink)!important;
+}
+html[data-ec-theme] .ec-regional-shell .ec-region-status{
+  background:color-mix(in srgb,var(--ec-topbar-bg-1) 78%,#fff)!important;
+  border-color:color-mix(in srgb,var(--ec-topbar-accent) 38%,var(--ec-topbar-line))!important;
+  color:var(--ec-topbar-ink)!important;
+}
+html[data-ec-theme] .ec-regional-shell .ec-region-status span{
+  color:var(--ec-topbar-accent-strong)!important;
+}
+html[data-ec-theme] .ec-regional-shell .ec-region-status strong,
+html[data-ec-theme] .ec-regional-shell .ec-region-status.is-home::after{
+  color:var(--ec-topbar-ink)!important;
+}
+
+html[data-ec-theme] .ec-regional-shell .ec-top-nav{
+  background:linear-gradient(110deg,
+    color-mix(in srgb,var(--ec-topbar-bg-1) 94%,#fff) 0%,
+    color-mix(in srgb,var(--ec-topbar-bg-2) 94%,#fff) 100%)!important;
+  border-bottom:2px solid var(--ec-topbar-accent)!important;
+  box-shadow:0 6px 18px color-mix(in srgb,var(--ec-topbar-accent) 12%,transparent)!important;
+}
+html[data-ec-theme] .ec-regional-shell .ec-top-nav > button,
+html[data-ec-theme] .ec-regional-shell .ec-region-picker{
+  color:var(--ec-topbar-ink)!important;
+}
+html[data-ec-theme] .ec-regional-shell .ec-top-nav > button:hover,
+html[data-ec-theme] .ec-regional-shell .ec-top-nav > button:focus-visible{
+  background:var(--ec-topbar-soft)!important;
+  color:var(--ec-topbar-accent-strong)!important;
+}
+html[data-ec-theme] .ec-regional-shell .ec-top-nav > button.active,
+html[data-ec-theme] .ec-regional-shell .ec-top-nav > button[aria-current="page"]{
+  background:linear-gradient(135deg,var(--ec-topbar-accent),var(--ec-topbar-accent-strong))!important;
+  border-color:var(--ec-topbar-accent-strong)!important;
+  color:#fff!important;
+}
+html[data-ec-theme] .ec-regional-shell .ec-region-picker{
+  background:color-mix(in srgb,var(--ec-topbar-bg-1) 82%,#fff)!important;
+  border-color:color-mix(in srgb,var(--ec-topbar-accent) 42%,var(--ec-topbar-line))!important;
+}
+html[data-ec-theme] .ec-regional-shell .ec-region-picker b{
+  color:var(--ec-topbar-accent)!important;
+}
+html[data-ec-theme] .ec-regional-shell .ec-region-picker select{
+  color:var(--ec-topbar-ink)!important;
+}
+
+html[data-ec-theme] .ec-right-dock{
+  background:color-mix(in srgb,var(--ec-topbar-bg-1) 82%,#fff)!important;
+  border-color:color-mix(in srgb,var(--ec-topbar-accent) 28%,var(--ec-topbar-line))!important;
+  box-shadow:0 14px 36px color-mix(in srgb,var(--ec-topbar-accent) 10%,rgba(25,42,58,.12))!important;
+}
+html[data-ec-theme] .ec-right-dock .ec-dock-head span,
+html[data-ec-theme] .ec-right-dock .ec-dock-section-label{
+  color:var(--ec-topbar-accent-strong)!important;
+}
+html[data-ec-theme] .ec-right-dock button:hover,
+html[data-ec-theme] .ec-right-dock button:focus-visible{
+  background:var(--ec-topbar-soft)!important;
+  color:var(--ec-topbar-accent-strong)!important;
+}

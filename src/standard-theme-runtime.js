@@ -1,14 +1,14 @@
 import { supabase } from './supabaseClient';
 
 const THEMES = {
-  'layout-theme-red': { key: 'red', logo: '/ennstal-connect-wordmark.svg' },
-  'layout-theme-blue': { key: 'blue', logo: '/ennstal-connect-wordmark.svg' },
-  'layout-theme-neon': { key: 'neon', logo: '/ennstal-connect-wordmark.svg' },
-  'layout-theme-alpine': { key: 'alpine', logo: '/ennstal-connect-wordmark.svg' },
-  'layout-theme-teal': { key: 'teal', logo: '/ennstal-connect-wordmark.svg' },
-  'layout-theme-violet': { key: 'violet', logo: '/ennstal-connect-wordmark.svg' },
-  'layout-theme-copper': { key: 'copper', logo: '/ennstal-connect-wordmark.svg' },
-  'layout-theme-aurora': { key: 'aurora', logo: '/ennstal-connect-wordmark.svg' },
+  'layout-theme-red': { key: 'red', logo: '/ennstal-connect-wordmark-red.svg' },
+  'layout-theme-blue': { key: 'blue', logo: '/ennstal-connect-wordmark-blue.svg' },
+  'layout-theme-neon': { key: 'neon', logo: '/ennstal-connect-wordmark-neon.svg' },
+  'layout-theme-alpine': { key: 'alpine', logo: '/ennstal-connect-wordmark-alpine.svg' },
+  'layout-theme-teal': { key: 'teal', logo: '/ennstal-connect-wordmark-teal.svg' },
+  'layout-theme-violet': { key: 'violet', logo: '/ennstal-connect-wordmark-violet.svg' },
+  'layout-theme-copper': { key: 'copper', logo: '/ennstal-connect-wordmark-copper.svg' },
+  'layout-theme-aurora': { key: 'aurora', logo: '/ennstal-connect-wordmark-aurora.svg' },
 };
 const DEFAULT_LOGO = '/ennstal-connect-wordmark.svg';
 const LEGACY_LAYOUTS = new Set(['alpine', 'aurora', 'ocean', 'slate', 'ember', 'redwood', 'lavender', 'midnight', 'sunrise', 'neon']);
