@@ -801,9 +801,10 @@ test("error-center regressions: cover save, DOM insertion and verification lock 
   assert.match(app,/return backgroundUrl;/);
   assert.doesNotMatch(app,/return publicUrl;\s*\n\s*}\s*\n\s*async function removeProfileCover/);
 
-  const communityEffect=app.slice(app.indexOf('if \(page !== "community"'), app.indexOf('}, \[page, profile\?\.role, communityEvents\.length\]\);')+60);
-  assert.doesNotMatch(communityEffect,/insertBefore\(/);
-  assert.match(communityEffect,/appendChild\(label\)/);
+  assert.match(app,/<label className="content-image-upload">Bild für die Veranstaltung \\(optional\\)<input name="image" type="file" accept="image\\/\\*"\\/><\\/label>/);
+  assert.doesNotMatch(app,/eventForm\\.appendChild\\(label\\)/);
+  assert.doesNotMatch(app,/eventForm\\.insertBefore\\(/);
+
 
   const actorLock=migration.indexOf("where id = auth.uid()\n  for update");
   const targetLock=migration.indexOf("where id = p_user_id\n  for update");
