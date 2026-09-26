@@ -366,3 +366,35 @@ html[data-ec-theme="neon"] .ec-regional-shell .ec-top-nav > button[aria-current=
     background:linear-gradient(105deg,#62fb11,#b7ff78)!important;
   }
 }
+
+
+/* Brand lockup must remain identical across color layouts.
+   Themes change the surrounding shell colors, never the Ennstal Connect logo. */
+html[data-ec-theme] .ec-regional-shell .ec-brand-family-mark{
+  background:linear-gradient(145deg,#60656a,#111)!important;
+  border-color:#24272a!important;
+  box-shadow:inset 0 0 0 3px #fff,0 6px 16px rgba(17,24,39,.18)!important;
+}
+html[data-ec-theme] .ec-regional-shell .ec-brand-family-mark::before{
+  color:#fff!important;
+  text-shadow:0 1px 2px rgba(0,0,0,.20)!important;
+}
+html[data-ec-theme] .ec-regional-shell .ec-brand-family-region{color:#f04c19!important}
+html[data-ec-theme] .ec-regional-shell .ec-brand-family-connect{color:#ff7c0a!important}
+html[data-ec-theme] .ec-regional-shell .ec-brand-family-tagline{color:#46515a!important}
+html[data-ec-theme] .ec-regional-shell .ec-brand-family-lockup{color:#202326!important}
+html[data-ec-theme] .ec-regional-shell .ec-brand-family-umbrella{color:#e94f0b!important}
+html[data-ec-theme] .ec-regional-shell .ec-brand-family-slogan{color:#2f3943!important}
+
+/* Fixed shell must stay opaque above scrolled page content. */
+html[data-ec-theme] .ec-regional-shell .ec-brand-masthead,
+html[data-ec-theme] .ec-regional-shell .ec-top-nav{
+  isolation:isolate!important;
+  opacity:1!important;
+}
+html[data-ec-theme] .ec-regional-shell .ec-brand-masthead{
+  z-index:9001!important;
+}
+html[data-ec-theme] .ec-regional-shell .ec-top-nav{
+  z-index:9000!important;
+}
