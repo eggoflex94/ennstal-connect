@@ -344,10 +344,12 @@ export default function App() {
         bootstrapRetry.current.timer = null;
         resetSession(); return;
       }
+      let ensureProfileError = null;
       if (initializedProfileUser.current !== currentUser.id) {
         const { error } = await supabase.rpc("ensure_current_profile");
-        if (error) throw error;
-        if (isCurrent()) initializedProfileUser.current = currentUser.id;
+        ensureProfileError = error || null;
+        if (!error && isCurrent()) initializedProfileUser.current = currentUser.id;
+        if (error) console.warn("Profil-Initialisierung konnte nicht bestätigt werden:", error?.message || error);
       }
       if (!isCurrent()) return;
       const read = async (query, fallback = []) => {
@@ -355,17 +357,33 @@ export default function App() {
         if (error) throw error;
         return data ?? fallback;
       };
-      // Access-sensitive state is ready before publishing directory content.
-      const [p, bs, locks, ruleAcceptance, personalDataAllowed, loadedAdminPermissions] = await Promise.all([
-        read(supabase.from("profiles").select("*").eq("id", currentUser.id).maybeSingle(), null),
-        read(supabase.from("user_blocks").select("*").eq("blocker_id", currentUser.id)),
-        read(supabase.from("user_feature_locks").select("*").eq("user_id", currentUser.id)),
-        read(supabase.from("community_rule_acceptances").select("rules_version,accepted_at").eq("user_id", currentUser.id).eq("rules_version", COMMUNITY_RULES_VERSION).maybeSingle(), null),
-        read(supabase.rpc("ec_can_view_personal_data"), false),
-        read(supabase.rpc("my_admin_permissions"), {})
+      const readOptional = async (query, fallback, label) => {
+        try {
+          return await read(query, fallback);
+        } catch (error) {
+          console.warn(label + " konnte nicht geladen werden; Standardwert wird verwendet:", error?.message || error);
+          return fallback;
+        }
+      };
+
+      // The profile is the only critical bootstrap record. Optional capability,
+      // block and preference lookups must never prevent the saved profile/layout
+      // from rendering after a refresh.
+      const p = await read(supabase.from("profiles").select("*").eq("id", currentUser.id).maybeSingle(), null);
+      if (!isCurrent()) return;
+      if (!p) {
+        if (ensureProfileError) throw ensureProfileError;
+        throw new Error("Dein Profil konnte nicht geladen werden. Bitte versuche es erneut.");
+      }
+      initializedProfileUser.current = currentUser.id;
+      const [bs, locks, ruleAcceptance, personalDataAllowed, loadedAdminPermissions] = await Promise.all([
+        readOptional(supabase.from("user_blocks").select("*").eq("blocker_id", currentUser.id), [], "Blockierungen"),
+        readOptional(supabase.from("user_feature_locks").select("*").eq("user_id", currentUser.id), [], "Funktionssperren"),
+        readOptional(supabase.from("community_rule_acceptances").select("rules_version,accepted_at").eq("user_id", currentUser.id).eq("rules_version", COMMUNITY_RULES_VERSION).maybeSingle(), null, "Regelzustimmung"),
+        readOptional(supabase.rpc("ec_can_view_personal_data"), false, "Persönliche-Daten-Berechtigung"),
+        readOptional(supabase.rpc("my_admin_permissions"), {}, "Admin-Berechtigungen")
       ]);
       if (!isCurrent()) return;
-      if (!p) throw new Error("Dein Profil konnte nicht geladen werden. Bitte versuche es erneut.");
       if (p.account_status === "SUSPENDED") {
         await supabase.auth.signOut();
         if (!isCurrent()) return;
