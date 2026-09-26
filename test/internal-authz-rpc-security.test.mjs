@@ -24,3 +24,23 @@ test('client-facing community group capability check remains signed-in only', as
   assert.match(sql, /grant execute on function public\.ec_can_manage_community_groups\(uuid\) to authenticated/);
   assert.match(sql, /revoke execute on function public\.ec_can_manage_community_groups\(uuid\) from public, anon/);
 });
+
+
+test('RLS helper functions remain authenticated-only because policies execute them', async () => {
+  const sql = await source('supabase/migrations/20260926184500_restore_rls_policy_helper_execution.sql');
+  for (const fn of [
+    'ec_can_admin_region',
+    'ec_can_manage_homepage_region',
+    'ec_can_manage_sidebar_banners',
+    'ec_can_profile_admin_action',
+    'ec_can_upload_popup_images',
+    'ec_has_admin_central_access',
+    'ec_is_admin',
+    'ec_is_head_admin',
+    'ec_is_head_admin_user'
+  ]) {
+    assert.match(sql, new RegExp(fn));
+  }
+  assert.match(sql, /to authenticated/);
+  assert.match(sql, /from public, anon/);
+});

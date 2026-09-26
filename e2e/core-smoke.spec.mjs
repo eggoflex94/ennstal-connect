@@ -15,6 +15,7 @@ function profileFor(role) {
     first_name: "Smoke",
     last_name: "Test",
     role: databaseRole,
+    is_primary_head_admin: role === "HEAD_ADMIN",
     account_status: "ACTIVE",
     account_badge: null,
     home_region_id: REGION_ID,
@@ -160,6 +161,7 @@ async function installSupabaseMock(page, role) {
         return json([{ completed: true }]);
       }
       if (fn === "record_online_time") return json({ rewards: 0 });
+      if (fn === "my_admin_permissions") return json(role === "ADMIN" || role === "HEAD_ADMIN" ? { manage_members: true, manage_reports: true, manage_news: true, manage_community: true } : {});
       if (fn === "admin_get_permissions") return json({});
       if (fn === "prepare_privileged_action") return json({});
       if (fn === "admin_set_role") return json(null);
