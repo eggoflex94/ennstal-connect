@@ -802,8 +802,8 @@ test("error-center regressions: cover save, DOM insertion and verification lock 
   assert.doesNotMatch(app,/return publicUrl;\s*\n\s*}\s*\n\s*async function removeProfileCover/);
 
   assert.ok(app.includes('<label className="content-image-upload">Bild für die Veranstaltung (optional)<input name="image" type="file" accept="image/*"/></label>'));
-  assert.doesNotMatch(app,/eventForm\\.appendChild\\(label\\)/);
-  assert.doesNotMatch(app,/eventForm\\.insertBefore\\(/);
+  assert.doesNotMatch(app,/eventForm\.appendChild\(label\)/);
+  assert.doesNotMatch(app,/eventForm\.insertBefore\(/);
 
 
   const actorLock=migration.indexOf("where id = auth.uid()\n  for update");
