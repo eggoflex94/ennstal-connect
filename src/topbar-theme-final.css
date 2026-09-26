@@ -485,3 +485,109 @@ html[data-ec-theme] .ec-right-dock button:focus-visible{
   background:var(--ec-topbar-soft)!important;
   color:var(--ec-topbar-accent-strong)!important;
 }
+
+
+/* EC LOGO + TOPBAR THEME VISIBILITY AUTHORITY */
+/* Keep every regional logo readable and visually matched to the selected layout.
+   This block intentionally comes last because older theme layers contain fixed
+   orange/grey brand overrides. */
+html[data-ec-theme]{
+  --ec-logo-panel:color-mix(in srgb,var(--ec-topbar-bg-1) 76%,#fff);
+  --ec-logo-region:var(--ec-topbar-accent-strong);
+  --ec-logo-connect:var(--ec-topbar-accent);
+  --ec-logo-tagline:var(--ec-topbar-muted);
+  --ec-logo-mark-1:var(--ec-topbar-accent);
+  --ec-logo-mark-2:var(--ec-topbar-accent-strong);
+  --ec-logo-mark-border:color-mix(in srgb,var(--ec-topbar-accent-strong) 80%,#111);
+  --ec-logo-star:#fff;
+}
+html[data-ec-theme="standard"]{
+  --ec-logo-region:#f04c19;
+  --ec-logo-connect:#ff7c0a;
+  --ec-logo-mark-1:#66727d;
+  --ec-logo-mark-2:#11171c;
+  --ec-logo-mark-border:#24292d;
+}
+html[data-ec-theme="neon"]{
+  --ec-logo-panel:rgba(7,21,13,.08);
+  --ec-logo-region:#0b3820;
+  --ec-logo-connect:#07150d;
+  --ec-logo-tagline:#173a24;
+  --ec-logo-mark-1:#123f29;
+  --ec-logo-mark-2:#061d12;
+  --ec-logo-mark-border:#04170e;
+  --ec-logo-star:#a4ff5a;
+}
+
+html[data-ec-theme] .ec-regional-shell .ec-brand-masthead,
+html[data-ec-theme] .ec-regional-shell .ec-top-nav,
+html[data-ec-theme] .app .modern-topbar{
+  opacity:1!important;
+  visibility:visible!important;
+  color:var(--ec-topbar-ink)!important;
+}
+
+html[data-ec-theme] .ec-regional-shell .ec-brand-logo{
+  background:var(--ec-logo-panel)!important;
+  border:1px solid color-mix(in srgb,var(--ec-topbar-accent) 30%,var(--ec-topbar-line))!important;
+  box-shadow:0 4px 14px color-mix(in srgb,var(--ec-topbar-accent) 9%,transparent)!important;
+}
+
+html[data-ec-theme] .ec-regional-shell .ec-brand-family-mark,
+html[data-ec-theme] .auth-page .ec-brand-family-mark{
+  background:linear-gradient(145deg,var(--ec-logo-mark-1),var(--ec-logo-mark-2))!important;
+  border-color:var(--ec-logo-mark-border)!important;
+  box-shadow:inset 0 0 0 3px color-mix(in srgb,var(--ec-logo-star) 78%,transparent),0 6px 16px color-mix(in srgb,var(--ec-logo-mark-2) 24%,transparent)!important;
+}
+html[data-ec-theme] .ec-regional-shell .ec-brand-family-mark::before,
+html[data-ec-theme] .auth-page .ec-brand-family-mark::before{
+  color:var(--ec-logo-star)!important;
+  text-shadow:0 1px 2px rgba(0,0,0,.22)!important;
+}
+html[data-ec-theme] :is(.ec-regional-shell,.auth-page) .ec-brand-family-region{
+  color:var(--ec-logo-region)!important;
+}
+html[data-ec-theme] :is(.ec-regional-shell,.auth-page) .ec-brand-family-connect{
+  color:var(--ec-logo-connect)!important;
+}
+html[data-ec-theme] :is(.ec-regional-shell,.auth-page) .ec-brand-family-tagline{
+  color:var(--ec-logo-tagline)!important;
+}
+html[data-ec-theme] .ec-regional-shell .ec-brand-family-umbrella,
+html[data-ec-theme] .auth-page .ec-auth-brand-claim small{
+  color:var(--ec-logo-region)!important;
+}
+html[data-ec-theme] .ec-regional-shell .ec-brand-family-slogan,
+html[data-ec-theme] .auth-page .ec-auth-brand-claim strong{
+  color:var(--ec-topbar-ink)!important;
+}
+html[data-ec-theme] .auth-page .ec-auth-brand-shell{
+  background:linear-gradient(110deg,var(--ec-topbar-bg-1),var(--ec-topbar-bg-2))!important;
+  border-color:var(--ec-topbar-line)!important;
+}
+html[data-ec-theme] .auth-page .ec-auth-brand-shell .ec-auth-brand-claim{
+  border-color:var(--ec-topbar-line)!important;
+}
+
+/* Keep logo copy inside the fixed masthead instead of clipping on long region names. */
+@media(min-width:901px){
+  html[data-ec-theme] .ec-brand-masthead .ec-brand-logo{
+    padding:4px 10px!important;
+    min-width:min(440px,42vw)!important;
+    max-width:min(520px,48vw)!important;
+  }
+  html[data-ec-theme] .ec-brand-masthead .ec-brand-family-lockup{
+    max-width:100%!important;
+  }
+}
+@media(max-width:900px){
+  html[data-ec-theme] .ec-brand-masthead .ec-brand-logo{
+    background:transparent!important;
+    border-color:transparent!important;
+    box-shadow:none!important;
+  }
+  html[data-ec-theme] .ec-brand-family-wordmark{
+    max-width:calc(100vw - 190px)!important;
+    overflow:hidden!important;
+  }
+}
