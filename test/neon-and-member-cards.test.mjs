@@ -57,3 +57,16 @@ test('profile form owns layout persistence so selection does not race a second u
   assert.match(app, /profile_layout: f\.get\("profile_layout"\) \|\| "standard"/);
   assert.doesNotMatch(runtime, /void persistSavedLayout\(savedLayout\)/);
 });
+
+
+test('legacy runtime never rewrites React-owned layout select options', async () => {
+  const runtime = await source('src/standard-theme-runtime.js');
+  assert.doesNotMatch(runtime, /document\.querySelectorAll\('select\[name="profile_layout"\]'\)\.forEach\(normalizeLayoutSelect\)/);
+  assert.match(runtime, /React owns the profile layout select/);
+});
+
+test('profile save immediately updates layout state and runtime event', async () => {
+  const app = await source('src/App.jsx');
+  assert.match(app, /setProfile\(\(current\) => current \? \{ \.\.\.current, \.\.\.payload \} : current\)/);
+  assert.match(app, /ec:profile-layout-saved/);
+});

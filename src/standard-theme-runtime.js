@@ -164,7 +164,6 @@ function renderProgress(section) {
 }
 
 function normalizeLayoutControls() {
-  document.querySelectorAll('select[name="profile_layout"]').forEach(normalizeLayoutSelect);
   document.querySelectorAll('.layout-rewards').forEach((section) => {
     const heading = section.querySelector('h3');
     const copy = section.querySelector('p');
@@ -175,15 +174,8 @@ function normalizeLayoutControls() {
 }
 
 function watchLayoutControls() {
-  if (layoutObserver) return;
-  layoutObserver = new MutationObserver((mutations) => {
-    const addedLayoutControl = mutations.some((mutation) => [...mutation.addedNodes].some((node) => {
-      if (!(node instanceof Element)) return false;
-      return node.matches?.('select[name="profile_layout"]') || Boolean(node.querySelector?.('select[name="profile_layout"]'));
-    }));
-    if (addedLayoutControl) queueSync();
-  });
-  layoutObserver.observe(document.documentElement, { childList: true, subtree: true });
+  // React owns the profile layout select and its option nodes.
+  // Do not rewrite or replace that controlled DOM from a legacy runtime.
 }
 
 async function loadSavedLayout(force = false) {
@@ -340,6 +332,14 @@ window.addEventListener('ec:navigate', () => {
 });
 window.addEventListener('ec:region-change', queueSync);
 window.addEventListener('focus', queueSync);
-window.addEventListener('ec:profile-layout-saved', queueSync);
+window.addEventListener('ec:profile-layout-saved', (event) => {
+  const layout = String(event.detail?.layout || '');
+  if (layout) {
+    savedLayout = layout;
+    pendingLayout = null;
+    savedLayoutLoadedAt = Date.now();
+  }
+  queueSync();
+});
 window.addEventListener('ec:activity-progress-refresh', refreshProgress);
 window.addEventListener('ec:online-reward', refreshProgress);

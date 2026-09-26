@@ -972,7 +972,12 @@ useEffect(() => {
     // Older live databases may not yet include the optional presentation fields.
     // Save the rest of the profile instead of blocking the whole form.
     if (error && /bio_(font|size|color)|bio_image_url.*column|column.*bio_/i.test(error.message || "")) { delete payload.bio_font; delete payload.bio_size; delete payload.bio_color; ({ error } = await supabase.from("profiles").update(payload).eq("id", user.id)); }
-    if (error) return showNotice(error.message); await logProfileActivity("Profil aktualisiert"); showNotice("Profil wurde gespeichert."); await loadAll();
+    if (error) return showNotice(error.message);
+    setProfile((current) => current ? { ...current, ...payload } : current);
+    window.dispatchEvent(new CustomEvent("ec:profile-layout-saved", { detail: { layout: payload.profile_layout } }));
+    await logProfileActivity("Profil aktualisiert");
+    showNotice("Profil wurde gespeichert.");
+    await loadAll();
   }
   async function logProfileActivity(label) { if (!user?.id) return; let { error } = await supabase.rpc("log_profile_change", { p_activity: label }); if (error) ({ error } = await supabase.from("profile_activity").insert({ profile_id: user.id, actor_id: user.id, target_user_id: user.id, activity_type: label, text: label })); if (error) { console.warn(error.message); showNotice("Profil gespeichert, aber die Aktualisierung konnte nicht protokolliert werden: " + error.message); return; } setProfileActivities((current) => [{ id: `local-${Date.now()}`, profile_id: user.id, actor_id: user.id, activity_type: label, created_at: new Date().toISOString() }, ...current].slice(0, 20)); }
   async function deleteProfileDesignImage(field, label, currentUrl) {
