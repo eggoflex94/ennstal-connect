@@ -35,3 +35,13 @@ test('production member directory uses the approved member card component', asyn
   assert.match(css, /data-role-theme="business"/);
   assert.match(css, /data-role-theme="member"/);
 });
+
+
+test('layout selection stays active while save is pending and runtime owns the applied theme class', async () => {
+  const runtime = await source('src/standard-theme-runtime.js');
+  assert.match(runtime, /let pendingLayout = null/);
+  assert.match(runtime, /pendingLayout = String\(select\.value \|\| 'standard'\)/);
+  assert.match(runtime, /if \(!error && data\?\.profile_layout && !pendingLayout\) savedLayout = String\(data\.profile_layout\)/);
+  assert.match(runtime, /app\.classList\.remove\('layout-standard', \.\.\.Object\.keys\(THEMES\)\)/);
+  assert.match(runtime, /const wantedClass = `layout-\$\{savedLayout\}`/);
+});
