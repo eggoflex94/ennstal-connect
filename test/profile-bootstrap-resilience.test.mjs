@@ -19,7 +19,10 @@ test('personal-data capability RPC remains signed-in only', async () => {
   assert.match(sql, /revoke execute on function public\.ec_can_view_personal_data\(\) from public, anon/);
 });
 
-test('saved red and blue layouts are applied from loaded profile state', async () => {
+test('saved supported layouts are applied from loaded profile state', async () => {
   const app = await source('src/App.jsx');
-  assert.match(app, /\["theme-red", "theme-blue"\]\.includes\(profile\?\.profile_layout\)/);
+  for (const layout of ['theme-red','theme-blue','theme-alpine','theme-teal','theme-violet','theme-copper','theme-aurora','theme-neon']) {
+    assert.match(app, new RegExp(layout));
+  }
+  assert.match(app, /\.includes\(profile\?\.profile_layout\)/);
 });
