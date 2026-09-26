@@ -11,7 +11,8 @@ test('neon theme stays available, persists immediately and survives React rerend
   assert.match(runtime, /\['theme-neon'[\s\S]*Neon Grün – Giftgrün & Dunkel[\s\S]*unlocked\(1200\)/);
   assert.match(runtime, /persistSavedLayout\(savedLayout\)/);
   assert.match(runtime, /update\(\{\s*profile_layout\s*:\s*layout\s*\}\)/);
-  assert.match(runtime, /classList\.toggle\('layout-theme-neon'\s*,\s*savedLayout\s*===\s*'theme-neon'\)/);
+  assert.match(runtime, /const wantedClass = `layout-\$\{savedLayout\}`/);
+  assert.match(runtime, /if \(THEMES\[wantedClass\]\) app\.classList\.add\(wantedClass\)/);
   assert.match(runtime, /MutationObserver/);
   assert.match(neonCss, /html\[data-ec-theme='neon'\]/);
   assert.ok(main.indexOf('./neon-green-theme.css') < main.indexOf('./member-card-mockup-final.css'));
@@ -34,4 +35,14 @@ test('production member directory uses the approved member card component', asyn
   assert.match(css, /data-role-theme="supporter"/);
   assert.match(css, /data-role-theme="business"/);
   assert.match(css, /data-role-theme="member"/);
+});
+
+
+test('layout selection stays active while save is pending and runtime owns the applied theme class', async () => {
+  const runtime = await source('src/standard-theme-runtime.js');
+  assert.match(runtime, /let pendingLayout = null/);
+  assert.match(runtime, /pendingLayout = String\(select\.value \|\| 'standard'\)/);
+  assert.match(runtime, /if \(!error && data\?\.profile_layout && !pendingLayout\) savedLayout = String\(data\.profile_layout\)/);
+  assert.match(runtime, /app\.classList\.remove\('layout-standard', \.\.\.Object\.keys\(THEMES\)\)/);
+  assert.match(runtime, /const wantedClass = `layout-\$\{savedLayout\}`/);
 });

@@ -32,6 +32,7 @@ let progress = null;
 let progressLoadedAt = 0;
 let progressPromise = null;
 let savedLayout = 'standard';
+let pendingLayout = null;
 let savedLayoutLoadedAt = 0;
 let businessUnlocked = false;
 let privilegedThemeUnlocked = false;
@@ -79,9 +80,11 @@ function normalizeLayoutSelect(select) {
     select.dataset.ecThemeSignature = signature;
   }
 
-  const preferred = savedLayout && options.some(([value, , enabled]) => value === savedLayout && enabled)
-    ? savedLayout
-    : current;
+  const preferred = pendingLayout && options.some(([value, , enabled]) => value === pendingLayout && enabled)
+    ? pendingLayout
+    : savedLayout && options.some(([value, , enabled]) => value === savedLayout && enabled)
+      ? savedLayout
+      : current;
   const wanted = options.some(([value, , enabled]) => value === preferred && enabled) ? preferred : 'standard';
   if (select.value !== wanted) select.value = wanted;
 }
@@ -190,7 +193,7 @@ async function loadSavedLayout(force = false) {
     const { data: { session } } = await withTimeout(supabase.auth.getSession(), 5000);
     if (!session?.user) return savedLayout;
     const { data, error } = await withTimeout(supabase.from('profiles').select('profile_layout,account_badge,role').eq('id', session.user.id).maybeSingle(), 7000);
-    if (!error && data?.profile_layout) savedLayout = String(data.profile_layout);
+    if (!error && data?.profile_layout && !pendingLayout) savedLayout = String(data.profile_layout);
     businessUnlocked = String(data?.account_badge || '').toUpperCase() === 'BUSINESS';
     privilegedThemeUnlocked = ['HEAD_ADMIN','ADMIN','SUPPORTER'].includes(String(data?.role || '').toUpperCase());
     savedLayoutLoadedAt = Date.now();
@@ -208,10 +211,12 @@ async function persistSavedLayout(layout) {
     const { error } = await withTimeout(supabase.from('profiles').update({ profile_layout: layout }).eq('id', session.user.id), 7000);
     if (error) throw error;
     savedLayout = layout;
+    pendingLayout = null;
     savedLayoutLoadedAt = Date.now();
     window.dispatchEvent(new CustomEvent('ec:profile-layout-saved', { detail: { layout } }));
   } catch (error) {
     console.warn('Layout konnte nicht gespeichert werden:', error?.message || error);
+    pendingLayout = null;
     savedLayoutLoadedAt = 0;
     void loadSavedLayout(true).finally(queueSync);
   }
@@ -248,7 +253,8 @@ function watchApp(app) {
   appObserver?.disconnect();
   observedApp = app;
   appObserver = new MutationObserver(() => {
-    if (savedLayout === 'theme-neon' && !app.classList.contains('layout-theme-neon')) queueSync();
+    const expected = savedLayout === 'standard' ? 'layout-standard' : `layout-${savedLayout}`;
+    if (!app.classList.contains(expected)) queueSync();
   });
   appObserver.observe(app, { attributes: true, attributeFilter: ['class'] });
 }
@@ -269,12 +275,13 @@ function syncTheme() {
   watchApp(app);
   if (app) [...LEGACY_LAYOUTS].forEach((legacy) => app.classList.remove(`layout-${legacy}`));
   if (app) {
-    app.classList.toggle('layout-theme-neon', savedLayout === 'theme-neon');
-    app.classList.toggle('layout-theme-alpine', savedLayout === 'theme-alpine');
-    app.classList.toggle('layout-theme-teal', savedLayout === 'theme-teal');
-    app.classList.toggle('layout-theme-violet', savedLayout === 'theme-violet');
-    app.classList.toggle('layout-theme-copper', savedLayout === 'theme-copper');
-    app.classList.toggle('layout-theme-aurora', savedLayout === 'theme-aurora');
+    app.classList.remove('layout-standard', ...Object.keys(THEMES));
+    if (savedLayout === 'standard') app.classList.add('layout-standard');
+    else {
+      const wantedClass = `layout-${savedLayout}`;
+      if (THEMES[wantedClass]) app.classList.add(wantedClass);
+      else app.classList.add('layout-standard');
+    }
   }
   const match = app ? Object.entries(THEMES).find(([className]) => app.classList.contains(className)) : null;
   const next = match ? match[1] : { key: 'standard', logo: DEFAULT_LOGO };
@@ -322,7 +329,8 @@ else boot();
 document.addEventListener('change', (event) => {
   const select = event.target?.closest?.('select[name="profile_layout"]');
   if (!select) return;
-  savedLayout = String(select.value || 'standard');
+  pendingLayout = String(select.value || 'standard');
+  savedLayout = pendingLayout;
   savedLayoutLoadedAt = Date.now();
   queueSync();
   void persistSavedLayout(savedLayout);
