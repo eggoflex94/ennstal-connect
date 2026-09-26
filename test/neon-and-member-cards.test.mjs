@@ -9,8 +9,8 @@ test('neon theme stays available, persists immediately and survives React rerend
   const main = await source('src/main.jsx');
   const neonCss = await source('src/neon-green-theme.css');
   assert.match(runtime, /\['theme-neon'[\s\S]*Neon Grün – Giftgrün & Dunkel[\s\S]*unlocked\(1200\)/);
-  assert.match(runtime, /persistSavedLayout\(savedLayout\)/);
-  assert.match(runtime, /update\(\{\s*profile_layout\s*:\s*layout\s*\}\)/);
+  assert.match(app, /profile_layout: f\.get\("profile_layout"\) \|\| "standard"/);
+  assert.doesNotMatch(runtime, /void persistSavedLayout\(savedLayout\)/);
   assert.match(runtime, /const wantedClass = `layout-\$\{savedLayout\}`/);
   assert.match(runtime, /if \(THEMES\[wantedClass\]\) app\.classList\.add\(wantedClass\)/);
   assert.match(runtime, /MutationObserver/);
