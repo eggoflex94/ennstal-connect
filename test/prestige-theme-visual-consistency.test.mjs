@@ -28,3 +28,14 @@ test('theme accent remains visible on controls without changing layout geometry'
   assert.ok(css.includes('border-color:var(--ec-theme-primary)!important'));
   assert.ok(css.includes('.ec-activity-progress-bar>i'));
 });
+
+
+test('masthead logo stays neutral while navigation follows the selected theme', async () => {
+  const css = await source('src/topbar-theme-final.css');
+  assert.ok(css.includes('Coherent shell authority'));
+  assert.ok(css.includes('html[data-ec-theme] .ec-regional-shell .ec-brand-masthead'));
+  assert.ok(css.includes('background:#ffffff!important'));
+  assert.ok(css.includes('html[data-ec-theme] .ec-regional-shell .ec-top-nav'));
+  assert.ok(css.includes('border-bottom:2px solid var(--ec-topbar-accent)!important'));
+  assert.ok(css.includes('html[data-ec-theme] .ec-right-dock'));
+});
