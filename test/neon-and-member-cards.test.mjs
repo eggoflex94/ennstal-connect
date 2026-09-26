@@ -6,11 +6,12 @@ const source = async (path) => readFile(new URL(`../${path}`, import.meta.url), 
 
 test('neon theme stays available, persists immediately and survives React rerenders', async () => {
   const runtime = await source('src/standard-theme-runtime.js');
+  const app = await source('src/App.jsx');
   const main = await source('src/main.jsx');
   const neonCss = await source('src/neon-green-theme.css');
   assert.match(runtime, /\['theme-neon'[\s\S]*Neon Grün – Giftgrün & Dunkel[\s\S]*unlocked\(1200\)/);
-  assert.match(runtime, /persistSavedLayout\(savedLayout\)/);
-  assert.match(runtime, /update\(\{\s*profile_layout\s*:\s*layout\s*\}\)/);
+  assert.match(app, /profile_layout: f\.get\("profile_layout"\) \|\| "standard"/);
+  assert.doesNotMatch(runtime, /void persistSavedLayout\(savedLayout\)/);
   assert.match(runtime, /const wantedClass = `layout-\$\{savedLayout\}`/);
   assert.match(runtime, /if \(THEMES\[wantedClass\]\) app\.classList\.add\(wantedClass\)/);
   assert.match(runtime, /MutationObserver/);
@@ -45,4 +46,14 @@ test('layout selection stays active while save is pending and runtime owns the a
   assert.match(runtime, /if \(!error && data\?\.profile_layout && !pendingLayout\) savedLayout = String\(data\.profile_layout\)/);
   assert.match(runtime, /app\.classList\.remove\('layout-standard', \.\.\.Object\.keys\(THEMES\)\)/);
   assert.match(runtime, /const wantedClass = `layout-\$\{savedLayout\}`/);
+});
+
+
+test('profile form owns layout persistence so selection does not race a second updater', async () => {
+  const app = await source('src/App.jsx');
+  const runtime = await source('src/standard-theme-runtime.js');
+  assert.match(app, /value=\{layoutChoice\}/);
+  assert.match(app, /onChange=\{\(e\) => setLayoutChoice\(e\.currentTarget\.value\)\}/);
+  assert.match(app, /profile_layout: f\.get\("profile_layout"\) \|\| "standard"/);
+  assert.doesNotMatch(runtime, /void persistSavedLayout\(savedLayout\)/);
 });

@@ -333,7 +333,6 @@ document.addEventListener('change', (event) => {
   savedLayout = pendingLayout;
   savedLayoutLoadedAt = Date.now();
   queueSync();
-  void persistSavedLayout(savedLayout);
 });
 window.addEventListener('ec:navigate', () => {
   queueSync();
