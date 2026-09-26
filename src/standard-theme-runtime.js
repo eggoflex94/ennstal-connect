@@ -7,6 +7,8 @@ const THEMES = {
   'layout-theme-alpine': { key: 'alpine', logo: '/ennstal-connect-wordmark.svg' },
   'layout-theme-teal': { key: 'teal', logo: '/ennstal-connect-wordmark.svg' },
   'layout-theme-violet': { key: 'violet', logo: '/ennstal-connect-wordmark.svg' },
+  'layout-theme-copper': { key: 'copper', logo: '/ennstal-connect-wordmark.svg' },
+  'layout-theme-aurora': { key: 'aurora', logo: '/ennstal-connect-wordmark.svg' },
 };
 const DEFAULT_LOGO = '/ennstal-connect-wordmark.svg';
 const LEGACY_LAYOUTS = new Set(['alpine', 'aurora', 'ocean', 'slate', 'ember', 'redwood', 'lavender', 'midnight', 'sunrise', 'neon']);
@@ -32,6 +34,7 @@ let progressPromise = null;
 let savedLayout = 'standard';
 let savedLayoutLoadedAt = 0;
 let businessUnlocked = false;
+let privilegedThemeUnlocked = false;
 let appObserver = null;
 let observedApp = null;
 let shellObserver = null;
@@ -43,16 +46,19 @@ const withTimeout = (promise, ms = 7000) => Promise.race([
 ]);
 
 function layoutOptions(state) {
-  const redOpen = businessUnlocked || Boolean(state?.red_unlocked);
-  const blueOpen = businessUnlocked || Boolean(state?.blue_unlocked);
+  const score = Number(state?.score || 0);
+  const allOpen = privilegedThemeUnlocked || businessUnlocked;
+  const unlocked = (minimum) => allOpen || score >= minimum;
   return [
     ['standard', 'Standard – Ennstal Connect', true],
-    ['theme-red', redOpen ? 'Connect Rot – Hellrot' : '🔒 Connect Rot – ab 30 Aktivitätspunkten', redOpen],
-    ['theme-blue', blueOpen ? 'Connect Blau – Kräftig' : '🔒 Connect Blau – ab 150 Aktivitätspunkten', blueOpen],
-    ['theme-alpine', 'Alpin Grün – Ruhig & Regional', true],
-    ['theme-teal', 'Bergsee Türkis – Frisch & Klar', true],
-    ['theme-violet', 'Enzian Violett – Modern & Edel', true],
-    ['theme-neon', 'Neon Grün – Giftgrün & Dunkel', true],
+    ['theme-red', unlocked(30) ? 'Connect Rot – Hellrot' : '🔒 Connect Rot – ab 30 Aktivitätspunkten', unlocked(30)],
+    ['theme-alpine', unlocked(75) ? 'Alpin Grün – Ruhig & Regional' : '🔒 Alpin Grün – ab 75 Aktivitätspunkten', unlocked(75)],
+    ['theme-blue', unlocked(150) ? 'Connect Blau – Kräftig' : '🔒 Connect Blau – ab 150 Aktivitätspunkten', unlocked(150)],
+    ['theme-teal', unlocked(300) ? 'Bergsee Türkis – Frisch & Klar' : '🔒 Bergsee Türkis – ab 300 Aktivitätspunkten', unlocked(300)],
+    ['theme-violet', unlocked(450) ? 'Enzian Violett – Modern & Edel' : '🔒 Enzian Violett – ab 450 Aktivitätspunkten', unlocked(450)],
+    ['theme-copper', unlocked(650) ? 'Kupfer Nacht – Kupfer & Tiefpetrol' : '🔒 Kupfer Nacht – ab 650 Aktivitätspunkten', unlocked(650)],
+    ['theme-aurora', unlocked(900) ? 'Polarlicht – Cyan, Magenta & Nachtblau' : '🔒 Polarlicht – ab 900 Aktivitätspunkten', unlocked(900)],
+    ['theme-neon', unlocked(1200) ? 'Neon Grün – Giftgrün & Dunkel' : '🔒 Neon Grün – ab 1200 Aktivitätspunkten', unlocked(1200)],
   ];
 }
 
@@ -81,14 +87,21 @@ function normalizeLayoutSelect(select) {
 }
 
 function rewardText(state) {
-  if (businessUnlocked) return 'Unternehmerkonto: alle Profil-Layouts sind automatisch freigeschaltet.';
+  if (privilegedThemeUnlocked || businessUnlocked) return 'Deine Rolle hat alle Profil-Layouts automatisch freigeschaltet.';
   if (!state) return 'Aktivitätsfortschritt derzeit nicht verfügbar.';
   const score = Number(state.score || 0);
-  if (!state.red_unlocked) return `Noch ${Math.max(0, 30 - score)} Punkte bis Connect Rot.`;
-  if (!state.blue_unlocked) return `Connect Rot ist frei. Noch ${Math.max(0, 150 - score)} Punkte bis Connect Blau.`;
-  if (score < 300) return `Rot und Blau sind frei. Noch ${300 - score} Punkte bis Prestige Bronze.`;
-  if (state.prestige_next_score == null) return 'Prestige Platin erreicht. Deine Aktivität bleibt weiterhin sichtbar.';
-  return `Prestige ${state.prestige}. Noch ${Math.max(0, Number(state.prestige_next_score) - score)} Punkte bis zur nächsten Prestige-Stufe.`;
+  const next = [
+    [30, 'Connect Rot'],
+    [75, 'Alpin Grün'],
+    [150, 'Connect Blau'],
+    [300, 'Bergsee Türkis'],
+    [450, 'Enzian Violett'],
+    [650, 'Kupfer Nacht'],
+    [900, 'Polarlicht'],
+    [1200, 'Neon Grün'],
+  ].find(([minimum]) => score < minimum);
+  if (!next) return 'Alle Layoutfarben freigeschaltet.';
+  return `Noch ${Math.max(0, next[0] - score)} Punkte bis ${next[1]}.`;
 }
 
 function progressPercent(state) {
@@ -164,9 +177,10 @@ async function loadSavedLayout(force = false) {
   try {
     const { data: { session } } = await withTimeout(supabase.auth.getSession(), 5000);
     if (!session?.user) return savedLayout;
-    const { data, error } = await withTimeout(supabase.from('profiles').select('profile_layout,account_badge').eq('id', session.user.id).maybeSingle(), 7000);
+    const { data, error } = await withTimeout(supabase.from('profiles').select('profile_layout,account_badge,role').eq('id', session.user.id).maybeSingle(), 7000);
     if (!error && data?.profile_layout) savedLayout = String(data.profile_layout);
     businessUnlocked = String(data?.account_badge || '').toUpperCase() === 'BUSINESS';
+    privilegedThemeUnlocked = ['HEAD_ADMIN','ADMIN','SUPPORTER'].includes(String(data?.role || '').toUpperCase());
     savedLayoutLoadedAt = Date.now();
   } catch (error) {
     console.warn('Gespeichertes Layout konnte nicht geladen werden:', error?.message || error);
@@ -247,6 +261,8 @@ function syncTheme() {
     app.classList.toggle('layout-theme-alpine', savedLayout === 'theme-alpine');
     app.classList.toggle('layout-theme-teal', savedLayout === 'theme-teal');
     app.classList.toggle('layout-theme-violet', savedLayout === 'theme-violet');
+    app.classList.toggle('layout-theme-copper', savedLayout === 'theme-copper');
+    app.classList.toggle('layout-theme-aurora', savedLayout === 'theme-aurora');
   }
   const match = app ? Object.entries(THEMES).find(([className]) => app.classList.contains(className)) : null;
   const next = match ? match[1] : { key: 'standard', logo: DEFAULT_LOGO };
