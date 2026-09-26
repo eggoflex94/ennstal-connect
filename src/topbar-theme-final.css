@@ -398,3 +398,105 @@ html[data-ec-theme] .ec-regional-shell .ec-brand-masthead{
 html[data-ec-theme] .ec-regional-shell .ec-top-nav{
   z-index:9000!important;
 }
+
+
+/* Coherent shell authority.
+   The Ennstal Connect logo stays identical on every layout. The masthead remains
+   neutral so the orange wordmark always has the same contrast, while the nav,
+   region controls and dock pick up the selected layout accent. */
+html[data-ec-theme] .ec-regional-shell .ec-brand-masthead{
+  background:#ffffff!important;
+  border-bottom:1px solid color-mix(in srgb,var(--ec-topbar-accent) 20%,#d9e1e7)!important;
+  box-shadow:0 4px 16px rgba(25,42,58,.07)!important;
+  color:#26384a!important;
+}
+html[data-ec-theme] .ec-regional-shell .ec-brand-logo{
+  background:#fff!important;
+  border-radius:14px!important;
+}
+html[data-ec-theme] .ec-regional-shell .ec-brand-image{
+  filter:none!important;
+  opacity:1!important;
+}
+html[data-ec-theme] .ec-regional-shell .ec-brand-claim{
+  border-left-color:#d9e1e7!important;
+  color:#596979!important;
+}
+html[data-ec-theme] .ec-regional-shell .ec-brand-claim b{
+  color:#28394a!important;
+}
+html[data-ec-theme] .ec-regional-shell .ec-region-status{
+  background:var(--ec-topbar-soft)!important;
+  border-color:color-mix(in srgb,var(--ec-topbar-accent) 34%,#d9e1e7)!important;
+  color:#27394b!important;
+}
+html[data-ec-theme] .ec-regional-shell .ec-region-status span{
+  color:var(--ec-topbar-accent-strong)!important;
+}
+html[data-ec-theme] .ec-regional-shell .ec-region-status strong,
+html[data-ec-theme] .ec-regional-shell .ec-region-status.is-home::after{
+  color:#27394b!important;
+}
+
+html[data-ec-theme] .ec-regional-shell .ec-top-nav{
+  background:linear-gradient(110deg,
+    color-mix(in srgb,var(--ec-topbar-bg-1) 92%,#fff) 0%,
+    color-mix(in srgb,var(--ec-topbar-bg-2) 92%,#fff) 100%)!important;
+  border-bottom:2px solid var(--ec-topbar-accent)!important;
+  box-shadow:0 6px 18px color-mix(in srgb,var(--ec-topbar-accent) 10%,transparent)!important;
+}
+html[data-ec-theme] .ec-regional-shell .ec-top-nav > button,
+html[data-ec-theme] .ec-regional-shell .ec-region-picker{
+  color:var(--ec-topbar-ink)!important;
+}
+html[data-ec-theme] .ec-regional-shell .ec-top-nav > button.active,
+html[data-ec-theme] .ec-regional-shell .ec-top-nav > button[aria-current="page"]{
+  background:linear-gradient(135deg,var(--ec-topbar-accent),var(--ec-topbar-accent-strong))!important;
+  border-color:var(--ec-topbar-accent-strong)!important;
+  color:#fff!important;
+}
+html[data-ec-theme] .ec-regional-shell .ec-region-picker{
+  background:#fff!important;
+  border-color:color-mix(in srgb,var(--ec-topbar-accent) 38%,#d9e1e7)!important;
+}
+html[data-ec-theme] .ec-regional-shell .ec-region-picker b{
+  color:var(--ec-topbar-accent)!important;
+}
+html[data-ec-theme] .ec-regional-shell .ec-region-picker select{
+  color:#26384a!important;
+}
+
+/* The personal dock belongs to the same layout family, but stays readable. */
+html[data-ec-theme] .ec-right-dock{
+  background:rgba(255,255,255,.98)!important;
+  border-color:color-mix(in srgb,var(--ec-topbar-accent) 24%,#d9e1e7)!important;
+  box-shadow:0 14px 36px rgba(25,42,58,.13)!important;
+}
+html[data-ec-theme] .ec-right-dock .ec-dock-head span,
+html[data-ec-theme] .ec-right-dock .ec-dock-section-label{
+  color:var(--ec-topbar-accent-strong)!important;
+}
+html[data-ec-theme] .ec-right-dock button:hover,
+html[data-ec-theme] .ec-right-dock button:focus-visible{
+  background:var(--ec-topbar-soft)!important;
+  color:var(--ec-topbar-accent-strong)!important;
+}
+
+/* Neon follows the same shell model too: same white masthead/logo,
+   bright green only as layout accent. */
+html[data-ec-theme="neon"] .ec-regional-shell .ec-brand-masthead{
+  background:#fff!important;
+  color:#26384a!important;
+}
+html[data-ec-theme="neon"] .ec-regional-shell .ec-top-nav{
+  background:linear-gradient(110deg,#f4ffe9,#e7ffd0)!important;
+  border-bottom-color:#49dc00!important;
+}
+html[data-ec-theme="neon"] .ec-regional-shell .ec-top-nav > button{
+  color:#17351f!important;
+}
+html[data-ec-theme="neon"] .ec-regional-shell .ec-top-nav > button.active,
+html[data-ec-theme="neon"] .ec-regional-shell .ec-top-nav > button[aria-current="page"]{
+  background:linear-gradient(135deg,#65f51e,#15893a)!important;
+  color:#08210f!important;
+}
