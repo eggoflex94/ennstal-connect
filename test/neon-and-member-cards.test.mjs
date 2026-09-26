@@ -46,3 +46,13 @@ test('layout selection stays active while save is pending and runtime owns the a
   assert.match(runtime, /app\.classList\.remove\('layout-standard', \.\.\.Object\.keys\(THEMES\)\)/);
   assert.match(runtime, /const wantedClass = `layout-\$\{savedLayout\}`/);
 });
+
+
+test('profile form owns layout persistence so selection does not race a second updater', async () => {
+  const app = await source('src/App.jsx');
+  const runtime = await source('src/standard-theme-runtime.js');
+  assert.match(app, /value=\{layoutChoice\}/);
+  assert.match(app, /onChange=\{\(e\) => setLayoutChoice\(e\.currentTarget\.value\)\}/);
+  assert.match(app, /profile_layout: f\.get\("profile_layout"\) \|\| "standard"/);
+  assert.doesNotMatch(runtime, /void persistSavedLayout\(savedLayout\)/);
+});
