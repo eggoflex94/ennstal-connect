@@ -30,12 +30,26 @@ test('theme accent remains visible on controls without changing layout geometry'
 });
 
 
-test('masthead logo stays neutral while navigation follows the selected theme', async () => {
+test('masthead navigation and dock follow the selected theme', async () => {
   const css = await source('src/topbar-theme-final.css');
   assert.ok(css.includes('Coherent shell authority'));
-  assert.ok(css.includes('html[data-ec-theme] .ec-regional-shell .ec-brand-masthead'));
-  assert.ok(css.includes('background:#ffffff!important'));
-  assert.ok(css.includes('html[data-ec-theme] .ec-regional-shell .ec-top-nav'));
+  assert.ok(css.includes('background:linear-gradient(110deg,var(--ec-topbar-bg-1),var(--ec-topbar-bg-2))!important'));
   assert.ok(css.includes('border-bottom:2px solid var(--ec-topbar-accent)!important'));
   assert.ok(css.includes('html[data-ec-theme] .ec-right-dock'));
+});
+
+test('every color layout uses the same logo geometry with a matching wordmark palette', async () => {
+  const runtime = await source('src/standard-theme-runtime.js');
+  for (const [theme, file] of [
+    ['red','ennstal-connect-wordmark-red.svg'],
+    ['blue','ennstal-connect-wordmark-blue.svg'],
+    ['neon','ennstal-connect-wordmark-neon.svg'],
+    ['alpine','ennstal-connect-wordmark-alpine.svg'],
+    ['teal','ennstal-connect-wordmark-teal.svg'],
+    ['violet','ennstal-connect-wordmark-violet.svg'],
+    ['copper','ennstal-connect-wordmark-copper.svg'],
+    ['aurora','ennstal-connect-wordmark-aurora.svg']
+  ]) {
+    assert.ok(runtime.includes(`key: '${theme}', logo: '/${file}'`));
+  }
 });
