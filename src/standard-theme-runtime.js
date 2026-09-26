@@ -4,6 +4,9 @@ const THEMES = {
   'layout-theme-red': { key: 'red', logo: '/ennstal-connect-wordmark-red.svg' },
   'layout-theme-blue': { key: 'blue', logo: '/ennstal-connect-wordmark-blue.svg' },
   'layout-theme-neon': { key: 'neon', logo: '/ennstal-connect-wordmark.svg' },
+  'layout-theme-alpine': { key: 'alpine', logo: '/ennstal-connect-wordmark.svg' },
+  'layout-theme-teal': { key: 'teal', logo: '/ennstal-connect-wordmark.svg' },
+  'layout-theme-violet': { key: 'violet', logo: '/ennstal-connect-wordmark.svg' },
 };
 const DEFAULT_LOGO = '/ennstal-connect-wordmark.svg';
 const LEGACY_LAYOUTS = new Set(['alpine', 'aurora', 'ocean', 'slate', 'ember', 'redwood', 'lavender', 'midnight', 'sunrise', 'neon']);
@@ -46,6 +49,9 @@ function layoutOptions(state) {
     ['standard', 'Standard – Ennstal Connect', true],
     ['theme-red', redOpen ? 'Connect Rot – Hellrot' : '🔒 Connect Rot – ab 30 Aktivitätspunkten', redOpen],
     ['theme-blue', blueOpen ? 'Connect Blau – Kräftig' : '🔒 Connect Blau – ab 150 Aktivitätspunkten', blueOpen],
+    ['theme-alpine', 'Alpin Grün – Ruhig & Regional', true],
+    ['theme-teal', 'Bergsee Türkis – Frisch & Klar', true],
+    ['theme-violet', 'Enzian Violett – Modern & Edel', true],
     ['theme-neon', 'Neon Grün – Giftgrün & Dunkel', true],
   ];
 }
@@ -126,7 +132,7 @@ function renderProgress(section) {
   const prestigeLabel = progress.prestige ? `Prestige ${progress.prestige}` : 'Prestige ab 300 Punkten';
   const prestigeNext = progress.prestige_next_score == null ? 'höchste Prestige-Stufe' : `nächste Stufe bei ${Number(progress.prestige_next_score)}`;
 
-  card.innerHTML = `<div class="ec-activity-progress-head"><span>COMMUNITY-LEVEL</span><strong>${String(progress.level || 'Neu')}</strong><b>${score} Punkte${next ? ` · nächstes Level bei ${next}` : ' · Level abgeschlossen'}</b></div><div class="ec-activity-progress-bar"><i style="width:${progressPercent(progress)}%"></i></div><div class="ec-activity-prestige-head"><span>${prestigeLabel}</span><b>${prestigeNext}</b></div><div class="ec-activity-progress-bar ec-activity-prestige-bar"><i style="width:${prestigePercent(progress)}%"></i></div><p>${rewardText(progress)}</p><div class="ec-activity-reward-chips"><span class="${progress.red_unlocked ? 'is-unlocked' : 'is-locked'}">${progress.red_unlocked ? '✓' : '🔒'} Connect Rot</span><span class="${progress.blue_unlocked ? 'is-unlocked' : 'is-locked'}">${progress.blue_unlocked ? '✓' : '🔒'} Connect Blau</span><span class="is-unlocked">✓ Neon Grün</span>${progress.prestige ? `<span class="is-prestige">★ ${progress.prestige}</span>` : ''}</div><details class="ec-activity-breakdown"><summary>Wie entstehen meine Punkte?</summary><p>Aktive Onlinezeit zählt langsam weiter. Beiträge, Antworten, Freundschaften, Gruppen, Events und regionale Community-Aktivität zählen stärker.</p><div>${components.map(([key, points]) => `<span><b>+${Number(points)}</b> ${COMPONENT_LABELS[key] || key}</span>`).join('')}</div></details>`;
+  card.innerHTML = `<div class="ec-activity-progress-head"><span>COMMUNITY-LEVEL</span><strong>${String(progress.level || 'Neu')}</strong><b>${score} Punkte${next ? ` · nächstes Level bei ${next}` : ' · Level abgeschlossen'}</b></div><div class="ec-activity-progress-bar"><i style="width:${progressPercent(progress)}%"></i></div><div class="ec-activity-prestige-head"><span>${prestigeLabel}</span><b>${prestigeNext}</b></div><div class="ec-activity-progress-bar ec-activity-prestige-bar"><i style="width:${prestigePercent(progress)}%"></i></div><p>${rewardText(progress)}</p><div class="ec-activity-reward-chips"><span class="${progress.red_unlocked ? 'is-unlocked' : 'is-locked'}">${progress.red_unlocked ? '✓' : '🔒'} Connect Rot</span><span class="${progress.blue_unlocked ? 'is-unlocked' : 'is-locked'}">${progress.blue_unlocked ? '✓' : '🔒'} Connect Blau</span><span class="is-unlocked">✓ Alpin Grün</span><span class="is-unlocked">✓ Bergsee Türkis</span><span class="is-unlocked">✓ Enzian Violett</span><span class="is-unlocked">✓ Neon Grün</span>${progress.prestige ? `<span class="is-prestige">★ ${progress.prestige}</span>` : ''}</div><details class="ec-activity-breakdown"><summary>Wie entstehen meine Punkte?</summary><p>Aktive Onlinezeit zählt langsam weiter. Beiträge, Antworten, Freundschaften, Gruppen, Events und regionale Community-Aktivität zählen stärker.</p><div>${components.map(([key, points]) => `<span><b>+${Number(points)}</b> ${COMPONENT_LABELS[key] || key}</span>`).join('')}</div></details>`;
 }
 
 function normalizeLayoutControls() {
@@ -135,7 +141,7 @@ function normalizeLayoutControls() {
     const heading = section.querySelector('h3');
     const copy = section.querySelector('p');
     if (heading) heading.textContent = 'Dein Layout';
-    if (copy && !copy.closest('.ec-activity-progress')) copy.textContent = 'Der Aufbau bleibt immer gleich. Standard, Rot, Blau und Neon sind voneinander getrennte Designs.';
+    if (copy && !copy.closest('.ec-activity-progress')) copy.textContent = 'Der Aufbau bleibt immer gleich. Nur Farben, Tiefe und Stimmung ändern sich.';
     renderProgress(section);
   });
 }
@@ -236,7 +242,12 @@ function syncTheme() {
   const app = document.querySelector('.app');
   watchApp(app);
   if (app) [...LEGACY_LAYOUTS].forEach((legacy) => app.classList.remove(`layout-${legacy}`));
-  if (app) app.classList.toggle('layout-theme-neon', savedLayout === 'theme-neon');
+  if (app) {
+    app.classList.toggle('layout-theme-neon', savedLayout === 'theme-neon');
+    app.classList.toggle('layout-theme-alpine', savedLayout === 'theme-alpine');
+    app.classList.toggle('layout-theme-teal', savedLayout === 'theme-teal');
+    app.classList.toggle('layout-theme-violet', savedLayout === 'theme-violet');
+  }
   const match = app ? Object.entries(THEMES).find(([className]) => app.classList.contains(className)) : null;
   const next = match ? match[1] : { key: 'standard', logo: DEFAULT_LOGO };
   if (next.key !== lastKey) {
