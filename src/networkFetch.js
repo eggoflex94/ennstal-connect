@@ -12,6 +12,11 @@ const isTransientNetworkError = (error) => /failed to fetch|networkerror|network
 
 function emitNetworkError(url, method, detail = {}) {
   if (/\/rpc\/record_client_error(?:[/?#]|$)/i.test(String(url || ""))) return;
+  const backgroundTransient = globalThis.document?.visibilityState === "hidden"
+    && (detail.kind === "network" || detail.kind === "timeout");
+  const backgroundPresenceAbort = /\/rpc\/record_presence(?:[/?#]|$)/i.test(String(url || ""))
+    && /abort|load failed|failed to fetch|network/i.test(String(detail.message || ""));
+  if (backgroundTransient || backgroundPresenceAbort) return;
   try {
     const parsed = new URL(String(url || ""), globalThis.location?.href || "http://localhost");
     globalThis.window?.dispatchEvent?.(new CustomEvent("ec:network-error", {
