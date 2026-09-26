@@ -168,20 +168,24 @@ async function openSupport() {
   card.append(contactsTitle);
   const contacts = document.createElement("div");
   contacts.className = "ec-support-people";
-  contacts.textContent = "Wird geladen …";
+  contacts.textContent = currentUser
+    ? "Wird geladen …"
+    : "Persönliche Community-Ansprechpartner werden nach der Anmeldung angezeigt. Der E-Mail-Support ist weiterhin erreichbar.";
   card.append(contacts);
 
   overlay.append(card);
   document.body.append(overlay);
   document.body.classList.add("ec-support-open");
   overlay.onclick = (event) => { if (event.target === overlay) closeSupport(); };
-  try {
-    const people = await loadSupportContacts();
-    contacts.replaceChildren(...people.map(renderContact));
-    if (!people.length) contacts.textContent = "Derzeit sind keine Support-Ansprechpartner hinterlegt.";
-  } catch (error) {
-    contacts.textContent = "Support-Ansprechpartner konnten gerade nicht geladen werden.";
-    console.warn(error);
+  if (currentUser) {
+    try {
+      const people = await loadSupportContacts();
+      contacts.replaceChildren(...people.map(renderContact));
+      if (!people.length) contacts.textContent = "Derzeit sind keine Support-Ansprechpartner hinterlegt.";
+    } catch (error) {
+      contacts.textContent = "Support-Ansprechpartner konnten gerade nicht geladen werden.";
+      console.warn(error);
+    }
   }
   close.focus();
 }
