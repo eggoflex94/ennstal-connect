@@ -1,8 +1,8 @@
 import { supabase } from './supabaseClient';
 
 const THEMES = {
-  'layout-theme-red': { key: 'red', logo: '/ennstal-connect-wordmark-red.svg' },
-  'layout-theme-blue': { key: 'blue', logo: '/ennstal-connect-wordmark-blue.svg' },
+  'layout-theme-red': { key: 'red', logo: '/ennstal-connect-wordmark.svg' },
+  'layout-theme-blue': { key: 'blue', logo: '/ennstal-connect-wordmark.svg' },
   'layout-theme-neon': { key: 'neon', logo: '/ennstal-connect-wordmark.svg' },
   'layout-theme-alpine': { key: 'alpine', logo: '/ennstal-connect-wordmark.svg' },
   'layout-theme-teal': { key: 'teal', logo: '/ennstal-connect-wordmark.svg' },
