@@ -27,7 +27,7 @@ async function touchPresence(force = false) {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) return;
     const device = deviceType();
-    const { error } = await supabase.rpc('ec_touch_presence', { p_device: device });
+    const { error } = await supabase.rpc('record_presence', { p_online: true, p_device: device });
     if (!error) {
       lastSentAt = Date.now();
       document.documentElement.dataset.ecPresenceDevice = device;
