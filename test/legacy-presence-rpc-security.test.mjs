@@ -19,9 +19,12 @@ test('legacy presence RPCs are not directly exposed', async () => {
   assert.match(sql, /revoke execute on function %s from public, anon, authenticated/);
 });
 
-test('current presence RPCs remain in the client bundle source', async () => {
+test('current presence RPCs remain wired in active client sources', async () => {
   const app = await source('src/App.jsx');
+  const mobile = await source('src/mobile-presence-sync.js');
+  const rewards = await source('src/online-reward-tracker.js');
   assert.match(app, /record_presence/);
-  assert.match(app, /record_online_activity/);
-  assert.match(app, /record_online_time/);
+  assert.match(mobile, /record_presence/);
+  assert.doesNotMatch(mobile, /ec_touch_presence/);
+  assert.match(rewards, /record_online_time/);
 });
