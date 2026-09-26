@@ -6,6 +6,7 @@ const source = async (path) => readFile(new URL(`../${path}`, import.meta.url), 
 
 test('neon theme stays available, persists immediately and survives React rerenders', async () => {
   const runtime = await source('src/standard-theme-runtime.js');
+  const app = await source('src/App.jsx');
   const main = await source('src/main.jsx');
   const neonCss = await source('src/neon-green-theme.css');
   assert.match(runtime, /\['theme-neon'[\s\S]*Neon Grün – Giftgrün & Dunkel[\s\S]*unlocked\(1200\)/);
