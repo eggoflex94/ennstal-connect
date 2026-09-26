@@ -145,7 +145,19 @@ function renderProgress(section) {
   const prestigeLabel = progress.prestige ? `Prestige ${progress.prestige}` : 'Prestige ab 300 Punkten';
   const prestigeNext = progress.prestige_next_score == null ? 'höchste Prestige-Stufe' : `nächste Stufe bei ${Number(progress.prestige_next_score)}`;
 
-  card.innerHTML = `<div class="ec-activity-progress-head"><span>COMMUNITY-LEVEL</span><strong>${String(progress.level || 'Neu')}</strong><b>${score} Punkte${next ? ` · nächstes Level bei ${next}` : ' · Level abgeschlossen'}</b></div><div class="ec-activity-progress-bar"><i style="width:${progressPercent(progress)}%"></i></div><div class="ec-activity-prestige-head"><span>${prestigeLabel}</span><b>${prestigeNext}</b></div><div class="ec-activity-progress-bar ec-activity-prestige-bar"><i style="width:${prestigePercent(progress)}%"></i></div><p>${rewardText(progress)}</p><div class="ec-activity-reward-chips"><span class="${progress.red_unlocked ? 'is-unlocked' : 'is-locked'}">${progress.red_unlocked ? '✓' : '🔒'} Connect Rot</span><span class="${progress.blue_unlocked ? 'is-unlocked' : 'is-locked'}">${progress.blue_unlocked ? '✓' : '🔒'} Connect Blau</span><span class="is-unlocked">✓ Alpin Grün</span><span class="is-unlocked">✓ Bergsee Türkis</span><span class="is-unlocked">✓ Enzian Violett</span><span class="is-unlocked">✓ Neon Grün</span>${progress.prestige ? `<span class="is-prestige">★ ${progress.prestige}</span>` : ''}</div><details class="ec-activity-breakdown"><summary>Wie entstehen meine Punkte?</summary><p>Aktive Onlinezeit zählt langsam weiter. Beiträge, Antworten, Freundschaften, Gruppen, Events und regionale Community-Aktivität zählen stärker.</p><div>${components.map(([key, points]) => `<span><b>+${Number(points)}</b> ${COMPONENT_LABELS[key] || key}</span>`).join('')}</div></details>`;
+  card.innerHTML = `<div class="ec-activity-progress-head"><span>COMMUNITY-LEVEL</span><strong>${String(progress.level || 'Neu')}</strong><b>${score} Punkte${next ? ` · nächstes Level bei ${next}` : ' · Level abgeschlossen'}</b></div><div class="ec-activity-progress-bar"><i style="width:${progressPercent(progress)}%"></i></div><div class="ec-activity-prestige-head"><span>${prestigeLabel}</span><b>${prestigeNext}</b></div><div class="ec-activity-progress-bar ec-activity-prestige-bar"><i style="width:${prestigePercent(progress)}%"></i></div><p>${rewardText(progress)}</p><div class="ec-activity-reward-chips">${[
+    [30,'Connect Rot'],
+    [75,'Alpin Grün'],
+    [150,'Connect Blau'],
+    [300,'Bergsee Türkis'],
+    [450,'Enzian Violett'],
+    [650,'Kupfer Nacht'],
+    [900,'Polarlicht'],
+    [1200,'Neon Grün'],
+  ].map(([minimum,label]) => {
+    const open = privilegedThemeUnlocked || businessUnlocked || score >= minimum;
+    return `<span class="${open ? 'is-unlocked' : 'is-locked'}">${open ? '✓' : '🔒'} ${label}</span>`;
+  }).join('')}${progress.prestige ? `<span class="is-prestige">★ ${progress.prestige}</span>` : ''}</div><details class="ec-activity-breakdown"><summary>Wie entstehen meine Punkte?</summary><p>Aktive Onlinezeit zählt langsam weiter. Beiträge, Antworten, Freundschaften, Gruppen, Events und regionale Community-Aktivität zählen stärker.</p><div>${components.map(([key, points]) => `<span><b>+${Number(points)}</b> ${COMPONENT_LABELS[key] || key}</span>`).join('')}</div></details>`;
 }
 
 function normalizeLayoutControls() {
