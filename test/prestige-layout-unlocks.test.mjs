@@ -35,6 +35,6 @@ test('rare layouts include copper night and aurora palettes', async () => {
   const css = await source('src/standard-theme-variants.css');
   assert.match(css, /layout-theme-copper/);
   assert.match(css, /layout-theme-aurora/);
-  assert.match(css, /Kupfer/);
-  assert.match(css, /Polarlicht|aurora/i);
+  assert.match(css, /--ec-theme-primary:#c77842/);
+  assert.match(css, /#23d4cf/);
 });
