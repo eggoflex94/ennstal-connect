@@ -679,3 +679,184 @@
 @media(max-width:620px){
   .cockpit-kpi-strip{grid-template-columns:1fr!important}
 }
+
+
+/* Personal dock redesign: keep homepage dominant, preserve every function, clarify hierarchy. */
+.ec-right-dock{
+  --ec-dock-card:#ffffff;
+  --ec-dock-line:#dfe6eb;
+  --ec-dock-muted:#6b7e91;
+}
+.ec-right-dock .ec-dock-head{
+  display:grid!important;
+  grid-template-columns:50px minmax(0,1fr)!important;
+  column-gap:10px!important;
+  align-items:center!important;
+  padding:12px 12px 10px!important;
+  margin:0 0 8px!important;
+  border:1px solid var(--ec-dock-line)!important;
+  border-radius:16px!important;
+  background:var(--ec-dock-card)!important;
+}
+.ec-right-dock .ec-dock-head>span{
+  grid-column:1/-1!important;
+  margin-bottom:3px!important;
+  color:#7650bf!important;
+  font-size:9px!important;
+  font-weight:950!important;
+  letter-spacing:.14em!important;
+}
+.ec-dock-head-avatar{
+  grid-row:2/span 3!important;
+  width:50px!important;
+  height:50px!important;
+  border-radius:14px!important;
+  object-fit:cover!important;
+  border:2px solid #d8e4ed!important;
+  background:#eef3f7!important;
+}
+.ec-right-dock .ec-dock-head strong{
+  min-width:0!important;
+  font-size:16px!important;
+  line-height:1.1!important;
+  color:#17324a!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+}
+.ec-dock-role-line{
+  display:block!important;
+  margin-top:3px!important;
+  font-size:9px!important;
+  font-weight:900!important;
+  color:#1d2730!important;
+  text-transform:uppercase!important;
+  letter-spacing:.05em!important;
+}
+.ec-right-dock .ec-dock-home{
+  margin-top:2px!important;
+  font-size:9px!important;
+  line-height:1.3!important;
+  color:var(--ec-dock-muted)!important;
+  white-space:normal!important;
+}
+
+.ec-dock-quick-label{
+  margin:3px 12px 5px!important;
+  font-size:9px!important;
+  font-weight:950!important;
+  letter-spacing:.13em!important;
+  color:#687d90!important;
+}
+.ec-right-dock .ec-compact-menu-grid{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:7px!important;
+  margin:0 10px 10px!important;
+  padding:9px!important;
+  border:1px solid var(--ec-dock-line)!important;
+  border-radius:16px!important;
+  background:#f7fafc!important;
+}
+.ec-right-dock .ec-compact-menu-grid>.ec-compact-menu-item{
+  min-height:58px!important;
+  height:auto!important;
+  padding:8px 4px!important;
+  display:grid!important;
+  place-items:center!important;
+  align-content:center!important;
+  gap:4px!important;
+  border:1px solid #dfe6eb!important;
+  border-radius:12px!important;
+  background:#fff!important;
+  color:#26425b!important;
+}
+.ec-right-dock .ec-compact-menu-grid>.ec-compact-menu-item:hover,
+.ec-right-dock .ec-compact-menu-grid>.ec-compact-menu-item:focus-visible{
+  background:#f2f7fb!important;
+  color:#17324a!important;
+  border-color:#9ec2df!important;
+}
+.ec-right-dock .ec-compact-menu-icon{
+  width:21px!important;
+  height:21px!important;
+}
+.ec-right-dock .ec-compact-menu-label,
+.ec-right-dock .ec-compact-menu-grid>.ec-compact-menu-item>span:not(.ec-compact-menu-icon){
+  position:static!important;
+  width:auto!important;
+  height:auto!important;
+  clip:auto!important;
+  margin:0!important;
+  overflow:visible!important;
+  white-space:normal!important;
+  border:0!important;
+  font-size:8px!important;
+  line-height:1.1!important;
+  font-weight:850!important;
+  text-align:center!important;
+  color:inherit!important;
+}
+.ec-right-dock .ec-dock-notification-badge[hidden],
+.ec-right-dock .ec-dock-visits-count[hidden],
+.ec-right-dock .ec-dock-updates-count[hidden],
+.ec-right-dock .ec-dock-actions-count[hidden]{display:none!important}
+
+.ec-online-friends-panel,
+.ec-right-dock [data-ec-detail="visits"],
+.ec-right-dock .ec-dock-reward-card,
+.ec-right-dock .ec-sidebar-banners,
+.ec-right-dock .ec-sidebar-ads{
+  border-radius:15px!important;
+}
+.ec-right-dock [data-ec-detail="visits"]{
+  margin:3px 10px!important;
+  border:1px solid #e2e7ec!important;
+  background:#fff!important;
+}
+.ec-right-dock .ec-dock-reward-card{
+  margin:8px 10px!important;
+  padding:12px!important;
+}
+.ec-right-dock .ec-sidebar-banners,
+.ec-right-dock .ec-sidebar-ads{
+  margin-top:10px!important;
+  order:50!important;
+}
+.ec-right-dock .ec-logout{order:60!important}
+
+@media(min-width:901px){
+  .ec-regional-ui .modern-main{
+    grid-template-columns:minmax(0,1fr) 286px!important;
+    column-gap:16px!important;
+  }
+  .ec-right-dock.ec-document-flow-dock{
+    max-width:286px!important;
+  }
+}
+
+@media(max-width:900px){
+  .ec-right-dock{
+    width:min(92vw,360px)!important;
+    max-width:360px!important;
+    padding:64px 12px 18px!important;
+  }
+  .ec-right-dock .ec-dock-head{
+    grid-template-columns:46px minmax(0,1fr)!important;
+    position:sticky!important;
+    top:0!important;
+    z-index:2!important;
+  }
+  .ec-dock-head-avatar{
+    width:46px!important;
+    height:46px!important;
+  }
+  .ec-right-dock .ec-compact-menu-grid{
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  }
+}
+
+@media(max-width:420px){
+  .ec-right-dock{width:100vw!important;max-width:none!important}
+  .ec-right-dock .ec-compact-menu-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+  .ec-right-dock .ec-compact-menu-grid>.ec-compact-menu-item{min-height:56px!important}
+}
