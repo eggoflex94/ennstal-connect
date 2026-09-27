@@ -1582,7 +1582,7 @@ function MemberInviteCard({ profile, user }) {
     return () => { cancelled = true; };
   }, [user?.id]);
   if (!user?.id || !profile?.nickname) return null;
-  const inviteUrl = location.origin + "/?ref=" + encodeURIComponent(profile.nickname);
+  const inviteUrl = location.origin + "/?ref=" + encodeURIComponent(profile.nickname) + "&share=20260927b";
   const copiedFeedback = () => { setCopied(true); window.setTimeout(() => setCopied(false), 2200); };
   const copy = async () => {
     try { await navigator.clipboard.writeText(inviteUrl); copiedFeedback(); } catch {}
