@@ -756,6 +756,8 @@ useEffect(() => {
     if (!supabase || !user?.id) return undefined;
     let cancelled = false;
     const loadNotifications = async () => {
+      const { error: reminderError } = await supabase.rpc("ec_create_due_event_reminders");
+      if (reminderError && !/function|schema cache|does not exist/i.test(reminderError.message || "")) console.warn("Termin-Erinnerungen konnten nicht geprüft werden:", reminderError.message);
       const { data, error } = await supabase.from("notifications").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(80);
       if (!cancelled && !error) setNotifications(data || []);
       if (!cancelled && error) console.warn("Benachrichtigungen konnten nicht geladen werden:", error.message);
@@ -1399,6 +1401,7 @@ useEffect(() => {
     if (type === "FORUM_REPLY") return setPage("forum");
     if (type === "POKE") return setPage("members");
     if (type === "ACTIVITY_REWARD") return setPage("profile");
+    if (type === "EVENT_REMINDER") return setPage("community");
   }
 
   async function sendWelcomeGreeting(member) {
@@ -1725,6 +1728,7 @@ function NotificationCenter({ notifications, onOpen, onMarkAll }) {
     if (key === "ADMIN_FORUM_POST") return "▤";
     if (key === "REFERRAL_JOINED") return "↗";
     if (key === "WELCOME_GREETING") return "👋";
+    if (key === "EVENT_REMINDER") return "◷";
     return "◎";
   };
   return <section className="notification-center">
