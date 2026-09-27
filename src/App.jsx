@@ -1898,13 +1898,24 @@ function ActivationDashboard({ data, onRefresh, forumPosts, forumReplies, events
   const blockers = data?.blockers || {};
   const pct = (value, total) => total > 0 ? Math.round((Number(value || 0) / Number(total)) * 100) : 0;
   const total = Number(funnel.total_members || 0);
+  const publicRate = pct(funnel.first_public_action,total);
+  const activeRate = pct(funnel.active_7d,total);
+  const profileRate = pct(funnel.profile_complete,total);
+  const socialActions = Number(activity.forum_replies_7d || 0) + Number(activity.event_rsvps_7d || 0) + Number(activity.group_joins_7d || 0) + Number(activity.photo_comments_7d || 0) + Number(activity.welcome_greetings_7d || 0) + Number(activity.helpful_marks_7d || 0);
+  const prevSocialActions = Number(activity.forum_replies_prev_7d || 0) + Number(activity.event_rsvps_prev_7d || 0) + Number(activity.group_joins_prev_7d || 0) + Number(activity.photo_comments_prev_7d || 0) + Number(activity.welcome_greetings_prev_7d || 0) + Number(activity.helpful_marks_prev_7d || 0);
+  const deltaLabel = (current, previous) => {
+    const delta = Number(current || 0) - Number(previous || 0);
+    if (delta > 0) return "+" + delta + " zur Vorwoche";
+    if (delta < 0) return String(delta) + " zur Vorwoche";
+    return "unverändert zur Vorwoche";
+  };
   const funnelRows = [
     ["Aktive Profile", total, 100],
-    ["Profil sinnvoll ergänzt", Number(funnel.profile_complete || 0), pct(funnel.profile_complete,total)],
+    ["Profil sinnvoll ergänzt", Number(funnel.profile_complete || 0), profileRate],
     ["Mindestens eine Gruppe", Number(funnel.joined_group || 0), pct(funnel.joined_group,total)],
     ["Mindestens eine Verbindung", Number(funnel.connected_member || 0), pct(funnel.connected_member,total)],
-    ["Erste öffentliche Aktion", Number(funnel.first_public_action || 0), pct(funnel.first_public_action,total)],
-    ["In den letzten 7 Tagen aktiv", Number(funnel.active_7d || 0), pct(funnel.active_7d,total)],
+    ["Erste öffentliche Aktion", Number(funnel.first_public_action || 0), publicRate],
+    ["In den letzten 7 Tagen aktiv", Number(funnel.active_7d || 0), activeRate],
   ];
   const activities = [
     ["Neue Mitglieder", activity.joined_7d ?? funnel.joined_7d ?? 0],
@@ -1918,10 +1929,9 @@ function ActivationDashboard({ data, onRefresh, forumPosts, forumReplies, events
     ["Hilfreich-Markierungen", activity.helpful_marks_7d || 0],
   ];
   const blockersList = [
-    ["Unbeantwortete Forumsbeiträge", blockers.unanswered_forum_posts || 0, "forum"],
-    ["Kommende Events ohne Reaktion", blockers.upcoming_events_without_rsvp || 0, "community"],
-    ["Gruppen ohne Mitglieder", blockers.groups_without_members || 0, "groups"],
-    ["Fotos ohne Kommentar", blockers.photos_without_comments || 0, "photos"],
+    ["Unbeantwortete Forumsbeiträge", blockers.unanswered_forum_posts || 0, "forum", "🔴"],
+    ["Kommende Events ohne Reaktion", blockers.upcoming_events_without_rsvp || 0, "community", "🟠"],
+    ["Fotos ohne Kommentar", blockers.photos_without_comments || 0, "photos", "🟡"],
   ];
   const generated = data?.generated_at ? new Date(data.generated_at).toLocaleString("de-AT") : "";
   const replyCountFor = (postId) => forumReplies.filter((reply) => reply.post_id === postId).length;
@@ -1932,21 +1942,36 @@ function ActivationDashboard({ data, onRefresh, forumPosts, forumReplies, events
     ...events.filter((event) => event.status !== "CANCELLED" && new Date(event.event_at).getTime() >= Date.now() && rsvpCountFor(event.id) === 0).sort((a,b)=>new Date(a.event_at)-new Date(b.event_at)).slice(0,2).map((event)=>({kind:"Event",title:event.title,page:"community",hint:"Noch keine Reaktion"})),
     ...photos.filter((photo) => commentCountFor(photo.id) === 0).sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0)).slice(0,1).map((photo)=>({kind:"Foto",title:photo.caption || "Neues Community-Foto",page:"photos",hint:"Noch kein Kommentar"})),
   ].slice(0,5);
-  return <section className="activation-dashboard panel">
-    <div className="activation-dashboard-head"><div><span className="eyebrow">HEAD-ADMIN · AKTIVIERUNG</span><h2>Community-Gesundheit</h2><p>Aggregierte Kennzahlen zeigen, wo Mitglieder vom Anmelden ins Mitmachen kommen – und wo noch Reibung entsteht.</p>{generated && <small>Stand: {generated}</small>}</div><button type="button" className="secondary-button" onClick={onRefresh}>Aktualisieren</button></div>
+  return <section className="activation-dashboard activation-cockpit panel">
+    <div className="activation-dashboard-head"><div><span className="eyebrow">HEAD-ADMIN · COMMUNITY COCKPIT</span><h2>Was braucht heute deine Aufmerksamkeit?</h2><p>Die wichtigsten Signale zuerst. Details bleiben verfügbar, aber der Alltag startet hier mit klaren nächsten Schritten.</p>{generated && <small>Stand: {generated}</small>}</div><button type="button" className="secondary-button" onClick={onRefresh}>Aktualisieren</button></div>
     {!data ? <div className="empty-card">Kennzahlen werden geladen …</div> : <>
-      <div className="activation-summary-grid">
-        <article><strong>{total}</strong><span>aktive echte Profile</span></article>
-        <article><strong>{Number(funnel.joined_7d || 0)}</strong><span>neue Mitglieder · 7 Tage</span></article>
-        <article><strong>{Number(funnel.active_7d || 0)}</strong><span>aktive Mitglieder · 7 Tage</span></article>
-        <article><strong>{pct(funnel.first_public_action,total)}%</strong><span>mit erster öffentlicher Aktion</span></article>
+      <div className="cockpit-kpi-strip">
+        <article><small>MITGLIEDER</small><strong>{total}</strong><span>{Number(funnel.joined_7d || 0)} neu diese Woche</span></article>
+        <article><small>AKTIV</small><strong>{Number(funnel.active_7d || 0)}</strong><span>{activeRate}% der Mitglieder</span><em>{deltaLabel(funnel.active_7d,funnel.active_prev_7d)}</em></article>
+        <article><small>BETEILIGUNG</small><strong>{publicRate}%</strong><span>mit erster öffentlicher Aktion</span></article>
+        <article><small>SOZIALE AKTIONEN</small><strong>{socialActions}</strong><span>in den letzten 7 Tagen</span><em>{deltaLabel(socialActions,prevSocialActions)}</em></article>
       </div>
-      <div className="activation-dashboard-grid">
-        <article className="activation-funnel"><h3>Aktivierungs-Funnel</h3>{funnelRows.map(([label,value,percent]) => <div className="activation-funnel-row" key={label}><div><span>{label}</span><b>{value} · {percent}%</b></div><i><em style={{width:String(percent)+"%"}}/></i></div>)}</article>
-        <article className="activation-week"><h3>Aktivität der letzten 7 Tage</h3><div>{activities.map(([label,value]) => <span key={label}><b>{Number(value || 0)}</b><small>{label}</small></span>)}</div></article>
+
+      <article className="cockpit-priority">
+        <div><span className="eyebrow">HEUTE WICHTIG</span><h3>Hier liegt gerade das größte Potenzial</h3><p>Maximal drei Bereiche, die du sofort öffnen und anschieben kannst.</p></div>
+        <div>{blockersList.map(([label,value,page,icon]) => <button type="button" key={label} onClick={() => window.dispatchEvent(new CustomEvent("ec:navigate",{detail:{page,source:"activation-cockpit"}}))}><span>{icon}</span><strong>{Number(value || 0)}</strong><b>{label}</b><em>Jetzt öffnen →</em></button>)}</div>
+      </article>
+
+      <div className="cockpit-health-grid">
+        <article><small>KOMMEN LEUTE REIN?</small><strong>{Number(funnel.joined_7d || 0)}</strong><span>neue Mitglieder in 7 Tagen</span><em>{deltaLabel(funnel.joined_7d,funnel.joined_prev_7d)}</em></article>
+        <article><small>MACHEN SIE MIT?</small><strong>{socialActions}</strong><span>soziale Aktionen in 7 Tagen</span><em>{deltaLabel(socialActions,prevSocialActions)}</em></article>
+        <article><small>KOMMEN SIE ZURÜCK?</small><strong>{activeRate}%</strong><span>{Number(funnel.active_7d || 0)} von {total} waren aktiv</span><em>{deltaLabel(funnel.active_7d,funnel.active_prev_7d)}</em></article>
       </div>
-      <article className="activation-blockers"><div><h3>Wo gerade Potenzial liegen bleibt</h3><p>Diese Zahlen sind keine Bewertung einzelner Mitglieder. Sie zeigen nur Bereiche, in denen Inhalte noch keine Resonanz bekommen.</p></div><div>{blockersList.map(([label,value,page]) => <button type="button" key={label} onClick={() => window.dispatchEvent(new CustomEvent("ec:navigate",{detail:{page,source:"activation-dashboard"}}))}><strong>{Number(value || 0)}</strong><span>{label}</span><b>Öffnen →</b></button>)}</div></article>
-      {opportunities.length > 0 && <article className="activation-opportunities"><div><span className="eyebrow">COMMUNITY ANSCHIEBEN</span><h3>Diese Inhalte brauchen gerade zuerst Resonanz</h3><p>Öffne gezielt 3–5 Stellen, statt allgemein nach Aktivität zu suchen.</p></div><div>{opportunities.map((item,index)=><button type="button" key={item.kind+"-"+index+"-"+item.title} onClick={()=>window.dispatchEvent(new CustomEvent("ec:navigate",{detail:{page:item.page,source:"activation-opportunities"}}))}><small>{item.kind}</small><strong>{item.title}</strong><span>{item.hint}</span><b>Öffnen →</b></button>)}</div></article>}
+
+      {opportunities.length > 0 && <article className="activation-opportunities"><div><span className="eyebrow">COMMUNITY ANSCHIEBEN</span><h3>Konkrete Inhalte, die zuerst Resonanz brauchen</h3><p>Öffne gezielt einzelne Stellen, statt allgemein nach Aktivität zu suchen.</p></div><div>{opportunities.map((item,index)=><button type="button" key={item.kind+"-"+index+"-"+item.title} onClick={()=>window.dispatchEvent(new CustomEvent("ec:navigate",{detail:{page:item.page,source:"activation-opportunities"}}))}><small>{item.kind}</small><strong>{item.title}</strong><span>{item.hint}</span><b>Öffnen →</b></button>)}</div></article>}
+
+      <details className="activation-details">
+        <summary>Details & Aktivierungs-Funnel anzeigen</summary>
+        <div className="activation-details-grid">
+          <article className="activation-funnel"><h3>Aktivierungs-Funnel</h3>{funnelRows.map(([label,value,percent]) => <div className="activation-funnel-row" key={label}><div><span>{label}</span><b>{value} · {percent}%</b></div><i><em style={{width:String(percent)+"%"}}/></i></div>)}</article>
+          <article className="activation-week"><h3>Aktivität der letzten 7 Tage</h3><div>{activities.map(([label,value]) => <span key={label}><b>{Number(value || 0)}</b><small>{label}</small></span>)}</div></article>
+        </div>
+      </details>
     </>}
   </section>;
 }
