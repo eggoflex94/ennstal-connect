@@ -542,3 +542,140 @@
 .activation-opportunities b{font-size:.66rem!important;color:#d94b13!important}
 @media(max-width:1100px){.activation-opportunities>div:last-child{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
 @media(max-width:620px){.activation-opportunities>div:last-child{grid-template-columns:1fr!important}}
+
+
+/* Community cockpit redesign */
+.activation-cockpit{
+  gap:18px!important;
+  background:linear-gradient(180deg,#ffffff 0%,#f8fbfd 100%)!important;
+}
+.cockpit-kpi-strip{
+  display:grid!important;
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:10px!important;
+}
+.cockpit-kpi-strip>article,
+.cockpit-health-grid>article{
+  display:grid!important;
+  gap:3px!important;
+  min-width:0!important;
+  padding:15px!important;
+  border:1px solid #dde5eb!important;
+  border-radius:16px!important;
+  background:#fff!important;
+}
+.cockpit-kpi-strip small,
+.cockpit-health-grid small{
+  font-size:.66rem!important;
+  font-weight:900!important;
+  letter-spacing:.08em!important;
+  color:#6c7f91!important;
+}
+.cockpit-kpi-strip strong,
+.cockpit-health-grid strong{
+  font-size:1.55rem!important;
+  line-height:1!important;
+  color:#17324a!important;
+}
+.cockpit-kpi-strip span,
+.cockpit-health-grid span{
+  font-size:.76rem!important;
+  color:#60758a!important;
+}
+.cockpit-kpi-strip em,
+.cockpit-health-grid em{
+  margin-top:4px!important;
+  font-style:normal!important;
+  font-size:.69rem!important;
+  color:#7f8e9b!important;
+}
+
+.cockpit-priority{
+  display:grid!important;
+  gap:12px!important;
+  padding:16px!important;
+  border:1px solid #efd8c7!important;
+  border-radius:18px!important;
+  background:linear-gradient(135deg,#fffdfb 0%,#fff7f1 100%)!important;
+}
+.cockpit-priority h3{margin:3px 0 5px!important;color:#20364b!important}
+.cockpit-priority p{margin:0!important;color:#746658!important;font-size:.8rem!important}
+.cockpit-priority>div:last-child{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:9px!important;
+}
+.cockpit-priority button{
+  display:grid!important;
+  grid-template-columns:auto auto minmax(0,1fr)!important;
+  align-items:center!important;
+  gap:4px 9px!important;
+  min-width:0!important;
+  padding:12px!important;
+  border:1px solid #eadfd6!important;
+  border-radius:13px!important;
+  background:#fff!important;
+  color:#20364b!important;
+  text-align:left!important;
+}
+.cockpit-priority button>span{font-size:1rem!important}
+.cockpit-priority button>strong{font-size:1.35rem!important;color:#17324a!important}
+.cockpit-priority button>b{font-size:.76rem!important;line-height:1.3!important}
+.cockpit-priority button>em{grid-column:3!important;font-style:normal!important;font-size:.68rem!important;color:#d94b13!important}
+.cockpit-priority button:hover{border-color:#ff9a67!important;box-shadow:0 7px 18px rgba(255,107,37,.08)!important}
+
+.cockpit-health-grid{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:10px!important;
+}
+.cockpit-health-grid>article{border-left:4px solid #8ab7dc!important}
+.cockpit-health-grid>article:nth-child(2){border-left-color:#f0a264!important}
+.cockpit-health-grid>article:nth-child(3){border-left-color:#7fb694!important}
+
+.activation-details{
+  border:1px solid #dde5eb!important;
+  border-radius:16px!important;
+  background:#fff!important;
+  overflow:hidden!important;
+}
+.activation-details>summary{
+  cursor:pointer!important;
+  padding:14px 16px!important;
+  font-weight:850!important;
+  color:#2b4257!important;
+  list-style:none!important;
+}
+.activation-details>summary::-webkit-details-marker{display:none!important}
+.activation-details>summary::after{content:"+";float:right;color:#7b8b99!important}
+.activation-details[open]>summary::after{content:"−"}
+.activation-details-grid{
+  display:grid!important;
+  grid-template-columns:minmax(0,1.15fr) minmax(300px,.85fr)!important;
+  gap:12px!important;
+  padding:0 16px 16px!important;
+}
+.activation-details-grid>article{
+  padding:15px!important;
+  border:1px solid #e2e8ed!important;
+  border-radius:14px!important;
+  background:#fbfcfd!important;
+}
+
+/* Neutral funnel colors: reserve red for real action items only. */
+.activation-funnel-row>i>em{
+  background:linear-gradient(90deg,#5f9fd0,#87b7db)!important;
+}
+.activation-funnel-row:nth-child(5)>i>em{
+  background:linear-gradient(90deg,#e99b5d,#f3b477)!important;
+}
+
+@media(max-width:980px){
+  .cockpit-kpi-strip{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .cockpit-priority>div:last-child{grid-template-columns:1fr!important}
+  .cockpit-health-grid{grid-template-columns:1fr!important}
+  .activation-details-grid{grid-template-columns:1fr!important}
+}
+@media(max-width:620px){
+  .cockpit-kpi-strip{grid-template-columns:1fr!important}
+}
