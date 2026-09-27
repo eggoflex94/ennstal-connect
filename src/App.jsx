@@ -126,6 +126,7 @@ export default function App() {
   const [memberEmails, setMemberEmails] = useState({});
   const [friendships, setFriendships] = useState([]);
   const [messages, setMessages] = useState([]);
+  const [notifications, setNotifications] = useState([]);
   const [homepageSections, setHomepageSections] = useState([]);
   const [reports, setReports] = useState([]);
   const [blockedUsers, setBlockedUsers] = useState([]);
@@ -182,7 +183,7 @@ export default function App() {
     initializedProfileUser.current = null;
     setSectionStatus({ pending: [], failed: [] });
     setUser(null); setProfile(null); setMembers([]); setFriendships([]);
-    setMessages([]); setAdminMembers([]); setAdminLog([]); setMemberEmails({}); setCanViewPersonalData(false); setMyAdminPermissions({});
+    setMessages([]); setNotifications([]); setAdminMembers([]); setAdminLog([]); setMemberEmails({}); setCanViewPersonalData(false); setMyAdminPermissions({});
     setReports([]); setBlockedUsers([]); setFeatureLocks([]); setProfileVisits([]);
     setProfileActivities([]); setRulesAccepted(null); setViewingMember(null);
     setViewingFriends([]); setChatMember(null); setSelectedMember(null);
@@ -235,7 +236,7 @@ export default function App() {
       const pageMap = {
         home: "home", members: "members", forum: "forum", groups: "groups", photos: "photos",
         community: "community", events: "community", news: "news", ads: "community", profile: "profile",
-        messages: "messages", friends: "friends", requests: "friend-requests",
+        messages: "messages", notifications: "notifications", friends: "friends", requests: "friend-requests",
         blocked: "blocked", admin: "admin", municipality: "municipality"
       };
       if (pageMap[requested]) setPage(pageMap[requested]);
@@ -747,6 +748,19 @@ useEffect(() => {
     void loadRegionalContent().catch(error => { if (!cancelled) console.warn(error); });
     return () => { cancelled = true; };
   }, [user?.id, activeRegionId]);
+
+  useEffect(() => {
+    if (!supabase || !user?.id) return undefined;
+    let cancelled = false;
+    const loadNotifications = async () => {
+      const { data, error } = await supabase.from("notifications").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(80);
+      if (!cancelled && !error) setNotifications(data || []);
+      if (!cancelled && error) console.warn("Benachrichtigungen konnten nicht geladen werden:", error.message);
+    };
+    void loadNotifications();
+    const timer = window.setInterval(loadNotifications, 45000);
+    return () => { cancelled = true; window.clearInterval(timer); };
+  }, [user?.id]);
 
   useEffect(() => {
     if (!supabase || !user?.id) return undefined;
@@ -1355,6 +1369,34 @@ useEffect(() => {
   async function reviewProfileVerification(item, approved) { if (!isHeadAdmin(profile?.role)) return showNotice("Nur der Head Admin darf Verifizierungsanfragen abschließen."); if (approved && !confirm(`Die Echtheit von ${item.nickname || getName(item)} wurde geprüft und wird bestätigt?`)) return; const { error } = await supabase.rpc("admin_review_profile_verification", { p_user_id: item.user_id || item.id, p_approved: approved }); if (error) return showNotice(/function|schema cache|does not exist|relation/i.test(error.message || "") ? "Die Verifizierungsfunktion ist in der Datenbank noch nicht aktiv. Bitte führe registration_and_forum_repair.sql einmal im Supabase SQL Editor aus." : error.message); showNotice(approved ? "Profil wurde verifiziert." : "Verifizierungsanfrage wurde abgelehnt."); await openAccountReview(); await loadAll(); }
   async function setProfileVerification(member, verified) { return reviewProfileVerification({ user_id: member.id, nickname: getName(member) }, verified); }
   async function setMemberFeatureLock(member, feature, locked) { if (!isHeadAdmin(profile?.role)) return showNotice("Nur der Head Admin darf Funktionen sperren."); const label = feature === "FORUM_POSTING" ? "Forum schreiben" : feature === "MESSAGING" ? "Nachrichten" : "Freundschaftsanfragen"; const reason = locked ? prompt(`Grund für die Sperre „${label}" bei ${getName(member)}:`, "Verstoß gegen die Community-Regeln") : prompt(`Grund für die Freigabe „${label}" bei ${getName(member)}:`, "Funktion wieder freigegeben"); if (reason === null || reason.trim().length < 3) return showNotice("Bitte einen Grund angeben."); const { error } = await supabase.rpc("admin_set_feature_lock", { p_target_user: member.id, p_feature_key: feature, p_is_locked: locked, p_reason: reason.trim() }); if (error) return showNotice(error.message); showNotice(`${label} wurde ${locked ? "gesperrt" : "freigegeben"}; die automatische Nachricht wurde versendet.`); await loadAll(); }
+
+  async function markNotificationRead(notification) {
+    if (!notification?.id || notification.read_at) return;
+    const readAt = new Date().toISOString();
+    const { error } = await supabase.from("notifications").update({ read_at: readAt }).eq("id", notification.id).eq("user_id", user.id);
+    if (error) return showNotice(error.message);
+    setNotifications((current) => current.map((item) => item.id === notification.id ? { ...item, read_at: readAt } : item));
+  }
+  async function markAllNotificationsRead() {
+    if (!notifications.some((item) => !item.read_at)) return;
+    const readAt = new Date().toISOString();
+    const { error } = await supabase.from("notifications").update({ read_at: readAt }).eq("user_id", user.id).is("read_at", null);
+    if (error) return showNotice(error.message);
+    setNotifications((current) => current.map((item) => item.read_at ? item : { ...item, read_at: readAt }));
+    showNotice("Alle Benachrichtigungen als gelesen markiert.");
+  }
+  async function openNotification(notification) {
+    await markNotificationRead(notification);
+    const type = String(notification?.type || "").toUpperCase();
+    if (type === "MESSAGE") return setPage("messages");
+    if (type === "FRIEND_REQUEST") return setPage("friend-requests");
+    if (type === "PHOTO_LIKE") return setPage("profile");
+    if (type === "ADMIN_FORUM_POST") return setPage("admin-forum");
+    if (type === "FORUM_HELPFUL") return setPage("forum");
+    if (type === "POKE") return setPage("members");
+    if (type === "ACTIVITY_REWARD") return setPage("profile");
+  }
+
   async function openChat(m) { setChatMember(m); setPage("messages"); const { data, error } = await supabase.from("messages").select("*").or(`and(sender_id.eq.${user.id},receiver_id.eq.${m.id}),and(sender_id.eq.${m.id},receiver_id.eq.${user.id})`).order("created_at", { ascending: true }); if (error) return showNotice(error.message); setMessages(data || []); await supabase.rpc("mark_messages_read", { from_user: m.id }); }
   async function openMember(m) { if (!m) return; if (m.id === user.id) return setPage("profile"); setViewingMember(m); setViewingFriends([]); setPage("member-profile"); void loadMemberProfile(m).then((fresh) => { if (fresh?.id === m.id) setViewingMember((current) => current?.id === m.id ? fresh : current); }).catch((error) => console.warn("Profil konnte nicht im Hintergrund aktualisiert werden:", error?.message || error)); const [{ data: connections }, { error: visitError }] = await Promise.all([supabase.from("friendships").select("requester_id,receiver_id").eq("status", "ACCEPTED").or(`requester_id.eq.${m.id},receiver_id.eq.${m.id}`), supabase.from("profile_visits").insert({ profile_id: m.id, visitor_id: user.id, visited_at: new Date().toISOString() })]); if (connections) { const ids = connections.map((connection) => connection.requester_id === m.id ? connection.receiver_id : connection.requester_id); setViewingFriends(members.filter((member) => ids.includes(member.id))); } if (visitError) console.warn(visitError.message); }
 
@@ -1362,6 +1404,7 @@ useEffect(() => {
   if (!user) return <div className="auth-page"><NewAuth login={login} register={register}/><button className="forgot-password-button" onClick={requestPasswordReset}>Passwort vergessen?</button>{notice && <div className="toast">{notice}</div>}</div>;
 
   const unread = messages.filter((m) => m.receiver_id === user.id && !m.is_read).length;
+  const unreadNotifications = notifications.filter((item) => !item.read_at).length;
   const myRole = roleLabel(profile?.role);
   return <div className={`app layout-${["theme-red", "theme-blue", "theme-neon", "theme-alpine", "theme-teal", "theme-violet", "theme-copper", "theme-aurora"].includes(profile?.profile_layout) ? profile.profile_layout : "standard"}`}>
     <div className="dashboard-layout">
@@ -1374,6 +1417,7 @@ useEffect(() => {
           <button onClick={() => setPage("friend-requests")}>♢ <span>Anfragen</span>{incomingRequests.length > 0 && <em>{incomingRequests.length}</em>}</button>
           <button onClick={() => setPage("blocked")}>⊘ <span>Blockiert</span></button>
           <button onClick={() => setPage("messages")}>☏ <span>Nachrichten</span>{unread > 0 && <em>{unread}</em>}</button>
+          <button onClick={() => setPage("notifications")}>◎ <span>Aktuelles</span>{unreadNotifications > 0 && <em>{unreadNotifications}</em>}</button>
           <button onClick={() => setPage("news")}>▣ <span>Neuigkeiten</span></button>
           <button onClick={() => setPage("community")}>✦ <span>Community</span></button>
           <button onClick={() => setPage("groups")}>◉ <span>Gruppen</span></button>
@@ -1400,6 +1444,7 @@ useEffect(() => {
         {page === "friend-requests" && <FriendRequests incoming={incomingRequests} sent={sentRequests} memberById={memberById} respond={respondToFriendRequest} cancel={cancelFriendRequest}/>} 
         {page === "blocked" && <Blocked blockedUsers={blockedUsers} memberById={memberById} unblock={unblockUser}/>} 
         {page === "messages" && <Messages user={user} messages={messages} chatMember={chatMember} setChatMember={setChatMember} memberById={memberById} openChat={openChat} messageText={messageText} setMessageText={setMessageText} sendMessage={sendMessage} deleteMessage={deleteMessage}/>}
+        {page === "notifications" && <NotificationCenter notifications={notifications} onOpen={openNotification} onMarkAll={markAllNotificationsRead}/>}
         {page === "news" && <News news={regionFilter(news)} members={members} profile={profile} canManage={canManageActiveRegion} activeRegion={activeRegion} createNews={createNews} editNews={editNews} deleteNews={deleteNews}/>}
         {page === "municipality" && <section className="municipality-loading-host" aria-live="polite"><div id="ec-municipality-runtime-host" className="ec-municipality-runtime-host" /></section>}
         {(page === "community" || page === "events") && <><CommunityHub members={regionalMembers} events={regionFilter(communityEvents)} ads={regionFilter(communityAds)} photos={memberPhotos} profile={profile} profileUpdates={publicProfileUpdates} activeRegion={activeRegion} onDeleteAd={deleteCommunityAd} onToggleEventFeatured={toggleCommunityEventFeatured}/>{canManageActiveRegion && <AdminCommunityTools members={regionalMembers} isHeadAdmin={isHeadAdmin(profile?.role)} createEvent={createCommunityEvent} createAd={createCommunityAd} setBusinessAccount={setBusinessAccount}/>}</>}
@@ -1595,6 +1640,32 @@ function MemberCard(props) { return <MemberCardView {...props}/>; }
 function FriendRequests({ incoming, sent, memberById, respond, cancel }) { return <section><div className="page-heading"><div><span className="eyebrow">VERBINDUNGEN</span><h1>Freundschaftsanfragen</h1><p>Anfragen werden erst nach Annahme zu Freunden.</p></div></div><h2>Eingehend</h2><div className="cards">{incoming.map((r) => { const m = memberById(r.requester_id); return <article className="request-card" key={r.id}>{m && <><img src={m.avatar_url || DEFAULT_AVATAR} alt=""/><div><strong>{getName(m)}</strong><span>{roleLabel(m.role)}</span></div><div className="request-actions"><button className="primary-button" onClick={() => respond(r, true)}>✓ Annehmen</button><button className="danger-button" onClick={() => respond(r, false)}>Ablehnen</button></div></>}</article>; })}{!incoming.length && <div className="empty-card">Keine eingehenden Anfragen.</div>}</div><h2>Gesendet</h2><div className="cards">{sent.map((r) => { const m = memberById(r.receiver_id); return <article className="request-card" key={r.id}>{m && <><img src={m.avatar_url || DEFAULT_AVATAR} alt=""/><div><strong>{getName(m)}</strong><span>Wartet auf Antwort</span></div><button className="danger-button" onClick={() => cancel(r)}>Anfrage abbrechen</button></>}</article>; })}{!sent.length && <div className="empty-card">Keine offenen gesendeten Anfragen.</div>}</div></section>; }
 function Blocked({ blockedUsers, memberById, unblock }) { return <section><div className="page-heading"><h1>Blockierliste</h1><p>Blockierte Nutzer sehen dich nicht in deinen normalen Community-Listen.</p></div><div className="member-grid">{blockedUsers.map((b) => { const m = memberById(b.blocked_id); return m && <article className="member-card member" key={b.id}><img className="member-avatar" src={m.avatar_url || DEFAULT_AVATAR} alt=""/><strong className="member-nickname">{getName(m)}</strong><button className="secondary-button" onClick={() => unblock(m.id)}>Entsperren</button></article>; })}{!blockedUsers.length && <div className="empty-card">Keine blockierten Nutzer.</div>}</div></section>; }
 function Messages({ user, messages, chatMember, setChatMember, memberById, openChat, messageText, setMessageText, sendMessage, deleteMessage }) { return <section><div className="page-heading"><h1>Nachrichten</h1></div>{!chatMember ? <div className="message-overview">{messages.filter((m) => m.receiver_id === user.id || m.sender_id === user.id).map((m) => { const other = memberById(m.sender_id === user.id ? m.receiver_id : m.sender_id); return other && <button className="message-preview" key={m.id} onClick={() => openChat(other)}><img src={other.avatar_url || DEFAULT_AVATAR} alt=""/><span><strong>{getName(other)}</strong><small>{m.content}</small></span></button>; })}{!messages.length && <div className="empty-card">Noch keine Nachrichten.</div>}</div> : <div className="chat-box"><div className="chat-header"><button className="back-button" onClick={() => setChatMember(null)}>← Zurück</button><MemberMini member={chatMember}/></div><div className="chat-messages">{messages.filter((m) => (m.sender_id === user.id && m.receiver_id === chatMember.id) || (m.sender_id === chatMember.id && m.receiver_id === user.id)).map((m) => <div className={`chat-message ${m.sender_id === user.id ? "mine" : ""}`} key={m.id}><p>{m.content}</p><small>{new Date(m.created_at).toLocaleString("de-AT")}</small><button className="message-delete-button" onClick={() => deleteMessage(m)} aria-label="Nachricht löschen">×</button></div>)}</div><form className="message-form" onSubmit={sendMessage}><textarea value={messageText} onChange={(e) => setMessageText(e.target.value)} placeholder="Nachricht schreiben …"/><button className="primary-button">Senden</button></form></div>}</section>; }
+function NotificationCenter({ notifications, onOpen, onMarkAll }) {
+  const unread = notifications.filter((item) => !item.read_at).length;
+  const iconFor = (type) => {
+    const key = String(type || "").toUpperCase();
+    if (key === "MESSAGE") return "✉";
+    if (key === "FRIEND_REQUEST") return "♥";
+    if (key === "PHOTO_LIKE") return "♡";
+    if (key === "FORUM_HELPFUL") return "✓";
+    if (key === "ACTIVITY_REWARD") return "✦";
+    if (key === "POKE") return "☝";
+    if (key === "ADMIN_FORUM_POST") return "▤";
+    return "◎";
+  };
+  return <section className="notification-center">
+    <div className="page-heading"><div><span className="eyebrow">AKTUELLES FÜR DICH</span><h1>Benachrichtigungen</h1><p>Reaktionen, Nachrichten und wichtige Community-Aktivitäten an einem Ort.</p></div>{unread > 0 && <button type="button" className="secondary-button" onClick={onMarkAll}>Alle als gelesen</button>}</div>
+    <div className="notification-list">
+      {notifications.map((item) => <button type="button" key={item.id} className={"notification-card panel" + (item.read_at ? "" : " is-unread")} onClick={() => onOpen(item)}>
+        <span className="notification-icon">{iconFor(item.type)}</span>
+        <span className="notification-copy"><small>{String(item.type || "INFO").replaceAll("_"," ")}</small><strong>{item.title}</strong><span>{item.body}</span><time>{new Date(item.created_at).toLocaleString("de-AT")}</time></span>
+        {!item.read_at && <b className="notification-unread-dot" aria-label="Ungelesen"/>}
+      </button>)}
+      {!notifications.length && <div className="empty-card">Noch keine Benachrichtigungen. Sobald jemand auf dich reagiert, erscheint es hier.</div>}
+    </div>
+  </section>;
+}
+
 function MemberMini({ member }) { return <div className="member-mini"><img src={member.avatar_url || DEFAULT_AVATAR} alt=""/><strong>{getName(member)}</strong></div>; }
 
 function ProfileWelcomeBadges({ badges }) { if (!badges.length) return null; return <section className="panel profile-welcome-badges"><span className="eyebrow">DEINE ERSTEN SCHRITTE</span><h2>Willkommens-Badges</h2><div>{badges.map((badge) => <span className={badge.earned ? "earned" : ""} key={badge.key}><b>{badge.icon}</b><span><strong>{badge.title}</strong><small>{badge.description}</small></span>{badge.earned ? "✓" : ""}</span>)}</div></section>; }
