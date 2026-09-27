@@ -142,6 +142,7 @@ export default function App() {
   const [profileVisits, setProfileVisits] = useState([]);
   const [forumPosts, setForumPosts] = useState([]);
   const [forumReplies, setForumReplies] = useState([]);
+  const [forumHelpful, setForumHelpful] = useState([]);
   const [featureLocks, setFeatureLocks] = useState([]);
   const [profileActivities, setProfileActivities] = useState([]);
   const [publicProfileUpdates, setPublicProfileUpdates] = useState([]);
@@ -189,7 +190,7 @@ export default function App() {
     setPermissionDraft({}); setAdminTarget(""); setIncomingMessage(null);
     setMessageText(""); setActiveRegion(null); setRegionalAssignments([]);
     setHomepageSections([]); setNews([]); setEvents([]); setGroups([]); setAllGroups([]);
-    setForumPosts([]); setForumReplies([]); setWeeklyPoll(null); setFeaturedGroup(null);
+    setForumPosts([]); setForumReplies([]); setForumHelpful([]); setWeeklyPoll(null); setFeaturedGroup(null);
     setCommunityRequests([]); setCommunityEvents([]); setCommunityAds([]);
     setMemberPhotos([]); setPhotoLikes([]); setPhotoComments([]); setEventRsvps([]);
     setWelcomeBadges([]); setSelectedGroup(null); setPage("home");
@@ -681,28 +682,36 @@ useEffect(() => {
         const author = members.find((member) => member.id === reply.author_id); const business = author?.account_badge === "BUSINESS";
         const moderator = author?.forum_moderator; const meta = document.createElement("small"); meta.className = `role-author ${business ? "business" : roleClass(author?.role)}`; meta.textContent = `${business ? "★" : roleMark(author?.role)} ${getName(author)}${business ? " · Unternehmenskonto" : moderator ? " · Forum-Moderator" : ""} · ${new Date(reply.created_at).toLocaleString("de-AT")}${reply.edited_at ? ` · bearbeitet${reply.edit_reason ? `: ${reply.edit_reason}` : ""}` : ""}`.trim(); item.appendChild(meta);
         const content = document.createElement("p"); content.textContent = reply.content; item.appendChild(content);
+        const helpfulForReply = forumHelpful.filter((entry) => entry.reply_id === reply.id);
+        if (reply.author_id !== user?.id) {
+          const thanks = document.createElement("button"); thanks.type = "button"; thanks.className = helpfulForReply.some((entry) => entry.user_id === user?.id) ? "forum-helpful-button is-active" : "forum-helpful-button"; thanks.textContent = helpfulForReply.length ? "♥ Hilfreich · " + helpfulForReply.length : "♡ Hilfreich"; thanks.onclick = () => void toggleForumReplyHelpful(reply); item.appendChild(thanks);
+        } else if (helpfulForReply.length) {
+          const thanksCount = document.createElement("small"); thanksCount.className = "forum-helpful-count"; thanksCount.textContent = helpfulForReply.length + (helpfulForReply.length === 1 ? " Mitglied fand diese Antwort hilfreich." : " Mitglieder fanden diese Antwort hilfreich."); item.appendChild(thanksCount);
+        }
         if (reply.author_id === user?.id || isHeadAdmin(profile?.role) || (post.scope === "COMMUNITY" && profile?.forum_moderator)) { const actions = document.createElement("div"); actions.className = "forum-reply-actions"; const edit = document.createElement("button"); edit.className = "secondary-button"; edit.textContent = "✎ Bearbeiten"; edit.onclick = () => editForumReply(reply); const remove = document.createElement("button"); remove.className = "danger-button"; remove.textContent = "Löschen"; remove.onclick = () => deleteForumReply(reply); actions.append(edit, remove); item.appendChild(actions); }
         box.appendChild(item);
       });
       if (canReply) { const repliesForPost = forumReplies.filter((reply) => reply.post_id === post.id); if (!repliesForPost.length) { const invite = document.createElement("p"); invite.className = "forum-first-reply-invite"; invite.textContent = "Noch keine Antwort – deine Rückmeldung kann die Diskussion ins Rollen bringen."; box.appendChild(invite); } const form = document.createElement("form"); form.className = "forum-reply-form"; const input = document.createElement("textarea"); input.placeholder = repliesForPost.length ? "Auf diesen Beitrag antworten …" : "Sei die erste Person, die antwortet …"; input.minLength = 2; input.required = true; const send = document.createElement("button"); send.className = "primary-button"; send.textContent = repliesForPost.length ? "Antwort senden" : "Erste Antwort senden"; form.append(input, send); form.onsubmit = (event) => { event.preventDefault(); void createForumReply(post, input.value); }; box.appendChild(form); }
     });
-  }, [page, forumPosts, forumReplies, members, profile?.role, featureLocks]);
+  }, [page, forumPosts, forumReplies, forumHelpful, members, profile?.role, featureLocks, user?.id]);
 
   useEffect(() => {
     if (!supabase || !user?.id) return undefined;
     let cancelled = false;
     const loadCommunityExtras = async () => {
-      const [photoResult, likeResult, commentResult, rsvpResult] = await Promise.all([
+      const [photoResult, likeResult, commentResult, rsvpResult, helpfulResult] = await Promise.all([
         supabase.from("member_photos").select("*").order("created_at", { ascending: false }).limit(100),
         supabase.from("member_photo_likes").select("*"),
         supabase.from("member_photo_comments").select("*").order("created_at", { ascending: true }),
-        supabase.from("community_event_rsvps").select("*")
+        supabase.from("community_event_rsvps").select("*"),
+        supabase.from("forum_reply_helpful").select("*")
       ]);
       if (cancelled) return;
       if (!photoResult.error) setMemberPhotos(photoResult.data || []);
       if (!likeResult.error) setPhotoLikes(likeResult.data || []);
       if (!commentResult.error) setPhotoComments(commentResult.data || []);
       if (!rsvpResult.error) setEventRsvps(rsvpResult.data || []);
+      if (!helpfulResult.error) setForumHelpful(helpfulResult.data || []);
     };
     void loadCommunityExtras().catch(error => { if (!cancelled) console.warn(error); });
     return () => { cancelled = true; };
@@ -1310,6 +1319,18 @@ useEffect(() => {
   }
   async function deleteForumPost(post) { const mayModerate = isAdmin(profile?.role) || (post.scope === "COMMUNITY" && profile?.forum_moderator); if (post.author_id !== user?.id && !mayModerate) return showNotice("Du kannst nur eigene Beiträge löschen."); if (!confirm(`Beitrag „${post.title}" wirklich löschen?`)) return; const { error } = await supabase.rpc("forum_delete_post", { p_post_id: post.id }); if (error) return showNotice(error.message); showNotice("Forumsbeitrag gelöscht."); await loadAll(); }
   async function createForumReply(post, content) { const text = String(content || "").trim(); if (text.length < 2) return showNotice("Bitte schreibe eine Antwort."); const { error } = await supabase.rpc("forum_create_reply", { p_post_id: post.id, p_content: text }); if (error) return showNotice(error.message); showNotice("Antwort veröffentlicht."); await loadAll(); }
+  async function toggleForumReplyHelpful(reply) {
+    if (!reply?.id || reply.author_id === user?.id) return;
+    const { data, error } = await supabase.rpc("ec_toggle_forum_reply_helpful", { p_reply_id: reply.id });
+    if (error) return showNotice(error.message);
+    const marked = Boolean(data?.helpful);
+    setForumHelpful((current) => {
+      const withoutMine = current.filter((item) => !(item.reply_id === reply.id && item.user_id === user.id));
+      return marked ? [...withoutMine, { reply_id: reply.id, user_id: user.id, created_at: new Date().toISOString() }] : withoutMine;
+    });
+    showNotice(marked ? "Danke – du hast diese Antwort als hilfreich markiert." : "Hilfreich-Markierung entfernt.");
+  }
+
   async function editForumReply(reply) { const parent = forumPosts.find((post) => post.id === reply.post_id); const mayModerate = parent?.scope === "COMMUNITY" && profile?.forum_moderator; if (reply.author_id !== user?.id && !isHeadAdmin(profile?.role) && !mayModerate) return showNotice("Du kannst nur eigene Antworten bearbeiten."); const content = prompt("Antwort bearbeiten:", reply.content); if (content === null || content.trim().length < 2) return; const reason = reply.author_id === user?.id ? "Vom Autor bearbeitet" : prompt("Grund der Bearbeitung:", "Von der Forum-Moderation bearbeitet"); if (reason === null || reason.trim().length < 3) return showNotice("Bitte einen Bearbeitungsgrund angeben."); const { error } = await supabase.rpc("forum_update_reply", { p_reply_id: reply.id, p_content: content.trim(), p_reason: reason.trim() }); if (error) return showNotice(error.message); showNotice("Antwort bearbeitet und gekennzeichnet."); await loadAll(); }
   async function deleteForumReply(reply) { const parent = forumPosts.find((post) => post.id === reply.post_id); const mayModerate = parent?.scope === "COMMUNITY" && profile?.forum_moderator; if (reply.author_id !== user?.id && !isHeadAdmin(profile?.role) && !mayModerate) return showNotice("Du kannst nur eigene Antworten löschen."); if (!confirm("Antwort wirklich löschen?")) return; const { error } = await supabase.rpc("forum_delete_reply", { p_reply_id: reply.id }); if (error) return showNotice(error.message); showNotice("Antwort gelöscht."); await loadAll(); }
   async function setForumModerator(member, enabled) { if (!isHeadAdmin(profile?.role)) return showNotice("Nur der Head Admin darf Forum-Moderatoren bestimmen."); const { error } = await supabase.rpc("admin_set_forum_moderator", { p_target_user: member.id, p_enabled: enabled }); if (error) return showNotice(error.message); showNotice(enabled ? `${getName(member)} ist jetzt Forum-Moderator.` : "Forum-Moderation entfernt."); await loadAll(); }
