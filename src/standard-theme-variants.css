@@ -374,3 +374,96 @@ html[data-ec-theme="aurora"] .ec-top-nav button[data-ec-page][aria-current="page
   color:#fff!important;
   box-shadow:0 5px 14px color-mix(in srgb,var(--ec-theme-primary,#ff6417) 30%,transparent)!important;
 }
+
+
+/* Readability guardrails for intensified themes. */
+.app.layout-theme-red,
+.app.layout-theme-blue,
+.app.layout-theme-alpine,
+.app.layout-theme-teal,
+.app.layout-theme-violet,
+.app.layout-theme-copper,
+.app.layout-theme-aurora{
+  --ec-readable-ink:#213247;
+  --ec-readable-muted:#5d7187;
+  --ec-readable-surface:rgba(255,255,255,.96);
+  --ec-readable-line:#d8e1e8;
+}
+
+.app.layout-theme-red :is(.panel,.community-card,.ec-activity-progress,.ec-regional-event-row,.group-card),
+.app.layout-theme-blue :is(.panel,.community-card,.ec-activity-progress,.ec-regional-event-row,.group-card),
+.app.layout-theme-alpine :is(.panel,.community-card,.ec-activity-progress,.ec-regional-event-row,.group-card),
+.app.layout-theme-teal :is(.panel,.community-card,.ec-activity-progress,.ec-regional-event-row,.group-card),
+.app.layout-theme-violet :is(.panel,.community-card,.ec-activity-progress,.ec-regional-event-row,.group-card),
+.app.layout-theme-copper :is(.panel,.community-card,.ec-activity-progress,.ec-regional-event-row,.group-card),
+.app.layout-theme-aurora :is(.panel,.community-card,.ec-activity-progress,.ec-regional-event-row,.group-card){
+  background:
+    linear-gradient(145deg,rgba(255,255,255,.98) 0%,color-mix(in srgb,var(--ec-theme-wash) 58%,#fff) 100%)!important;
+  color:var(--ec-readable-ink)!important;
+}
+
+.app.layout-theme-red :is(.panel,.community-card,.ec-activity-progress,.ec-regional-event-row,.group-card) :is(h1,h2,h3,h4,strong,label,summary),
+.app.layout-theme-blue :is(.panel,.community-card,.ec-activity-progress,.ec-regional-event-row,.group-card) :is(h1,h2,h3,h4,strong,label,summary),
+.app.layout-theme-alpine :is(.panel,.community-card,.ec-activity-progress,.ec-regional-event-row,.group-card) :is(h1,h2,h3,h4,strong,label,summary),
+.app.layout-theme-teal :is(.panel,.community-card,.ec-activity-progress,.ec-regional-event-row,.group-card) :is(h1,h2,h3,h4,strong,label,summary),
+.app.layout-theme-violet :is(.panel,.community-card,.ec-activity-progress,.ec-regional-event-row,.group-card) :is(h1,h2,h3,h4,strong,label,summary),
+.app.layout-theme-copper :is(.panel,.community-card,.ec-activity-progress,.ec-regional-event-row,.group-card) :is(h1,h2,h3,h4,strong,label,summary),
+.app.layout-theme-aurora :is(.panel,.community-card,.ec-activity-progress,.ec-regional-event-row,.group-card) :is(h1,h2,h3,h4,strong,label,summary){
+  color:var(--ec-readable-ink)!important;
+  text-shadow:none!important;
+}
+
+.app.layout-theme-red :is(.panel,.community-card,.ec-activity-progress,.ec-regional-event-row,.group-card) :is(p,small,span,em,time),
+.app.layout-theme-blue :is(.panel,.community-card,.ec-activity-progress,.ec-regional-event-row,.group-card) :is(p,small,span,em,time),
+.app.layout-theme-alpine :is(.panel,.community-card,.ec-activity-progress,.ec-regional-event-row,.group-card) :is(p,small,span,em,time),
+.app.layout-theme-teal :is(.panel,.community-card,.ec-activity-progress,.ec-regional-event-row,.group-card) :is(p,small,span,em,time),
+.app.layout-theme-violet :is(.panel,.community-card,.ec-activity-progress,.ec-regional-event-row,.group-card) :is(p,small,span,em,time),
+.app.layout-theme-copper :is(.panel,.community-card,.ec-activity-progress,.ec-regional-event-row,.group-card) :is(p,small,span,em,time),
+.app.layout-theme-aurora :is(.panel,.community-card,.ec-activity-progress,.ec-regional-event-row,.group-card) :is(p,small,span,em,time){
+  color:var(--ec-readable-muted)!important;
+}
+
+.app.layout-theme-red :is(input,select,textarea),
+.app.layout-theme-blue :is(input,select,textarea),
+.app.layout-theme-alpine :is(input,select,textarea),
+.app.layout-theme-teal :is(input,select,textarea),
+.app.layout-theme-violet :is(input,select,textarea),
+.app.layout-theme-copper :is(input,select,textarea),
+.app.layout-theme-aurora :is(input,select,textarea){
+  background:#fff!important;
+  color:#172838!important;
+  border-color:color-mix(in srgb,var(--ec-theme-primary) 28%,#cfd8df)!important;
+}
+
+.app.layout-theme-red :is(.secondary-button,button:not(.primary-button)),
+.app.layout-theme-blue :is(.secondary-button,button:not(.primary-button)),
+.app.layout-theme-alpine :is(.secondary-button,button:not(.primary-button)),
+.app.layout-theme-teal :is(.secondary-button,button:not(.primary-button)),
+.app.layout-theme-violet :is(.secondary-button,button:not(.primary-button)),
+.app.layout-theme-copper :is(.secondary-button,button:not(.primary-button)),
+.app.layout-theme-aurora :is(.secondary-button,button:not(.primary-button)){
+  color:#213247;
+}
+
+.app.layout-theme-red :is(.eyebrow,.layout-rewards legend),
+.app.layout-theme-blue :is(.eyebrow,.layout-rewards legend),
+.app.layout-theme-alpine :is(.eyebrow,.layout-rewards legend),
+.app.layout-theme-teal :is(.eyebrow,.layout-rewards legend),
+.app.layout-theme-violet :is(.eyebrow,.layout-rewards legend),
+.app.layout-theme-copper :is(.eyebrow,.layout-rewards legend),
+.app.layout-theme-aurora :is(.eyebrow,.layout-rewards legend){
+  color:var(--ec-theme-primary-strong)!important;
+}
+
+@media (prefers-contrast: more){
+  .app.layout-theme-red,
+  .app.layout-theme-blue,
+  .app.layout-theme-alpine,
+  .app.layout-theme-teal,
+  .app.layout-theme-violet,
+  .app.layout-theme-copper,
+  .app.layout-theme-aurora{
+    --ec-readable-ink:#102033;
+    --ec-readable-muted:#45596f;
+  }
+}
