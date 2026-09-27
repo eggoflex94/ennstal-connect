@@ -46,6 +46,9 @@ const READ_ONLY_RPCS = new Set([
   'community_group_owner_change_queue',
   'head_admin_error_summary',
   'head_admin_error_feed',
+  'admin_attention_summary',
+  'ec_activity_feed',
+  'ec_list_manageable_community_announcements',
 ]);
 
 function requestUrl(input) {
