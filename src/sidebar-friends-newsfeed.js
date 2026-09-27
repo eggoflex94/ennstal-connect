@@ -19,7 +19,7 @@ function ensureCard() {
   }
   card = document.createElement('section');
   card.className = 'ec-friends-newsfeed';
-  card.innerHTML = `<div class="ec-friends-newsfeed-head"><div><span>FREUNDE</span><strong>Newsfeed</strong></div><button type="button" class="ec-friends-newsfeed-refresh" aria-label="Newsfeed aktualisieren" title="Aktualisieren">↻</button></div><div class="ec-friends-newsfeed-list"><div class="ec-friends-newsfeed-empty">Newsfeed wird geladen …</div></div>`;
+  card.innerHTML = `<div class="ec-friends-newsfeed-head"><div><span>FREUNDE-NEWSFEED</span><strong>Aktuelles von deinen Freunden</strong></div><button type="button" class="ec-friends-newsfeed-refresh" aria-label="Newsfeed aktualisieren" title="Aktualisieren">↻</button></div><div class="ec-friends-newsfeed-list"><div class="ec-friends-newsfeed-empty">Newsfeed wird geladen …</div></div>`;
   const adminSlot = dock.querySelector('.ec-dock-admin-slot');
   if (adminSlot) adminSlot.insertAdjacentElement('beforebegin', card); else dock.appendChild(card);
   card.querySelector('.ec-friends-newsfeed-refresh').onclick = () => queueRefresh(0);
