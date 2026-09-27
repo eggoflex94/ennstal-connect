@@ -165,3 +165,60 @@
 .regional-discovery-date>small{font-size:.62rem!important;text-transform:uppercase!important;color:#9f4b22!important}
 @media(max-width:980px){.regional-discovery-grid{grid-template-columns:1fr 1fr!important}.regional-discovery-grid>article:last-child{grid-column:1/-1!important}}
 @media(max-width:680px){.home-page .regional-discovery{padding:15px!important;border-radius:17px!important}.regional-discovery-grid{grid-template-columns:1fr!important}.regional-discovery-grid>article:last-child{grid-column:auto!important}.regional-discovery-grid button{grid-template-columns:40px minmax(0,1fr)!important}.regional-discovery-grid button>b{grid-column:2!important;white-space:normal!important}}
+
+
+/* Return pulse: lightweight retention cue, not a pressure mechanic. */
+.home-page .return-pulse{
+  display:grid!important;
+  gap:13px!important;
+  margin:0!important;
+  padding:18px 20px!important;
+  border:1px solid #dbe4ea!important;
+  border-radius:20px!important;
+  background:linear-gradient(180deg,#fff 0%,#f8fbfd 100%)!important;
+  box-shadow:0 9px 24px rgba(31,50,72,.045)!important;
+  color:#20364b!important;
+}
+.home-page .return-pulse.has-news{
+  border-color:#f0c5ab!important;
+  background:linear-gradient(135deg,#fff 0%,#fff8f3 100%)!important;
+}
+.return-pulse-copy h2{margin:3px 0 5px!important;font-size:1.15rem!important;color:#172838!important}
+.return-pulse-copy p{margin:0!important;color:#667a8e!important;line-height:1.45!important}
+.return-pulse-copy>small{display:block!important;margin-top:6px!important;color:#8191a0!important;font-size:.73rem!important}
+.return-pulse-items{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:8px!important}
+.return-pulse-items>button{
+  display:grid!important;
+  grid-template-columns:auto minmax(0,1fr)!important;
+  gap:2px 8px!important;
+  align-items:center!important;
+  min-width:0!important;
+  min-height:58px!important;
+  padding:10px 11px!important;
+  border:1px solid #dce4ea!important;
+  border-radius:13px!important;
+  background:#fff!important;
+  color:#20364b!important;
+  text-align:left!important;
+}
+.return-pulse-items>button:hover{border-color:#ff8a50!important;box-shadow:0 6px 16px rgba(255,107,37,.09)!important}
+.return-pulse-items>button>strong{grid-row:1/span 2!important;font-size:1.3rem!important;color:#d94b13!important}
+.return-pulse-items>button>span{font-size:.78rem!important;font-weight:800!important;color:#2d4357!important}
+.return-pulse-items>button>b{font-size:.67rem!important;color:#718497!important;font-weight:800!important}
+.return-pulse-streak{
+  display:flex!important;
+  align-items:center!important;
+  gap:10px!important;
+  width:max-content!important;
+  max-width:100%!important;
+  padding:9px 11px!important;
+  border:1px solid #cfe4d6!important;
+  border-radius:13px!important;
+  background:#f3faf5!important;
+}
+.return-pulse-streak>span{display:grid!important;place-items:center!important;width:30px!important;height:30px!important;border-radius:999px!important;background:#238b55!important;color:#fff!important;font-weight:900!important}
+.return-pulse-streak>div{display:grid!important;gap:1px!important}
+.return-pulse-streak strong{font-size:.8rem!important;color:#1f6b45!important}
+.return-pulse-streak small{font-size:.7rem!important;color:#637d6d!important}
+@media(max-width:920px){.return-pulse-items{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+@media(max-width:560px){.home-page .return-pulse{padding:15px!important;border-radius:17px!important}.return-pulse-items{grid-template-columns:1fr!important}.return-pulse-streak{width:100%!important}}
