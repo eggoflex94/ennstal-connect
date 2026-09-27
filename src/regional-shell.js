@@ -103,15 +103,31 @@ async function syncDockDetail(type,{force=false}={}){
 }
 
 function toggleDockDetail(key){
-  const button=document.querySelector(`[data-ec-detail="${key}"]`);
-  const panel=document.querySelector(`.ec-dock-detail[data-panel="${key}"]`);
+  const dock=document.querySelector('.ec-right-dock');
+  const button=dock?.querySelector(`[data-ec-detail="${key}"]`);
+  const panel=dock?.querySelector(`.ec-dock-detail[data-panel="${key}"]`);
   if(!button||!panel)return;
-  const opening=panel.hidden;
-  document.querySelectorAll('.ec-dock-detail').forEach(item=>item.hidden=true);
-  document.querySelectorAll('.ec-regional-shell [data-ec-detail]').forEach(item=>item.setAttribute('aria-expanded','false'));
-  panel.hidden=!opening;
-  button.setAttribute('aria-expanded',opening?'true':'false');
-  if(opening)void syncDockDetail(key);
+
+  const opening=panel.hasAttribute('hidden');
+
+  dock.querySelectorAll('.ec-dock-detail').forEach((item)=>{
+    item.hidden=true;
+    item.setAttribute('hidden','');
+    item.classList.remove('is-open');
+  });
+  dock.querySelectorAll('[data-ec-detail]').forEach((item)=>{
+    item.setAttribute('aria-expanded','false');
+    item.classList.remove('is-open');
+  });
+
+  if(opening){
+    panel.hidden=false;
+    panel.removeAttribute('hidden');
+    panel.classList.add('is-open');
+    button.setAttribute('aria-expanded','true');
+    button.classList.add('is-open');
+    void syncDockDetail(key);
+  }
 }
 
 async function changeHomeRegion(){if(!currentProfile)return;const currentSlug=regions.find(r=>r.id===currentProfile.home_region_id)?.slug||regions[0]?.slug;const options=regions.map(r=>`${r.slug} = ${r.name}`).join('\n');const slug=prompt(`Heimatregion ändern\nAktuell: ${regionName(currentProfile.home_region_id)}\n\nRegionscode eingeben:\n${options}`,currentSlug);if(!slug)return;const next=regions.find(r=>r.slug===slug.trim());if(!next){alert('Region nicht gefunden.');return}if(!confirm(`Heimatregion auf ${next.name} ändern? Danach wirst du standardmäßig dort in der Mitgliederliste angezeigt.`))return;const {data,error}=await supabase.rpc('ec_change_home_region',{p_region_slug:next.slug});if(error){alert(`Region konnte nicht geändert werden: ${error.message}`);return}currentProfile.home_region_id=data||next.id;activeRegion=next;localStorage.setItem('ec-active-region',next.slug);invalidateDockDetails('news');renderRegionOptions();syncRegionUI();applyRegionalDirectory();window.dispatchEvent(new CustomEvent('ec:region-change',{detail:next}))}
@@ -120,7 +136,28 @@ async function loadRegionalContext(){if(!supabase)return;try{const {data:{sessio
 function renderRegionOptions(){const picker=document.querySelector('.ec-region-picker select');if(!picker)return;picker.innerHTML=regions.map(r=>`<option value="${r.slug}">${esc(r.name)}</option>`).join('');picker.value=activeRegion?.slug||regions[0]?.slug||'ennstal'}
 function renderIdentity(){const box=document.querySelector('.ec-dock-identity');if(!box||!currentProfile)return;const heading=document.querySelector('.ec-dock-head strong');if(heading){heading.textContent=roleLabel(currentProfile,false)+' · '+(currentProfile.nickname||'Mitglied');let home=heading.parentElement.querySelector('.ec-dock-home');if(!home){home=document.createElement('small');home.className='ec-dock-home';heading.after(home)}home.textContent='Heimatregion: '+regionName(currentProfile.home_region_id)}box.innerHTML=`<span class="ec-dock-role-star">★</span><div><strong>${esc(currentProfile.nickname||'Mitglied')}</strong><small>${esc(roleLabel(currentProfile,false))}</small><em>Heimatregion: <b class="ec-dock-home-region">${esc(regionName(currentProfile.home_region_id))}</b></em></div>`}
 function renderAdminDock(){const slot=document.querySelector('.ec-dock-admin-slot');if(!slot)return;const role=String(currentProfile?.role||'').toUpperCase();if(role==='HEAD_ADMIN')slot.innerHTML=`<div class="ec-dock-divider"></div><div class="ec-dock-section-label">ADMINISTRATION</div><button type="button" data-ec-page="admin"><b>⚙</b><span>Admin-Zentrale</span></button><button type="button" data-ec-page="adminTools"><b>⌘</b><span>Admin Tools</span></button><button type="button" data-ec-page="legal"><b>⚖</b><span>Beweissicherung</span></button>`;else if(role==='ADMIN')slot.innerHTML=`<div class="ec-dock-divider"></div><div class="ec-dock-section-label">ADMINISTRATION</div><button type="button" data-ec-page="admin"><b>⚙</b><span>Admin-Zentrale</span></button>`;else slot.innerHTML='';slot.querySelectorAll('[data-ec-page]').forEach(bindDockButton)}
-function bindDockButton(button){button.onclick=()=>{if(button.dataset.ecDetail){toggleDockDetail(button.dataset.ecDetail);return}if(button.dataset.ecHomeRegion){changeHomeRegion();return}if(button.dataset.ecPage==='notifications'){window.dispatchEvent(new CustomEvent('ec:open-notifications'));return}clickPage(button.dataset.ecPage);document.body.classList.remove('ec-dock-open');requestAnimationFrame(applyRegionalDirectory)}}
+function bindDockButton(button){
+  if(!button||button.dataset.ecDockBound==='1')return;
+  button.dataset.ecDockBound='1';
+  button.addEventListener('click',(event)=>{
+    event.preventDefault();
+    if(button.dataset.ecDetail){
+      toggleDockDetail(button.dataset.ecDetail);
+      return;
+    }
+    if(button.dataset.ecHomeRegion){
+      changeHomeRegion();
+      return;
+    }
+    if(button.dataset.ecPage==='notifications'){
+      window.dispatchEvent(new CustomEvent('ec:open-notifications'));
+      return;
+    }
+    clickPage(button.dataset.ecPage);
+    document.body.classList.remove('ec-dock-open');
+    requestAnimationFrame(applyRegionalDirectory);
+  });
+}
 async function logout(){const button=document.querySelector('.ec-logout');if(button)button.disabled=true;try{const {error}=await supabase.auth.signOut();if(error)throw error;localStorage.removeItem('ec-active-region');sessionStorage.clear();location.replace('/')}catch(error){if(button)button.disabled=false;alert(`Abmelden fehlgeschlagen: ${error.message||error}`)}}
 
 function ensureShell(){if(!document.querySelector('.modern-main')){document.querySelector('.ec-regional-shell')?.remove();document.body.classList.remove('ec-regional-ui','ec-dock-open');return;}if(document.querySelector('.ec-regional-shell')){applyRegionalDirectory();return}const shell=document.createElement('div');shell.className='ec-regional-shell';shell.innerHTML=`<header class="ec-brand-masthead"><div class="ec-brand-logo" aria-label="Ennstal Connect"><img class="ec-brand-image" src="/ennstal-connect-wordmark.svg" width="370" height="70" alt="Ennstal Connect – Regional. Echt. Gemeinsam."/></div><div class="ec-brand-claim">Unsere Region.<br><b>Unsere Menschen.</b></div><div class="ec-region-status"><span>Du bist in</span><strong class="ec-active-region-name">Region</strong></div></header><nav class="ec-top-nav" aria-label="Hauptnavigation">${TOP_LINKS.map(([i,l,p])=>`<button type="button" data-ec-page="${p}" aria-label="${l}" title="${l}"><b aria-hidden="true">${i}</b><span>${l}</span></button>`).join('')}<label class="ec-region-picker"><b>⌖</b><select aria-label="Region"></select></label><button class="ec-dock-toggle" type="button" aria-label="Menü öffnen">☰</button></nav><aside class="ec-right-dock ec-compact-personal-dock" aria-label="Persönliche Funktionen"><div class="ec-dock-head"><span>MEIN BEREICH</span><strong>Profil wird geladen …</strong></div><div class="ec-dock-identity"></div><button class="ec-dock-close" type="button" aria-label="Menü schließen">×</button><div class="ec-compact-menu-grid" aria-label="Persönliche Funktionen"><button type="button" class="ec-compact-menu-item" data-ec-page="notifications" data-ec-compact-label="Benachrichtigungen" title="Benachrichtigungen" aria-label="Benachrichtigungen"><span class="ec-compact-menu-icon">${DOCK_ICONS['Benachrichtigungen']}</span><span class="ec-compact-menu-label">Benachrichtigungen</span><em class="ec-dock-notification-badge">0</em></button>${DOCK_LINKS.map(([label,page])=>`<button type="button" class="ec-compact-menu-item" data-ec-page="${page}" data-ec-compact-label="${label}" title="${label}" aria-label="${label}"><span class="ec-compact-menu-icon">${DOCK_ICONS[label]}</span><span class="ec-compact-menu-label">${label}</span></button>`).join('')}<button type="button" class="ec-compact-menu-item" data-ec-home-region="1" data-ec-compact-label="Heimatregion ändern" title="Heimatregion ändern" aria-label="Heimatregion ändern"><span class="ec-compact-menu-icon">${DOCK_ICONS['Heimatregion ändern']}</span><span class="ec-compact-menu-label">Heimatregion ändern</span></button></div><div class="ec-dock-divider"></div><div class="ec-dock-section-label">COMMUNITY</div><button type="button" data-ec-detail="visits" aria-expanded="false" aria-controls="ec-detail-visits"><b>◉</b><span>Profilbesuche</span><em class="ec-dock-visits-count">0</em></button><div class="ec-dock-detail" data-panel="visits" id="ec-detail-visits" role="region" aria-live="polite" hidden><div class="ec-dock-empty">Beim Öffnen laden …</div></div><button type="button" data-ec-detail="updates" aria-expanded="false" aria-controls="ec-detail-updates"><b>▦</b><span>Profil-Aktualisierungen</span><em class="ec-dock-updates-count">0</em></button><div class="ec-dock-detail" data-panel="updates" id="ec-detail-updates" role="region" aria-live="polite" hidden><div class="ec-dock-empty">Beim Öffnen laden …</div></div><button type="button" data-ec-detail="actions" aria-expanded="false" aria-controls="ec-detail-actions"><b>↗</b><span>Community-Aktionen</span><em class="ec-dock-actions-count">0</em></button><div class="ec-dock-detail" data-panel="actions" id="ec-detail-actions" role="region" aria-live="polite" hidden><div class="ec-dock-empty">Beim Öffnen laden …</div></div><button type="button" data-ec-detail="news" aria-expanded="false" aria-controls="ec-detail-news"><b>▤</b><span>Community Neuigkeiten</span></button><div class="ec-dock-detail" data-panel="news" id="ec-detail-news" role="region" aria-live="polite" hidden><div class="ec-dock-empty">Beim Öffnen laden …</div></div><div class="ec-dock-admin-slot"></div><button type="button" class="ec-logout"><b>↪</b><span>Abmelden</span></button></aside>`;document.body.appendChild(shell);shell.querySelectorAll('[data-ec-page],[data-ec-detail],[data-ec-home-region]').forEach(bindDockButton);shell.querySelector('.ec-dock-toggle').onclick=()=>{document.body.classList.add('ec-dock-open');void syncDockCounts()};shell.querySelector('.ec-dock-close').onclick=()=>document.body.classList.remove('ec-dock-open');shell.querySelector('.ec-logout').onclick=logout;shell.querySelector('select').onchange=e=>{const next=regions.find(r=>r.slug===e.target.value);if(!next)return;activeRegion=next;showAllMembers=false;localStorage.setItem('ec-active-region',next.slug);invalidateDockDetails('news');window.dispatchEvent(new CustomEvent('ec:region-change',{detail:next}));syncRegionUI();applyRegionalDirectory()};document.body.classList.add('ec-regional-ui');renderRegionOptions();renderIdentity();syncRegionUI();renderAdminDock();applyRegionalDirectory()}
