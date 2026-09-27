@@ -40,6 +40,6 @@ const raw=Buffer.alloc((W*4+1)*H);
 for(let y=0;y<H;y++){raw[y*(W*4+1)]=0;px.copy(raw,y*(W*4+1)+1,y*W*4,(y+1)*W*4)}
 const ihdr=Buffer.alloc(13);ihdr.writeUInt32BE(W,0);ihdr.writeUInt32BE(H,4);ihdr[8]=8;ihdr[9]=6;
 const png=Buffer.concat([Buffer.from([137,80,78,71,13,10,26,10]),chunk("IHDR",ihdr),chunk("IDAT",zlib.deflateSync(raw,{level:9})),chunk("IEND",Buffer.alloc(0))]);
-const out=path.resolve("public/ennstal-connect-share-2026.png");
+const out=path.resolve("public/ennstal-connect-share-2026-v2.png");
 fs.writeFileSync(out,png);
 console.log("Generated",out,png.length,"bytes");
