@@ -41,8 +41,20 @@ function prestigeCopy(state){const score=Number(state.score||0),prestige=state.p
 function render(state){
   const card=ensureCard();if(!card)return;
   if(!state){card.innerHTML='<div class="ec-dock-reward-head"><span>BELOHNUNGEN</span><strong>Derzeit nicht verfügbar</strong></div>';return}
-  const score=Number(state.score||0),next=state.next_score==null?null:Number(state.next_score),seconds=Number(state.total_online_seconds||0),onlinePoints=Number(state.components?.online||0),nextCopy=next?`${Math.max(0,next-score)} Punkte bis ${next}`:'Community-Level abgeschlossen',prestigeLabel=state.prestige?`Prestige ${state.prestige}`:'Prestige';
-  card.innerHTML=`<div class="ec-dock-reward-head"><span>BELOHNUNGEN</span><strong>${String(state.level||'Neu')}</strong><b>${score} Punkte</b></div><div class="ec-dock-reward-row"><span>Community-Level</span><em>${nextCopy}</em></div><div class="ec-dock-reward-bar ec-dock-reward-bar-level"><i style="width:${levelPercent(state)}%"></i></div><div class="ec-dock-reward-row ec-dock-prestige-row"><span>${prestigeLabel}</span><em>${prestigeCopy(state)}</em></div><div class="ec-dock-reward-bar ec-dock-reward-bar-prestige"><i style="width:${prestigePercent(state)}%"></i></div><div class="ec-dock-reward-row ec-dock-reward-online-copy"><span>Aktive Onlinezeit</span><em>${formatHours(seconds)}</em></div><div class="ec-dock-reward-bar ec-dock-reward-bar-online"><i style="width:${onlinePercent(seconds)}%"></i></div><small>${onlinePoints}/250 Online-Punkte · +1 Punkt je 2 aktive Stunden · max. 500 Std.</small><div class="ec-dock-reward-unlocks"><span class="${state.red_unlocked?'is-open':'is-locked'}">${state.red_unlocked?'✓':'🔒'} Rot</span><span class="${state.blue_unlocked?'is-open':'is-locked'}">${state.blue_unlocked?'✓':'🔒'} Blau</span>${state.prestige?`<span class="is-prestige">★ ${state.prestige}</span>`:''}</div>`;
+  const score=Number(state.score||0),next=state.next_score==null?null:Number(state.next_score),seconds=Number(state.total_online_seconds||0),onlinePoints=Number(state.components?.online||0),nextCopy=next?`${Math.max(0,next-score)} Punkte bis ${next}`:'Community-Level abgeschlossen';
+  card.innerHTML=`<div class="ec-dock-reward-head"><span>BELOHNUNGEN</span><strong>${String(state.level||'Neu')}</strong><b>${score} Punkte</b></div>
+    <div class="ec-dock-reward-row ec-dock-level-row"><span>Community-Level</span><em>${nextCopy}</em></div>
+    <div class="ec-dock-reward-bar ec-dock-reward-bar-level"><i style="width:${levelPercent(state)}%"></i></div>
+    <div class="ec-dock-reward-meta">
+      ${state.prestige?`<span class="is-prestige">★ Prestige ${state.prestige}</span>`:''}
+      <span class="${state.red_unlocked?'is-open':'is-locked'}">${state.red_unlocked?'✓':'🔒'} Rot</span>
+      <span class="${state.blue_unlocked?'is-open':'is-locked'}">${state.blue_unlocked?'✓':'🔒'} Blau</span>
+    </div>
+    <div class="ec-dock-reward-row ec-dock-reward-online-copy"><span>Aktive Onlinezeit</span><em>${formatHours(seconds)}</em></div>
+    <div class="ec-dock-reward-bar ec-dock-reward-bar-online"><i style="width:${onlinePercent(seconds)}%"></i></div>
+    <small>${onlinePoints}/250 Online-Punkte · +1 Punkt je 2 aktive Stunden · max. 500 Std.</small>
+    <div class="ec-dock-prestige-detail"><span>Prestige-Fortschritt</span><em>${prestigeCopy(state)}</em></div>
+    <div class="ec-dock-reward-bar ec-dock-reward-bar-prestige"><i style="width:${prestigePercent(state)}%"></i></div>`;
 }
 async function refresh(force=false){ensureCard();render(await load(force))}
 function boot(){
