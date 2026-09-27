@@ -200,6 +200,9 @@ import "./interaction-reliability-final.css";
 /* Community Photographer badge and event-photo gallery. */
 import "./community-photographer.css";
 
+/* Absolute final personal-dock authority. */
+import "./personal-dock-final-authority.css";
+
 class AppErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
