@@ -1396,6 +1396,7 @@ useEffect(() => {
     if (type === "PHOTO_LIKE") return setPage("profile");
     if (type === "ADMIN_FORUM_POST") return setPage("admin-forum");
     if (type === "FORUM_HELPFUL") return setPage("forum");
+    if (type === "FORUM_REPLY") return setPage("forum");
     if (type === "POKE") return setPage("members");
     if (type === "ACTIVITY_REWARD") return setPage("profile");
   }
@@ -1718,6 +1719,7 @@ function NotificationCenter({ notifications, onOpen, onMarkAll }) {
     if (key === "FRIEND_REQUEST") return "♥";
     if (key === "PHOTO_LIKE") return "♡";
     if (key === "FORUM_HELPFUL") return "✓";
+    if (key === "FORUM_REPLY") return "↩";
     if (key === "ACTIVITY_REWARD") return "✦";
     if (key === "POKE") return "☝";
     if (key === "ADMIN_FORUM_POST") return "▤";
