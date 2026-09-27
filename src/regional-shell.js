@@ -32,6 +32,8 @@ function roleLabel(p,context=true){const base=String(p?.role||'MEMBER').toUpperC
 function clickPage(page){
   const special=page==='adminTools'?document.querySelector('.ec-admin-workspace-entry'):page==='legal'?document.querySelector('.ec-legal-entry'):null;
   if(special){special.click();return true}
+  const nativeDetail=document.querySelector(`[data-ec-detail="${page}"]`);
+  if(nativeDetail){nativeDetail.click();return true}
   window.dispatchEvent(new CustomEvent('ec:navigate',{detail:{page,source:'regional-shell'}}));
   return true;
 }
