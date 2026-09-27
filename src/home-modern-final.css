@@ -331,3 +331,43 @@
 .notification-copy>time{font-size:.7rem!important;color:#8a99a7!important}
 .notification-unread-dot{width:9px!important;height:9px!important;border-radius:50%!important;background:#ff6b25!important;box-shadow:0 0 0 4px rgba(255,107,37,.12)!important}
 @media(max-width:620px){.notification-card{grid-template-columns:40px minmax(0,1fr)!important;padding:12px!important}.notification-icon{width:40px!important;height:40px!important}.notification-unread-dot{position:absolute!important;right:12px!important;top:12px!important}}
+
+
+/* Personal invite card */
+.member-invite-card{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:18px!important;
+  margin:0!important;
+  padding:18px 20px!important;
+  border:1px solid #d9e3ea!important;
+  border-radius:20px!important;
+  background:linear-gradient(135deg,#fff 0%,#f6fbff 100%)!important;
+  box-shadow:0 9px 24px rgba(31,50,72,.045)!important;
+  color:#20364b!important;
+}
+.member-invite-card>div:first-child{min-width:0!important}
+.member-invite-card h2{margin:3px 0 5px!important;font-size:1.12rem!important;color:#172838!important}
+.member-invite-card p{margin:0!important;max-width:760px!important;color:#667a8e!important;line-height:1.45!important}
+.member-invite-card small{display:block!important;margin-top:7px!important;color:#50677a!important}
+.member-invite-card small strong{color:#d94b13!important}
+.member-invite-actions{display:flex!important;gap:8px!important;flex-wrap:wrap!important;justify-content:flex-end!important}
+.member-invite-actions button{min-height:40px!important;white-space:nowrap!important}
+.auth-referral-note{
+  display:grid!important;
+  gap:3px!important;
+  margin:0 0 10px!important;
+  padding:11px 12px!important;
+  border:1px solid #f0c7ae!important;
+  border-radius:13px!important;
+  background:#fff8f3!important;
+  color:#7f3f1d!important;
+}
+.auth-referral-note strong{font-size:.85rem!important}
+.auth-referral-note span{font-size:.75rem!important;line-height:1.35!important;color:#8f5a3e!important}
+@media(max-width:760px){
+  .member-invite-card{align-items:flex-start!important;flex-direction:column!important;padding:15px!important}
+  .member-invite-actions{width:100%!important;display:grid!important;grid-template-columns:1fr!important}
+  .member-invite-actions button{width:100%!important}
+}
