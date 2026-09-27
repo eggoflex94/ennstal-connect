@@ -604,3 +604,49 @@ body .ec-right-dock.ec-compact-personal-dock .ec-compact-menu-grid .ec-dock-noti
     font-size:9.2px!important;
   }
 }
+
+
+/* Final visitor density override after all legacy dock styles. */
+body .ec-right-dock .ec-dock-detail[data-panel="visits"] .ec-profile-visitor-link{
+  grid-template-columns:20px minmax(0,1fr) auto!important;
+  min-height:26px!important;
+  height:26px!important;
+  padding:2px 5px!important;
+  gap:5px!important;
+  align-items:center!important;
+}
+body .ec-right-dock .ec-dock-detail[data-panel="visits"] .ec-profile-visitor-avatar{
+  width:20px!important;
+  height:20px!important;
+  min-width:20px!important;
+  max-width:20px!important;
+  min-height:20px!important;
+  max-height:20px!important;
+  border-radius:5px!important;
+}
+body .ec-right-dock .ec-dock-detail[data-panel="visits"] .ec-profile-visitor-copy{
+  display:flex!important;
+  align-items:center!important;
+  min-width:0!important;
+}
+body .ec-right-dock .ec-dock-detail[data-panel="visits"] .ec-profile-visitor-copy strong{
+  font-size:8.5px!important;
+  line-height:1!important;
+  gap:3px!important;
+  min-width:0!important;
+}
+body .ec-right-dock .ec-dock-detail[data-panel="visits"] .ec-profile-visitor-copy .ec-inline-role-star{
+  width:9px!important;
+  height:9px!important;
+  min-width:9px!important;
+  max-width:9px!important;
+  flex:0 0 9px!important;
+}
+body .ec-right-dock .ec-dock-detail[data-panel="visits"] .ec-profile-visitor-link time{
+  font-size:6.5px!important;
+  line-height:1!important;
+}
+body .ec-right-dock .ec-dock-detail[data-panel="visits"]{
+  gap:2px!important;
+  padding:3px!important;
+}
