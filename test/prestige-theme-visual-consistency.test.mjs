@@ -53,3 +53,13 @@ test('every color layout uses the same logo geometry with a matching wordmark pa
     assert.ok(runtime.includes(`key: '${theme}', logo: '/${file}'`));
   }
 });
+
+
+test('regional shell resyncs the theme-specific wordmark after shell creation', async () => {
+  const runtime = await source('src/standard-theme-runtime.js');
+  const shell = await source('src/regional-shell.js');
+  assert.match(runtime, /brandAdded/);
+  assert.match(runtime, /ec:theme-applied/);
+  assert.match(shell, /ec:theme-applied/);
+  assert.match(shell, /dataset\.ecThemeLogo/);
+});

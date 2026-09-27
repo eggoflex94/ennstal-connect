@@ -253,9 +253,13 @@ function watchApp(app) {
 
 function watchShell() {
   if (shellObserver) return;
-  shellObserver = new MutationObserver(() => {
+  shellObserver = new MutationObserver((mutations) => {
     const app = document.querySelector('.app');
-    if (app && app !== observedApp) queueSync();
+    const brandAdded = mutations.some((mutation) => [...mutation.addedNodes].some((node) => {
+      if (!(node instanceof Element)) return false;
+      return node.matches?.('.ec-brand-image') || Boolean(node.querySelector?.('.ec-brand-image'));
+    }));
+    if ((app && app !== observedApp) || brandAdded) queueSync();
   });
   shellObserver.observe(document.documentElement, { childList: true, subtree: true });
 }
@@ -283,7 +287,9 @@ function syncTheme() {
   }
   document.querySelectorAll('.ec-brand-image').forEach((img) => {
     if (img.getAttribute('src') !== next.logo) img.setAttribute('src', next.logo);
+    img.dataset.ecThemeLogo = next.key;
   });
+  window.dispatchEvent(new CustomEvent('ec:theme-applied', { detail: { key: next.key, logo: next.logo } }));
 }
 
 function queueSync() {
