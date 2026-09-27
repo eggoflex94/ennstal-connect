@@ -121,6 +121,7 @@ export default function App() {
   const [members, setMembers] = useState([]);
   const [adminMembers, setAdminMembers] = useState([]);
   const [adminLog, setAdminLog] = useState([]);
+  const [activationDashboard, setActivationDashboard] = useState(null);
   const [rulesAccepted, setRulesAccepted] = useState(null);
   const [acceptingRules, setAcceptingRules] = useState(false);
   const [memberEmails, setMemberEmails] = useState({});
@@ -184,7 +185,7 @@ export default function App() {
     initializedProfileUser.current = null;
     setSectionStatus({ pending: [], failed: [] });
     setUser(null); setProfile(null); setMembers([]); setFriendships([]);
-    setMessages([]); setNotifications([]); setWelcomeGreetings([]); setAdminMembers([]); setAdminLog([]); setMemberEmails({}); setCanViewPersonalData(false); setMyAdminPermissions({});
+    setMessages([]); setNotifications([]); setWelcomeGreetings([]); setAdminMembers([]); setAdminLog([]); setActivationDashboard(null); setMemberEmails({}); setCanViewPersonalData(false); setMyAdminPermissions({});
     setReports([]); setBlockedUsers([]); setFeatureLocks([]); setProfileVisits([]);
     setProfileActivities([]); setRulesAccepted(null); setViewingMember(null);
     setViewingFriends([]); setChatMember(null); setSelectedMember(null);
@@ -245,6 +246,11 @@ export default function App() {
     window.addEventListener("ec:navigate", handleNavigation);
     return () => window.removeEventListener("ec:navigate", handleNavigation);
   }, [profile?.role, profile?.account_status]);
+
+  useEffect(() => {
+    if (page !== "admin" || !profile?.is_primary_head_admin) return;
+    void loadActivationDashboard();
+  }, [page, profile?.is_primary_head_admin]);
 
   useEffect(() => {
     const handleRegionChange = (event) => {
@@ -795,6 +801,16 @@ useEffect(() => {
     window.addEventListener("pagehide", clearPresence);
     return () => { window.clearTimeout(inactiveTimer); activityEvents.forEach((eventName) => window.removeEventListener(eventName, setPresence)); window.removeEventListener("pagehide", clearPresence); };
   }, [user?.id]);
+
+  async function loadActivationDashboard() {
+    if (!profile?.is_primary_head_admin || !supabase) return;
+    const { data, error } = await supabase.rpc("head_admin_activation_dashboard");
+    if (error) {
+      console.warn("Aktivierungs-Dashboard konnte nicht geladen werden:", error.message);
+      return;
+    }
+    setActivationDashboard(data || null);
+  }
 
   async function login(e) {
     e.preventDefault(); if (!supabase) return showNotice(supabaseUnavailableMessage); const f = new FormData(e.currentTarget);
@@ -1484,7 +1500,7 @@ useEffect(() => {
         {page === "reports" && (profile?.is_primary_head_admin || hasAdminPermission("manage_reports")) && <Reports reports={reports} memberById={memberById} resolveReport={resolveReport}/>} 
         {page === "fake-accounts" && profile?.is_primary_head_admin && profile?.account_status === "ACTIVE" && <section className="fake-account-page head-admin-tools-page"><div className="page-heading"><div><span className="eyebrow">NUR HEAD ADMIN</span><h1>Fake-Erkennung</h1></div></div></section>}
         {page === "admin-log" && profile?.is_primary_head_admin && profile?.account_status === "ACTIVE" && <section className="admin-log-page head-admin-tools-page"><div className="page-heading"><div><span className="eyebrow">NUR HEAD ADMIN</span><h1>Admin-Logbuch</h1></div><button className="secondary-button" onClick={loadAll}>Aktualisieren</button></div><AdminLogPage adminLog={adminLog} members={adminMembers.length ? adminMembers : members}/></section>}
-        {page === "admin" && (profile?.role === "ADMIN" || profile?.is_primary_head_admin || (profile?.role === "HEAD_ADMIN" && hasAnyAdminPermission)) && <AdminPanel members={adminMembers.length ? adminMembers : members} memberEmails={memberEmails} adminLog={adminLog} profile={profile} user={user} permissions={myAdminPermissions} canViewPersonalData={canViewPersonalData} onOpen={openMember} updateMemberRole={updateMemberRole} toggleSuspension={toggleSuspension} setBusinessAccount={setBusinessAccount} editingMember={editingMember} setEditingMember={setEditingMember} saveMemberData={saveMemberData} adminTarget={adminTarget} loadPermissions={loadPermissions} permissionDraft={permissionDraft} setPermissionDraft={setPermissionDraft} savePermissions={savePermissions} savingPermissions={savingPermissions} openAccountReview={openAccountReview}/>}
+        {page === "admin" && (profile?.role === "ADMIN" || profile?.is_primary_head_admin || (profile?.role === "HEAD_ADMIN" && hasAnyAdminPermission)) && <AdminPanel members={adminMembers.length ? adminMembers : members} memberEmails={memberEmails} adminLog={adminLog} activationDashboard={activationDashboard} onRefreshActivation={loadActivationDashboard} profile={profile} user={user} permissions={myAdminPermissions} canViewPersonalData={canViewPersonalData} onOpen={openMember} updateMemberRole={updateMemberRole} toggleSuspension={toggleSuspension} setBusinessAccount={setBusinessAccount} editingMember={editingMember} setEditingMember={setEditingMember} saveMemberData={saveMemberData} adminTarget={adminTarget} loadPermissions={loadPermissions} permissionDraft={permissionDraft} setPermissionDraft={setPermissionDraft} savePermissions={savePermissions} savingPermissions={savingPermissions} openAccountReview={openAccountReview}/>}
         {page === "admin-account-review" && (profile?.is_primary_head_admin || hasAdminPermission("manage_members")) && <AccountReview queue={accountReviewQueue} members={members} canReview={Boolean(profile?.is_primary_head_admin || hasAdminPermission("manage_members"))} onBack={() => setPage("admin")} onOpen={openMember} onReview={reviewProfileVerification}/>}
         {page === "impressum" && <LegalPage type="impressum"/>}
         {page === "privacy" && <LegalPage type="privacy"/>}
@@ -1819,12 +1835,63 @@ function AccountReview({ queue, members, canReview, onBack, onOpen, onReview }) 
 
 function AdminLogPage({ adminLog, members }) { return <section className="admin-log-panel panel"><span className="eyebrow">VERTRAULICH · NUR GLOBAL ADMIN</span><h2>Admin-Logbuch</h2><p>Begründete Rechte- und Moderationsaktionen von Admins und Supportern.</p><div className="admin-log-list">{adminLog.map((entry) => { const actor = members.find((m) => m.id === entry.actor_id); const target = members.find((m) => m.id === entry.target_id); const detailText = entry.details?.old_role && entry.details?.new_role ? `Rolle: ${entry.details.old_role} → ${entry.details.new_role}${entry.details.reason ? ` · Begründung: ${entry.details.reason}` : ""}` : formatAdminLogDetails(entry.details); return <article className="admin-log-row" key={entry.id}><div><strong>{ADMIN_LOG_LABELS[entry.action] || entry.details?.action_name || entry.action}</strong><span>Ausgeführt von: {getName(actor) || "System"}{entry.details?.actor_role ? ` (${roleLabel(entry.details.actor_role)})` : ""}{target ? ` · Betroffen: ${getName(target)}` : ""}</span>{detailText && <small>{detailText}</small>}</div><time dateTime={entry.created_at}>{new Date(entry.created_at).toLocaleString("de-AT")}</time></article>; })}{!adminLog.length && <div className="empty-card">Noch keine begründeten Verwaltungsaktionen protokolliert.</div>}</div></section>; }
 
-function AdminPanel({ members, memberEmails, adminLog, profile, user, canViewPersonalData, onOpen, updateMemberRole, toggleSuspension, setBusinessAccount, editingMember, setEditingMember, saveMemberData, adminTarget, loadPermissions, permissionDraft, setPermissionDraft, savePermissions, savingPermissions, openAccountReview }) {
+function ActivationDashboard({ data, onRefresh }) {
+  const funnel = data?.funnel || {};
+  const activity = data?.activity_7d || {};
+  const blockers = data?.blockers || {};
+  const pct = (value, total) => total > 0 ? Math.round((Number(value || 0) / Number(total)) * 100) : 0;
+  const total = Number(funnel.total_members || 0);
+  const funnelRows = [
+    ["Aktive Profile", total, 100],
+    ["Profil sinnvoll ergänzt", Number(funnel.profile_complete || 0), pct(funnel.profile_complete,total)],
+    ["Mindestens eine Gruppe", Number(funnel.joined_group || 0), pct(funnel.joined_group,total)],
+    ["Mindestens eine Verbindung", Number(funnel.connected_member || 0), pct(funnel.connected_member,total)],
+    ["Erste öffentliche Aktion", Number(funnel.first_public_action || 0), pct(funnel.first_public_action,total)],
+    ["In den letzten 7 Tagen aktiv", Number(funnel.active_7d || 0), pct(funnel.active_7d,total)],
+  ];
+  const activities = [
+    ["Neue Mitglieder", activity.joined_7d ?? funnel.joined_7d ?? 0],
+    ["Forumsbeiträge", activity.forum_posts_7d || 0],
+    ["Forenantworten", activity.forum_replies_7d || 0],
+    ["Event-Reaktionen", activity.event_rsvps_7d || 0],
+    ["Gruppenbeitritte", activity.group_joins_7d || 0],
+    ["Fotokommentare", activity.photo_comments_7d || 0],
+    ["Einladungen", activity.referrals_7d || 0],
+    ["Willkommensgrüße", activity.welcome_greetings_7d || 0],
+    ["Hilfreich-Markierungen", activity.helpful_marks_7d || 0],
+  ];
+  const blockersList = [
+    ["Unbeantwortete Forumsbeiträge", blockers.unanswered_forum_posts || 0, "forum"],
+    ["Kommende Events ohne Reaktion", blockers.upcoming_events_without_rsvp || 0, "community"],
+    ["Gruppen ohne Mitglieder", blockers.groups_without_members || 0, "groups"],
+    ["Fotos ohne Kommentar", blockers.photos_without_comments || 0, "photos"],
+  ];
+  const generated = data?.generated_at ? new Date(data.generated_at).toLocaleString("de-AT") : "";
+  return <section className="activation-dashboard panel">
+    <div className="activation-dashboard-head"><div><span className="eyebrow">HEAD-ADMIN · AKTIVIERUNG</span><h2>Community-Gesundheit</h2><p>Aggregierte Kennzahlen zeigen, wo Mitglieder vom Anmelden ins Mitmachen kommen – und wo noch Reibung entsteht.</p>{generated && <small>Stand: {generated}</small>}</div><button type="button" className="secondary-button" onClick={onRefresh}>Aktualisieren</button></div>
+    {!data ? <div className="empty-card">Kennzahlen werden geladen …</div> : <>
+      <div className="activation-summary-grid">
+        <article><strong>{total}</strong><span>aktive echte Profile</span></article>
+        <article><strong>{Number(funnel.joined_7d || 0)}</strong><span>neue Mitglieder · 7 Tage</span></article>
+        <article><strong>{Number(funnel.active_7d || 0)}</strong><span>aktive Mitglieder · 7 Tage</span></article>
+        <article><strong>{pct(funnel.first_public_action,total)}%</strong><span>mit erster öffentlicher Aktion</span></article>
+      </div>
+      <div className="activation-dashboard-grid">
+        <article className="activation-funnel"><h3>Aktivierungs-Funnel</h3>{funnelRows.map(([label,value,percent]) => <div className="activation-funnel-row" key={label}><div><span>{label}</span><b>{value} · {percent}%</b></div><i><em style={{width:String(percent)+"%"}}/></i></div>)}</article>
+        <article className="activation-week"><h3>Aktivität der letzten 7 Tage</h3><div>{activities.map(([label,value]) => <span key={label}><b>{Number(value || 0)}</b><small>{label}</small></span>)}</div></article>
+      </div>
+      <article className="activation-blockers"><div><h3>Wo gerade Potenzial liegen bleibt</h3><p>Diese Zahlen sind keine Bewertung einzelner Mitglieder. Sie zeigen nur Bereiche, in denen Inhalte noch keine Resonanz bekommen.</p></div><div>{blockersList.map(([label,value,page]) => <button type="button" key={label} onClick={() => window.dispatchEvent(new CustomEvent("ec:navigate",{detail:{page,source:"activation-dashboard"}}))}><strong>{Number(value || 0)}</strong><span>{label}</span><b>Öffnen →</b></button>)}</div></article>
+    </>}
+  </section>;
+}
+
+function AdminPanel({ members, memberEmails, adminLog, activationDashboard, onRefreshActivation, profile, user, canViewPersonalData, onOpen, updateMemberRole, toggleSuspension, setBusinessAccount, editingMember, setEditingMember, saveMemberData, adminTarget, loadPermissions, permissionDraft, setPermissionDraft, savePermissions, savingPermissions, openAccountReview }) {
   const admins = members.filter((m) => isAdmin(m.role));
   useEffect(() => { const heading = document.querySelector(".admin-page > .page-heading"); if (!heading || heading.querySelector(".admin-review-button")) return; const button = document.createElement("button"); button.className = "primary-button admin-review-button"; button.type = "button"; button.textContent = "✓ Verifizierungen prüfen"; button.onclick = openAccountReview; heading.appendChild(button); }, [openAccountReview]);
   useEffect(() => { if (!profile?.is_primary_head_admin) return; document.querySelectorAll(".admin-member-card").forEach((card) => { const name = card.querySelector(".admin-member-person-button strong")?.textContent; const member = members.find((item) => getName(item) === name); if (!member || member.is_primary_head_admin) return; if (member.account_badge === "BUSINESS") { const role = card.querySelector(".admin-member-card-info strong"); if (role) role.textContent = "★ Unternehmenskonto"; card.classList.add("business-card"); } if (card.querySelector(".business-account-button")) return; const button = document.createElement("button"); button.className = "profile-admin-button business-account-button"; button.textContent = member.account_badge === "BUSINESS" ? "★ Unternehmenskonto entfernen" : "★ Unternehmenskonto"; button.onclick = () => setBusinessAccount(member.id, member.account_badge !== "BUSINESS"); card.querySelector(".admin-member-card-actions")?.appendChild(button); }); }, [members, profile?.role, setBusinessAccount]);
   return <section className="admin-page"><div className="page-heading"><div><span className="eyebrow">VERWALTUNG</span><h1>Admin-Zentrale</h1><p>Global Admin und Community Admin werden klar unterschieden. Berechtigungen sind einzeln steuerbar.</p></div></div>
     <div className="admin-dashboard-shortcuts-host" />
+    {profile?.is_primary_head_admin && <ActivationDashboard data={activationDashboard} onRefresh={onRefreshActivation}/>}
     <div id="ec-head-municipality-manager-host" className="ec-head-municipality-manager-host" />
     <div className="admin-member-cards">{members.slice().sort((a,b) => (a.role === "HEAD_ADMIN" ? 1 : a.role === "ADMIN" ? 2 : a.role === "SUPPORTER" ? 3 : 4) - (b.role === "HEAD_ADMIN" ? 1 : b.role === "ADMIN" ? 2 : b.role === "SUPPORTER" ? 3 : 4) || getName(a).localeCompare(getName(b), "de")).map((m) => <article className={`admin-member-card ${roleClass(m.role)} ${m.is_test_account ? "hidden-account" : ""}`} key={m.id}><button className="admin-member-person-button" onClick={() => onOpen(m)}><img src={m.avatar_url || DEFAULT_AVATAR} alt=""/><span><strong>{getName(m)}</strong><small>{roleLabel(m.role)}{m.is_test_account ? " · Verborgenes Konto" : ""}{m.account_status === "SUSPENDED" ? " · Gesperrt" : ""}</small></span></button><div className="admin-member-card-info"><div><span>Rolle</span><strong>{m.is_primary_head_admin ? "Primärer Head Admin" : roleLabel(m.role)}</strong></div><div><span>Status</span><strong>{m.is_test_account ? "Verborgen" : m.account_status === "SUSPENDED" ? "Gesperrt" : "Sichtbar"}</strong></div><div><span>Community-Regeln</span><strong>{m.rules_accepted_at ? `Bestätigt · ${new Date(m.rules_accepted_at).toLocaleDateString("de-AT")}` : "Noch nicht bestätigt"}</strong></div></div>{!m.is_primary_head_admin && (canManageMembers || canManageRoles || profile?.is_primary_head_admin) && <div className="admin-member-card-actions">{canManageRoles && m.role !== "HEAD_ADMIN" && <><button className="profile-admin-button supporter" onClick={() => updateMemberRole(m, "SUPPORTER")}>🟢 Supporter</button><button className="profile-admin-button admin" onClick={() => updateMemberRole(m, m.role === "ADMIN" ? "MEMBER" : "ADMIN")}>{m.role === "ADMIN" ? "✕ Community Admin entfernen" : "★ Community Admin"}</button>{m.role !== "MEMBER" && <button className="profile-admin-button remove-role" onClick={() => updateMemberRole(m, "MEMBER")}>↩ Rolle entfernen</button>}</>}{profile?.is_primary_head_admin && <button className="profile-admin-button head-admin" onClick={() => updateMemberRole(m, m.role === "HEAD_ADMIN" ? "MEMBER" : "HEAD_ADMIN")}>{m.role === "HEAD_ADMIN" ? "✕ Head Admin entfernen" : "★ Head Admin"}</button>}{canManageMembers && <><button className="profile-admin-button" onClick={() => setEditingMember(m)}>✎ Name / Geburtsdatum</button><button className="profile-admin-button danger" onClick={() => toggleSuspension(m)}>{m.account_status === "SUSPENDED" ? "🔓 Freischalten" : "🔒 Sperren"}</button></>}{profile?.is_primary_head_admin && <button className="profile-admin-button" onClick={() => loadPermissions(m.id)}>⚙ Rechte</button>}</div>}</article>)}</div>
     {editingMember && <section className="profile-admin-edit-form panel"><div className="panel-title-row"><h2>Mitgliedsdaten ändern</h2><button className="modal-close-inline" onClick={() => setEditingMember(null)}>×</button></div><form onSubmit={saveMemberData} className="profile-admin-edit-grid"><label>Nickname<input name="nickname" defaultValue={editingMember.nickname || ""}/></label><label>Vorname<input name="first_name" defaultValue={editingMember.first_name || ""} required/></label><label>Nachname<input name="last_name" defaultValue={editingMember.last_name || ""} required/></label><label>Geburtsdatum<input type="date" name="birth_date" defaultValue={editingMember.birth_date || ""} required/></label><label>Geschlecht<select name="gender" defaultValue={editingMember.gender || ""}><option value="">Nicht angegeben</option><option value="männlich">Männlich</option><option value="weiblich">Weiblich</option><option value="divers">Divers</option></select></label><div className="edit-actions"><button className="primary-button">💾 Speichern</button></div></form></section>}
