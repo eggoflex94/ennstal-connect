@@ -127,6 +127,7 @@ export default function App() {
   const [friendships, setFriendships] = useState([]);
   const [messages, setMessages] = useState([]);
   const [notifications, setNotifications] = useState([]);
+  const [welcomeGreetings, setWelcomeGreetings] = useState([]);
   const [homepageSections, setHomepageSections] = useState([]);
   const [reports, setReports] = useState([]);
   const [blockedUsers, setBlockedUsers] = useState([]);
@@ -183,7 +184,7 @@ export default function App() {
     initializedProfileUser.current = null;
     setSectionStatus({ pending: [], failed: [] });
     setUser(null); setProfile(null); setMembers([]); setFriendships([]);
-    setMessages([]); setNotifications([]); setAdminMembers([]); setAdminLog([]); setMemberEmails({}); setCanViewPersonalData(false); setMyAdminPermissions({});
+    setMessages([]); setNotifications([]); setWelcomeGreetings([]); setAdminMembers([]); setAdminLog([]); setMemberEmails({}); setCanViewPersonalData(false); setMyAdminPermissions({});
     setReports([]); setBlockedUsers([]); setFeatureLocks([]); setProfileVisits([]);
     setProfileActivities([]); setRulesAccepted(null); setViewingMember(null);
     setViewingFriends([]); setChatMember(null); setSelectedMember(null);
@@ -700,12 +701,13 @@ useEffect(() => {
     if (!supabase || !user?.id) return undefined;
     let cancelled = false;
     const loadCommunityExtras = async () => {
-      const [photoResult, likeResult, commentResult, rsvpResult, helpfulResult] = await Promise.all([
+      const [photoResult, likeResult, commentResult, rsvpResult, helpfulResult, greetingResult] = await Promise.all([
         supabase.from("member_photos").select("*").order("created_at", { ascending: false }).limit(100),
         supabase.from("member_photo_likes").select("*"),
         supabase.from("member_photo_comments").select("*").order("created_at", { ascending: true }),
         supabase.from("community_event_rsvps").select("*"),
-        supabase.from("forum_reply_helpful").select("*")
+        supabase.from("forum_reply_helpful").select("*"),
+        supabase.from("community_welcome_greetings").select("*")
       ]);
       if (cancelled) return;
       if (!photoResult.error) setMemberPhotos(photoResult.data || []);
@@ -713,6 +715,7 @@ useEffect(() => {
       if (!commentResult.error) setPhotoComments(commentResult.data || []);
       if (!rsvpResult.error) setEventRsvps(rsvpResult.data || []);
       if (!helpfulResult.error) setForumHelpful(helpfulResult.data || []);
+      if (!greetingResult.error) setWelcomeGreetings(greetingResult.data || []);
     };
     void loadCommunityExtras().catch(error => { if (!cancelled) console.warn(error); });
     return () => { cancelled = true; };
@@ -1397,6 +1400,15 @@ useEffect(() => {
     if (type === "ACTIVITY_REWARD") return setPage("profile");
   }
 
+  async function sendWelcomeGreeting(member) {
+    if (!member?.id || member.id === user?.id) return;
+    const { data, error } = await supabase.rpc("ec_send_welcome_greeting", { p_recipient_id: member.id });
+    if (error) return showNotice(error.message);
+    if (data?.already_sent) return showNotice("Du hast dieses Mitglied bereits willkommen geheißen.");
+    setWelcomeGreetings((current) => [...current, { sender_id:user.id, recipient_id:member.id, created_at:new Date().toISOString() }]);
+    showNotice("Willkommensgruß gesendet.");
+  }
+
   async function openChat(m) { setChatMember(m); setPage("messages"); const { data, error } = await supabase.from("messages").select("*").or(`and(sender_id.eq.${user.id},receiver_id.eq.${m.id}),and(sender_id.eq.${m.id},receiver_id.eq.${user.id})`).order("created_at", { ascending: true }); if (error) return showNotice(error.message); setMessages(data || []); await supabase.rpc("mark_messages_read", { from_user: m.id }); }
   async function openMember(m) { if (!m) return; if (m.id === user.id) return setPage("profile"); setViewingMember(m); setViewingFriends([]); setPage("member-profile"); void loadMemberProfile(m).then((fresh) => { if (fresh?.id === m.id) setViewingMember((current) => current?.id === m.id ? fresh : current); }).catch((error) => console.warn("Profil konnte nicht im Hintergrund aktualisiert werden:", error?.message || error)); const [{ data: connections }, { error: visitError }] = await Promise.all([supabase.from("friendships").select("requester_id,receiver_id").eq("status", "ACCEPTED").or(`requester_id.eq.${m.id},receiver_id.eq.${m.id}`), supabase.from("profile_visits").insert({ profile_id: m.id, visitor_id: user.id, visited_at: new Date().toISOString() })]); if (connections) { const ids = connections.map((connection) => connection.requester_id === m.id ? connection.receiver_id : connection.requester_id); setViewingFriends(members.filter((member) => ids.includes(member.id))); } if (visitError) console.warn(visitError.message); }
 
@@ -1429,7 +1441,7 @@ useEffect(() => {
       </aside>
       <main className="modern-main"><div className="content-root">{(sectionStatus.pending.length > 0 || sectionStatus.failed.length > 0) && <aside className="panel" role="status" aria-live="polite">{sectionStatus.pending.length > 0 && <p>Weitere Inhalte werden geladen …</p>}{sectionStatus.failed.length > 0 && <><p>Noch nicht aktualisiert: {sectionStatus.failed.join(", ")}. Bereits geladene Inhalte bleiben verfügbar.</p><button type="button" className="secondary-button" disabled={sectionStatus.pending.length > 0} onClick={() => void loadAllRef.current()}>Erneut laden</button></>}</aside>}{notice && <div className="toast">{notice}</div>}{incomingMessage && <aside className="incoming-message-popup" role="status"><strong>✉ Neue Nachricht von {incomingMessage.senderName}</strong><p>{incomingMessage.content || "Du hast eine neue private Nachricht erhalten."}</p><div><button className="primary-button" onClick={() => { const sender = members.find((member) => member.id === incomingMessage.senderId); setIncomingMessage(null); if (sender) openChat(sender); else setPage("messages"); }}>Nachricht öffnen</button><button className="secondary-button" onClick={() => setIncomingMessage(null)}>Später</button></div></aside>}
         {page === "home" && (
-          <Home profile={profile} user={user} activeRegion={activeRegion} isHeadAdmin={isHeadAdmin} homepageSections={regionFilter(homepageSections)} canEdit={isHeadAdmin(profile?.role)} createHomepageSection={createHomepageSection} editHomepageSection={editHomepageSection} deleteHomepageSection={deleteHomepageSection} uploadHomepageImage={uploadHomepageImage} weeklyPoll={weeklyPoll?.region_id && weeklyPoll.region_id !== activeRegionId ? null : weeklyPoll} welcomeBadges={welcomeBadges} groups={regionFilter(groups)} featuredGroup={featuredGroup?.region_id && featuredGroup.region_id !== activeRegionId ? null : featuredGroup} communityRequests={regionFilter(communityRequests)} events={regionFilter(communityEvents)} eventRsvps={eventRsvps} forumPosts={regionFilter(forumPosts)} forumReplies={forumReplies} friendships={friendships} members={regionalMembers} onVote={voteWeeklyPoll} onCreatePoll={createWeeklyPoll} onFeatureGroup={featureCommunityGroup} onCreateRequest={createCommunityRequest} onCloseRequest={closeCommunityRequest} onOpenGroup={(group) => { setSelectedGroup(group); setPage("groups"); }}/>
+          <Home profile={profile} user={user} activeRegion={activeRegion} isHeadAdmin={isHeadAdmin} homepageSections={regionFilter(homepageSections)} canEdit={isHeadAdmin(profile?.role)} createHomepageSection={createHomepageSection} editHomepageSection={editHomepageSection} deleteHomepageSection={deleteHomepageSection} uploadHomepageImage={uploadHomepageImage} weeklyPoll={weeklyPoll?.region_id && weeklyPoll.region_id !== activeRegionId ? null : weeklyPoll} welcomeBadges={welcomeBadges} groups={regionFilter(groups)} featuredGroup={featuredGroup?.region_id && featuredGroup.region_id !== activeRegionId ? null : featuredGroup} communityRequests={regionFilter(communityRequests)} events={regionFilter(communityEvents)} eventRsvps={eventRsvps} forumPosts={regionFilter(forumPosts)} forumReplies={forumReplies} friendships={friendships} members={regionalMembers} welcomeGreetings={welcomeGreetings} onSendWelcome={sendWelcomeGreeting} onVote={voteWeeklyPoll} onCreatePoll={createWeeklyPoll} onFeatureGroup={featureCommunityGroup} onCreateRequest={createCommunityRequest} onCloseRequest={closeCommunityRequest} onOpenGroup={(group) => { setSelectedGroup(group); setPage("groups"); }}/>
         )}
         {page === "members" && <NativeMembersDirectory
   members={members}
@@ -1490,13 +1502,13 @@ function MunicipalityWelcome({ profile, activeRegion }) {
   </section>;
 }
 
-function Home({ profile, user, activeRegion, isHeadAdmin, homepageSections, canEdit, createHomepageSection, editHomepageSection, deleteHomepageSection, uploadHomepageImage, weeklyPoll, welcomeBadges, groups, featuredGroup, communityRequests, events, eventRsvps, forumPosts, forumReplies, friendships, members, onVote, onCreatePoll, onFeatureGroup, onCreateRequest, onCloseRequest, onOpenGroup }) {
+function Home({ profile, user, activeRegion, isHeadAdmin, homepageSections, canEdit, createHomepageSection, editHomepageSection, deleteHomepageSection, uploadHomepageImage, weeklyPoll, welcomeBadges, groups, featuredGroup, communityRequests, events, eventRsvps, forumPosts, forumReplies, friendships, members, welcomeGreetings, onSendWelcome, onVote, onCreatePoll, onFeatureGroup, onCreateRequest, onCloseRequest, onOpenGroup }) {
   const [frames, setFrames] = useState([{ imageUrl: "", status: "" }, { imageUrl: "", status: "" }]);
   const updateFrame = (index, changes) => setFrames((current) => current.map((frame, i) => i === index ? { ...frame, ...changes } : frame));
   const chooseImage = async (index, event) => { const file = event.target.files?.[0]; if (!file) return; updateFrame(index, { status: "Bild wird hochgeladen …" }); try { const imageUrl = await uploadHomepageImage(file); updateFrame(index, { imageUrl, status: "✓ Bild bereit – Rahmen jetzt veröffentlichen." }); } catch (error) { updateFrame(index, { status: `Upload fehlgeschlagen: ${error?.message || "Unbekannter Fehler"}` }); } };
   const saveFrame = async (index, event) => { const saved = await createHomepageSection(event); if (saved) updateFrame(index, { imageUrl: "", status: "" }); };
   const frameForm = (label, index) => <section className="homepage-builder panel"><span className="eyebrow">{label}</span><h2>Rahmen gestalten</h2><form onSubmit={(event) => saveFrame(index, event)} className="homepage-form"><input name="title" placeholder="Rahmen-Überschrift" required/><textarea name="content" placeholder="Text für den Rahmen" required/><input name="image_url" value={frames[index].imageUrl} onChange={(event) => updateFrame(index, { imageUrl: event.target.value })} placeholder="Bild-URL (optional)"/><label className="homepage-image-picker">Foto hochladen<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(event) => chooseImage(index, event)}/></label>{frames[index].imageUrl && <img className="homepage-upload-preview" src={frames[index].imageUrl} alt="Bildvorschau"/>}{frames[index].status && <p className="homepage-upload-status" aria-live="polite">{frames[index].status}</p>}<select name="frame_style" defaultValue="standard"><option value="standard">Standard</option><option value="accent">Akzent</option><option value="soft">Soft</option><option value="dark">Dunkel</option></select><button className="primary-button">Rahmen veröffentlichen</button></form></section>;
-  return <section className="home-page"><div className="page-heading"><div><span className="eyebrow">REGION {activeRegion?.name || "ENNSTAL CONNECT"}</span><h1>Willkommen, {getName(profile)}</h1><p>Entdecke Beiträge, Gruppen und gemeinsame Aktivitäten in {activeRegion?.name || "deiner Region"}.</p></div>{isHeadAdmin(profile?.role) && <div className="head-admin-profile-badge">★ Hauptadmin · Betreiber</div>}</div><MunicipalityWelcome profile={profile} activeRegion={activeRegion}/><ReturnPulse profile={profile} user={user} members={members} groups={groups} events={events} forumPosts={forumPosts}/><MemberInviteCard profile={profile} user={user}/><MemberActivationPanel profile={profile} user={user} poll={weeklyPoll} groups={groups} events={events} eventRsvps={eventRsvps} forumPosts={forumPosts} forumReplies={forumReplies} friendships={friendships}/><RegionalDiscovery user={user} members={members} groups={groups} events={events} eventRsvps={eventRsvps} friendships={friendships} onOpenGroup={onOpenGroup}/><CommunityNeedsYou user={user} members={members} forumPosts={forumPosts} forumReplies={forumReplies} requests={communityRequests}/><EngagementPanel poll={weeklyPoll} badges={welcomeBadges} groups={groups} featuredGroup={featuredGroup} requests={communityRequests} user={user} isHeadAdmin={isHeadAdmin(profile?.role)} onVote={onVote} onCreatePoll={onCreatePoll} onFeatureGroup={onFeatureGroup} onCreateRequest={onCreateRequest} onCloseRequest={onCloseRequest} onOpenGroup={onOpenGroup}/>{canEdit && <details className="homepage-editor-toggle"><summary>Startseite für {activeRegion?.name || "diese Region"} gestalten</summary><div className="homepage-builder-grid">{frameForm("NEUER BEITRAG", 0)}{frameForm("WEITERER BEITRAG", 1)}</div></details>}{homepageSections.length > 0 && <div className="homepage-sections">{homepageSections.map((x) => <article className={`homepage-frame ${x.frame_style || "standard"}`} key={x.id}>{x.image_url && <img src={x.image_url} alt=""/>}<div><span className="frame-kicker">{activeRegion?.name || "ENNSTAL CONNECT"}</span><h2>{x.title}</h2><p>{x.content}</p>{canEdit && <div className="content-manage-actions"><button onClick={() => editHomepageSection(x)}>Bearbeiten</button><button className="danger-button" onClick={() => deleteHomepageSection(x)}>Löschen</button></div>}</div></article>)}</div>}</section>;
+  return <section className="home-page"><div className="page-heading"><div><span className="eyebrow">REGION {activeRegion?.name || "ENNSTAL CONNECT"}</span><h1>Willkommen, {getName(profile)}</h1><p>Entdecke Beiträge, Gruppen und gemeinsame Aktivitäten in {activeRegion?.name || "deiner Region"}.</p></div>{isHeadAdmin(profile?.role) && <div className="head-admin-profile-badge">★ Hauptadmin · Betreiber</div>}</div><MunicipalityWelcome profile={profile} activeRegion={activeRegion}/><ReturnPulse profile={profile} user={user} members={members} groups={groups} events={events} forumPosts={forumPosts}/><MemberInviteCard profile={profile} user={user}/><MemberActivationPanel profile={profile} user={user} poll={weeklyPoll} groups={groups} events={events} eventRsvps={eventRsvps} forumPosts={forumPosts} forumReplies={forumReplies} friendships={friendships}/><RegionalDiscovery user={user} members={members} groups={groups} events={events} eventRsvps={eventRsvps} friendships={friendships} onOpenGroup={onOpenGroup}/><NewMemberWelcome user={user} members={members} greetings={welcomeGreetings} onSendWelcome={onSendWelcome}/><CommunityNeedsYou user={user} members={members} forumPosts={forumPosts} forumReplies={forumReplies} requests={communityRequests}/><EngagementPanel poll={weeklyPoll} badges={welcomeBadges} groups={groups} featuredGroup={featuredGroup} requests={communityRequests} user={user} isHeadAdmin={isHeadAdmin(profile?.role)} onVote={onVote} onCreatePoll={onCreatePoll} onFeatureGroup={onFeatureGroup} onCreateRequest={onCreateRequest} onCloseRequest={onCloseRequest} onOpenGroup={onOpenGroup}/>{canEdit && <details className="homepage-editor-toggle"><summary>Startseite für {activeRegion?.name || "diese Region"} gestalten</summary><div className="homepage-builder-grid">{frameForm("NEUER BEITRAG", 0)}{frameForm("WEITERER BEITRAG", 1)}</div></details>}{homepageSections.length > 0 && <div className="homepage-sections">{homepageSections.map((x) => <article className={`homepage-frame ${x.frame_style || "standard"}`} key={x.id}>{x.image_url && <img src={x.image_url} alt=""/>}<div><span className="frame-kicker">{activeRegion?.name || "ENNSTAL CONNECT"}</span><h2>{x.title}</h2><p>{x.content}</p>{canEdit && <div className="content-manage-actions"><button onClick={() => editHomepageSection(x)}>Bearbeiten</button><button className="danger-button" onClick={() => deleteHomepageSection(x)}>Löschen</button></div>}</div></article>)}</div>}</section>;
 }
 
 function ReturnPulse({ profile, user, members, groups, events, forumPosts }) {
@@ -1643,6 +1655,30 @@ function RegionalDiscovery({ user, members, groups, events, eventRsvps, friendsh
     </div>
   </section>;
 }
+function NewMemberWelcome({ user, members, greetings, onSendWelcome }) {
+  if (!user?.id) return null;
+  const cutoff = Date.now() - (30 * 86400000);
+  const greetedIds = new Set(greetings.filter((item) => item.sender_id === user.id).map((item) => item.recipient_id));
+  const newcomers = members
+    .filter((member) => member.id !== user.id && member.account_status !== "SUSPENDED" && !member.is_test_account && new Date(member.created_at || 0).getTime() >= cutoff)
+    .sort((a,b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+    .slice(0,4);
+  if (!newcomers.length) return null;
+  return <section className="new-member-welcome panel">
+    <div className="new-member-welcome-head"><span className="eyebrow">NEU IN DEINER REGION</span><h2>Heiße neue Mitglieder willkommen</h2><p>Ein kurzer Gruß senkt die Hürde für den ersten Kontakt. Pro Mitglied kannst du einmal einen freundlichen Willkommensgruß senden.</p></div>
+    <div className="new-member-welcome-grid">
+      {newcomers.map((member) => {
+        const sent = greetedIds.has(member.id);
+        return <article key={member.id}>
+          <img src={member.avatar_url || DEFAULT_AVATAR} alt=""/>
+          <div><strong>{getName(member)}</strong><small>Seit {new Date(member.created_at).toLocaleDateString("de-AT")} dabei</small></div>
+          <button type="button" className={sent ? "secondary-button is-sent" : "primary-button"} disabled={sent} onClick={() => onSendWelcome(member)}>{sent ? "✓ Begrüßt" : "👋 Willkommen heißen"}</button>
+        </article>;
+      })}
+    </div>
+  </section>;
+}
+
 function CommunityNeedsYou({ user, members, forumPosts, forumReplies, requests }) {
   if (!user?.id) return null;
   const replyCount = (postId) => forumReplies.filter((reply) => reply.post_id === postId).length;
@@ -1686,6 +1722,7 @@ function NotificationCenter({ notifications, onOpen, onMarkAll }) {
     if (key === "POKE") return "☝";
     if (key === "ADMIN_FORUM_POST") return "▤";
     if (key === "REFERRAL_JOINED") return "↗";
+    if (key === "WELCOME_GREETING") return "👋";
     return "◎";
   };
   return <section className="notification-center">
