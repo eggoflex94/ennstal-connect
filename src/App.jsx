@@ -825,7 +825,7 @@ useEffect(() => {
         const { data: sameNickname } = await supabase.from("profiles").select("id").ilike("nickname", nickname).limit(1);
         if (sameNickname?.length) return showNotice("Dieser Nickname ist bereits vergeben. Bitte wähle einen anderen.");
       }
-      const { data, error } = await withTimeout(supabase.auth.signUp({ email: f.get("email"), password: f.get("password"), options: { emailRedirectTo: `${location.origin}/`, data: { nickname, first_name: String(f.get("first_name") || "").trim(), last_name: String(f.get("last_name") || "").trim(), birth_date: String(f.get("birth_date") || "").trim(), gender: String(f.get("gender") || "").trim(), home_region_slug: String(f.get("home_region_slug") || "ennstal").trim() } } }), supabaseUnavailableMessage);
+      const { data, error } = await withTimeout(supabase.auth.signUp({ email: f.get("email"), password: f.get("password"), options: { emailRedirectTo: `${location.origin}/`, data: { nickname, first_name: String(f.get("first_name") || "").trim(), last_name: String(f.get("last_name") || "").trim(), birth_date: String(f.get("birth_date") || "").trim(), gender: String(f.get("gender") || "").trim(), home_region_slug: String(f.get("home_region_slug") || "ennstal").trim(), inviter_nickname: String(new URLSearchParams(location.search).get("ref") || "").trim().slice(0, 100) } } }), supabaseUnavailableMessage);
       if (error) return showNotice(/database error saving new user/i.test(error.message || "") ? "Die Registrierung konnte nicht angelegt werden. Der Nickname ist nicht als vergeben erkannt worden – die Datenbank-Registrierung muss einmal repariert werden. Bitte führe die Datei registration_and_forum_repair.sql in Supabase aus und versuche es danach erneut." : error.message);
       // When confirmations are disabled, create the matching profile immediately.
       if (data.session?.user) { setUser(data.session.user); void supabase.rpc("ensure_current_profile").finally(loadAll); }
@@ -1496,7 +1496,7 @@ function Home({ profile, user, activeRegion, isHeadAdmin, homepageSections, canE
   const chooseImage = async (index, event) => { const file = event.target.files?.[0]; if (!file) return; updateFrame(index, { status: "Bild wird hochgeladen …" }); try { const imageUrl = await uploadHomepageImage(file); updateFrame(index, { imageUrl, status: "✓ Bild bereit – Rahmen jetzt veröffentlichen." }); } catch (error) { updateFrame(index, { status: `Upload fehlgeschlagen: ${error?.message || "Unbekannter Fehler"}` }); } };
   const saveFrame = async (index, event) => { const saved = await createHomepageSection(event); if (saved) updateFrame(index, { imageUrl: "", status: "" }); };
   const frameForm = (label, index) => <section className="homepage-builder panel"><span className="eyebrow">{label}</span><h2>Rahmen gestalten</h2><form onSubmit={(event) => saveFrame(index, event)} className="homepage-form"><input name="title" placeholder="Rahmen-Überschrift" required/><textarea name="content" placeholder="Text für den Rahmen" required/><input name="image_url" value={frames[index].imageUrl} onChange={(event) => updateFrame(index, { imageUrl: event.target.value })} placeholder="Bild-URL (optional)"/><label className="homepage-image-picker">Foto hochladen<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(event) => chooseImage(index, event)}/></label>{frames[index].imageUrl && <img className="homepage-upload-preview" src={frames[index].imageUrl} alt="Bildvorschau"/>}{frames[index].status && <p className="homepage-upload-status" aria-live="polite">{frames[index].status}</p>}<select name="frame_style" defaultValue="standard"><option value="standard">Standard</option><option value="accent">Akzent</option><option value="soft">Soft</option><option value="dark">Dunkel</option></select><button className="primary-button">Rahmen veröffentlichen</button></form></section>;
-  return <section className="home-page"><div className="page-heading"><div><span className="eyebrow">REGION {activeRegion?.name || "ENNSTAL CONNECT"}</span><h1>Willkommen, {getName(profile)}</h1><p>Entdecke Beiträge, Gruppen und gemeinsame Aktivitäten in {activeRegion?.name || "deiner Region"}.</p></div>{isHeadAdmin(profile?.role) && <div className="head-admin-profile-badge">★ Hauptadmin · Betreiber</div>}</div><MunicipalityWelcome profile={profile} activeRegion={activeRegion}/><ReturnPulse profile={profile} user={user} members={members} groups={groups} events={events} forumPosts={forumPosts}/><MemberActivationPanel profile={profile} user={user} poll={weeklyPoll} groups={groups} events={events} eventRsvps={eventRsvps} forumPosts={forumPosts} forumReplies={forumReplies} friendships={friendships}/><RegionalDiscovery user={user} members={members} groups={groups} events={events} eventRsvps={eventRsvps} friendships={friendships} onOpenGroup={onOpenGroup}/><CommunityNeedsYou user={user} members={members} forumPosts={forumPosts} forumReplies={forumReplies} requests={communityRequests}/><EngagementPanel poll={weeklyPoll} badges={welcomeBadges} groups={groups} featuredGroup={featuredGroup} requests={communityRequests} user={user} isHeadAdmin={isHeadAdmin(profile?.role)} onVote={onVote} onCreatePoll={onCreatePoll} onFeatureGroup={onFeatureGroup} onCreateRequest={onCreateRequest} onCloseRequest={onCloseRequest} onOpenGroup={onOpenGroup}/>{canEdit && <details className="homepage-editor-toggle"><summary>Startseite für {activeRegion?.name || "diese Region"} gestalten</summary><div className="homepage-builder-grid">{frameForm("NEUER BEITRAG", 0)}{frameForm("WEITERER BEITRAG", 1)}</div></details>}{homepageSections.length > 0 && <div className="homepage-sections">{homepageSections.map((x) => <article className={`homepage-frame ${x.frame_style || "standard"}`} key={x.id}>{x.image_url && <img src={x.image_url} alt=""/>}<div><span className="frame-kicker">{activeRegion?.name || "ENNSTAL CONNECT"}</span><h2>{x.title}</h2><p>{x.content}</p>{canEdit && <div className="content-manage-actions"><button onClick={() => editHomepageSection(x)}>Bearbeiten</button><button className="danger-button" onClick={() => deleteHomepageSection(x)}>Löschen</button></div>}</div></article>)}</div>}</section>;
+  return <section className="home-page"><div className="page-heading"><div><span className="eyebrow">REGION {activeRegion?.name || "ENNSTAL CONNECT"}</span><h1>Willkommen, {getName(profile)}</h1><p>Entdecke Beiträge, Gruppen und gemeinsame Aktivitäten in {activeRegion?.name || "deiner Region"}.</p></div>{isHeadAdmin(profile?.role) && <div className="head-admin-profile-badge">★ Hauptadmin · Betreiber</div>}</div><MunicipalityWelcome profile={profile} activeRegion={activeRegion}/><ReturnPulse profile={profile} user={user} members={members} groups={groups} events={events} forumPosts={forumPosts}/><MemberInviteCard profile={profile} user={user}/><MemberActivationPanel profile={profile} user={user} poll={weeklyPoll} groups={groups} events={events} eventRsvps={eventRsvps} forumPosts={forumPosts} forumReplies={forumReplies} friendships={friendships}/><RegionalDiscovery user={user} members={members} groups={groups} events={events} eventRsvps={eventRsvps} friendships={friendships} onOpenGroup={onOpenGroup}/><CommunityNeedsYou user={user} members={members} forumPosts={forumPosts} forumReplies={forumReplies} requests={communityRequests}/><EngagementPanel poll={weeklyPoll} badges={welcomeBadges} groups={groups} featuredGroup={featuredGroup} requests={communityRequests} user={user} isHeadAdmin={isHeadAdmin(profile?.role)} onVote={onVote} onCreatePoll={onCreatePoll} onFeatureGroup={onFeatureGroup} onCreateRequest={onCreateRequest} onCloseRequest={onCloseRequest} onOpenGroup={onOpenGroup}/>{canEdit && <details className="homepage-editor-toggle"><summary>Startseite für {activeRegion?.name || "diese Region"} gestalten</summary><div className="homepage-builder-grid">{frameForm("NEUER BEITRAG", 0)}{frameForm("WEITERER BEITRAG", 1)}</div></details>}{homepageSections.length > 0 && <div className="homepage-sections">{homepageSections.map((x) => <article className={`homepage-frame ${x.frame_style || "standard"}`} key={x.id}>{x.image_url && <img src={x.image_url} alt=""/>}<div><span className="frame-kicker">{activeRegion?.name || "ENNSTAL CONNECT"}</span><h2>{x.title}</h2><p>{x.content}</p>{canEdit && <div className="content-manage-actions"><button onClick={() => editHomepageSection(x)}>Bearbeiten</button><button className="danger-button" onClick={() => deleteHomepageSection(x)}>Löschen</button></div>}</div></article>)}</div>}</section>;
 }
 
 function ReturnPulse({ profile, user, members, groups, events, forumPosts }) {
@@ -1538,6 +1538,40 @@ function ReturnPulse({ profile, user, members, groups, events, forumPosts }) {
     {streak > 1 && <div className="return-pulse-streak"><span>↻</span><div><strong>{streak} aktive Tage in Folge</strong><small>Deine regelmäßige Beteiligung hält die Community lebendig.</small></div></div>}
   </section>;
 }
+function MemberInviteCard({ profile, user }) {
+  const [inviteCount, setInviteCount] = useState(0);
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    if (!supabase || !user?.id) return undefined;
+    let cancelled = false;
+    supabase.from("community_referrals").select("invited_user_id", { count:"exact", head:true }).eq("inviter_id", user.id).then(({ count, error }) => {
+      if (!cancelled && !error) setInviteCount(Number(count || 0));
+    });
+    return () => { cancelled = true; };
+  }, [user?.id]);
+  if (!user?.id || !profile?.nickname) return null;
+  const inviteUrl = location.origin + "/?ref=" + encodeURIComponent(profile.nickname);
+  const copiedFeedback = () => { setCopied(true); window.setTimeout(() => setCopied(false), 2200); };
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(inviteUrl); copiedFeedback(); } catch {}
+  };
+  const share = async () => {
+    try {
+      if (navigator.share) {
+        await navigator.share({ title:"Ennstal Connect", text:"Komm zu Ennstal Connect – unserer regionalen Community.", url:inviteUrl });
+      } else {
+        await copy();
+      }
+    } catch (error) {
+      if (error?.name !== "AbortError") await copy();
+    }
+  };
+  return <section className="member-invite-card panel">
+    <div><span className="eyebrow">COMMUNITY WÄCHST DURCH MENSCHEN</span><h2>Lade jemanden aus deiner Region ein</h2><p>Teile deinen persönlichen Einladungslink. Registrierungen über diesen Link werden deiner Einladung zugeordnet.</p>{inviteCount > 0 && <small><strong>{inviteCount}</strong> {inviteCount === 1 ? "Person ist" : "Personen sind"} bereits über deine Einladung beigetreten.</small>}</div>
+    <div className="member-invite-actions"><button type="button" className="primary-button" onClick={share}>↗ Einladung teilen</button><button type="button" className="secondary-button" onClick={copy}>{copied ? "✓ Link kopiert" : "Link kopieren"}</button></div>
+  </section>;
+}
+
 function MemberActivationPanel({ profile, user, poll, groups, events, eventRsvps, forumPosts, forumReplies, friendships }) {
   if (!user?.id) return null;
   const interests = Array.isArray(profile?.interests) ? profile.interests : String(profile?.interests || "").split(",").filter(Boolean);
@@ -1651,6 +1685,7 @@ function NotificationCenter({ notifications, onOpen, onMarkAll }) {
     if (key === "ACTIVITY_REWARD") return "✦";
     if (key === "POKE") return "☝";
     if (key === "ADMIN_FORUM_POST") return "▤";
+    if (key === "REFERRAL_JOINED") return "↗";
     return "◎";
   };
   return <section className="notification-center">
@@ -1862,7 +1897,8 @@ function MemberProfile({ member, friends, groups = [], photos = [], onOpenGroup,
 function PublicProfileUpdatesPreview() { const [updates, setUpdates] = useState([]); useEffect(() => { if (!supabase) return; supabase.from("public_profile_updates").select("nickname, role, is_verified, avatar_url, activity_type, created_at").order("created_at", { ascending: false }).limit(5).then(({ data }) => setUpdates(data || [])); }, []); if (!updates.length) return null; return <section className="public-auth-updates"><span className="eyebrow">ÖFFENTLICHE AKTUALISIERUNGEN</span><h2>Aus der Community</h2>{updates.map((entry, index) => <div className={`hub-row ${roleClass(entry.role)}`} key={`${entry.nickname}-${entry.created_at}-${index}`}><img src={entry.avatar_url || DEFAULT_AVATAR} alt=""/><div><strong><RoleStar member={entry}/> {entry.nickname}{entry.is_verified ? " ✓" : ""}</strong><span>{entry.activity_type}</span></div></div>)}</section>; }
 function PasswordReset({ finishPasswordReset, notice }) { return <div className="auth-page"><div className="auth-welcome ec-auth-welcome"><section className="auth-intro ec-auth-intro"><img className="ec-auth-logo" src="/ennstal-connect-wordmark.svg" alt="Ennstal Connect"/><span className="eyebrow">KONTO-SICHERHEIT</span><h1>Neues Passwort festlegen.</h1><p>Wähle ein sicheres neues Passwort für dein Ennstal-Connect-Konto.</p></section><div className="auth-box ec-auth-box"><form className="panel" onSubmit={finishPasswordReset}><h2>Passwort zurücksetzen</h2><input name="password" type="password" minLength={6} placeholder="Neues Passwort (mindestens 6 Zeichen)" required/><input name="confirm_password" type="password" minLength={6} placeholder="Passwort wiederholen" required/><button className="primary-button">Passwort speichern</button></form></div></div>{notice && <div className="toast">{notice}</div>}</div>; }
 function NewAuth({ login, register }) {
-  const [mode, setMode] = useState("login");
+  const inviter = String(new URLSearchParams(location.search).get("ref") || "").trim();
+  const [mode, setMode] = useState(inviter ? "register" : "login");
   return <div className="auth-welcome ec-auth-welcome">
     <section className="auth-intro ec-auth-intro">
       <span className="eyebrow">REGIONAL. ECHT. GEMEINSAM.</span>
@@ -1885,7 +1921,7 @@ function NewAuth({ login, register }) {
       <small>Profile und private Inhalte sind erst nach der Anmeldung sichtbar.</small>
       <PublicProfileUpdatesPreview/>
     </section>
-    <div className="auth-box ec-auth-box">{mode === "login" ?
+    <div className="auth-box ec-auth-box">{inviter && <div className="auth-referral-note"><strong>Du wurdest eingeladen</strong><span>Ein Mitglied von Ennstal Connect hat dir diesen Registrierungslink geschickt.</span></div>}{mode === "login" ?
       <form className="panel" onSubmit={login}><span className="eyebrow">WILLKOMMEN</span><h2>Anmelden</h2><input name="email" type="email" autoComplete="email" placeholder="E-Mail *" required/><input name="password" type="password" autoComplete="current-password" placeholder="Passwort *" required/><button className="primary-button">Anmelden</button><button type="button" className="text-button" onClick={() => setMode("register")}>Noch kein Konto? Jetzt registrieren</button></form> :
       <form className="panel" onSubmit={register}><span className="eyebrow">NEUES KONTO</span><h2>Registrieren</h2><p className="auth-form-note">Dein Nickname ist sichtbar. Wähle die Heimatregion, in der dein Profil geführt wird.</p><input name="nickname" placeholder="Nickname *" required/><input name="first_name" placeholder="Vorname *" required/><input name="last_name" placeholder="Nachname *" required/><input name="birth_date" type="date" required/><select name="gender" defaultValue="" required><option value="">Geschlecht auswählen *</option><option value="männlich">Männlich</option><option value="weiblich">Weiblich</option><option value="divers">Divers</option></select><label className="region-register-label"><span>Deine Heimatregion</span><small>Dort bist du in der Mitgliederliste sichtbar.</small><select name="home_region_slug" defaultValue="ennstal" required><option value="ennstal">Ennstal</option><option value="leoben-bruck-muerzzuschlag">Leoben – Bruck – Mürzzuschlag</option><option value="salzkammergut">Salzkammergut</option></select></label><input name="email" type="email" autoComplete="email" placeholder="E-Mail *" required/><input name="password" type="password" autoComplete="new-password" minLength={6} placeholder="Passwort *" required/><button className="primary-button">Konto erstellen</button><button type="button" className="text-button" onClick={() => setMode("login")}>Bereits registriert? Anmelden</button></form>}
     </div>
