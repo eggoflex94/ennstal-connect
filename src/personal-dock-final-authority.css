@@ -549,3 +549,58 @@ body .ec-right-dock.ec-compact-personal-dock .ec-compact-menu-grid .ec-dock-noti
     font-size:10px!important;
   }
 }
+
+
+/* Ultra-compact profile visitor list */
+.ec-right-dock>.ec-dock-detail[data-panel="visits"].is-pinned-open{
+  gap:3px!important;
+  padding:4px!important;
+}
+.ec-right-dock .ec-profile-visitor-link{
+  grid-template-columns:22px minmax(0,1fr) auto!important;
+  gap:5px!important;
+  min-height:29px!important;
+  padding:3px 5px!important;
+  border-radius:7px!important;
+}
+.ec-right-dock .ec-profile-visitor-avatar{
+  width:22px!important;
+  height:22px!important;
+  min-width:22px!important;
+  border-radius:6px!important;
+}
+.ec-right-dock .ec-profile-visitor-copy strong{
+  gap:3px!important;
+  font-size:8.8px!important;
+  line-height:1!important;
+}
+.ec-right-dock .ec-profile-visitor-copy .ec-inline-role-star{
+  width:10px!important;
+  height:10px!important;
+  min-width:10px!important;
+  flex:0 0 10px!important;
+}
+.ec-right-dock .ec-profile-visitor-copy small{
+  font-size:6.6px!important;
+  line-height:1.05!important;
+}
+.ec-right-dock .ec-profile-visitor-link time{
+  font-size:6.5px!important;
+}
+.ec-right-dock>[data-ec-detail="visits"]{
+  min-height:36px!important;
+  padding:6px 8px!important;
+}
+@media(max-width:900px){
+  .ec-right-dock .ec-profile-visitor-link{
+    grid-template-columns:24px minmax(0,1fr) auto!important;
+    min-height:31px!important;
+  }
+  .ec-right-dock .ec-profile-visitor-avatar{
+    width:24px!important;
+    height:24px!important;
+  }
+  .ec-right-dock .ec-profile-visitor-copy strong{
+    font-size:9.2px!important;
+  }
+}
