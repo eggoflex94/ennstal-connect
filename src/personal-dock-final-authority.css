@@ -723,3 +723,86 @@ body .ec-right-dock .ec-dock-detail[data-panel="visits"]{
     padding-right:0!important;
   }
 }
+
+
+/* 2026-09-28 profile-visitor card authority.
+   Keep every visitor card two-column so name/status/time cannot collapse into
+   one-character vertical columns on narrow desktop-app layouts. */
+body .ec-right-dock .ec-dock-detail[data-panel="visits"] .ec-profile-visitor-link{
+  display:grid!important;
+  grid-template-columns:28px minmax(0,1fr)!important;
+  grid-template-rows:auto!important;
+  align-items:center!important;
+  column-gap:8px!important;
+  row-gap:0!important;
+  width:100%!important;
+  height:auto!important;
+  min-height:48px!important;
+  padding:6px 8px!important;
+  overflow:hidden!important;
+}
+body .ec-right-dock .ec-dock-detail[data-panel="visits"] .ec-profile-visitor-avatar{
+  grid-column:1!important;
+  width:28px!important;
+  min-width:28px!important;
+  max-width:28px!important;
+  height:28px!important;
+  min-height:28px!important;
+  max-height:28px!important;
+}
+body .ec-right-dock .ec-dock-detail[data-panel="visits"] .ec-profile-visitor-copy{
+  grid-column:2!important;
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr)!important;
+  gap:2px!important;
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+  overflow:hidden!important;
+}
+body .ec-right-dock .ec-dock-detail[data-panel="visits"] .ec-profile-visitor-copy strong{
+  display:flex!important;
+  align-items:center!important;
+  gap:5px!important;
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  writing-mode:horizontal-tb!important;
+}
+body .ec-right-dock .ec-dock-detail[data-panel="visits"] .ec-profile-visitor-name{
+  display:block!important;
+  min-width:0!important;
+  max-width:100%!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+  word-break:normal!important;
+  overflow-wrap:normal!important;
+  writing-mode:horizontal-tb!important;
+}
+body .ec-right-dock .ec-dock-detail[data-panel="visits"] .ec-profile-visitor-copy small,
+body .ec-right-dock .ec-dock-detail[data-panel="visits"] .ec-profile-visitor-copy time{
+  display:block!important;
+  position:static!important;
+  width:auto!important;
+  min-width:0!important;
+  max-width:100%!important;
+  margin:0!important;
+  padding:0!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  word-break:normal!important;
+  overflow-wrap:normal!important;
+  writing-mode:horizontal-tb!important;
+  line-height:1.15!important;
+}
+body .ec-right-dock .ec-dock-detail[data-panel="visits"] .ec-profile-visitor-copy small{
+  font-size:8px!important;
+}
+body .ec-right-dock .ec-dock-detail[data-panel="visits"] .ec-profile-visitor-copy time{
+  font-size:7px!important;
+  color:#8595a2!important;
+}
