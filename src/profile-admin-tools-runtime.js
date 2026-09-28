@@ -18,7 +18,7 @@ async function loadContext(targetId){
   const {data:{user}}=await supabase.auth.getUser(); if(!user?.id||!targetId||user.id===targetId)return null;
   const [viewerResult,targetResult,permResult,regionsResult,regionalAdminResult,regionalModResult,targetRegionalAdminResult,targetRegionalModResult,photographerAssignmentsResult,targetPermissionResult]=await Promise.all([
     supabase.from('profiles').select('id,nickname,role,account_status,forum_moderator,home_region_id,is_primary_head_admin').eq('id',user.id).maybeSingle(),
-    supabase.from('profiles').select('id,nickname,first_name,last_name,role,account_status,forum_moderator,is_verified,is_test_account,account_badge,home_region_id,community_points,purchase_points,avatar_url,profile_background,bio_image_url,admin_responsibilities,is_primary_head_admin').eq('id',targetId).maybeSingle(),
+    supabase.from('profiles').select('id,nickname,first_name,last_name,birth_date,gender,role,account_status,forum_moderator,is_verified,is_test_account,account_badge,home_region_id,community_points,purchase_points,avatar_url,profile_background,bio_image_url,admin_responsibilities,is_primary_head_admin').eq('id',targetId).maybeSingle(),
     supabase.from('user_permissions').select('*').eq('user_id',user.id).maybeSingle(),
     supabase.from('regions').select('id,slug,name').eq('is_active',true).order('sort_order'),
     supabase.from('regional_admin_assignments').select('region_id,active').eq('user_id',user.id).eq('active',true),
@@ -60,6 +60,7 @@ const canVerificationRequest=ctx=>ctx.hasBasicAdmin||canGlobal(ctx,'manage_membe
 const canPoints=ctx=>!(bool(ctx.target?.is_primary_head_admin)&&ctx.viewer?.id!==ctx.target?.id)&&(ctx.hasBasicAdmin||canGlobal(ctx,'manage_points'));
 const canReports=ctx=>ctx.hasBasicAdmin||canGlobal(ctx,'manage_reports')||canRegional(ctx,'MEMBERS');
 const canManagePhotographers=ctx=>ctx.isHead||(ctx.isGlobalAdmin&&bool(ctx.permissions?.manage_community_photographers));
+const canEditIdentity=ctx=>ctx.isHead||ctx.isGlobalAdmin||bool(ctx.permissions?.manage_members)||ctx.isRegionalAdminForTarget||canRegional(ctx,'MEMBERS');
 const targetName=t=>t.nickname||[t.first_name,t.last_name].filter(Boolean).join(' ')||'Mitglied';
 const toolButton=(label,action,cls='')=>`<button type="button" class="ec-profile-admin-action ${cls}" data-admin-action="${esc(action)}">${esc(label)}</button>`;
 const section=(icon,title,subtitle,body,cls='')=>`<section class="ec-profile-admin-section ${cls}"><header class="ec-profile-admin-section-head"><span class="ec-profile-admin-section-icon">${icon}</span><div><h3>${esc(title)}</h3>${subtitle?`<p>${esc(subtitle)}</p>`:''}</div></header>${body}</section>`;
@@ -85,6 +86,8 @@ function buildModal(ctx){
     const status=hasGlobal?'Global · alle Regionen':regionalNames.length?`Regional · ${regionalNames.join(' · ')}`:'Nicht vergeben';
     blocks.push(section('📷','Community-Fotograf',`Aktuell: ${status}`,`<label class="ec-profile-admin-region-picker">Region<select class="ec-photographer-region-select">${regionOptions}</select></label><div class="ec-profile-admin-grid">${toolButton(hasGlobal?'Globale Fotografenfreigabe entfernen':'Global vergeben','photographer-global')}${toolButton('Regionale Freigabe umschalten','photographer-regional')}${ctx.isHead&&role(t.role)==='ADMIN'?toolButton(ctx.targetCanManagePhotographers?'Zusatzrecht Fotografenverwaltung entfernen':'Global Admin: Fotografenverwaltung erlauben','photographer-manager-right'):''}</div>`));
   }
+
+  if(canEditIdentity(ctx))blocks.push(section('✎','Mitgliedsdaten','Name, Geburtsdatum und Geschlecht ändern – automatische Nachricht an das Mitglied',`<div class="ec-profile-admin-grid">${toolButton('Name / Geburtsdatum ändern','identity-edit')}</div>`));
 
   const moderation=[];
   if(canWarn(ctx))moderation.push(toolButton('Verwarnung senden','warn'));
@@ -121,7 +124,27 @@ async function showReports(ctx,modal){const {data,error}=await supabase.rpc('adm
 async function savePermissionSet(targetId,values){let result=await supabase.rpc('admin_set_permissions',{target_user:targetId,p_manage_members:!!values.manage_members,p_manage_points:!!values.manage_points,p_manage_messages:!!values.manage_messages,p_manage_media:!!values.manage_media,p_manage_roles:!!values.manage_roles,p_manage_admins:!!values.manage_admins,p_view_profile_visits:!!values.view_profile_visits,p_manage_news:!!values.manage_news,p_manage_groups:!!values.manage_groups,p_manage_events:!!values.manage_events,p_manage_marketplace:!!values.manage_marketplace,p_manage_friend_requests:!!values.manage_friend_requests,p_manage_homepage:!!values.manage_homepage,p_manage_reports:!!values.manage_reports});if(result.error)return result;const responsibilities=PERMISSIONS.filter(([key])=>values[key]).map(([,label])=>label);return supabase.rpc('admin_set_responsibilities',{p_target_user:targetId,p_responsibilities:responsibilities});}
 async function managePermissions(ctx,modal){const {data,error}=await supabase.rpc('admin_get_permissions',{target_user:ctx.target.id});if(error)return notify(error.message);const panel=modal.querySelector('.ec-profile-admin-body');panel.innerHTML=`<section class="ec-profile-admin-section"><button class="ec-profile-admin-back" type="button">← Zurück</button><h3>Zusatzrechte für ${esc(targetName(ctx.target))}</h3><p>Admin-Grundfunktionen bleiben rollenabhängig aktiv. Diese Auswahl steuert zusätzliche Verwaltungsbereiche.</p><div class="ec-profile-permission-list">${PERMISSIONS.map(([key,label])=>`<label><input type="checkbox" data-permission="${key}" ${data?.[key]?'checked':''}><span>${esc(label)}</span></label>`).join('')}</div><button type="button" class="ec-profile-permissions-save">Rechte speichern</button></section>`;panel.querySelector('.ec-profile-admin-back').onclick=()=>openTools(ctx.target.id);panel.querySelector('.ec-profile-permissions-save').onclick=async()=>{const values=Object.fromEntries(PERMISSIONS.map(([key])=>[key,!!panel.querySelector(`[data-permission="${key}"]`)?.checked]));const ok=await withPreparedAction('Berechtigungen ändern',ctx.target.id,()=>savePermissionSet(ctx.target.id,values));if(ok){notify('Berechtigungen und Zuständigkeiten wurden gespeichert.');openTools(ctx.target.id);}};}
 
+async function manageIdentity(ctx,modal){
+  if(!canEditIdentity(ctx))return;
+  const t=ctx.target,panel=modal.querySelector('.ec-profile-admin-body');
+  panel.innerHTML=`<section class="ec-profile-admin-section"><button class="ec-profile-admin-back" type="button">← Zurück</button><h3>Mitgliedsdaten ändern</h3><p>Das Mitglied wird automatisch über jede Änderung und den angegebenen Grund informiert.</p><div class="ec-profile-permission-list"><label>Nickname<input data-id-field="nickname" value="${esc(t.nickname||'')}"></label><label>Vorname<input data-id-field="first_name" value="${esc(t.first_name||'')}"></label><label>Nachname<input data-id-field="last_name" value="${esc(t.last_name||'')}"></label><label>Geburtsdatum<input data-id-field="birth_date" type="date" value="${esc(t.birth_date||'')}"></label><label>Geschlecht<select data-id-field="gender"><option value="">Nicht angegeben</option><option value="männlich" ${t.gender==='männlich'?'selected':''}>Männlich</option><option value="weiblich" ${t.gender==='weiblich'?'selected':''}>Weiblich</option><option value="divers" ${t.gender==='divers'?'selected':''}>Divers</option></select></label><label>Änderungsgrund<textarea data-id-field="reason" minlength="10" placeholder="Warum werden diese Daten geändert?"></textarea></label></div><button type="button" class="ec-profile-permissions-save">Speichern & Mitglied informieren</button></section>`;
+  panel.querySelector('.ec-profile-admin-back').onclick=()=>openTools(t.id);
+  panel.querySelector('.ec-profile-permissions-save').onclick=async()=>{
+    const get=n=>panel.querySelector(`[data-id-field="${n}"]`)?.value?.trim()||'';
+    const nickname=get('nickname'),first=get('first_name'),last=get('last_name'),birth=get('birth_date'),gender=get('gender')||null,reason=get('reason');
+    if(!nickname||!first||!last||!birth)return notify('Nickname, Vorname, Nachname und Geburtsdatum müssen ausgefüllt sein.');
+    if(reason.length<10)return notify('Bitte einen nachvollziehbaren Änderungsgrund mit mindestens 10 Zeichen eingeben.');
+    const prepared=await preparePrivilegedAction('Mitgliedsdaten ändern',t.id,reason);
+    if(prepared?.error)return notify(prepared.error.message||'Die Änderung konnte nicht vorbereitet werden.');
+    const {error}=await supabase.rpc('admin_update_member_identity',{p_user_id:t.id,p_nickname:nickname,p_first_name:first,p_last_name:last,p_birth_date:birth,p_gender:gender,p_reason:reason});
+    if(error)return notify(error.message);
+    notify('Mitgliedsdaten gespeichert. Das Mitglied wurde automatisch informiert.');
+    return openTools(t.id);
+  };
+}
+
 async function handleAction(ctx,action,modal){
+  if(action==='identity-edit'&&canEditIdentity(ctx))return manageIdentity(ctx,modal);
   if(action.startsWith('role:')&&ctx.isHead){const next=action.split(':')[1];const ok=await withPreparedAction(next==='MEMBER'?'Rolle entfernen':`Rolle auf ${roleLabel(next)} ändern`,ctx.target.id,()=>supabase.rpc('admin_set_role',{target_user:ctx.target.id,new_role:next}));if(ok){notify('Rolle wurde aktualisiert.');location.reload();}return;}
   if(action==='permissions'&&ctx.isHead)return managePermissions(ctx,modal);
   if(action==='forum-moderator'&&ctx.isHead){const enabled=!bool(ctx.target.forum_moderator);const ok=await withPreparedAction(`Forum-Moderation ${enabled?'vergeben':'entfernen'}`,ctx.target.id,()=>supabase.rpc('admin_set_forum_moderator',{p_target_user:ctx.target.id,p_enabled:enabled}));if(ok){notify('Forum-Moderationsrolle wurde aktualisiert.');openTools(ctx.target.id);}return;}
