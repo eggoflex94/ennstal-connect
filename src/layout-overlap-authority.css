@@ -6,16 +6,42 @@ img,video,canvas,svg{max-width:100%;height:auto}
 .modern-main,.content-root,.admin-page,.member-profile-page,.my-area-layout,.profile-page-layout,.panel,.member-grid,.member-card,.ec-right-dock,.admin-central-modern,.ec-admin-central-modern{min-width:0!important;max-width:100%}
 
 @media(min-width:1181px){
-  .ec-regional-ui .modern-main{display:grid!important;grid-template-columns:minmax(0,1fr) 300px!important;column-gap:24px!important;align-items:start!important;width:100%!important;max-width:100%!important;padding:var(--ec-page-top) 18px 46px 28px!important}
-  .ec-regional-ui .modern-main>.content-root{grid-column:1!important;width:100%!important;max-width:1360px!important;margin:0 auto!important}
-  /* Dashboard belongs to normal document flow so it scrolls with the full page. */
-  .ec-right-dock.ec-stable-personal-dock.ec-document-flow-dock{grid-column:2!important;position:static!important;inset:auto!important;top:auto!important;right:auto!important;bottom:auto!important;width:300px!important;max-width:300px!important;height:auto!important;max-height:none!important;overflow:visible!important;align-self:start!important}
+  /* The regional shell owns the dock as a direct body child. Keep that DOM
+     ownership stable and reserve desktop space for the fixed dashboard. */
+  .ec-regional-ui .modern-main{display:block!important;width:100%!important;max-width:100%!important;padding:var(--ec-page-top) 342px 46px 28px!important}
+  .ec-regional-ui .modern-main>.content-root{width:100%!important;max-width:1360px!important;margin:0 auto!important}
+  .ec-regional-ui>.ec-right-dock.ec-compact-personal-dock{
+    position:fixed!important;
+    top:var(--ec-dock-top)!important;
+    right:18px!important;
+    bottom:auto!important;
+    left:auto!important;
+    width:300px!important;
+    max-width:300px!important;
+    height:auto!important;
+    max-height:calc(100dvh - var(--ec-dock-top) - 18px)!important;
+    overflow-x:hidden!important;
+    overflow-y:auto!important;
+    z-index:55!important;
+  }
 }
 @media(min-width:901px) and (max-width:1180px){
-  .ec-regional-ui .modern-main{display:grid!important;grid-template-columns:minmax(0,1fr) 270px!important;column-gap:16px!important;align-items:start!important;width:100%!important;max-width:100%!important;padding:var(--ec-page-top) 14px 40px 18px!important}
-  .ec-regional-ui .modern-main>.content-root{grid-column:1!important;width:100%!important;margin:0!important}
-  /* No sticky/fixed dashboard here either; one page, one vertical scroll context. */
-  .ec-right-dock.ec-stable-personal-dock.ec-document-flow-dock{grid-column:2!important;position:static!important;inset:auto!important;top:auto!important;right:auto!important;bottom:auto!important;width:270px!important;max-width:270px!important;height:auto!important;max-height:none!important;overflow:visible!important;align-self:start!important}
+  .ec-regional-ui .modern-main{display:block!important;width:100%!important;max-width:100%!important;padding:var(--ec-page-top) 300px 40px 18px!important}
+  .ec-regional-ui .modern-main>.content-root{width:100%!important;margin:0!important}
+  .ec-regional-ui>.ec-right-dock.ec-compact-personal-dock{
+    position:fixed!important;
+    top:var(--ec-dock-top)!important;
+    right:14px!important;
+    bottom:auto!important;
+    left:auto!important;
+    width:270px!important;
+    max-width:270px!important;
+    height:auto!important;
+    max-height:calc(100dvh - var(--ec-dock-top) - 14px)!important;
+    overflow-x:hidden!important;
+    overflow-y:auto!important;
+    z-index:55!important;
+  }
 }
 .member-grid{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(min(286px,100%),320px))!important;justify-content:center!important;align-items:stretch!important;gap:16px!important;width:100%!important}
 .member-card{width:100%!important;max-width:320px!important;min-width:0!important;overflow:hidden!important}
