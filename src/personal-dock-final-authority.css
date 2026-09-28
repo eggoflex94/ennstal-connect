@@ -652,17 +652,25 @@ body .ec-right-dock .ec-dock-detail[data-panel="visits"]{
 }
 
 /* FINAL PERSONAL DASHBOARD PLACEMENT
-   One authority only: from tablet/desktop width upward the dashboard is a
-   document-scrolling right column. Use 100vw for the horizontal anchor so a
-   desktop-mode mobile browser cannot push it to the far edge of an oversized
-   document canvas. */
+   The shell is only a logical wrapper. On tablet/desktop it must not establish
+   a containing block; the dashboard is anchored to the document itself and
+   therefore starts directly under the fixed regional header and scrolls with
+   the page. */
 @media (min-width:761px){
-  body.ec-regional-ui .ec-regional-shell > .ec-right-dock.ec-compact-personal-dock{
+  body.ec-regional-ui > .ec-regional-shell{
+    display:contents!important;
+    position:static!important;
+    inset:auto!important;
+    transform:none!important;
+    contain:none!important;
+  }
+
+  body.ec-regional-ui > .ec-regional-shell > .ec-right-dock.ec-compact-personal-dock{
     position:absolute!important;
     top:136px!important;
-    left:calc(100vw - 282px)!important;
-    right:auto!important;
+    right:16px!important;
     bottom:auto!important;
+    left:auto!important;
     display:flex!important;
     flex-direction:column!important;
     width:270px!important;
@@ -683,36 +691,19 @@ body .ec-right-dock .ec-dock-detail[data-panel="visits"]{
     z-index:8999!important;
   }
 
-  body.ec-regional-ui .ec-regional-shell > .ec-top-nav .ec-dock-toggle,
-  body.ec-regional-ui .ec-regional-shell > .ec-right-dock .ec-dock-close{
+  body.ec-regional-ui > .ec-regional-shell > .ec-top-nav .ec-dock-toggle,
+  body.ec-regional-ui > .ec-regional-shell > .ec-right-dock .ec-dock-close{
     display:none!important;
-  }
-
-  body.ec-regional-ui:not(.ec-dock-open) .ec-regional-shell > .ec-right-dock.ec-compact-personal-dock,
-  body.ec-regional-ui.ec-dock-open .ec-regional-shell > .ec-right-dock.ec-compact-personal-dock{
-    transform:none!important;
-    visibility:visible!important;
-    opacity:1!important;
-    pointer-events:auto!important;
   }
 
   body.ec-regional-ui .modern-main{
     padding-right:300px!important;
   }
-
-  body.ec-regional-ui .ec-regional-shell > .ec-right-dock.ec-compact-personal-dock .ec-sidebar-banners,
-  body.ec-regional-ui .ec-regional-shell > .ec-right-dock.ec-compact-personal-dock .ec-sidebar-ads{
-    display:block!important;
-    visibility:visible!important;
-    opacity:1!important;
-    max-height:none!important;
-    overflow:visible!important;
-  }
 }
 
 @media (min-width:1181px){
-  body.ec-regional-ui .ec-regional-shell > .ec-right-dock.ec-compact-personal-dock{
-    left:calc(100vw - 318px)!important;
+  body.ec-regional-ui > .ec-regional-shell > .ec-right-dock.ec-compact-personal-dock{
+    right:18px!important;
     width:300px!important;
     min-width:300px!important;
     max-width:300px!important;
@@ -723,8 +714,11 @@ body .ec-right-dock .ec-dock-detail[data-panel="visits"]{
   }
 }
 
-/* Real narrow mobile layout keeps the existing drawer behaviour. */
 @media (max-width:760px){
+  body.ec-regional-ui > .ec-regional-shell{
+    display:block!important;
+  }
+
   body.ec-regional-ui .modern-main{
     padding-right:0!important;
   }
