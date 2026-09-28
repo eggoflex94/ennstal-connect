@@ -33,7 +33,10 @@ async function loadContext(targetId){
   const isGlobalAdmin=role(viewer.role)==='ADMIN';
   const targetRegionalAdmins=(targetRegionalAdminResult.data||[]).filter(x=>x.active!==false);
   const targetProtected=role(target.role)==='HEAD_ADMIN'||role(target.role)==='ADMIN'||targetRegionalAdmins.length>0;
-  if(targetProtected&&!isHead)return null;
+  // Global admins may open protected profiles as well; the individual tools
+  // below still enforce their own permission checks. Regional admins and
+  // moderators must not administer other protected admin profiles.
+  if(targetProtected&&!isHead&&!isGlobalAdmin)return null;
   const permissions=permResult.data||{};
   const viewerRegionalAdmins=(regionalAdminResult.data||[]).filter(x=>x.active!==false);
   const isRegionalAdminForTarget=viewerRegionalAdmins.some(x=>x.region_id===target.home_region_id);
