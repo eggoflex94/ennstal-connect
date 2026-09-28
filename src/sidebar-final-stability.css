@@ -1,1 +1,56 @@
 .ec-right-dock.ec-final-stable-dock{overflow:visible!important;max-height:none!important;height:auto!important;bottom:auto!important}.ec-right-dock.ec-final-stable-dock .ec-dock-detail{overflow:visible!important;max-height:none!important;height:auto!important}.ec-right-dock.ec-final-stable-dock .ec-dock-detail[hidden]{display:none!important}.ec-right-dock.ec-final-stable-dock .ec-dock-detail.is-open{display:block!important}.ec-right-dock.ec-final-stable-dock [data-ec-detail]{position:relative!important}.ec-right-dock.ec-final-stable-dock [data-ec-detail]::after{content:'›';margin-left:auto!important;font-weight:900!important;transform:rotate(0deg);transition:transform .15s ease}.ec-right-dock.ec-final-stable-dock [data-ec-detail].is-open::after{transform:rotate(90deg)}.ec-right-dock.ec-final-stable-dock .ec-dock-detail-row{min-height:44px!important}.ec-right-dock.ec-final-stable-dock .ec-dock-detail-row>img{width:28px!important;height:28px!important;min-width:28px!important;max-width:28px!important}.ec-right-dock.ec-final-stable-dock .ec-dock-detail-row strong{font-size:10.5px!important}.ec-right-dock.ec-final-stable-dock .ec-dock-detail-row small,.ec-right-dock.ec-final-stable-dock .ec-dock-detail-row time{font-size:8.5px!important}.ec-right-dock.ec-final-stable-dock .ec-dock-section-label{margin-top:6px!important}.ec-right-dock.ec-final-stable-dock .ec-dock-admin-slot{margin-bottom:4px!important}@media(max-width:900px){.ec-right-dock.ec-final-stable-dock{position:static!important;width:100%!important;max-width:none!important;overflow:visible!important}.ec-right-dock.ec-final-stable-dock .ec-dock-detail{overflow:visible!important;max-height:none!important}}
+
+/* 2026-09-28: compact dock detail panels so profile visitors cannot push into the friends feed. */
+.ec-right-dock.ec-final-stable-dock .ec-dock-detail{
+  min-width:0!important;
+  max-width:100%!important;
+  overflow:hidden!important;
+}
+.ec-right-dock.ec-final-stable-dock .ec-dock-detail.is-open{
+  display:block!important;
+  max-height:150px!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  overscroll-behavior:contain!important;
+  scrollbar-width:thin!important;
+}
+.ec-right-dock.ec-final-stable-dock .ec-dock-detail-row{
+  display:grid!important;
+  grid-template-columns:28px minmax(0,1fr) auto!important;
+  align-items:center!important;
+  gap:7px!important;
+  min-height:34px!important;
+  height:auto!important;
+  padding:4px 6px!important;
+  overflow:hidden!important;
+}
+.ec-right-dock.ec-final-stable-dock .ec-dock-detail-row>img{
+  width:24px!important;
+  height:24px!important;
+  min-width:24px!important;
+  max-width:24px!important;
+}
+.ec-right-dock.ec-final-stable-dock .ec-dock-detail-row strong,
+.ec-right-dock.ec-final-stable-dock .ec-dock-detail-row small,
+.ec-right-dock.ec-final-stable-dock .ec-dock-detail-row time{
+  min-width:0!important;
+  max-width:100%!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  word-break:normal!important;
+  overflow-wrap:normal!important;
+  writing-mode:horizontal-tb!important;
+}
+.ec-right-dock .ec-friends-newsfeed{
+  position:relative!important;
+  z-index:2!important;
+  clear:both!important;
+}
+@media(max-width:900px){
+  .ec-right-dock.ec-final-stable-dock .ec-dock-detail.is-open{
+    max-height:140px!important;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+  }
+}
