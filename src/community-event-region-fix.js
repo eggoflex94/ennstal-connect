@@ -40,13 +40,17 @@ async function loadManageableRegions() {
   if (authError || !authData?.user?.id) return [];
   const userId = authData.user.id;
   const [{ data: profile }, { data: regions }, { data: assignments }] = await Promise.all([
-    supabase.from('profiles').select('role,home_region_id').eq('id', userId).maybeSingle(),
+    supabase.from('profiles').select('role,home_region_id,is_community_photographer,community_photographer_global,community_photographer_region_ids').eq('id', userId).maybeSingle(),
     supabase.from('regions').select('id,slug,name,short_name,is_active,sort_order').eq('is_active', true).order('sort_order'),
     supabase.from('regional_admin_assignments').select('region_id,active').eq('user_id', userId).eq('active', true)
   ]);
   const available = regions || [];
   if (profile?.role === 'HEAD_ADMIN' || profile?.role === 'ADMIN') return available;
+  if (profile?.is_community_photographer && profile?.community_photographer_global) return available;
   const allowed = new Set((assignments || []).filter((row) => row.active).map((row) => row.region_id));
+  if (profile?.is_community_photographer && Array.isArray(profile?.community_photographer_region_ids)) {
+    profile.community_photographer_region_ids.forEach((regionId) => allowed.add(regionId));
+  }
   return available.filter((region) => allowed.has(region.id));
 }
 
