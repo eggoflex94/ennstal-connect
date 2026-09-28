@@ -67,15 +67,31 @@ async function applyProfileRoleContext() {
   const role = norm(profile.role);
   if (role === 'HEAD_ADMIN') return setFunctionPresentation(box, 'Hauptadmin', '/role-star-red.svg');
   if (role === 'ADMIN' || role === 'GLOBAL_ADMIN') return setFunctionPresentation(box, 'Global Admin', '/role-star-red.svg');
-  if (role === 'MUNICIPALITY') return setFunctionPresentation(box, 'Gemeinde', '/role-star-green.svg');
 
-  const assignedIds = (assignments || []).map((assignment) => assignment.region_id).filter(Boolean);
-  if (activeRegionId && assignedIds.includes(activeRegionId)) {
-    const region = regions.find((item) => item.id === activeRegionId);
-    const suffix = region?.short_name || region?.name || '';
-    return setFunctionPresentation(box, `Regional Admin${suffix ? ` · ${suffix}` : ''}`, '/role-star-red.svg');
+  // Highest visible role wins. A regional-admin assignment is above
+  // municipality/supporter/business and must never fall back to "Supporter"
+  // merely because the viewer currently has another region selected.
+  const assignedIds = [...new Set((assignments || []).map((assignment) => assignment.region_id).filter(Boolean))];
+  if (assignedIds.length) {
+    const assignedRegions = assignedIds
+      .map((id) => regions.find((item) => item.id === id))
+      .filter(Boolean);
+    const activeAssigned = activeRegionId
+      ? assignedRegions.find((region) => region.id === activeRegionId)
+      : null;
+    const orderedRegions = activeAssigned
+      ? [activeAssigned, ...assignedRegions.filter((region) => region.id !== activeAssigned.id)]
+      : assignedRegions;
+    const names = orderedRegions.map((region) => region.short_name || region.name).filter(Boolean);
+    return setFunctionPresentation(
+      box,
+      `Regional Admin${names.length ? ` · ${names.join(', ')}` : ''}`,
+      '/role-star-red.svg'
+    );
   }
-  if (assignedIds.length || role === 'SUPPORTER') return setFunctionPresentation(box, 'Supporter', '/supporter-star.svg');
+
+  if (role === 'MUNICIPALITY') return setFunctionPresentation(box, 'Gemeinde', '/role-star-green.svg');
+  if (role === 'SUPPORTER') return setFunctionPresentation(box, 'Supporter', '/supporter-star.svg');
   if (profile.account_badge === 'BUSINESS') return setFunctionPresentation(box, 'Unternehmenskonto', '/role-star-blue.svg');
   setFunctionPresentation(box, 'Mitglied', null);
 }
