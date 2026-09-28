@@ -740,3 +740,66 @@ body .ec-right-dock .ec-dock-detail[data-panel="visits"]{
     padding-right:300px!important;
   }
 }
+
+
+/* 2026-09-28: tablet/desktop widths must keep the personal dashboard visible.
+   The previous 901px cutoff sent 8xx-wide desktop browser windows into the
+   hidden mobile-drawer state. From 761px upward the dock is part of the normal
+   page scroll and the content column reserves its space. */
+@media (min-width:761px){
+  body.ec-regional-ui .ec-regional-shell > .ec-right-dock.ec-compact-personal-dock{
+    position:absolute!important;
+    top:136px!important;
+    right:12px!important;
+    bottom:auto!important;
+    left:auto!important;
+    display:flex!important;
+    flex-direction:column!important;
+    visibility:visible!important;
+    opacity:1!important;
+    transform:none!important;
+    pointer-events:auto!important;
+    width:260px!important;
+    max-width:260px!important;
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+    overflow:visible!important;
+    overflow-x:visible!important;
+    overflow-y:visible!important;
+    padding:12px!important;
+    z-index:8999!important;
+  }
+
+  body.ec-regional-ui:not(.ec-dock-open) .ec-regional-shell > .ec-right-dock.ec-compact-personal-dock,
+  body.ec-regional-ui.ec-dock-open .ec-regional-shell > .ec-right-dock.ec-compact-personal-dock{
+    visibility:visible!important;
+    transform:none!important;
+    pointer-events:auto!important;
+  }
+
+  body.ec-regional-ui .ec-regional-shell > .ec-right-dock.ec-compact-personal-dock .ec-dock-close{
+    display:none!important;
+  }
+
+  body.ec-regional-ui .modern-main{
+    padding-right:286px!important;
+  }
+}
+
+@media (min-width:1181px){
+  body.ec-regional-ui .ec-regional-shell > .ec-right-dock.ec-compact-personal-dock{
+    right:18px!important;
+    width:300px!important;
+    max-width:300px!important;
+  }
+  body.ec-regional-ui .modern-main{
+    padding-right:342px!important;
+  }
+}
+
+@media (max-width:760px){
+  body.ec-regional-ui .modern-main{
+    padding-right:0!important;
+  }
+}
