@@ -370,14 +370,25 @@ test("legacy duplicate friend and group blocks are removed from member profile",
 });
 
 
-test("personal dashboard stays off-canvas on narrow screens", async()=>{
+test("personal dashboard keeps React DOM ownership stable on narrow screens", async()=>{
   const code=await source("src/personal-dashboard-final-fix.js");
   const css=await source("src/layout-overlap-authority.css");
   assert.match(code,/max-width:1050px/);
-  assert.match(code,/classList\.remove\('ec-document-flow-dock'\)/);
-  assert.match(code,/document\.body\.appendChild\(dock\)/);
+  assert.match(code,/classList\.toggle\('ec-document-flow-dock',!compact\)/);
+  assert.doesNotMatch(code,/document\.body\.appendChild\(dock\)/);
+  assert.doesNotMatch(code,/main\.appendChild\(dock\)/);
   assert.match(code,/addEventListener\('resize',schedule/);
   assert.doesNotMatch(css,/ec-stable-personal-dock\.ec-document-flow-dock\{grid-column:1/);
+});
+
+test("member profile shows regional admin above supporter", async()=>{
+  const code=await source("src/member-profile-final.js");
+  const regional=code.indexOf("regional_admin_assignments");
+  const supporter=code.indexOf("if(role==='SUPPORTER')");
+  assert.ok(regional>=0, "regional admin assignments must be checked");
+  assert.ok(supporter>regional, "supporter must only be considered after regional admin assignments");
+  assert.match(code,/Regional Admin/);
+  assert.match(code,/role-star-red\.svg/);
 });
 
 
