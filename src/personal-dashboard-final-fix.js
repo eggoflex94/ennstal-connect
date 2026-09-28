@@ -16,16 +16,16 @@ function personStar(p){const role=String(p?.role||'MEMBER').toUpperCase();if(rol
 function closeOverlay(){document.querySelector('.ec-dashboard-info-overlay')?.remove();document.body.classList.remove('ec-dashboard-info-open')}
 function go(page){document.body.classList.remove('ec-dock-open');window.dispatchEvent(new CustomEvent('ec:navigate',{detail:{page}}))}
 function placeDockInPageFlow(){
-  const dock=document.querySelector('.ec-right-dock'),main=document.querySelector('.modern-main');
-  if(!dock||!main)return;
+  const dock=document.querySelector('.ec-right-dock');
+  if(!dock)return;
+  // Never reparent this node. React owns the dashboard tree and can reconcile
+  // it at the same time as resize/navigation handlers run. Moving the dock
+  // between document.body and .modern-main makes React later call insertBefore
+  // with a reference node that is no longer a child of the expected parent.
+  // CSS controls fixed/document-flow geometry; JavaScript only toggles the
+  // presentation class.
   const compact=window.matchMedia('(max-width:1050px)').matches;
-  if(compact){
-    dock.classList.remove('ec-document-flow-dock');
-    if(dock.parentElement!==document.body)document.body.appendChild(dock);
-    return;
-  }
-  dock.classList.add('ec-document-flow-dock');
-  if(dock.parentElement!==main)main.appendChild(dock);
+  dock.classList.toggle('ec-document-flow-dock',!compact);
 }
 function openPopupManager(){closeOverlay();document.body.classList.remove('ec-dock-open');window.dispatchEvent(new CustomEvent('ec:open-community-popup-manager'))}
 function openStatistics(){closeOverlay();document.body.classList.remove('ec-dock-open');window.dispatchEvent(new CustomEvent('ec:open-admin-statistics'))}
