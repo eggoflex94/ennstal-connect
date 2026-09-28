@@ -852,3 +852,63 @@ body .ec-right-dock .ec-dock-detail[data-panel="visits"]{
     padding-right:342px!important;
   }
 }
+
+
+/* Mobile browser/app in desktop layout.
+   Touch devices may still report pointer:coarse even when the browser is using
+   a desktop-sized layout viewport. In that case the legacy <=1050px drawer
+   rules must not translate the dashboard off-screen. */
+@media (pointer:coarse) and (min-width:600px){
+  body.ec-regional-ui .ec-regional-shell > .ec-right-dock.ec-compact-personal-dock{
+    position:absolute!important;
+    top:136px!important;
+    right:12px!important;
+    bottom:auto!important;
+    left:auto!important;
+    display:flex!important;
+    flex-direction:column!important;
+    visibility:visible!important;
+    opacity:1!important;
+    transform:none!important;
+    pointer-events:auto!important;
+    width:260px!important;
+    max-width:260px!important;
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+    overflow:visible!important;
+    overflow-x:visible!important;
+    overflow-y:visible!important;
+    margin:0!important;
+    z-index:8999!important;
+  }
+
+  body.ec-regional-ui .ec-regional-shell > .ec-top-nav .ec-dock-toggle,
+  body.ec-regional-ui .ec-regional-shell > .ec-right-dock .ec-dock-close{
+    display:none!important;
+  }
+
+  body.ec-regional-ui:not(.ec-dock-open) .ec-regional-shell > .ec-right-dock.ec-compact-personal-dock,
+  body.ec-regional-ui.ec-dock-open .ec-regional-shell > .ec-right-dock.ec-compact-personal-dock{
+    transform:none!important;
+    visibility:visible!important;
+    opacity:1!important;
+    pointer-events:auto!important;
+  }
+
+  body.ec-regional-ui .modern-main{
+    padding-right:286px!important;
+  }
+}
+
+@media (pointer:coarse) and (min-width:1181px){
+  body.ec-regional-ui .ec-regional-shell > .ec-right-dock.ec-compact-personal-dock{
+    right:18px!important;
+    width:300px!important;
+    max-width:300px!important;
+  }
+
+  body.ec-regional-ui .modern-main{
+    padding-right:342px!important;
+  }
+}
