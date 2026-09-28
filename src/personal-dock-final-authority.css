@@ -650,3 +650,43 @@ body .ec-right-dock .ec-dock-detail[data-panel="visits"]{
   gap:2px!important;
   padding:3px!important;
 }
+
+
+/* 2026-09-28 desktop visibility authority.
+   The personal dock is a child of .ec-regional-shell, not a direct child of body.
+   Keep it fixed and visible without moving the React-owned DOM node. */
+@media (min-width:901px){
+  body.ec-regional-ui .ec-regional-shell > .ec-right-dock.ec-compact-personal-dock{
+    position:fixed!important;
+    top:136px!important;
+    right:18px!important;
+    bottom:auto!important;
+    left:auto!important;
+    display:flex!important;
+    flex-direction:column!important;
+    visibility:visible!important;
+    opacity:1!important;
+    transform:none!important;
+    pointer-events:auto!important;
+    width:300px!important;
+    max-width:300px!important;
+    max-height:calc(100dvh - 154px)!important;
+    overflow-x:hidden!important;
+    overflow-y:auto!important;
+    margin:0!important;
+    z-index:8999!important;
+  }
+  body.ec-regional-ui .modern-main{
+    padding-right:342px!important;
+  }
+}
+@media (min-width:901px) and (max-width:1180px){
+  body.ec-regional-ui .ec-regional-shell > .ec-right-dock.ec-compact-personal-dock{
+    right:14px!important;
+    width:270px!important;
+    max-width:270px!important;
+  }
+  body.ec-regional-ui .modern-main{
+    padding-right:300px!important;
+  }
+}
