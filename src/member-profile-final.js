@@ -60,12 +60,18 @@ function visible(target,field,isFriend){
 async function functionInfo(target){
   const role=String(target.role||'MEMBER').toUpperCase();
   if(role==='HEAD_ADMIN')return{label:'Hauptadmin',star:'/role-star-red.svg'};
-  if(role==='ADMIN')return{label:'Global Admin',star:'/role-star-red.svg'};
+  if(role==='ADMIN'||role==='GLOBAL_ADMIN')return{label:'Global Admin',star:'/role-star-red.svg'};
+
   const {data}=await supabase.from('regional_admin_assignments').select('region_id,active').eq('user_id',target.id).eq('active',true);
   if(data?.length){
-    const names=data.map(a=>regions.find(r=>r.id===a.region_id)?.name).filter(Boolean);
+    const names=[...new Set(data.map(a=>regions.find(r=>r.id===a.region_id)?.name).filter(Boolean))];
     return{label:`Regional Admin${names.length?` · ${names.join(', ')}`:''}`,star:'/role-star-red.svg'};
   }
+
+  if(role==='MUNICIPALITY')return{
+    label:target.role_display_label||'Gemeinde',
+    star:target.role_star_url||'/role-star-green.svg'
+  };
   if(role==='SUPPORTER')return{label:'Supporter',star:'/supporter-star.svg'};
   if(target.account_badge==='BUSINESS')return{label:'Unternehmenskonto',star:'/role-star-blue.svg'};
   return{label:'Mitglied',star:null};
