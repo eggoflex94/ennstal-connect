@@ -651,235 +651,35 @@ body .ec-right-dock .ec-dock-detail[data-panel="visits"]{
   padding:3px!important;
 }
 
-
-/* 2026-09-28 desktop visibility authority.
-   The personal dock is a child of .ec-regional-shell, not a direct child of body.
-   Keep it fixed and visible without moving the React-owned DOM node. */
-@media (min-width:901px){
-  body.ec-regional-ui .ec-regional-shell > .ec-right-dock.ec-compact-personal-dock{
-    position:fixed!important;
-    top:136px!important;
-    right:18px!important;
-    bottom:auto!important;
-    left:auto!important;
-    display:flex!important;
-    flex-direction:column!important;
-    visibility:visible!important;
-    opacity:1!important;
-    transform:none!important;
-    pointer-events:auto!important;
-    width:300px!important;
-    max-width:300px!important;
-    max-height:calc(100dvh - 154px)!important;
-    overflow-x:hidden!important;
-    overflow-y:auto!important;
-    margin:0!important;
-    z-index:8999!important;
-  }
-  body.ec-regional-ui .modern-main{
-    padding-right:342px!important;
-  }
-}
-@media (min-width:901px) and (max-width:1180px){
-  body.ec-regional-ui .ec-regional-shell > .ec-right-dock.ec-compact-personal-dock{
-    right:14px!important;
-    width:270px!important;
-    max-width:270px!important;
-  }
-  body.ec-regional-ui .modern-main{
-    padding-right:300px!important;
-  }
-}
-
-
-/* 2026-09-28: desktop dock follows the normal page scroll.
-   It must not create its own vertical scroll container. The dock remains in
-   the regional-shell DOM, but absolute positioning anchors it to the document
-   instead of the viewport. This also prevents lower modules (ads/logout) from
-   being clipped behind an internal dashboard scrollbar. */
-@media (min-width:901px){
-  body.ec-regional-ui .ec-regional-shell > .ec-right-dock.ec-compact-personal-dock{
-    position:absolute!important;
-    top:136px!important;
-    right:18px!important;
-    bottom:auto!important;
-    left:auto!important;
-    width:300px!important;
-    max-width:300px!important;
-    height:auto!important;
-    min-height:0!important;
-    max-height:none!important;
-    overflow:visible!important;
-    overflow-x:visible!important;
-    overflow-y:visible!important;
-    transform:none!important;
-    visibility:visible!important;
-    opacity:1!important;
-    pointer-events:auto!important;
-    z-index:8999!important;
-  }
-  body.ec-regional-ui .ec-regional-shell > .ec-right-dock.ec-compact-personal-dock .ec-sidebar-banners,
-  body.ec-regional-ui .ec-regional-shell > .ec-right-dock.ec-compact-personal-dock .ec-sidebar-ads{
-    display:block!important;
-    visibility:visible!important;
-    opacity:1!important;
-    overflow:visible!important;
-    max-height:none!important;
-  }
-  body.ec-regional-ui .modern-main{
-    padding-right:342px!important;
-  }
-}
-@media (min-width:901px) and (max-width:1180px){
-  body.ec-regional-ui .ec-regional-shell > .ec-right-dock.ec-compact-personal-dock{
-    right:14px!important;
-    width:270px!important;
-    max-width:270px!important;
-  }
-  body.ec-regional-ui .modern-main{
-    padding-right:300px!important;
-  }
-}
-
-
-/* 2026-09-28: tablet/desktop widths must keep the personal dashboard visible.
-   The previous 901px cutoff sent 8xx-wide desktop browser windows into the
-   hidden mobile-drawer state. From 761px upward the dock is part of the normal
-   page scroll and the content column reserves its space. */
+/* FINAL PERSONAL DASHBOARD PLACEMENT
+   One authority only: from tablet/desktop width upward the dashboard is a
+   document-scrolling right column. Use 100vw for the horizontal anchor so a
+   desktop-mode mobile browser cannot push it to the far edge of an oversized
+   document canvas. */
 @media (min-width:761px){
   body.ec-regional-ui .ec-regional-shell > .ec-right-dock.ec-compact-personal-dock{
     position:absolute!important;
     top:136px!important;
-    right:12px!important;
+    left:calc(100vw - 282px)!important;
+    right:auto!important;
     bottom:auto!important;
-    left:auto!important;
     display:flex!important;
     flex-direction:column!important;
-    visibility:visible!important;
-    opacity:1!important;
-    transform:none!important;
-    pointer-events:auto!important;
-    width:260px!important;
-    max-width:260px!important;
+    width:270px!important;
+    min-width:270px!important;
+    max-width:270px!important;
     height:auto!important;
     min-height:0!important;
     max-height:none!important;
-    overflow:visible!important;
-    overflow-x:visible!important;
-    overflow-y:visible!important;
+    margin:0!important;
     padding:12px!important;
-    z-index:8999!important;
-  }
-
-  body.ec-regional-ui:not(.ec-dock-open) .ec-regional-shell > .ec-right-dock.ec-compact-personal-dock,
-  body.ec-regional-ui.ec-dock-open .ec-regional-shell > .ec-right-dock.ec-compact-personal-dock{
-    visibility:visible!important;
-    transform:none!important;
-    pointer-events:auto!important;
-  }
-
-  body.ec-regional-ui .ec-regional-shell > .ec-right-dock.ec-compact-personal-dock .ec-dock-close{
-    display:none!important;
-  }
-
-  body.ec-regional-ui .modern-main{
-    padding-right:286px!important;
-  }
-}
-
-@media (min-width:1181px){
-  body.ec-regional-ui .ec-regional-shell > .ec-right-dock.ec-compact-personal-dock{
-    right:18px!important;
-    width:300px!important;
-    max-width:300px!important;
-  }
-  body.ec-regional-ui .modern-main{
-    padding-right:342px!important;
-  }
-}
-
-@media (max-width:760px){
-  body.ec-regional-ui .modern-main{
-    padding-right:0!important;
-  }
-}
-
-
-/* Desktop/fine-pointer authority: dashboard is always visible and belongs to
-   the document scroll. This overrides the legacy <=1050px drawer rules on
-   Windows/macOS browser windows, even when the viewport is narrow. */
-@media (pointer:fine){
-  body.ec-regional-ui .ec-regional-shell > .ec-right-dock.ec-compact-personal-dock{
-    position:absolute!important;
-    top:136px!important;
-    right:12px!important;
-    bottom:auto!important;
-    left:auto!important;
-    display:flex!important;
-    flex-direction:column!important;
+    overflow:visible!important;
+    overflow-x:visible!important;
+    overflow-y:visible!important;
     visibility:visible!important;
     opacity:1!important;
     transform:none!important;
     pointer-events:auto!important;
-    width:260px!important;
-    max-width:260px!important;
-    height:auto!important;
-    min-height:0!important;
-    max-height:none!important;
-    overflow:visible!important;
-    overflow-x:visible!important;
-    overflow-y:visible!important;
-    margin:0!important;
-    z-index:8999!important;
-  }
-  body.ec-regional-ui .ec-regional-shell > .ec-top-nav .ec-dock-toggle{
-    display:none!important;
-  }
-  body.ec-regional-ui .ec-regional-shell > .ec-right-dock .ec-dock-close{
-    display:none!important;
-  }
-  body.ec-regional-ui .modern-main{
-    padding-right:286px!important;
-  }
-}
-@media (pointer:fine) and (min-width:1181px){
-  body.ec-regional-ui .ec-regional-shell > .ec-right-dock.ec-compact-personal-dock{
-    right:18px!important;
-    width:300px!important;
-    max-width:300px!important;
-  }
-  body.ec-regional-ui .modern-main{
-    padding-right:342px!important;
-  }
-}
-
-
-/* Mobile browser/app in desktop layout.
-   Touch devices may still report pointer:coarse even when the browser is using
-   a desktop-sized layout viewport. In that case the legacy <=1050px drawer
-   rules must not translate the dashboard off-screen. */
-@media (pointer:coarse) and (min-width:600px){
-  body.ec-regional-ui .ec-regional-shell > .ec-right-dock.ec-compact-personal-dock{
-    position:absolute!important;
-    top:136px!important;
-    right:12px!important;
-    bottom:auto!important;
-    left:auto!important;
-    display:flex!important;
-    flex-direction:column!important;
-    visibility:visible!important;
-    opacity:1!important;
-    transform:none!important;
-    pointer-events:auto!important;
-    width:260px!important;
-    max-width:260px!important;
-    height:auto!important;
-    min-height:0!important;
-    max-height:none!important;
-    overflow:visible!important;
-    overflow-x:visible!important;
-    overflow-y:visible!important;
-    margin:0!important;
     z-index:8999!important;
   }
 
@@ -897,77 +697,22 @@ body .ec-right-dock .ec-dock-detail[data-panel="visits"]{
   }
 
   body.ec-regional-ui .modern-main{
-    padding-right:286px!important;
-  }
-}
-
-@media (pointer:coarse) and (min-width:1181px){
-  body.ec-regional-ui .ec-regional-shell > .ec-right-dock.ec-compact-personal-dock{
-    right:18px!important;
-    width:300px!important;
-    max-width:300px!important;
+    padding-right:300px!important;
   }
 
-  body.ec-regional-ui .modern-main{
-    padding-right:342px!important;
-  }
-}
-
-
-/* 2026-09-28 final placement authority.
-   Keep the dashboard anchored to the document's right column, directly below
-   the regional header. The shell itself must not become the positioning
-   containing block, otherwise desktop-mode mobile browsers can place the dock
-   relative to a zero-sized overlay shell. */
-@media (min-width:600px){
-  body.ec-regional-ui > .ec-regional-shell{
-    position:static!important;
-    inset:auto!important;
-    width:auto!important;
-    height:auto!important;
-    min-height:0!important;
-    transform:none!important;
-  }
-
-  body.ec-regional-ui > .ec-regional-shell > .ec-right-dock.ec-compact-personal-dock{
-    position:absolute!important;
-    top:144px!important;
-    right:16px!important;
-    bottom:auto!important;
-    left:auto!important;
-    display:flex!important;
-    flex-direction:column!important;
-    width:280px!important;
-    min-width:280px!important;
-    max-width:280px!important;
-    height:auto!important;
-    min-height:0!important;
-    max-height:none!important;
-    margin:0!important;
-    padding:12px!important;
-    overflow:visible!important;
-    overflow-x:visible!important;
-    overflow-y:visible!important;
+  body.ec-regional-ui .ec-regional-shell > .ec-right-dock.ec-compact-personal-dock .ec-sidebar-banners,
+  body.ec-regional-ui .ec-regional-shell > .ec-right-dock.ec-compact-personal-dock .ec-sidebar-ads{
+    display:block!important;
     visibility:visible!important;
     opacity:1!important;
-    transform:none!important;
-    pointer-events:auto!important;
-    z-index:8999!important;
-  }
-
-  body.ec-regional-ui > .ec-regional-shell > .ec-right-dock .ec-dock-close,
-  body.ec-regional-ui > .ec-regional-shell > .ec-top-nav .ec-dock-toggle{
-    display:none!important;
-  }
-
-  body.ec-regional-ui .modern-main{
-    padding-right:312px!important;
+    max-height:none!important;
+    overflow:visible!important;
   }
 }
 
 @media (min-width:1181px){
-  body.ec-regional-ui > .ec-regional-shell > .ec-right-dock.ec-compact-personal-dock{
-    right:18px!important;
+  body.ec-regional-ui .ec-regional-shell > .ec-right-dock.ec-compact-personal-dock{
+    left:calc(100vw - 318px)!important;
     width:300px!important;
     min-width:300px!important;
     max-width:300px!important;
@@ -975,5 +720,12 @@ body .ec-right-dock .ec-dock-detail[data-panel="visits"]{
 
   body.ec-regional-ui .modern-main{
     padding-right:342px!important;
+  }
+}
+
+/* Real narrow mobile layout keeps the existing drawer behaviour. */
+@media (max-width:760px){
+  body.ec-regional-ui .modern-main{
+    padding-right:0!important;
   }
 }
