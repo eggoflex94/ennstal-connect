@@ -8,3 +8,43 @@
 .ec-right-dock .ec-friends-newsfeed-head>div{display:flex!important;align-items:baseline!important;gap:6px!important;flex-wrap:wrap!important}
 .ec-right-dock .ec-friends-newsfeed-head span,
 .ec-right-dock .ec-friends-newsfeed-head strong{writing-mode:horizontal-tb!important;word-break:normal!important;overflow-wrap:normal!important}
+
+
+/* 2026-09-28: keep the friends-newsfeed heading readable on narrow/touch sidebars.
+   The previous flex-wrap rule let the title shrink to a few pixels and render vertically. */
+.ec-right-dock .ec-friends-newsfeed-head{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) auto!important;
+  align-items:start!important;
+  gap:8px!important;
+  width:100%!important;
+  min-width:0!important;
+}
+.ec-right-dock .ec-friends-newsfeed-head>div{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr)!important;
+  align-items:start!important;
+  gap:4px!important;
+  width:100%!important;
+  min-width:0!important;
+}
+.ec-right-dock .ec-friends-newsfeed-head span,
+.ec-right-dock .ec-friends-newsfeed-head strong{
+  display:block!important;
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  writing-mode:horizontal-tb!important;
+  white-space:normal!important;
+  word-break:normal!important;
+  overflow-wrap:normal!important;
+}
+.ec-right-dock .ec-friends-newsfeed-refresh{
+  align-self:start!important;
+}
+@media (max-width:560px), (pointer:coarse){
+  .ec-right-dock .ec-friends-newsfeed-head strong{
+    font-size:14px!important;
+    line-height:1.25!important;
+  }
+}
