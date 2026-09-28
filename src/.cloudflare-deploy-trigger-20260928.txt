@@ -1,0 +1,2 @@
+Deploy current main to Cloudflare using the configured production Supabase project.
+Requested: 2026-09-28
