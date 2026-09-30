@@ -94,12 +94,12 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
     };
     return members
       .filter((member) => member && member.account_status !== "SUSPENDED" && !member.is_test_account)
-      .filter((member) => regionId === "ALL" || member.home_region_id === regionId)
+      .filter((member) => regionId === "ALL" || member.home_region_id === regionId || isHeadAdmin(member) || member?.is_primary_head_admin)
       .filter((member) => !onlineOnly || presenceOnline(member))
       .filter((member) => {
         if (!q) return true;
         const region = regionById[member.home_region_id]?.name || "";
-        const roleWord = isGlobalAdmin(member) || isRegionalAdmin(member) ? "admin" : normalized(member?.role) === "MUNICIPALITY" ? "gemeinde" : isBusiness(member) ? "unternehmer" : normalized(member?.role) === "SUPPORTER" ? "supporter" : "mitglied";
+        const roleWord = isHeadAdmin(member) || member?.is_primary_head_admin ? "hauptadmin hauptverantwortlicher alle regionen" : isGlobalAdmin(member) || isRegionalAdmin(member) ? "admin" : normalized(member?.role) === "MUNICIPALITY" ? "gemeinde" : isBusiness(member) ? "unternehmer" : normalized(member?.role) === "SUPPORTER" ? "supporter" : "mitglied";
         return [member.nickname, member.first_name, member.last_name, region, roleWord].filter(Boolean).join(" ").toLowerCase().includes(q);
       })
       .sort((a, b) => {
@@ -185,9 +185,11 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
 
     <div className="member-grid native-member-grid">
       {pagedVisible.map((member) => {
-        const cardMember = isRegionalAdmin(member) && !isGlobalAdmin(member)
-          ? { ...member, directory_admin: true, directory_role_star: roleStarSrc(member) }
-          : { ...member, directory_role_star: roleStarSrc(member) };
+        const cardMember = isHeadAdmin(member) || member?.is_primary_head_admin
+          ? { ...member, directory_admin: true, directory_role_star: roleStarSrc(member), directory_responsibility_label: "Hauptverantwortlicher · alle Regionen" }
+          : isRegionalAdmin(member) && !isGlobalAdmin(member)
+            ? { ...member, directory_admin: true, directory_role_star: roleStarSrc(member) }
+            : { ...member, directory_role_star: roleStarSrc(member) };
         return <MemberCardView
           key={member.id}
           member={cardMember}
