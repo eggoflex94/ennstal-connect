@@ -314,10 +314,10 @@ export default function App() {
   const activeRegionId = activeRegion?.id || profile?.home_region_id || null;
   const displayedMembers = useMemo(() => {
     if (search.trim()) return sortedMembers;
-    return activeRegionId ? sortedMembers.filter((member) => member.home_region_id === activeRegionId) : sortedMembers;
+    return activeRegionId ? sortedMembers.filter((member) => member.home_region_id === activeRegionId || String(member.role || "").toUpperCase() === "HEAD_ADMIN" || member.is_primary_head_admin) : sortedMembers;
   }, [sortedMembers, search, activeRegionId]);
   const regionFilter = (entries) => activeRegionId ? entries.filter((entry) => entry.region_id === activeRegionId) : entries;
-  const regionalMembers = activeRegionId ? visibleMembers.filter((member) => member.home_region_id === activeRegionId) : visibleMembers;
+  const regionalMembers = activeRegionId ? visibleMembers.filter((member) => member.home_region_id === activeRegionId || String(member.role || "").toUpperCase() === "HEAD_ADMIN" || member.is_primary_head_admin) : visibleMembers;
   const isRegionalAdminHere = regionalAssignments.some((assignment) => assignment.user_id === profile?.id && assignment.region_id === activeRegionId && assignment.active);
   const hasAdminPermission = (key) => Boolean(profile?.is_primary_head_admin || myAdminPermissions?.[key]);
   const hasAnyAdminPermission = Boolean(profile?.is_primary_head_admin || PERMISSIONS.some(([key]) => myAdminPermissions?.[key]));
