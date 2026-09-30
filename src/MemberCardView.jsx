@@ -26,7 +26,7 @@ function rolePresentation(member) {
   const role = String(member?.role || "MEMBER").toUpperCase();
   const adminPresentation = ["HEAD_ADMIN", "ADMIN", "GLOBAL_ADMIN", "REGIONAL_ADMIN"].includes(role) || member?.directory_admin === true;
   if (adminPresentation) {
-    return { key: role === "HEAD_ADMIN" ? "head-admin" : "admin", theme: "admin", label: role === "HEAD_ADMIN" ? "Hauptadmin" : "Admin", star: roleStarAsset("/role-star-red.svg") };
+    return { key: role === "HEAD_ADMIN" ? "head-admin" : "admin", theme: "admin", label: role === "HEAD_ADMIN" ? "Hauptverantwortlicher · Hauptadmin" : "Admin", star: roleStarAsset("/role-star-red.svg") };
   }
   if (role === "SUPPORTER") return { key: "supporter", theme: "supporter", label: "Supporter", star: roleStarAsset("/supporter-star.svg") };
   if (role === "MUNICIPALITY") return { key: "municipality", theme: "municipality", label: member?.role_display_label || "Gemeinde", star: member?.role_star_url || roleStarAsset("/role-star-green.svg"), color: member?.role_accent_color || "#20a866" };
@@ -110,6 +110,7 @@ export default function MemberCardView({ member, profile, friendships, onOpen, i
       <div className="member-meta ec-member-meta">
         <div className="member-name ec-native-member-name">
           <span className="ec-member-realname">{fullName}</span>
+          {(member?.directory_responsibility_label || baseRole === "HEAD_ADMIN") && <small className="ec-member-responsibility">{member?.directory_responsibility_label || "Hauptverantwortlicher · alle Regionen"}</small>}
           {age !== null && <small className="ec-member-age">{age} Jahre</small>}
         </div>
       </div>
