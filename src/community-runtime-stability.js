@@ -16,7 +16,8 @@ function showToast(text,type='info',timeout=5200){
 }
 
 function normalizeRoleStars(root=document){
-  root.querySelectorAll?.('img[src*="role-star-member.svg"]').forEach(img=>img.remove());
+  // Never remove React-owned nodes here. Only decorate existing elements.
+  root.querySelectorAll?.('img[src*="role-star-member.svg"]').forEach(img=>img.classList.add('ec-role-star-member-hidden'));
   root.querySelectorAll?.('img[src*="role-star-red.svg"]').forEach(img=>img.classList.add('ec-role-star-admin-glow'));
 }
 function stabilizeImages(root=document){
