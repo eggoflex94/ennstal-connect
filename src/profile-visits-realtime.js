@@ -9,6 +9,7 @@ let refreshTimer = null;
 let restartTimer = null;
 let pollTimer = null;
 let startPromise = null;
+let channelSequence = 0;
 
 function emitProfileVisitsChanged(reason = 'refresh', visit = null) {
   if (!currentUserId) return;
@@ -32,7 +33,7 @@ function startFallbackPolling() {
 function scheduleRestart(delay = 700) {
   clearTimeout(restartTimer);
   restartTimer = window.setTimeout(() => {
-    if (!document.hidden) void start({ force: true });
+    if (!document.hidden) void ensureRealtimeChannel();
   }, delay);
 }
 
@@ -40,14 +41,28 @@ async function setRealtimeAuth(session) {
   const token = session?.access_token || '';
   if (!token) return false;
   if (token !== currentAccessToken) {
-    supabase.realtime.setAuth(token);
+    await supabase.realtime.setAuth(token);
     currentAccessToken = token;
   }
   return true;
 }
 
-async function start({ force = false } = {}) {
-  if (startPromise && !force) return startPromise;
+async function stopCurrentChannel() {
+  if (!channel) return;
+  const previous = channel;
+  channel = null;
+  try {
+    await supabase.removeChannel(previous);
+  } catch (error) {
+    console.warn('Profilbesuche-Realtime Kanal konnte nicht sauber entfernt werden:', error?.message || error);
+  }
+}
+
+async function ensureRealtimeChannel() {
+  // Never run two channel setup sequences at the same time. Supabase Realtime
+  // forbids adding postgres_changes callbacks after a channel has subscribed,
+  // which can happen when auth/focus/visibility restarts race each other.
+  if (startPromise) return startPromise;
 
   startPromise = (async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -57,35 +72,36 @@ async function start({ force = false } = {}) {
     currentUserId = user.id;
     clearTimeout(restartTimer);
 
-    if (channel) {
-      const previous = channel;
-      channel = null;
-      await supabase.removeChannel(previous);
-    }
+    await stopCurrentChannel();
 
-    const nextChannel = supabase
-      .channel(`profile-visits-${user.id}-${Date.now()}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'profile_visits', filter: `profile_id=eq.${user.id}` },
-        (payload) => {
-          const visit = payload?.new || null;
-          if (visit?.profile_id && visit.profile_id !== user.id) return;
-          queueRefresh(0, 'realtime-insert', visit);
-        }
-      );
+    const topic = `profile-visits-${user.id}-${++channelSequence}`;
+    const nextChannel = supabase.channel(topic);
+
+    // Register every callback before subscribe(). Do not mutate this channel
+    // after subscribe has been called.
+    nextChannel.on(
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'profile_visits', filter: `profile_id=eq.${user.id}` },
+      (payload) => {
+        const visit = payload?.new || null;
+        if (visit?.profile_id && visit.profile_id !== user.id) return;
+        queueRefresh(0, 'realtime-insert', visit);
+      }
+    );
 
     channel = nextChannel;
     nextChannel.subscribe((status, error) => {
       if (channel !== nextChannel) return;
+
       if (status === 'SUBSCRIBED') {
         clearTimeout(restartTimer);
         queueRefresh(0, 'realtime-subscribed');
         return;
       }
+
       if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
         console.warn('Profilbesuche-Realtime getrennt:', status, error?.message || '');
-        channel = null;
+        if (channel === nextChannel) channel = null;
         scheduleRestart(status === 'TIMED_OUT' ? 1200 : 700);
       }
     });
@@ -99,21 +115,16 @@ async function start({ force = false } = {}) {
   return startPromise;
 }
 
-window.addEventListener('focus', () => {
-  queueRefresh(0, 'focus');
-  if (!channel && currentUserId) scheduleRestart(0);
-}, { passive: true });
-
-window.addEventListener('pageshow', () => {
-  queueRefresh(0, 'pageshow');
+function refreshAndEnsure(reason) {
+  queueRefresh(0, reason);
   if (!channel) scheduleRestart(0);
-}, { passive: true });
+}
+
+window.addEventListener('focus', () => refreshAndEnsure('focus'), { passive: true });
+window.addEventListener('pageshow', () => refreshAndEnsure('pageshow'), { passive: true });
 
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden) {
-    queueRefresh(0, 'visible');
-    if (!channel) scheduleRestart(0);
-  }
+  if (!document.hidden) refreshAndEnsure('visible');
 });
 
 supabase.auth.onAuthStateChange((_event, session) => {
@@ -124,18 +135,16 @@ supabase.auth.onAuthStateChange((_event, session) => {
     currentAccessToken = '';
     clearInterval(pollTimer);
     clearTimeout(restartTimer);
-    if (channel) {
-      const previous = channel;
-      channel = null;
-      void supabase.removeChannel(previous);
-    }
+    void stopCurrentChannel();
     return;
   }
 
+  // Token refreshes update Realtime auth, but channel construction remains
+  // serialized through ensureRealtimeChannel().
   void setRealtimeAuth(session).then(() => {
-    if (nextUserId !== currentUserId || !channel) void start({ force: true });
+    if (nextUserId !== currentUserId || !channel) void ensureRealtimeChannel();
     else queueRefresh(0, 'auth-refresh');
   });
 });
 
-void start();
+void ensureRealtimeChannel();
