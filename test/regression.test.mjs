@@ -1147,3 +1147,10 @@ test("profile visits authenticate realtime before subscribing", async()=>{
   assert.doesNotMatch(dashboard,/table:'profile_visits'/);
   assert.match(dashboard,/ec:profile-visits-changed/);
 });
+
+
+test("primary Head Admin card uses home region instead of all regions", async()=>{
+  const directory=await source("src/NativeMembersDirectory.jsx");
+  assert.match(directory,/member\?\.is_primary_head_admin[\s\S]*Hauptverantwortlich · zuständig für Region/);
+  assert.doesNotMatch(directory,/is_primary_head_admin[\s\S]{0,220}Hauptverantwortlicher · alle Regionen/);
+});
