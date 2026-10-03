@@ -981,3 +981,20 @@ test("cloudflare deploy targets the production domains", async()=>{
   assert.ok(routes.some((route)=>route.pattern==="ennstal-connect.com" && route.custom_domain===true));
   assert.ok(routes.some((route)=>route.pattern==="www.ennstal-connect.com" && route.custom_domain===true));
 });
+
+
+test("admin log separates successful and denied actions", async()=>{
+  const app=await source("src/App.jsx");
+  const client=await source("src/supabaseClient.js");
+  const main=await source("src/main.jsx");
+  const css=await source("src/admin-log-modern.css");
+  assert.match(app,/Abgelehnt/);
+  assert.match(app,/AUSGEFÜHRT/);
+  assert.match(app,/ADMIN_DENIED/);
+  assert.match(app,/Grund der Ablehnung/);
+  assert.match(client,/logDeniedAdminAction/);
+  assert.match(client,/log_admin_denied_action/);
+  assert.match(main,/import "\.\/admin-log-modern\.css"/);
+  assert.match(css,/admin-log-summary/);
+  assert.match(css,/admin-log-status\.denied/);
+});

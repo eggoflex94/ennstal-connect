@@ -13,6 +13,7 @@ export const isSupabaseConfigured = Boolean(
 export const supabaseUnavailableMessage =
   "Die Anmeldung ist momentan nicht erreichbar. Bitte versuche es später erneut.";
 export let preparePrivilegedAction = async () => ({ error: new Error(supabaseUnavailableMessage) });
+export let logDeniedAdminAction = async () => ({ error: new Error(supabaseUnavailableMessage) });
 
 export const supabase = isSupabaseConfigured
   ? createClient(supabaseUrl, supabaseAnonKey, {
@@ -91,6 +92,23 @@ preparePrivilegedAction = async function (actionName, targetId = null, suppliedR
   const result = await originalRpc("prepare_privileged_action", { p_action_name: actionName, p_reason: reason, p_target_id: targetId });
   if (!result.error) preparedPrivilegedContext = { targetId, preparedAt: Date.now(), headAdmin };
   return result;
+};
+
+logDeniedAdminAction = async function (actionName, targetId = null, errorMessage = "", context = {}) {
+  try {
+    const actorRole = await currentPrivilegeRole();
+    if (!["HEAD_ADMIN","ADMIN","SUPPORTER"].includes(actorRole)) return { data: null, error: null };
+    const result = await originalRpc("log_admin_denied_action", {
+      p_action_name: String(actionName || "Admin-Aktion"),
+      p_target_id: targetId || null,
+      p_error: String(errorMessage || "Keine Berechtigung."),
+      p_context: context && typeof context === "object" ? context : {}
+    });
+    return result;
+  } catch (error) {
+    console.warn("Abgelehnte Admin-Aktion konnte nicht protokolliert werden:", error?.message || error);
+    return { data: null, error };
+  }
 };
 
 void currentPrivilegeRole();

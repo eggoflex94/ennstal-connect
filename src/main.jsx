@@ -128,6 +128,7 @@ import "./profile-design-preview-role.css";
 import "./admin-central-modern.css";
 import "./layout-overlap-authority.css";
 import "./admin-central-final.css";
+import "./admin-log-modern.css";
 import "./layout-runtime-sync.js";
 import "./role-responsibility-final.css";
 import "./layout-integrity-final.css";
