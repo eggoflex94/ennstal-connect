@@ -253,10 +253,11 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
 
     <div className="member-grid native-member-grid">
       {pagedVisible.map((member) => {
+        const headRegionLabel = regionById[member.home_region_id]?.name || "Hauptregion";
         const cardMember = member?.is_primary_head_admin
-          ? { ...member, directory_admin: true, directory_role_star: roleStarSrc(member), directory_responsibility_label: "Hauptverantwortlicher · alle Regionen" }
+          ? { ...member, directory_admin: true, directory_role_star: roleStarSrc(member), directory_responsibility_label: `Hauptverantwortlich · zuständig für Region ${headRegionLabel}` }
           : isHeadAdmin(member)
-            ? { ...member, directory_admin: true, directory_role_star: roleStarSrc(member), directory_responsibility_label: `Hauptverantwortlich · zuständig für Region ${regionById[member.home_region_id]?.name || "Hauptregion"}` }
+            ? { ...member, directory_admin: true, directory_role_star: roleStarSrc(member), directory_responsibility_label: `Hauptverantwortlich · zuständig für Region ${headRegionLabel}` }
             : normalized(member?.role) === "ADMIN"
               ? { ...member, directory_admin: true, directory_role_star: roleStarSrc(member), directory_responsibility_label: "Global Admin · alle Regionen" }
               : isRegionalAdmin(member)
