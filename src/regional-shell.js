@@ -102,6 +102,17 @@ function renderDetail(rows,type){
 }
 function bindDockDetailRows(panel){panel.querySelectorAll('.ec-dock-detail-row').forEach(row=>row.onclick=()=>{const profileId=row.dataset.profileId;if(profileId&&profileId!==currentProfile.id)window.dispatchEvent(new CustomEvent('ec:open-profile',{detail:{profileId}}));else clickPage(row.dataset.detailTarget==='visits'?'profile':'news');document.body.classList.remove('ec-dock-open')})}
 
+async function refreshProfileVisitDock(){
+  invalidateDockDetails('visits');
+  dockCountsCache={userId:'',at:0,data:null};
+  await Promise.all([
+    syncDockCounts({force:true}),
+    syncDockDetail('visits',{force:true})
+  ]);
+}
+
+window.addEventListener('ec:profile-visits-changed',()=>{void refreshProfileVisitDock()});
+
 async function syncDockDetail(type,{force=false}={}){
   const panel=document.querySelector(`.ec-dock-detail[data-panel="${type}"]`);
   if(!panel||!currentProfile?.id)return;

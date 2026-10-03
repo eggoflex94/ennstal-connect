@@ -934,3 +934,16 @@ test("literal newline cleanup blanks artifacts without removing React-owned node
   assert.doesNotMatch(cleanup,/node\.remove\(\)/);
   assert.match(cleanup,/new MutationObserver\(scheduleLiteralNewlineCleanup\)/);
 });
+
+
+test("profile visits have one realtime owner and refresh both dock and React state", async()=>{
+  const realtime=await source("src/profile-visits-realtime.js");
+  const shell=await source("src/regional-shell.js");
+  const app=await source("src/App.jsx");
+  assert.match(realtime,/ec:profile-visits-changed/);
+  assert.doesNotMatch(realtime,/panel\.innerHTML/);
+  assert.match(shell,/syncDockCounts\(\{force:true\}\)/);
+  assert.match(shell,/syncDockDetail\('visits',\{force:true\}\)/);
+  assert.match(app,/window\.addEventListener\("ec:profile-visits-changed", handleVisitsChanged\)/);
+  assert.match(app,/setProfileVisits\(data \|\| \[\]\)/);
+});
