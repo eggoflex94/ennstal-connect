@@ -45,8 +45,14 @@ function canvasBlob(canvas, type, quality) {
   return new Promise((resolve) => canvas.toBlob(resolve, type, quality));
 }
 
+function isImageFile(file) {
+  if (!file) return false;
+  if (String(file.type || "").startsWith("image/")) return true;
+  return /\.(png|jpe?g|webp|gif|heic|heif|avif)$/i.test(String(file.name || ""));
+}
+
 async function optimizeAndWatermark(file) {
-  if (!file?.type?.startsWith("image/")) throw new Error("Bitte nur Bilddateien auswählen.");
+  if (!isImageFile(file)) throw new Error("Bitte nur Bilddateien auswählen.");
   if (file.size > MAX_SOURCE_BYTES) throw new Error(`${file.name}: Das Original ist größer als 20 MB.`);
 
   const source = await decodeImage(file);
@@ -188,14 +194,36 @@ export default function EventPhotosPage({ user, profile, members = [], regions =
         });
         if (uploadError) throw uploadError;
 
-        const { error: createError } = await supabase.rpc("create_event_photo", {
-          p_event_id: selectedEvent.id,
-          p_storage_path: path,
-          p_caption: caption.trim() || null
-        });
+        let createError = null;
+        for (let attempt = 0; attempt < 2; attempt += 1) {
+          const result = await supabase.rpc("create_event_photo", {
+            p_event_id: selectedEvent.id,
+            p_storage_path: path,
+            p_caption: caption.trim() || null
+          });
+          createError = result.error;
+          if (!createError) break;
+
+          const { data: existing } = await supabase
+            .from("event_photos")
+            .select("id")
+            .eq("storage_path", path)
+            .maybeSingle();
+          if (existing?.id) { createError = null; break; }
+
+          if (!/failed to fetch|load failed|network|timeout|antwortet nicht|aborted|thread killed/i.test(String(createError?.message || createError || "")) || attempt === 1) break;
+          await new Promise((resolve) => setTimeout(resolve, 900));
+        }
         if (createError) {
-          await supabase.storage.from("event-photos").remove([path]);
-          throw createError;
+          const { data: existing } = await supabase
+            .from("event_photos")
+            .select("id")
+            .eq("storage_path", path)
+            .maybeSingle();
+          if (!existing?.id) {
+            await supabase.storage.from("event-photos").remove([path]);
+            throw createError;
+          }
         }
         completed += 1;
       }
@@ -309,7 +337,7 @@ export default function EventPhotosPage({ user, profile, members = [], regions =
       <input value={caption} onChange={(event) => setCaption(event.target.value)} maxLength="240" placeholder="Bildbeschreibung für diesen Upload (optional)"/>
       <label className={`event-photo-upload-button ${uploading ? "is-busy" : ""}`}>
         {uploading ? "Upload läuft …" : "📷 Fotos auswählen"}
-        <input type="file" accept="image/*" multiple disabled={uploading} onChange={(event) => { void uploadFiles(event.target.files); event.target.value = ""; }}/>
+        <input type="file" accept="image/*,.heic,.heif,.avif" multiple disabled={uploading} onChange={(event) => { const input = event.currentTarget; const files = input.files; void uploadFiles(files).finally(() => { input.value = ""; }); }}/>
       </label>
       <small>Bis zu {MAX_BATCH} Fotos pro Durchgang · Original max. 20 MB · Upload wird automatisch auf unter 6 MB optimiert.</small>
       {uploadStatus && <div className="event-photo-upload-status" aria-live="polite">{uploadStatus}</div>}
