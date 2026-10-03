@@ -187,6 +187,7 @@ export default function App() {
   const bootstrapRetry = useRef({ count: 0, timer: null });
   const membersRef = useRef(members);
   membersRef.current = members;
+  const lastRecordedProfileVisit = useRef({ profileId: "", at: 0 });
   const resetSession = () => {
     initializedProfileUser.current = null;
     setSectionStatus({ pending: [], failed: [] });
@@ -236,6 +237,24 @@ export default function App() {
       window.removeEventListener("ec:profile-visits-changed", handleVisitsChanged);
     };
   }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id || page !== "member-profile" || !viewingMember?.id || viewingMember.id === user.id) return;
+    const now = Date.now();
+    const previous = lastRecordedProfileVisit.current;
+    if (previous.profileId === viewingMember.id && now - previous.at < 5000) return;
+    lastRecordedProfileVisit.current = { profileId: viewingMember.id, at: now };
+    void supabase.from("profile_visits").insert({
+      profile_id: viewingMember.id,
+      visitor_id: user.id,
+      visited_at: new Date(now).toISOString()
+    }).then(({ error }) => {
+      if (error) {
+        lastRecordedProfileVisit.current = { profileId: "", at: 0 };
+        console.warn("Profilbesuch konnte nicht gespeichert werden:", error.message);
+      }
+    });
+  }, [page, viewingMember?.id, user?.id]);
 
   useEffect(() => {
     if (!user?.id || !members.length) return undefined;
@@ -1606,7 +1625,7 @@ export default function App() {
   }
 
   async function openChat(m) { setChatMember(m); setPage("messages"); const { data, error } = await supabase.from("messages").select("*").or(`and(sender_id.eq.${user.id},receiver_id.eq.${m.id}),and(sender_id.eq.${m.id},receiver_id.eq.${user.id})`).order("created_at", { ascending: true }); if (error) return showNotice(error.message); setMessages(data || []); await supabase.rpc("mark_messages_read", { from_user: m.id }); }
-  async function openMember(m) { if (!m) return; if (m.id === user.id) return setPage("profile"); setViewingMember(m); setViewingFriends([]); setPage("member-profile"); void loadMemberProfile(m).then((fresh) => { if (fresh?.id === m.id) setViewingMember((current) => current?.id === m.id ? fresh : current); }).catch((error) => console.warn("Profil konnte nicht im Hintergrund aktualisiert werden:", error?.message || error)); const [{ data: connections }, { error: visitError }] = await Promise.all([supabase.from("friendships").select("requester_id,receiver_id").eq("status", "ACCEPTED").or(`requester_id.eq.${m.id},receiver_id.eq.${m.id}`), supabase.from("profile_visits").insert({ profile_id: m.id, visitor_id: user.id, visited_at: new Date().toISOString() })]); if (connections) { const ids = connections.map((connection) => connection.requester_id === m.id ? connection.receiver_id : connection.requester_id); setViewingFriends(members.filter((member) => ids.includes(member.id))); } if (visitError) console.warn(visitError.message); }
+  async function openMember(m) { if (!m) return; if (m.id === user.id) return setPage("profile"); setViewingMember(m); setViewingFriends([]); setPage("member-profile"); void loadMemberProfile(m).then((fresh) => { if (fresh?.id === m.id) setViewingMember((current) => current?.id === m.id ? fresh : current); }).catch((error) => console.warn("Profil konnte nicht im Hintergrund aktualisiert werden:", error?.message || error)); const { data: connections } = await supabase.from("friendships").select("requester_id,receiver_id").eq("status", "ACCEPTED").or(`requester_id.eq.${m.id},receiver_id.eq.${m.id}`); if (connections) { const ids = connections.map((connection) => connection.requester_id === m.id ? connection.receiver_id : connection.requester_id); setViewingFriends(members.filter((member) => ids.includes(member.id))); } }
 
   if (passwordRecovery) return <PasswordReset finishPasswordReset={finishPasswordReset} notice={notice}/>;
   if (!user) return <div className="auth-page"><NewAuth login={login} register={register} loginPending={loginPending} loginFeedback={loginFeedback}/><button className="forgot-password-button" onClick={requestPasswordReset}>Passwort vergessen?</button>{notice && <div className="toast">{notice}</div>}</div>;
