@@ -137,3 +137,24 @@
     flex-wrap:wrap;
   }
 }
+
+
+.ec-photo-editor-mode{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+}
+.ec-photo-editor-mode button{
+  min-height:44px;
+  border:1px solid #d9e2e8;
+  border-radius:12px;
+  background:#f8fafc;
+  color:#294156;
+  font-weight:800;
+  cursor:pointer;
+}
+.ec-photo-editor-mode button.is-active{
+  border-color:#2f7dd3;
+  box-shadow:0 0 0 2px rgba(47,125,211,.12);
+  background:#eef6ff;
+}
