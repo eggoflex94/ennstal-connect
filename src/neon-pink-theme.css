@@ -363,3 +363,31 @@ html[data-ec-theme="neon-pink"] .admin-responsibilities-card{
 }
 html[data-ec-theme="neon-pink"] .admin-responsibilities-card>span{color:#c50070!important}
 html[data-ec-theme="neon-pink"] .admin-responsibilities-card>strong{color:#351126!important}
+
+
+/* Public profile "Über mich": the saved bio color must never become unreadable
+   against the Neon Pink profile card. Keep this section light and high contrast. */
+html[data-ec-theme="neon-pink"] .member-profile-page .panel:has(.member-profile-bio),
+html[data-ec-theme="neon-pink"] .member-profile-page .profile-section:has(.member-profile-bio){
+  background:linear-gradient(145deg,#fff,#fff0f8)!important;
+  border-color:#ff9dd5!important;
+  box-shadow:0 12px 28px rgba(176,18,102,.10)!important;
+}
+html[data-ec-theme="neon-pink"] .member-profile-page .panel:has(.member-profile-bio) .eyebrow,
+html[data-ec-theme="neon-pink"] .member-profile-page .profile-section:has(.member-profile-bio) .eyebrow{
+  color:#c50070!important;
+}
+html[data-ec-theme="neon-pink"] .member-profile-page .member-profile-bio{
+  color:#351126!important;
+  text-shadow:none!important;
+  opacity:1!important;
+}
+html[data-ec-theme="neon-pink"] .member-profile-page .panel:has(.member-profile-bio) h1,
+html[data-ec-theme="neon-pink"] .member-profile-page .panel:has(.member-profile-bio) h2,
+html[data-ec-theme="neon-pink"] .member-profile-page .panel:has(.member-profile-bio) h3,
+html[data-ec-theme="neon-pink"] .member-profile-page .profile-section:has(.member-profile-bio) h1,
+html[data-ec-theme="neon-pink"] .member-profile-page .profile-section:has(.member-profile-bio) h2,
+html[data-ec-theme="neon-pink"] .member-profile-page .profile-section:has(.member-profile-bio) h3{
+  color:#351126!important;
+  text-shadow:none!important;
+}
