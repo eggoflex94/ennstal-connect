@@ -973,3 +973,11 @@ test("neon pink layout is selectable, point-gated, and fully themed", async()=>{
   assert.match(css,/data-ec-theme="neon-pink"/);
   assert.match(css,/#ff1bb8/i);
 });
+
+
+test("cloudflare deploy targets the production domains", async()=>{
+  const config=JSON.parse(await source("wrangler.json"));
+  const routes=config.routes || [];
+  assert.ok(routes.some((route)=>route.pattern==="ennstal-connect.com" && route.custom_domain===true));
+  assert.ok(routes.some((route)=>route.pattern==="www.ennstal-connect.com" && route.custom_domain===true));
+});
