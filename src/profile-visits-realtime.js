@@ -41,26 +41,33 @@ async function start() {
 
   clearTimeout(restartTimer);
   if (channel) {
-    await supabase.removeChannel(channel);
+    const previousChannel = channel;
     channel = null;
+    await supabase.removeChannel(previousChannel);
   }
 
-  channel = supabase
+  const nextChannel = supabase
     .channel(`profile-visits-${user.id}`)
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'profile_visits', filter: `profile_id=eq.${user.id}` },
       () => queueRefresh(25, 'realtime')
-    )
-    .subscribe((status) => {
-      if (status === 'SUBSCRIBED') {
-        queueRefresh(0, 'subscribed');
-        return;
-      }
-      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-        scheduleRestart();
-      }
-    });
+    );
+
+  channel = nextChannel;
+  nextChannel.subscribe((status) => {
+    // Ignore lifecycle callbacks from a channel that has already been replaced.
+    if (channel !== nextChannel) return;
+    if (status === 'SUBSCRIBED') {
+      clearTimeout(restartTimer);
+      queueRefresh(0, 'subscribed');
+      return;
+    }
+    if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+      channel = null;
+      scheduleRestart();
+    }
+  });
 
   startFallbackPolling();
   queueRefresh(0, 'start');
@@ -73,13 +80,13 @@ window.addEventListener('focus', () => {
 
 window.addEventListener('pageshow', () => {
   queueRefresh(0, 'pageshow');
-  if (currentUserId) scheduleRestart(0);
+  if (currentUserId && !channel) scheduleRestart(0);
 }, { passive: true });
 
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) {
     queueRefresh(0, 'visible');
-    if (currentUserId) scheduleRestart(0);
+    if (currentUserId && !channel) scheduleRestart(0);
   }
 });
 
@@ -90,8 +97,9 @@ supabase?.auth?.onAuthStateChange?.((_event, session) => {
     clearInterval(pollTimer);
     clearTimeout(restartTimer);
     if (channel) {
-      void supabase.removeChannel(channel);
+      const previousChannel = channel;
       channel = null;
+      void supabase.removeChannel(previousChannel);
     }
     return;
   }
