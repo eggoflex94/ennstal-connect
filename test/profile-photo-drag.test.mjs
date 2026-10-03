@@ -84,3 +84,13 @@ test("whole photo mode keeps full image visible while allowing vertical position
   assert.match(editor, /<span>Oben \/ unten<\/span>/);
   assert.match(editor, /onChange=\{e => applyPan\(x, Number\(e\.target\.value\)\)\}/);
 });
+
+
+test("saving whole photo never uploads the raw portrait that avatar CSS would crop", async () => {
+  const editor = await source("src/ProfilePhotoEditor.jsx");
+  assert.match(editor, /useState\("contain"\)/);
+  assert.match(editor, /mode: "contain"/);
+  assert.match(editor, /profilbild-ganz-/);
+  assert.match(editor, /Ganzes Foto verwenden/);
+  assert.doesNotMatch(editor, /await onSave\(file\)/);
+});
