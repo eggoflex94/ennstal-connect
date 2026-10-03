@@ -92,8 +92,10 @@ const openContentEditor = ({ title, description, fields }) => new Promise((resol
   dialog.innerHTML = `<div class="content-editor-header"><div><span class="eyebrow">BEARBEITEN</span><h2>${title}</h2><p>${description || "Änderungen prüfen und anschließend speichern."}</p></div><button type="button" class="content-editor-close" aria-label="Schließen">×</button></div>`;
   fields.forEach((definition) => {
     const label = document.createElement("label"); label.className = "content-editor-field"; label.textContent = definition.label;
-    const element = definition.type === "textarea" ? document.createElement("textarea") : document.createElement("input");
-    element.name = definition.name; element.type = definition.type === "file" ? "file" : definition.type || "text";
+    const isTextarea = definition.type === "textarea";
+    const element = isTextarea ? document.createElement("textarea") : document.createElement("input");
+    element.name = definition.name;
+    if (!isTextarea) element.type = definition.type === "file" ? "file" : definition.type || "text";
     if (definition.type === "file") element.accept = "image/png,image/jpeg,image/webp,image/gif";
     else element.value = definition.value || "";
     if (definition.placeholder) element.placeholder = definition.placeholder;
