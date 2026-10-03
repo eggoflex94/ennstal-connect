@@ -7,11 +7,7 @@ let observerRetry = null;
 
 function legacyAdminElements(page) {
   if (!page) return [];
-  const elements = [...page.querySelectorAll('.member-admin-tools,.feature-unlocks,.head-admin-media-tools,.member-business-tool')];
-  page.querySelectorAll('button').forEach((button) => {
-    if (/punkteliste|punkte vergeben/i.test(String(button.textContent || ''))) elements.push(button);
-  });
-  return [...new Set(elements)];
+  return [...page.querySelectorAll('.member-admin-tools,.feature-unlocks,.head-admin-media-tools,.member-business-tool')];
 }
 
 function restoreLegacyAdminSurface(targetId) {
@@ -71,26 +67,11 @@ function mount() {
   if (page.classList.contains('ec-profile-admin-fallback-active')) return;
 
   const existing = actions.querySelector('.ec-profile-admin-open');
-  if (!hasAdminSurface(page)) {
-    existing?.remove();
-    return;
-  }
+  if (!existing) return;
 
   legacyAdminElements(page).forEach((element) => {
     element.style.setProperty('display', 'none', 'important');
   });
-
-  if (existing) {
-    existing.onclick = () => openAdminTools(targetId, existing);
-    return;
-  }
-
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = 'primary-button ec-profile-admin-open';
-  button.textContent = '⚙ Admin Tools';
-  button.onclick = () => openAdminTools(targetId, button);
-  actions.prepend(button);
 }
 
 function scheduleMount(delay = 40) {

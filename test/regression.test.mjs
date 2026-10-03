@@ -1115,3 +1115,22 @@ test("Neon Pink About Me section keeps bio text readable", async()=>{
   assert.match(css,/\.member-profile-bio\{[\s\S]*color:#351126!important/);
   assert.match(css,/background:linear-gradient\(145deg,#fff,#fff0f8\)!important/);
 });
+
+
+test("delegated Head Admin member card shows home-region responsibility", async()=>{
+  const directory=await source("src/NativeMembersDirectory.jsx");
+  assert.match(directory,/member\?\.is_primary_head_admin[\s\S]*Hauptverantwortlicher · alle Regionen/);
+  assert.match(directory,/isHeadAdmin\(member\)[\s\S]*Hauptverantwortlich · zuständig für Region/);
+  assert.match(directory,/regionById\[member\.home_region_id\]\?\.name/);
+});
+
+test("member profile admin actions remain React-owned", async()=>{
+  const app=await source("src/App.jsx");
+  const unified=await source("src/profile-admin-tools-unified.js");
+  const runtime=await source("src/profile-admin-tools-runtime.js");
+  assert.match(app,/ec-profile-admin-open/);
+  assert.match(app,/ec-profile-point-history-open/);
+  assert.doesNotMatch(unified,/actions\.prepend\(/);
+  assert.doesNotMatch(unified,/document\.createElement\('button'\)[\s\S]*ec-profile-admin-open/);
+  assert.match(runtime,/ecOpenUnifiedProfilePointHistory/);
+});
