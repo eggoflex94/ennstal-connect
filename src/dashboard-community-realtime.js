@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { loadMemberScores } from './member-score.js';
 
 let userId = null;
 let channel = null;
@@ -40,7 +41,8 @@ async function loadVisitProfiles(visits) {
     .select('id,nickname,avatar_url,role,account_badge,role_star_url,points')
     .in('id', ids);
   if (error) return new Map();
-  return new Map((data || []).map((profile) => [profile.id, profile]));
+  const scores = await loadMemberScores(ids);
+  return new Map((data || []).map((profile) => [profile.id, { ...profile, total_score: scores.get(String(profile.id)) ?? Number(profile.points || 0) }]));
 }
 
 function uniqueRecentVisits(visits, limit = 10) {
@@ -81,7 +83,7 @@ async function refresh() {
         const nickname = profile?.nickname || 'Mitglied';
         const avatar = profile?.avatar_url || '/community-default-avatar-fast.svg';
         const star = profileStar(profile);
-        return `<button type="button" class="ec-dock-detail-row ec-profile-visit-row" data-profile-id="${esc(row.visitor_id)}"><img class="ec-profile-visit-avatar" src="${esc(avatar)}" alt=""><span class="ec-profile-visit-main"><span class="ec-profile-visit-name">${star ? `<img class="ec-profile-visit-star" src="${esc(star)}" alt="">` : ''}<strong>${esc(nickname)} <span class="ec-inline-points">[${esc(Number(profile?.points||0).toLocaleString('de-AT'))}]</span></strong></span><small>hat dein Profil besucht</small></span><time datetime="${esc(row.visited_at)}">${esc(fmt(row.visited_at))}</time></button>`;
+        return `<button type="button" class="ec-dock-detail-row ec-profile-visit-row" data-profile-id="${esc(row.visitor_id)}"><img class="ec-profile-visit-avatar" src="${esc(avatar)}" alt=""><span class="ec-profile-visit-main"><span class="ec-profile-visit-name">${star ? `<img class="ec-profile-visit-star" src="${esc(star)}" alt="">` : ''}<strong>${esc(nickname)} <span class="ec-inline-points">[${esc(Number(profile?.total_score??profile?.points??0).toLocaleString('de-AT'))}]</span></strong></span><small>hat dein Profil besucht</small></span><time datetime="${esc(row.visited_at)}">${esc(fmt(row.visited_at))}</time></button>`;
       }).join('') : '<div class="ec-dock-empty">Noch keine Profilbesuche.</div>';
       bindProfileRows(visitsPanel);
     }
