@@ -63,7 +63,7 @@ function ensureOnlineFriends(dock){
     const star=starFor(friend,region?.id||null);
     const name=esc(friend.nickname||'Mitglied');
     const points=Number(friend.points||0).toLocaleString('de-AT');
-    return `<button type="button" class="ec-online-friend" data-profile-id="${esc(friend.id)}" title="Profil von ${name} öffnen"><span class="ec-online-dot" aria-hidden="true"></span>${star?`<img class="ec-online-friend-star" src="${esc(star)}" alt="" aria-hidden="true">`:''}<strong class="ec-online-friend-name">${name} <span class="ec-inline-points">[${esc(points)} Punkte]</span></strong></button>`;
+    return `<button type="button" class="ec-online-friend" data-profile-id="${esc(friend.id)}" title="Profil von ${name} öffnen"><span class="ec-online-dot" aria-hidden="true"></span>${star?`<img class="ec-online-friend-star" src="${esc(star)}" alt="" aria-hidden="true">`:''}<strong class="ec-online-friend-name"><span class="ec-online-nickname">${name}</span><span class="ec-inline-points">[${esc(points)}]</span></strong></button>`;
   }).join('');
   panel.innerHTML=`<div class="ec-online-friends-head"><span>FREUNDE ONLINE</span><em>${state.friends.length}</em></div><div class="ec-online-friends-list">${rows||'<small>Derzeit keine Freunde online.</small>'}</div>`;
   panel.querySelectorAll('[data-profile-id]').forEach(btn=>btn.onclick=()=>window.dispatchEvent(new CustomEvent('ec:open-profile',{detail:{profileId:btn.dataset.profileId}})));
