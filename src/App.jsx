@@ -15,6 +15,7 @@ import EventPhotosPage from "./EventPhotosPage.jsx";
 import HeadAdminSelfControls from "./HeadAdminSelfControls.jsx";
 import ProfileSocialTabs from "./ProfileSocialTabs.jsx";
 import ProfileRelationshipSection from "./ProfileRelationshipSection.jsx";
+import { loadDeferredProfileAdminEnhancements } from "./deferred-admin-enhancements.js";
 
 // A friendly community image is shown until a member uploads a personal photo.
 const DEFAULT_AVATAR = "/community-default-avatar-fast.svg";
@@ -2491,22 +2492,98 @@ function MemberProfile({ member, friends, groups = [], photos = [], onOpenGroup,
   const accepted = friendship?.status === "ACCEPTED";
   const viewerIsPrimaryHead = Boolean(viewerProfile?.is_primary_head_admin);
   const protectedHeadTarget = member.role === "HEAD_ADMIN";
-  const canModerate = (isAdmin(viewerProfile?.role) || viewerProfile?.forum_moderator) && member.id !== user.id && (!protectedHeadTarget || viewerIsPrimaryHead);
+  const canModerate = (viewerIsPrimaryHead || viewerProfile?.role === "ADMIN" || viewerProfile?.forum_moderator) && member.id !== user.id && (!protectedHeadTarget || viewerIsPrimaryHead);
   const canManageRoles = viewerIsPrimaryHead && member.id !== user.id;
   const canSee = (field) => isAdmin(viewerProfile?.role) || (member.privacy_settings?.[field] || "PUBLIC") === "PUBLIC" || ((member.privacy_settings?.[field] || "PUBLIC") === "FRIENDS" && accepted);
-  useEffect(() => {
-    const tools = document.querySelector(".member-admin-tools>div");
-    const hasGroupModeration = (member.admin_responsibilities || []).some((item) => /gruppen verwalten/i.test(String(item)));
-    if (!tools || !isHeadAdmin(viewerProfile?.role) || member.role !== "SUPPORTER" || tools.querySelector(".group-moderator-tool")) return;
-    const button = document.createElement("button"); button.className = "secondary-button group-moderator-tool";
-    button.textContent = hasGroupModeration ? "★ Gruppenmoderation entfernen" : "★ Zum Gruppenmoderator ernennen";
-    button.onclick = () => setGroupModerator(member, !hasGroupModeration); tools.appendChild(button);
-  }, [member, viewerProfile?.role, setGroupModerator]);
-  useEffect(() => { const page = document.querySelector(".member-profile-page"); const hero = page?.querySelector(".member-profile-hero"); if (!page || !hero) return; const text = hero.querySelector("div"); const nameLine = text?.querySelector("p:not(.member-profile-bio)"); const bio = text?.querySelector(".member-profile-bio"); if (nameLine) nameLine.style.display = canSee("name") || canSee("birth_date") ? "" : "none"; if (bio) bio.style.display = canSee("bio") ? "" : "none"; page.querySelector(".profile-visible-details")?.remove(); const details = [["location", "Ort", member.location], ["interests", "Interessen", formatInterests(member.interests)], ["website", "Webseite", member.website]].filter(([field,,value]) => value && canSee(field)); if (!details.length) return; const panel = document.createElement("section"); panel.className = "panel profile-visible-details"; const label = document.createElement("span"); label.className = "eyebrow"; label.textContent = "PROFILINFORMATIONEN"; panel.appendChild(label); details.forEach(([, caption, value]) => { const row = document.createElement("p"); row.textContent = `${caption}: ${String(value)}`; panel.appendChild(row); }); hero.insertAdjacentElement("afterend", panel); }, [member, accepted, viewerProfile?.role]);
-  useEffect(() => { const hero = document.querySelector(".member-profile-page .member-profile-hero"); const text = hero?.querySelector(":scope > div"); if (!hero || !text) return; text.querySelector(".admin-responsibilities")?.remove(); const saved = Array.isArray(member.admin_responsibilities) ? member.admin_responsibilities : []; const defaultAdminText = member.role === "ADMIN" ? ["Community-Verwaltung – Zuständigkeiten werden vom Head Admin festgelegt"] : []; const list = member.role === "HEAD_ADMIN" ? [member.head_admin_responsibilities || "Gesamtverantwortung, Sicherheit & Regeln"] : [...(saved.length ? saved : defaultAdminText), ...(member.forum_moderator ? ["Forum-Moderation · Meldungen und respektvoller Austausch"] : [])]; const visible = list.map((value) => String(value || "").trim()).filter(Boolean); if (!visible.length) return; const box = document.createElement("p"); box.className = "admin-responsibilities"; box.textContent = `Zuständig für: ${visible.join(" · ")}`; text.appendChild(box); }, [member.id, member.role, member.head_admin_responsibilities, member.admin_responsibilities, member.forum_moderator]);
-  useEffect(() => { const tools = document.querySelector(".member-admin-tools>div"); if (!tools || !isAdmin(viewerProfile?.role) || member.is_verified || member.role === "HEAD_ADMIN" || tools.querySelector(".verification-request-tool")) return; const button = document.createElement("button"); button.className = "secondary-button verification-request-tool"; button.textContent = "✓ Verifizierung mit Frist anfordern"; button.onclick = async () => { const reason = prompt(`Warum soll ${getName(member)} sein Profil verifizieren?`, "Bitte bestätige zur Sicherheit die Echtheit deines Profils."); if (reason === null || reason.trim().length < 3) return; const days = Number(prompt("Frist in Tagen (1 bis 30):", "7")); if (!Number.isInteger(days) || days < 1 || days > 30) return alert("Bitte eine Frist zwischen 1 und 30 Tagen eingeben."); const { error } = await supabase.rpc("admin_require_profile_verification", { p_target_user: member.id, p_reason: reason.trim(), p_due_days: days }); alert(error ? error.message : "Verifizierung wurde angefordert. Das Mitglied wurde benachrichtigt."); }; tools.appendChild(button); }, [member, viewerProfile?.role]);
-  useEffect(() => { const hero = document.querySelector(".member-profile-hero"); if (hero) { hero.classList.toggle("business-profile", member.account_badge === "BUSINESS"); if (!hero.querySelector(".verified-profile-badge") && member.is_verified) { const badge = document.createElement("small"); badge.className = "verified-profile-badge"; badge.textContent = "✓ Verifiziert"; hero.querySelector("div")?.appendChild(badge); } } const tools = document.querySelector(".member-admin-tools>div"); if (tools && isHeadAdmin(viewerProfile?.role) && !tools.querySelector(".profile-business-tool")) { const button = document.createElement("button"); button.className = "secondary-button profile-business-tool"; button.textContent = member.account_badge === "BUSINESS" ? "★ Unternehmenskonto entfernen" : "★ Unternehmenskonto"; button.onclick = () => setBusinessAccount(member.id, member.account_badge !== "BUSINESS"); tools.appendChild(button); } if (tools && isHeadAdmin(viewerProfile?.role) && member.role === "SUPPORTER" && !tools.querySelector(".forum-moderator-tool")) { const button = document.createElement("button"); button.className = "secondary-button forum-moderator-tool"; button.textContent = member.forum_moderator ? "★ Forum-Moderation entfernen" : "★ Zum Forum-Moderator ernennen"; button.onclick = () => setForumModerator(member, !member.forum_moderator); tools.appendChild(button); } if (tools && isHeadAdmin(viewerProfile?.role) && !tools.querySelector(".profile-verification-tool")) { const button = document.createElement("button"); button.className = "secondary-button profile-verification-tool"; button.textContent = member.is_verified ? "✓ Verifizierung entfernen" : "✓ Profil verifizieren"; button.onclick = () => setProfileVerification(member, !member.is_verified); tools.appendChild(button); } if (tools && isHeadAdmin(viewerProfile?.role) && !tools.querySelector(".test-account-tool")) { const button = document.createElement("button"); button.className = "secondary-button test-account-tool"; button.textContent = member.is_test_account ? "◉ Testkonto sichtbar machen" : "◌ Als Testkonto ausblenden"; button.onclick = () => toggleTestAccount(member); tools.appendChild(button); } }, [member, viewerProfile?.role, setBusinessAccount, setForumModerator, setProfileVerification, toggleTestAccount]);
-  return <section className="member-profile-page" data-profile-id={member.id}><button className="back-button" onClick={back}>← Zurück zu Mitgliedern</button><article className={`member-profile-hero ${roleClass(member.role)} has-profile-cover`}><div className="member-profile-cover">{member.profile_background?.startsWith("http") && <img src={member.profile_background} alt="" style={{objectPosition:"50% 50%",transform:`translate(${((member?.profile_background_position_x ?? 50)-50)*0.16}%, ${((member?.profile_background_position_y ?? 50)-50)*0.16}%) scale(${member?.profile_background_zoom ?? 1})`,transformOrigin:"50% 50%"}}/>}<span className="member-profile-cover-overlay" style={{background:`rgba(10,24,36,${member?.profile_background_overlay ?? 0.18})`}}/></div><img className={!member.avatar_url ? "member-profile-default-avatar" : ""} src={member.avatar_url || DEFAULT_AVATAR} alt="Standard-Profilbild"/><div><span>{roleLabel(member.role)}</span><h1>{getName(member)}</h1>{member.is_community_photographer && <div className="community-photographer-profile-badge"><img src="/community-photographer-camera.svg" alt=""/><span><strong>Community-Fotograf</strong><small>{member.community_photographer_global ? "Alle Regionen" : "Regional"}</small></span></div>}<p>{[member.first_name, member.last_name].filter(Boolean).join(" ")}{getAge(member.birth_date) !== null && ` · ${getAge(member.birth_date)} Jahre`}</p>{member.bio && <p className="member-profile-bio">{member.bio}</p>}</div></article><ProfileRelationshipSection member={member} currentUserId={user?.id}/><div className="member-profile-actions"><button className="primary-button" onClick={() => openChat(member)}>💬 Nachricht</button>{accepted ? <button className="secondary-button" onClick={() => removeFriend(member)}>♥ Befreundet · entfernen</button> : incoming ? <><button className="primary-button" onClick={() => respond(friendship, true)}>✓ Anfrage annehmen</button><button className="danger-button" onClick={() => respond(friendship, false)}>Ablehnen</button></> : <button className="secondary-button" onClick={() => requestFriend(member)}>{sent ? "⏳ Anfrage gesendet" : "🤝 Freundschaftsanfrage"}</button>}{member.id !== user.id && (viewerIsPrimaryHead || isAdmin(viewerProfile?.role) || viewerProfile?.forum_moderator) && <button className="primary-button ec-profile-admin-open" onClick={() => window.ecOpenUnifiedProfileAdminTools?.(member.id)}>⚙ Admin Tools</button>}{viewerIsPrimaryHead && member.id !== user.id && !member.is_primary_head_admin && <button className="secondary-button ec-profile-point-history-open" onClick={() => window.ecOpenUnifiedProfilePointHistory?.(member.id)}>★ Punkteliste</button>} {!isAdmin(member.role) && <button className="secondary-button" onClick={() => blockUser(member)}>🚫 Blockieren</button>}<button className="danger-button" onClick={() => reportUser(member)}>🚩 Nutzer melden</button></div>{canModerate && <section className="member-admin-tools"><span className="eyebrow">MODERATION</span><h2>Admin-Werkzeuge</h2><div><button className="danger-button" onClick={() => warnMember(member)}>⚠ Verwarnung senden</button><button className="secondary-button" onClick={() => toggleSuspension(member)}>{member.account_status === "SUSPENDED" ? "🔓 Freischalten" : "🔒 Sperren"}</button>{canManageRoles && <><button className="secondary-button" onClick={() => updateMemberRole(member, "SUPPORTER")}>🟢 Supporter</button><button className="secondary-button" onClick={() => updateMemberRole(member, member.role === "ADMIN" ? "MEMBER" : "ADMIN")}>{member.role === "ADMIN" ? "✕ Admin entfernen" : "★ Community Admin"}</button>{viewerIsPrimaryHead && member.role !== "HEAD_ADMIN" && <button className="secondary-button" onClick={() => updateMemberRole(member, "HEAD_ADMIN")}>♛ Head Admin (delegiert)</button>}{member.role !== "MEMBER" && <button className="secondary-button" onClick={() => updateMemberRole(member, "MEMBER")}>↩ Rolle entfernen</button>}<button className="secondary-button" onClick={() => loadPermissions(member.id)}>⚙ Rechte verwalten</button><button className="secondary-button" onClick={() => manageDirectMessagePolicy(member)}>✉ Direktnachrichten verwalten</button><button className="secondary-button" onClick={() => setMemberFeatureLock(member, "FORUM_POSTING", true)}>Forum sperren</button><button className="secondary-button" onClick={() => setMemberFeatureLock(member, "MESSAGING", true)}>Nachrichten sperren</button><button className="secondary-button" onClick={() => setMemberFeatureLock(member, "FRIEND_REQUESTS", true)}>Anfragen sperren</button><button className="secondary-button" onClick={() => setMemberFeatureLock(member, "FORUM_POSTING", false)}>Forum freigeben</button></>}</div></section>}<ProfileSections member={member} isFriend={accepted}/><PublicProfilePhotoFolder member={member} photos={photos} canSeeFriends={accepted}/></section>;
+  const hasGroupModeration = (member.admin_responsibilities || []).some((item) => /gruppen verwalten/i.test(String(item)));
+  const visibleDetails = [["location", "Ort", member.location], ["interests", "Interessen", formatInterests(member.interests)], ["website", "Webseite", member.website]].filter(([field,,value]) => value && canSee(field));
+  const savedResponsibilities = Array.isArray(member.admin_responsibilities) ? member.admin_responsibilities : [];
+  const defaultAdminResponsibilities = member.role === "ADMIN" ? ["Community-Verwaltung – Zuständigkeiten werden vom Head Admin festgelegt"] : [];
+  const visibleResponsibilities = (member.role === "HEAD_ADMIN"
+    ? [member.head_admin_responsibilities || (member.is_primary_head_admin ? "Gesamtverantwortung, Sicherheit & Regeln" : "Delegierter Head Admin – Rechte werden einzeln vergeben")]
+    : [...(savedResponsibilities.length ? savedResponsibilities : defaultAdminResponsibilities), ...(member.forum_moderator ? ["Forum-Moderation · Meldungen und respektvoller Austausch"] : [])]
+  ).map((value) => String(value || "").trim()).filter(Boolean);
+  const nameVisible = canSee("name");
+  const birthVisible = canSee("birth_date");
+  const age = birthVisible ? getAge(member.birth_date) : null;
+  const displayName = nameVisible ? [member.first_name, member.last_name].filter(Boolean).join(" ") : "";
+  const openUnifiedAdminTools = async () => {
+    await loadDeferredProfileAdminEnhancements();
+    if (typeof window.ecOpenUnifiedProfileAdminTools !== "function") return showNotice("Admin Tools konnten nicht geladen werden.");
+    return window.ecOpenUnifiedProfileAdminTools(member.id);
+  };
+  const openUnifiedPointHistory = async () => {
+    await loadDeferredProfileAdminEnhancements();
+    if (typeof window.ecOpenUnifiedProfilePointHistory !== "function") return showNotice("Punkteliste konnte nicht geladen werden.");
+    return window.ecOpenUnifiedProfilePointHistory(member.id);
+  };
+  const requestVerification = async () => {
+    const reason = prompt(`Warum soll ${getName(member)} sein Profil verifizieren?`, "Bitte bestätige zur Sicherheit die Echtheit deines Profils.");
+    if (reason === null || reason.trim().length < 3) return;
+    const days = Number(prompt("Frist in Tagen (1 bis 30):", "7"));
+    if (!Number.isInteger(days) || days < 1 || days > 30) return alert("Bitte eine Frist zwischen 1 und 30 Tagen eingeben.");
+    const { error } = await supabase.rpc("admin_require_profile_verification", { p_target_user: member.id, p_reason: reason.trim(), p_due_days: days });
+    alert(error ? error.message : "Verifizierung wurde angefordert. Das Mitglied wurde benachrichtigt.");
+  };
+
+  return <section className="member-profile-page" data-profile-id={member.id}>
+    <button className="back-button" onClick={back}>← Zurück zu Mitgliedern</button>
+    <article className={`member-profile-hero ${roleClass(member.role)} has-profile-cover ${member.account_badge === "BUSINESS" ? "business-profile" : ""}`}>
+      <div className="member-profile-cover">{member.profile_background?.startsWith("http") && <img src={member.profile_background} alt="" style={{objectPosition:"50% 50%",transform:`translate(${((member?.profile_background_position_x ?? 50)-50)*0.16}%, ${((member?.profile_background_position_y ?? 50)-50)*0.16}%) scale(${member?.profile_background_zoom ?? 1})`,transformOrigin:"50% 50%"}}/>}<span className="member-profile-cover-overlay" style={{background:`rgba(10,24,36,${member?.profile_background_overlay ?? 0.18})`}}/></div>
+      <img className={!member.avatar_url ? "member-profile-default-avatar" : ""} src={member.avatar_url || DEFAULT_AVATAR} alt="Standard-Profilbild"/>
+      <div>
+        <span>{roleLabel(member.role)}</span>
+        <h1>{getName(member)}{member.is_verified && <small className="verified-profile-badge"> ✓ Verifiziert</small>}</h1>
+        {member.is_community_photographer && <div className="community-photographer-profile-badge"><img src="/community-photographer-camera.svg" alt=""/><span><strong>Community-Fotograf</strong><small>{member.community_photographer_global ? "Alle Regionen" : "Regional"}</small></span></div>}
+        {(displayName || age !== null) && <p>{displayName}{displayName && age !== null ? " · " : ""}{age !== null ? `${age} Jahre` : ""}</p>}
+        {member.bio && canSee("bio") && <p className="member-profile-bio">{member.bio}</p>}
+        {visibleResponsibilities.length > 0 && <p className="admin-responsibilities">Zuständig für: {visibleResponsibilities.join(" · ")}</p>}
+      </div>
+    </article>
+
+    {visibleDetails.length > 0 && <section className="panel profile-visible-details"><span className="eyebrow">PROFILINFORMATIONEN</span>{visibleDetails.map(([, caption, value]) => <p key={caption}>{caption}: {String(value)}</p>)}</section>}
+    <ProfileRelationshipSection member={member} currentUserId={user?.id}/>
+
+    <div className="member-profile-actions">
+      <button className="primary-button" onClick={() => openChat(member)}>💬 Nachricht</button>
+      {accepted ? <button className="secondary-button" onClick={() => removeFriend(member)}>♥ Befreundet · entfernen</button> : incoming ? <><button className="primary-button" onClick={() => respond(friendship, true)}>✓ Anfrage annehmen</button><button className="danger-button" onClick={() => respond(friendship, false)}>Ablehnen</button></> : <button className="secondary-button" onClick={() => requestFriend(member)}>{sent ? "⏳ Anfrage gesendet" : "🤝 Freundschaftsanfrage"}</button>}
+      {member.id !== user.id && (viewerIsPrimaryHead || viewerProfile?.role === "ADMIN" || viewerProfile?.forum_moderator) && <button className="primary-button ec-profile-admin-open" onClick={openUnifiedAdminTools}>⚙ Admin Tools</button>}
+      {viewerIsPrimaryHead && member.id !== user.id && !member.is_primary_head_admin && <button className="secondary-button ec-profile-point-history-open" onClick={openUnifiedPointHistory}>★ Punkteliste</button>}
+      {!isAdmin(member.role) && <button className="secondary-button" onClick={() => blockUser(member)}>🚫 Blockieren</button>}
+      <button className="danger-button" onClick={() => reportUser(member)}>🚩 Nutzer melden</button>
+    </div>
+
+    {canModerate && <section className="member-admin-tools">
+      <span className="eyebrow">MODERATION</span><h2>Admin-Werkzeuge</h2>
+      <div>
+        <button className="danger-button" onClick={() => warnMember(member)}>⚠ Verwarnung senden</button>
+        <button className="secondary-button" onClick={() => toggleSuspension(member)}>{member.account_status === "SUSPENDED" ? "🔓 Freischalten" : "🔒 Sperren"}</button>
+        {!member.is_verified && member.role !== "HEAD_ADMIN" && <button className="secondary-button" onClick={requestVerification}>✓ Verifizierung mit Frist anfordern</button>}
+        {viewerIsPrimaryHead && <>
+          <button className="secondary-button" onClick={() => setBusinessAccount(member.id, member.account_badge !== "BUSINESS")}>{member.account_badge === "BUSINESS" ? "★ Unternehmenskonto entfernen" : "★ Unternehmenskonto"}</button>
+          {member.role === "SUPPORTER" && <button className="secondary-button" onClick={() => setForumModerator(member, !member.forum_moderator)}>{member.forum_moderator ? "★ Forum-Moderation entfernen" : "★ Zum Forum-Moderator ernennen"}</button>}
+          <button className="secondary-button" onClick={() => setProfileVerification(member, !member.is_verified)}>{member.is_verified ? "✓ Verifizierung entfernen" : "✓ Profil verifizieren"}</button>
+          <button className="secondary-button" onClick={() => toggleTestAccount(member)}>{member.is_test_account ? "◉ Testkonto sichtbar machen" : "◌ Als Testkonto ausblenden"}</button>
+          {member.role === "SUPPORTER" && <button className="secondary-button" onClick={() => setGroupModerator(member, !hasGroupModeration)}>{hasGroupModeration ? "★ Gruppenmoderation entfernen" : "★ Zum Gruppenmoderator ernennen"}</button>}
+        </>}
+        {canManageRoles && <>
+          <button className="secondary-button" onClick={() => updateMemberRole(member, "SUPPORTER")}>🟢 Supporter</button>
+          <button className="secondary-button" onClick={() => updateMemberRole(member, member.role === "ADMIN" ? "MEMBER" : "ADMIN")}>{member.role === "ADMIN" ? "✕ Admin entfernen" : "★ Community Admin"}</button>
+          {member.role !== "HEAD_ADMIN" && <button className="secondary-button" onClick={() => updateMemberRole(member, "HEAD_ADMIN")}>♛ Head Admin (delegiert)</button>}
+          {member.role !== "MEMBER" && <button className="secondary-button" onClick={() => updateMemberRole(member, "MEMBER")}>↩ Rolle entfernen</button>}
+          <button className="secondary-button" onClick={() => loadPermissions(member.id)}>⚙ Rechte verwalten</button>
+          <button className="secondary-button" onClick={() => manageDirectMessagePolicy(member)}>✉ Direktnachrichten verwalten</button>
+          <button className="secondary-button" onClick={() => setMemberFeatureLock(member, "FORUM_POSTING", true)}>Forum sperren</button>
+          <button className="secondary-button" onClick={() => setMemberFeatureLock(member, "MESSAGING", true)}>Nachrichten sperren</button>
+          <button className="secondary-button" onClick={() => setMemberFeatureLock(member, "FRIEND_REQUESTS", true)}>Anfragen sperren</button>
+          <button className="secondary-button" onClick={() => setMemberFeatureLock(member, "FORUM_POSTING", false)}>Forum freigeben</button>
+        </>}
+      </div>
+    </section>}
+
+    <ProfileSections member={member} isFriend={accepted}/>
+    <PublicProfilePhotoFolder member={member} photos={photos} canSeeFriends={accepted}/>
+  </section>;
 }
 
 function PublicProfileUpdatesPreview() { const [updates, setUpdates] = useState([]); useEffect(() => { if (!supabase) return; supabase.from("public_profile_updates").select("nickname, role, is_verified, avatar_url, activity_type, created_at").order("created_at", { ascending: false }).limit(5).then(({ data }) => setUpdates(data || [])); }, []); if (!updates.length) return null; return <section className="public-auth-updates"><span className="eyebrow">ÖFFENTLICHE AKTUALISIERUNGEN</span><h2>Aus der Community</h2>{updates.map((entry, index) => <div className={`hub-row ${roleClass(entry.role)}`} key={`${entry.nickname}-${entry.created_at}-${index}`}><img src={entry.avatar_url || DEFAULT_AVATAR} alt=""/><div><strong><RoleStar member={entry}/> {entry.nickname}{entry.is_verified ? " ✓" : ""}</strong><span>{entry.activity_type}</span></div></div>)}</section>; }
