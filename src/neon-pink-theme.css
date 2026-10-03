@@ -345,3 +345,21 @@ html[data-ec-theme="neon-pink"] .native-member-quick-filters button.active{
     padding:14px!important;
   }
 }
+
+
+html[data-ec-theme="neon-pink"] .profile-editor-responsibility{
+  background:linear-gradient(145deg,#fff,#fff0f8)!important;
+  border-color:#ff9dd5!important;
+}
+html[data-ec-theme="neon-pink"] .profile-editor-responsibility h3,
+html[data-ec-theme="neon-pink"] .profile-editor-responsibility p,
+html[data-ec-theme="neon-pink"] .profile-editor-responsibility label,
+html[data-ec-theme="neon-pink"] .profile-editor-responsibility small{
+  color:#351126!important;
+}
+html[data-ec-theme="neon-pink"] .admin-responsibilities-card{
+  background:linear-gradient(120deg,#fff,#ffe4f3)!important;
+  border-color:#ff8ccd!important;
+}
+html[data-ec-theme="neon-pink"] .admin-responsibilities-card>span{color:#c50070!important}
+html[data-ec-theme="neon-pink"] .admin-responsibilities-card>strong{color:#351126!important}

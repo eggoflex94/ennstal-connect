@@ -1082,3 +1082,20 @@ test("database layout unlock trigger allows Neon Pink at 1000 points", async()=>
   assert.match(migration,/'theme-neon-pink'/);
   assert.match(migration,/when 'theme-neon-pink' then 1000/);
 });
+
+
+test("profile layout database constraint allows Neon Pink", async()=>{
+  const migration=await source("supabase/migrations/20261003203400_allow_neon_pink_layout_constraint.sql");
+  assert.match(migration,/profiles_layout_allowed/);
+  assert.match(migration,/'theme-neon-pink'/);
+});
+
+test("Head Admin responsibility is a native modern profile-editor section", async()=>{
+  const app=await source("src/App.jsx");
+  const css=await source("src/profile-layout-organizer.css");
+  assert.match(app,/profile-editor-responsibility/);
+  assert.match(app,/Wofür du zuständig bist/);
+  assert.match(app,/admin-responsibilities-card/);
+  assert.doesNotMatch(app,/head-admin-responsibilities-field/);
+  assert.match(css,/\.profile-editor-responsibility/);
+});
