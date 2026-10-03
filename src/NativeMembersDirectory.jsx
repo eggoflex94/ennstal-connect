@@ -253,11 +253,13 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
 
     <div className="member-grid native-member-grid">
       {pagedVisible.map((member) => {
-        const cardMember = isHeadAdmin(member) || member?.is_primary_head_admin
+        const cardMember = member?.is_primary_head_admin
           ? { ...member, directory_admin: true, directory_role_star: roleStarSrc(member), directory_responsibility_label: "Hauptverantwortlicher · alle Regionen" }
-          : isRegionalAdmin(member) && !isGlobalAdmin(member)
-            ? { ...member, directory_admin: true, directory_role_star: roleStarSrc(member) }
-            : { ...member, directory_role_star: roleStarSrc(member) };
+          : isHeadAdmin(member)
+            ? { ...member, directory_admin: true, directory_role_star: roleStarSrc(member), directory_responsibility_label: `Hauptverantwortlich · zuständig für Region ${regionById[member.home_region_id]?.name || "Hauptregion"}` }
+            : isRegionalAdmin(member) && !isGlobalAdmin(member)
+              ? { ...member, directory_admin: true, directory_role_star: roleStarSrc(member) }
+              : { ...member, directory_role_star: roleStarSrc(member) };
         return <MemberCardView
           key={member.id}
           member={cardMember}
