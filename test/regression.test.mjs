@@ -1099,3 +1099,11 @@ test("Head Admin responsibility is a native modern profile-editor section", asyn
   assert.doesNotMatch(app,/head-admin-responsibilities-field/);
   assert.match(css,/\.profile-editor-responsibility/);
 });
+
+
+test("profile bio no longer renders or uploads a second portrait image", async()=>{
+  const app=await source("src/App.jsx");
+  assert.doesNotMatch(app,/profile-bio-image/);
+  assert.doesNotMatch(app,/Bild zu „Über mich“/);
+  assert.doesNotMatch(app,/\["bio_image_url", "Über-mich-Bild"\]/);
+});
