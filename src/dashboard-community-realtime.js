@@ -23,6 +23,39 @@ function bindProfileRows(panel) {
   });
 }
 
+function profileStar(profile) {
+  const role = String(profile?.role || '').toUpperCase();
+  if (role === 'HEAD_ADMIN' || role === 'ADMIN') return '/role-star-red.svg';
+  if (role === 'MUNICIPALITY') return profile?.role_star_url || '/role-star-green.svg';
+  if (role === 'SUPPORTER') return '/supporter-star.svg';
+  if (profile?.account_badge === 'BUSINESS') return '/role-star-blue.svg';
+  return '';
+}
+
+async function loadVisitProfiles(visits) {
+  const ids = [...new Set((visits || []).map((row) => row.visitor_id).filter((id) => id && id !== userId))];
+  if (!ids.length) return new Map();
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id,nickname,avatar_url,role,account_badge,role_star_url')
+    .in('id', ids);
+  if (error) return new Map();
+  return new Map((data || []).map((profile) => [profile.id, profile]));
+}
+
+function uniqueRecentVisits(visits, limit = 10) {
+  const seen = new Set();
+  const rows = [];
+  for (const visit of visits || []) {
+    const id = visit.visitor_id;
+    if (!id || id === userId || seen.has(id)) continue;
+    seen.add(id);
+    rows.push(visit);
+    if (rows.length >= limit) break;
+  }
+  return rows;
+}
+
 async function refresh() {
   if (!userId || !document.querySelector('.ec-right-dock')) return;
   const picker = document.querySelector('.ec-region-picker select');
@@ -31,13 +64,29 @@ async function refresh() {
   const regionId = (regions || []).find((region) => region.slug === slug)?.id || null;
 
   const [visitsResult, updatesResult, actionsResult, newsResult] = await Promise.all([
-    supabase.from('profile_visits').select('visitor_id,visited_at', { count:'exact' }).eq('profile_id',userId).order('visited_at',{ascending:false}).limit(10),
+    supabase.from('profile_visits').select('visitor_id,visited_at').eq('profile_id',userId).order('visited_at',{ascending:false}).limit(40),
     supabase.from('public_profile_updates').select('profile_id,nickname,activity_type,created_at',{count:'exact'}).order('created_at',{ascending:false}).limit(10),
     supabase.from('profile_activity').select('actor_id,profile_id,target_user_id,activity_type,text,created_at',{count:'exact'}).order('created_at',{ascending:false}).limit(10),
     regionId ? supabase.from('news').select('id,title,created_at',{count:'exact'}).eq('region_id',regionId).order('created_at',{ascending:false}).limit(8) : Promise.resolve({data:[],count:0,error:null})
   ]);
 
-  if (!visitsResult.error) setCount('.ec-dock-visits-count', visitsResult.count ?? visitsResult.data?.length ?? 0);
+  if (!visitsResult.error) {
+    const visits = uniqueRecentVisits(visitsResult.data || []);
+    const profiles = await loadVisitProfiles(visits);
+    const visitsPanel = document.querySelector('.ec-dock-detail[data-panel="visits"]');
+    setCount('.ec-dock-visits-count', visits.length);
+    if (visitsPanel) {
+      visitsPanel.innerHTML = visits.length ? visits.map((row) => {
+        const profile = profiles.get(row.visitor_id);
+        const nickname = profile?.nickname || 'Mitglied';
+        const avatar = profile?.avatar_url || '/community-default-avatar-fast.svg';
+        const star = profileStar(profile);
+        return `<button type="button" class="ec-dock-detail-row ec-profile-visit-row" data-profile-id="${esc(row.visitor_id)}"><img class="ec-profile-visit-avatar" src="${esc(avatar)}" alt=""><span class="ec-profile-visit-main"><span class="ec-profile-visit-name">${star ? `<img class="ec-profile-visit-star" src="${esc(star)}" alt="">` : ''}<strong>${esc(nickname)}</strong></span><small>hat dein Profil besucht</small></span><time datetime="${esc(row.visited_at)}">${esc(fmt(row.visited_at))}</time></button>`;
+      }).join('') : '<div class="ec-dock-empty">Noch keine Profilbesuche.</div>';
+      bindProfileRows(visitsPanel);
+    }
+  }
+
   if (!updatesResult.error) setCount('.ec-dock-updates-count', updatesResult.count ?? updatesResult.data?.length ?? 0);
   if (!actionsResult.error) setCount('.ec-dock-actions-count', actionsResult.count ?? actionsResult.data?.length ?? 0);
 
