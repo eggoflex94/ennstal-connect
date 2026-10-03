@@ -75,3 +75,13 @@ test("whole photo mode always shows the complete image without white letterboxin
   assert.match(editor, /fillStyle = "rgba\(10, 24, 36, 0\.22\)"/);
   assert.match(editor, /Das komplette Foto wird zentriert und ohne Zuschnitt angezeigt/);
 });
+
+
+test("whole photo mode keeps full image visible while allowing vertical positioning", async () => {
+  const editor = await source("src/ProfilePhotoEditor.jsx");
+  assert.match(editor, /const scale = containScale \* 0\.88/);
+  assert.match(editor, /const freeY = Math\.max\(0, \(size - renderedH\) \/ 2\)/);
+  assert.match(editor, /const offsetY = .*\* freeY/);
+  assert.match(editor, /<span>Oben \/ unten<\/span>/);
+  assert.match(editor, /onChange=\{e => applyPan\(x, Number\(e\.target\.value\)\)\}/);
+});
