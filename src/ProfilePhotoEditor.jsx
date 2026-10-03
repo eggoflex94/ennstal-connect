@@ -8,6 +8,7 @@ const PAN_Y_UP_LIMIT = 260;
 const PAN_Y_DOWN_LIMIT = 160;
 const MAX_ZOOM = 2.8;
 const EXTRA_ZOOM_OUT_FACTOR = 0.55;
+const CIRCLE_INSET_RATIO = 0.08;
 
 function loadImage(file) {
   return new Promise((resolve, reject) => {
@@ -59,8 +60,12 @@ function drawEditedImage(canvas, source, { zoom, x, y, rotation }, size) {
   const drawH = source.naturalHeight * scale;
   const renderedW = quarterTurn ? drawH : drawW;
   const renderedH = quarterTurn ? drawW : drawH;
-  const maxOffsetX = Math.max(0, (renderedW - size) / 2);
-  const maxOffsetY = Math.max(0, (renderedH - size) / 2);
+  // The visible avatar is circular and inset from the square canvas.
+  // Allow movement as long as the circle remains covered; the square corners
+  // are outside the final avatar and must not unnecessarily lock panning.
+  const visibleDiameter = size * (1 - CIRCLE_INSET_RATIO * 2);
+  const maxOffsetX = Math.max(0, (renderedW - visibleDiameter) / 2);
+  const maxOffsetY = Math.max(0, (renderedH - visibleDiameter) / 2);
   const requested = panOffsets(x, y, size);
   const offsetX = Math.max(-maxOffsetX, Math.min(maxOffsetX, requested.x));
   const offsetY = Math.max(-maxOffsetY, Math.min(maxOffsetY, requested.y));
@@ -175,6 +180,10 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
     setRotation(0);
   };
 
+  const nudge = (dx, dy) => {
+    applyPan(x + dx, y + dy);
+  };
+
   const showWholeImage = () => {
     setZoom(fitZoom);
     setX(0);
@@ -284,6 +293,12 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
             <input type="range" min={-PAN_Y_UP_LIMIT} max={PAN_Y_DOWN_LIMIT} step="1" value={y} onChange={e => applyPan(x, Number(e.target.value))}/>
             <b>{y}</b>
           </label>
+          <div className="ec-photo-editor-nudges" aria-label="Bild fein verschieben">
+            <button type="button" onClick={() => nudge(0,-12)} aria-label="Bild nach oben">↑</button>
+            <button type="button" onClick={() => nudge(-12,0)} aria-label="Bild nach links">←</button>
+            <button type="button" onClick={() => nudge(12,0)} aria-label="Bild nach rechts">→</button>
+            <button type="button" onClick={() => nudge(0,12)} aria-label="Bild nach unten">↓</button>
+          </div>
           <div className="ec-photo-editor-rotate">
             <button type="button" onClick={zoomFurtherOut}>Weiter raus</button>
             <button type="button" onClick={showWholeImage}>Ganzes Bild</button>
