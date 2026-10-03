@@ -806,3 +806,28 @@ body .ec-right-dock .ec-dock-detail[data-panel="visits"] .ec-profile-visitor-cop
   font-size:7px!important;
   color:#8595a2!important;
 }
+
+
+/* Keep everyday quick actions together and visually separate only the admin
+   shortcuts that are already authorized/injected for the signed-in account. */
+body .ec-right-dock.ec-compact-personal-dock .ec-compact-menu-grid > .ec-compact-menu-item{
+  order:1!important;
+}
+body .ec-right-dock.ec-compact-personal-dock .ec-compact-menu-grid.ec-has-admin-tools::after{
+  content:"ADMIN TOOLS";
+  grid-column:1/-1!important;
+  order:2!important;
+  display:block!important;
+  margin:7px 0 1px!important;
+  padding:10px 2px 3px!important;
+  border-top:1px solid rgba(45,73,94,.14)!important;
+  color:#6f8291!important;
+  font-size:9px!important;
+  line-height:1!important;
+  font-weight:900!important;
+  letter-spacing:.14em!important;
+  text-align:left!important;
+}
+body .ec-right-dock.ec-compact-personal-dock .ec-compact-menu-grid > [data-ec-admin-tool="1"]{
+  order:3!important;
+}
