@@ -125,3 +125,50 @@
     min-width:max-content;
   }
 }
+
+
+/* Head Admin public responsibility — native profile-editor section, no DOM injection. */
+.profile-editor-responsibility{
+  position:relative!important;
+  overflow:hidden!important;
+}
+.profile-editor-responsibility::after{
+  content:"";
+  position:absolute;
+  right:-52px;
+  top:-52px;
+  width:150px;
+  height:150px;
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(255,93,38,.12),transparent 68%);
+  pointer-events:none;
+}
+.profile-editor-responsibility h3{margin:4px 0 6px!important}
+.profile-editor-responsibility p{margin:0 0 12px!important;max-width:760px!important}
+.profile-editor-responsibility textarea{min-height:118px!important;resize:vertical!important}
+
+.admin-responsibilities-card{
+  display:grid!important;
+  gap:5px!important;
+  width:100%!important;
+  max-width:720px!important;
+  margin:12px 0 0!important;
+  padding:12px 14px!important;
+  box-sizing:border-box!important;
+  border:1px solid rgba(255,112,58,.22)!important;
+  border-radius:14px!important;
+  background:rgba(255,255,255,.08)!important;
+}
+.admin-responsibilities-card>span{
+  font-size:9px!important;
+  line-height:1!important;
+  font-weight:900!important;
+  letter-spacing:.12em!important;
+  opacity:.76!important;
+}
+.admin-responsibilities-card>strong{
+  font-size:13px!important;
+  line-height:1.35!important;
+  font-weight:800!important;
+  overflow-wrap:anywhere!important;
+}
