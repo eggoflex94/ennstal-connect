@@ -41,7 +41,11 @@ export default function MemberCardView({ member, profile, friendships, onOpen, i
   const friend = friendship?.status === "ACCEPTED";
   const online = isRecentlyActive(member);
   const fullName = [member.first_name, member.last_name].filter(Boolean).join(" ").trim() || getName(member);
-  const age = getAge(member.birth_date);
+  // The directory payload can omit birth_date for the signed-in member even
+  // though the full profile already has it. Use the own profile as a safe
+  // fallback so the user's age does not disappear from their member card.
+  const birthDate = member.birth_date || (member.id === profile?.id ? profile?.birth_date : null);
+  const age = getAge(birthDate);
   const statusLabel = online ? (String(member?.presence_device || "").toUpperCase() === "MOBILE" ? "Mobil online" : "Online") : "Offline";
 
   const openProfile = () => {
