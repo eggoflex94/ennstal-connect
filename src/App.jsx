@@ -483,13 +483,11 @@ export default function App() {
         setSectionStatus({ pending: [], failed: ["Anmeldung und Profil"] });
         console.error(e);
         showNotice(e?.message || "Fehler beim Laden");
-        if (bootstrapRetry.current.count < 3) {
-          const attempt = ++bootstrapRetry.current.count;
-          window.clearTimeout(bootstrapRetry.current.timer);
-          bootstrapRetry.current.timer = window.setTimeout(() => {
-            if (!globalThis.document?.hidden) void loadAllRef.current?.();
-          }, Math.min(6000, 1200 * attempt));
-        }
+        const attempt = ++bootstrapRetry.current.count;
+        window.clearTimeout(bootstrapRetry.current.timer);
+        bootstrapRetry.current.timer = window.setTimeout(() => {
+          if (!globalThis.document?.hidden && user) void loadAllRef.current?.();
+        }, Math.min(30000, 1500 * Math.max(1, attempt)));
       }
     }
   };
