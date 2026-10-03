@@ -1117,11 +1117,12 @@ test("Neon Pink About Me section keeps bio text readable", async()=>{
 });
 
 
-test("delegated Head Admin member card shows home-region responsibility", async()=>{
+test("admin member cards show the current responsibility labels", async()=>{
   const directory=await source("src/NativeMembersDirectory.jsx");
-  assert.match(directory,/member\?\.is_primary_head_admin[\s\S]*Hauptverantwortlicher · alle Regionen/);
-  assert.match(directory,/isHeadAdmin\(member\)[\s\S]*Hauptverantwortlich · zuständig für Region/);
-  assert.match(directory,/regionById\[member\.home_region_id\]\?\.name/);
+  assert.match(directory,/member\?\.is_primary_head_admin[\s\S]*Hauptverantwortlicher · Community/);
+  assert.match(directory,/isHeadAdmin\(member\)[\s\S]*Head Admin · alle Regionen/);
+  assert.match(directory,/Global Admin · Region/);
+  assert.match(directory,/Regional Admin · Region/);
 });
 
 test("member profile admin actions remain React-owned", async()=>{
@@ -1149,10 +1150,9 @@ test("profile visits authenticate realtime before subscribing", async()=>{
 });
 
 
-test("primary Head Admin card uses home region instead of all regions", async()=>{
+test("primary Head Admin card uses community oversight label", async()=>{
   const directory=await source("src/NativeMembersDirectory.jsx");
-  assert.match(directory,/member\?\.is_primary_head_admin[\s\S]*Hauptverantwortlich · zuständig für Region/);
-  assert.doesNotMatch(directory,/is_primary_head_admin[\s\S]{0,220}Hauptverantwortlicher · alle Regionen/);
+  assert.match(directory,/member\?\.is_primary_head_admin[\s\S]*Hauptverantwortlicher · Community/);
 });
 
 
