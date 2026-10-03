@@ -1035,3 +1035,12 @@ test("neon pink theme uses bright readable surfaces", async()=>{
   assert.match(css,/color:#48102f!important/);
   assert.doesNotMatch(css,/linear-gradient\(145deg,#1b0012/);
 });
+
+
+test("neon pink profile editor has explicit dark text on light panels", async()=>{
+  const css=await source("src/neon-pink-theme.css");
+  assert.match(css,/\.profile-form\.profile-editor\{[\s\S]*background:#fff9fc!important/);
+  assert.match(css,/\.profile-form\.profile-editor h2[\s\S]*color:#351126!important/);
+  assert.match(css,/\.profile-form\.profile-editor \.privacy-settings[\s\S]*background:linear-gradient/);
+  assert.match(css,/body\.ec-regional-ui \.modern-main/);
+});
