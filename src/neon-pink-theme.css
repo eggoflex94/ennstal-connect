@@ -157,3 +157,90 @@ html[data-ec-theme="neon-pink"] .ec-online-friend{
   0%,100%{filter:brightness(1)}
   50%{filter:brightness(1.07)}
 }
+
+
+/* High-contrast authority for the profile editor and regional shell. */
+html[data-ec-theme="neon-pink"] body.ec-regional-ui,
+html[data-ec-theme="neon-pink"] body.ec-regional-ui .modern-main{
+  background:
+    radial-gradient(circle at 12% 10%,rgba(255,31,168,.17),transparent 24%),
+    linear-gradient(145deg,#fff6fb 0%,#ffd9ef 52%,#fff9fc 100%)!important;
+  color:#3c0828!important;
+}
+html[data-ec-theme="neon-pink"] .ec-regional-shell{
+  color:#3c0828!important;
+}
+html[data-ec-theme="neon-pink"] .ec-brand-masthead,
+html[data-ec-theme="neon-pink"] .ec-top-nav{
+  background:linear-gradient(105deg,#ff0a96,#ff3eb9 52%,#ff77cf)!important;
+}
+html[data-ec-theme="neon-pink"] .ec-brand-claim,
+html[data-ec-theme="neon-pink"] .ec-brand-claim *,
+html[data-ec-theme="neon-pink"] .ec-region-status,
+html[data-ec-theme="neon-pink"] .ec-region-status *,
+html[data-ec-theme="neon-pink"] .ec-top-nav button,
+html[data-ec-theme="neon-pink"] .ec-top-nav button *{
+  color:#fff!important;
+}
+html[data-ec-theme="neon-pink"] .profile-form.profile-editor{
+  background:#fff9fc!important;
+  color:#351126!important;
+  border:2px solid #ff79c9!important;
+  box-shadow:0 14px 34px rgba(177,12,101,.13)!important;
+}
+html[data-ec-theme="neon-pink"] .profile-form.profile-editor .profile-editor-header,
+html[data-ec-theme="neon-pink"] .profile-form.profile-editor .profile-editor-section,
+html[data-ec-theme="neon-pink"] .profile-form.profile-editor .privacy-settings{
+  background:linear-gradient(145deg,#ffffff,#fff2f9)!important;
+  color:#351126!important;
+  border:1px solid #ffb7df!important;
+  border-radius:16px!important;
+}
+html[data-ec-theme="neon-pink"] .profile-form.profile-editor .profile-editor-header{
+  padding:18px!important;
+}
+html[data-ec-theme="neon-pink"] .profile-form.profile-editor .profile-editor-section,
+html[data-ec-theme="neon-pink"] .profile-form.profile-editor .privacy-settings{
+  padding:16px!important;
+}
+html[data-ec-theme="neon-pink"] .profile-form.profile-editor h1,
+html[data-ec-theme="neon-pink"] .profile-form.profile-editor h2,
+html[data-ec-theme="neon-pink"] .profile-form.profile-editor h3,
+html[data-ec-theme="neon-pink"] .profile-form.profile-editor p,
+html[data-ec-theme="neon-pink"] .profile-form.profile-editor label,
+html[data-ec-theme="neon-pink"] .profile-form.profile-editor label > span,
+html[data-ec-theme="neon-pink"] .profile-form.profile-editor small{
+  color:#351126!important;
+  text-shadow:none!important;
+}
+html[data-ec-theme="neon-pink"] .profile-form.profile-editor .eyebrow,
+html[data-ec-theme="neon-pink"] .profile-form.profile-editor legend{
+  color:#d40078!important;
+  text-shadow:none!important;
+  font-weight:900!important;
+}
+html[data-ec-theme="neon-pink"] .profile-form.profile-editor input,
+html[data-ec-theme="neon-pink"] .profile-form.profile-editor textarea,
+html[data-ec-theme="neon-pink"] .profile-form.profile-editor select{
+  background:#fff!important;
+  color:#351126!important;
+  border:1px solid #ff63bd!important;
+}
+html[data-ec-theme="neon-pink"] .profile-form.profile-editor select option{
+  background:#fff!important;
+  color:#351126!important;
+}
+html[data-ec-theme="neon-pink"] .profile-form.profile-editor .primary-button{
+  background:linear-gradient(110deg,#ff008f,#ff4abe)!important;
+  color:#fff!important;
+}
+html[data-ec-theme="neon-pink"] .profile-form.profile-editor .secondary-button,
+html[data-ec-theme="neon-pink"] .profile-form.profile-editor .text-button{
+  background:#fff!important;
+  color:#b60067!important;
+  border-color:#ff66c2!important;
+}
+html[data-ec-theme="neon-pink"] .profile-form.profile-editor .secondary-button *,
+html[data-ec-theme="neon-pink"] .profile-form.profile-editor .text-button *{
+  color:inherit!important;
+}
