@@ -67,7 +67,17 @@ function ensureOnlineFriends(dock){
     return `<button type="button" class="ec-online-friend" data-profile-id="${esc(friend.id)}" title="Profil von ${name} öffnen"><span class="ec-online-dot" aria-hidden="true"></span>${star?`<img class="ec-online-friend-star" src="${esc(star)}" alt="" aria-hidden="true">`:''}<strong class="ec-online-friend-name"><span class="ec-online-nickname">${name}</span><span class="ec-inline-points">[${esc(points)}]</span></strong></button>`;
   }).join('');
   panel.innerHTML=`<div class="ec-online-friends-head"><span>FREUNDE ONLINE</span><em>${state.friends.length}</em></div><div class="ec-online-friends-list">${rows||'<small>Derzeit keine Freunde online.</small>'}</div>`;
-  panel.querySelectorAll('[data-profile-id]').forEach(btn=>btn.onclick=()=>window.dispatchEvent(new CustomEvent('ec:open-profile',{detail:{profileId:btn.dataset.profileId}})));
+  panel.querySelectorAll('[data-profile-id]').forEach(btn=>btn.onclick=()=>{
+    const profileId=btn.dataset.profileId||'';
+    const nickname=btn.querySelector('.ec-online-nickname')?.textContent||'';
+    const event=new CustomEvent('ec:open-profile',{cancelable:true,detail:{profileId,nickname,source:'friends-online'}});
+    window.dispatchEvent(event);
+    if(!event.defaultPrevented&&profileId){
+      const url=new URL(window.location.href);
+      url.searchParams.set('profile',profileId);
+      window.location.assign(url.toString());
+    }
+  });
 }
 
 function ensureMunicipalityPanel(dock){
