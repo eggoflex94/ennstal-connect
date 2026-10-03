@@ -1154,3 +1154,11 @@ test("primary Head Admin card uses home region instead of all regions", async()=
   assert.match(directory,/member\?\.is_primary_head_admin[\s\S]*Hauptverantwortlich · zuständig für Region/);
   assert.doesNotMatch(directory,/is_primary_head_admin[\s\S]{0,220}Hauptverantwortlicher · alle Regionen/);
 });
+
+
+test("global and regional admin cards show region", async()=>{
+  const directory=await source("src/NativeMembersDirectory.jsx");
+  assert.match(directory,/Global Admin · Region/);
+  assert.match(directory,/Regional Admin · Region/);
+  assert.match(directory,/Head Admin · alle Regionen/);
+});
