@@ -69,7 +69,7 @@ test("profile photo zoom-out never exposes a flat white or light canvas backgrou
 test("whole photo mode always shows the complete image without white letterboxing", async () => {
   const editor = await source("src/ProfilePhotoEditor.jsx");
   assert.match(editor, /if \(mode === "contain"\)/);
-  assert.match(editor, /const scale = containScale \* 0\.88/);
+  assert.match(editor, /const scale = containScale \* 0\.78/);
   assert.match(editor, /brightness\(\.56\) saturate\(1\.12\)/);
   assert.match(editor, /fillStyle = "rgba\(10, 24, 36, 0\.22\)"/);
   assert.match(editor, /Das komplette Foto bleibt sichtbar/);
@@ -78,9 +78,19 @@ test("whole photo mode always shows the complete image without white letterboxin
 
 test("whole photo mode keeps full image visible while allowing vertical positioning", async () => {
   const editor = await source("src/ProfilePhotoEditor.jsx");
-  assert.match(editor, /const scale = containScale \* 0\.88/);
+  assert.match(editor, /const scale = containScale \* 0\.78/);
   assert.match(editor, /const freeY = Math\.max\(0, \(size - renderedH\) \/ 2\)/);
   assert.match(editor, /const offsetY = .*\* freeY/);
   assert.match(editor, /<span>Oben \/ unten<\/span>/);
   assert.match(editor, /onChange=\{e => applyPan\(x, Number\(e\.target\.value\)\)\}/);
+});
+
+
+test("saving whole photo never uploads the raw portrait that avatar CSS would crop", async () => {
+  const editor = await source("src/ProfilePhotoEditor.jsx");
+  assert.match(editor, /useState\("contain"\)/);
+  assert.match(editor, /mode: "contain"/);
+  assert.match(editor, /profilbild-ganz-/);
+  assert.match(editor, /Ganzes Foto verwenden/);
+  assert.doesNotMatch(editor, /await onSave\(file\)/);
 });
