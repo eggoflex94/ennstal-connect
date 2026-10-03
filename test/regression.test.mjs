@@ -1055,3 +1055,13 @@ test("admin tool buttons normalize legacy glyphs to one icon and label", async()
   assert.match(css,/\[data-ec-admin-tool="1"\][\s\S]*grid-template-rows:24px auto!important/);
   assert.match(css,/\.ec-compact-menu-icon svg\{[\s\S]*width:22px!important/);
 });
+
+
+test("neon pink members page keeps heading, checkboxes and member cards readable", async()=>{
+  const css=await source("src/neon-pink-theme.css");
+  assert.match(css,/\.native-members-heading\{[\s\S]*position:relative!important/);
+  assert.match(css,/input\[type="checkbox"\][\s\S]*width:18px!important/);
+  assert.match(css,/article\.member-card\[data-role-theme="member"\][\s\S]*#ffe8f5/);
+  assert.match(css,/data-role-theme="member"[\s\S]*color:#40102d!important/);
+  assert.doesNotMatch(css,/html\[data-ec-theme="neon-pink"\] \.ec-brand-image\{[\s\S]*animation:ec-neon-pink-pulse/);
+});
