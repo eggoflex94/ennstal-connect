@@ -7,7 +7,6 @@ const PAN_X_LIMIT = 120;
 const PAN_Y_UP_LIMIT = 260;
 const PAN_Y_DOWN_LIMIT = 160;
 const MAX_ZOOM = 2.8;
-const EXTRA_ZOOM_OUT_FACTOR = 0.55;
 const CIRCLE_INSET_RATIO = 0.08;
 
 function loadImage(file) {
@@ -38,9 +37,10 @@ function cropGeometry(source, rotation, size) {
   const rotatedWidth = quarterTurn ? source.naturalHeight : source.naturalWidth;
   const rotatedHeight = quarterTurn ? source.naturalWidth : source.naturalHeight;
   const coverScale = Math.max(size / rotatedWidth, size / rotatedHeight);
-  const containScale = Math.min(size / rotatedWidth, size / rotatedHeight);
-  const fitZoom = Math.max(0.25, containScale / Math.max(coverScale, 0.0001));
-  return { quarterTurn, coverScale, fitZoom };
+  const visibleDiameter = size * (1 - CIRCLE_INSET_RATIO * 2);
+  const renderedMinDimension = Math.min(rotatedWidth * coverScale, rotatedHeight * coverScale);
+  const circleFillZoom = Math.max(0.1, visibleDiameter / Math.max(renderedMinDimension, 0.0001));
+  return { quarterTurn, coverScale, circleFillZoom };
 }
 
 function drawEditedImage(canvas, source, { zoom, x, y, rotation }, size) {
@@ -124,8 +124,8 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
     );
   }, [source, zoom, x, y, rotation]);
 
-  const fitZoom = source ? cropGeometry(source, rotation, PREVIEW_SIZE).fitZoom : 0.5;
-  const minZoom = Math.max(0.08, fitZoom * EXTRA_ZOOM_OUT_FACTOR);
+  const circleFillZoom = source ? cropGeometry(source, rotation, PREVIEW_SIZE).circleFillZoom : 0.84;
+  const minZoom = Math.max(0.1, circleFillZoom);
   const zoomSliderValue = Math.max(0, Math.min(100,
     ((zoom - minZoom) / Math.max(0.0001, MAX_ZOOM - minZoom)) * 100
   ));
@@ -184,14 +184,13 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
     applyPan(x + dx, y + dy);
   };
 
-  const showWholeImage = () => {
-    setZoom(fitZoom);
+  const fillCircle = () => {
+    setZoom(minZoom);
     setX(0);
     setY(0);
   };
 
-  const zoomFurtherOut = () => {
-    setZoom(minZoom);
+  const centerImage = () => {
     setX(0);
     setY(0);
   };
@@ -243,7 +242,7 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
         <div>
           <span className="eyebrow">PROFILBILD</span>
           <h2>Foto anpassen</h2>
-          <p>Ziehe das Bild mit Finger oder Maus. Ganz links am Zoom-Regler kannst du jetzt weiter als das vollständige Foto herauszoomen.</p>
+          <p>Ziehe das Bild direkt im Kreis oder nutze die Regler. Der sichtbare Profilkreis bleibt dabei immer vollständig mit deinem Foto gefüllt.</p>
         </div>
         <button type="button" className="ec-photo-editor-close" onClick={onCancel} aria-label="Schließen">×</button>
       </header>
@@ -300,8 +299,8 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
             <button type="button" onClick={() => nudge(0,12)} aria-label="Bild nach unten">↓</button>
           </div>
           <div className="ec-photo-editor-rotate">
-            <button type="button" onClick={zoomFurtherOut}>Weiter raus</button>
-            <button type="button" onClick={showWholeImage}>Ganzes Bild</button>
+            <button type="button" onClick={fillCircle}>Kreis vollständig füllen</button>
+            <button type="button" onClick={centerImage}>Bild zentrieren</button>
             <button type="button" onClick={() => setRotation(v => v - 90)}>↶ Links drehen</button>
             <button type="button" onClick={() => setRotation(v => v + 90)}>↷ Rechts drehen</button>
             <button type="button" onClick={reset}>Zurücksetzen</button>
