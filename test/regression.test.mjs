@@ -998,3 +998,23 @@ test("admin log separates successful and denied actions", async()=>{
   assert.match(css,/admin-log-summary/);
   assert.match(css,/admin-log-status\.denied/);
 });
+
+
+test("admin log shows successful and denied actions with filters", async()=>{
+  const app=await source("src/App.jsx");
+  const css=await source("src/admin-log-modern.css");
+  const client=await source("src/supabaseClient.js");
+  assert.match(app,/ADMIN_DENIED/);
+  assert.match(app,/Abgelehnt/);
+  assert.match(app,/Ausgeführt/);
+  assert.match(app,/Grund der Ablehnung/);
+  assert.match(client,/logDeniedAdminAction/);
+  assert.match(css,/admin-log-summary/);
+  assert.match(css,/admin-log-status\.denied/);
+});
+
+test("online friend nickname sits directly beside role star", async()=>{
+  const css=await source("src/dashboard-top-polish.css");
+  assert.match(css,/grid-template-columns:9px auto minmax\(0,1fr\)/);
+  assert.match(css,/\.ec-online-friend-name\{[\s\S]*justify-self:start/);
+});
