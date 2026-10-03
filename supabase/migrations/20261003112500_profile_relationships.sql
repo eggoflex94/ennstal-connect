@@ -197,3 +197,55 @@ $$;
 
 revoke all on function public.respond_profile_relationship(uuid,boolean) from public, anon;
 grant execute on function public.respond_profile_relationship(uuid,boolean) to authenticated;
+
+
+create or replace function public.profile_relationships_for_profile(p_profile_id uuid)
+returns table(
+  id uuid,
+  owner_id uuid,
+  status_type text,
+  partner_user_id uuid,
+  partner_name text,
+  confirmation_status text,
+  created_at timestamptz,
+  updated_at timestamptz,
+  perspective text
+)
+language sql
+security definer
+set search_path = public, pg_catalog
+stable
+as $$
+  select
+    r.id,
+    r.owner_id,
+    r.status_type,
+    case when r.confirmation_status = 'ACCEPTED' then r.partner_user_id else null end as partner_user_id,
+    case when r.confirmation_status in ('NOT_REQUIRED','ACCEPTED') then r.partner_name else null end as partner_name,
+    r.confirmation_status,
+    r.created_at,
+    r.updated_at,
+    'OWNER'::text as perspective
+  from public.profile_relationships r
+  where r.owner_id = p_profile_id
+    and r.confirmation_status in ('NOT_REQUIRED','PENDING','ACCEPTED')
+
+  union all
+
+  select
+    r.id,
+    r.owner_id,
+    r.status_type,
+    r.partner_user_id,
+    r.partner_name,
+    r.confirmation_status,
+    r.created_at,
+    r.updated_at,
+    'PARTNER'::text as perspective
+  from public.profile_relationships r
+  where r.partner_user_id = p_profile_id
+    and r.confirmation_status = 'ACCEPTED';
+$$;
+
+revoke all on function public.profile_relationships_for_profile(uuid) from public, anon;
+grant execute on function public.profile_relationships_for_profile(uuid) to authenticated;
