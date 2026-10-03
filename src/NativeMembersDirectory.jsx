@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "./supabaseClient";
 import MemberCardView from "./MemberCardView.jsx";
 
@@ -25,10 +25,36 @@ function presenceOnline(member) {
 
 export default function NativeMembersDirectory({ members = [], regions = [], activeRegion, profile, friendships = [], onOpen }) {
   const [query, setQuery] = useState("");
-  const [regionId, setRegionId] = useState("ALL");
+  const [regionId, setRegionId] = useState(profile?.home_region_id || "ALL");
   const [onlineOnly, setOnlineOnly] = useState(false);
   const [regionalAssignments, setRegionalAssignments] = useState([]);
+  const [presenceUpdates, setPresenceUpdates] = useState({});
   const [page, setPage] = useState(1);
+  const defaultRegionApplied = useRef(Boolean(profile?.home_region_id));
+
+  useEffect(() => {
+    if (defaultRegionApplied.current) return;
+    const preferredRegionId = profile?.home_region_id || activeRegion?.id;
+    if (!preferredRegionId) return;
+    setRegionId(preferredRegionId);
+    defaultRegionApplied.current = true;
+  }, [profile?.home_region_id, activeRegion?.id]);
+
+  useEffect(() => {
+    if (!supabase) return undefined;
+    const channel = supabase.channel("ec-native-member-presence")
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "profiles" }, (payload) => {
+        const row = payload.new;
+        if (!row?.id) return;
+        const patch = {};
+        ["is_online", "last_active_at", "last_seen_at", "hide_online_status", "presence_device"].forEach((key) => {
+          if (Object.prototype.hasOwnProperty.call(row, key)) patch[key] = row[key];
+        });
+        setPresenceUpdates((current) => ({ ...current, [row.id]: { ...(current[row.id] || {}), ...patch } }));
+      })
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -51,10 +77,27 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
   }, []);
 
   const regionById = useMemo(() => Object.fromEntries(regions.map((region) => [region.id, region])), [regions]);
+  const liveMembers = useMemo(
+    () => members.map((member) => ({ ...member, ...(presenceUpdates[member?.id] || {}) })),
+    [members, presenceUpdates]
+  );
+  const homeRegionId = profile?.home_region_id || activeRegion?.id || null;
+  const homeRegion = homeRegionId ? regionById[homeRegionId] : null;
+  const onlineHomeMembers = useMemo(
+    () => liveMembers.filter((member) =>
+      member
+      && member.account_status !== "SUSPENDED"
+      && !member.is_test_account
+      && member.home_region_id === homeRegionId
+      && !member.hide_online_status
+      && presenceOnline(member)
+    ),
+    [liveMembers, homeRegionId]
+  );
 
   const regionalAdminByUser = useMemo(() => {
     const map = new Map();
-    members.forEach((member) => {
+    liveMembers.forEach((member) => {
       explicitRegionalRegions(member).forEach((region) => {
         if (!region?.id) return;
         if (!map.has(member.id)) map.set(member.id, new Set());
@@ -67,7 +110,7 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
       map.get(assignment.user_id).add(assignment.region_id);
     });
     return map;
-  }, [members, regionalAssignments]);
+  }, [liveMembers, regionalAssignments]);
 
   const isRegionalAdmin = (member) => {
     const assigned = regionalAdminByUser.get(member?.id);
@@ -92,10 +135,10 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
       if (normalized(member?.role) === "SUPPORTER") return 4;
       return 5;
     };
-    return members
+    return liveMembers
       .filter((member) => member && member.account_status !== "SUSPENDED" && !member.is_test_account)
-      .filter((member) => regionId === "ALL" || member.home_region_id === regionId || isHeadAdmin(member) || member?.is_primary_head_admin)
-      .filter((member) => !onlineOnly || presenceOnline(member))
+      .filter((member) => regionId === "ALL" || member.home_region_id === regionId)
+      .filter((member) => !onlineOnly || (!member.hide_online_status && presenceOnline(member)))
       .filter((member) => {
         if (!q) return true;
         const region = regionById[member.home_region_id]?.name || "";
@@ -108,7 +151,7 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
         if (aRank !== bRank) return aRank - bRank;
         return displayName(a).localeCompare(displayName(b), "de", { sensitivity: "base" });
       });
-  }, [members, regionId, onlineOnly, query, regionById, regionalAdminByUser, activeRegion?.id]);
+  }, [liveMembers, regionId, onlineOnly, query, regionById, regionalAdminByUser, activeRegion?.id]);
 
   const pageCount = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
   const pagedVisible = useMemo(() => {
@@ -155,6 +198,17 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
     if (page > pageCount) setPage(pageCount);
   }, [page, pageCount]);
 
+  const showHomeRegionOnline = () => {
+    if (!homeRegionId) return;
+    setQuery("");
+    setRegionId(homeRegionId);
+    setOnlineOnly(true);
+    setPage(1);
+    window.requestAnimationFrame(() => {
+      document.querySelector(".native-members-directory")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
+
   const changePage = (nextPage) => {
     const safePage = Math.min(pageCount, Math.max(1, nextPage));
     setPage(safePage);
@@ -166,7 +220,20 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
   return <section className="native-members-directory">
     <div className="page-heading native-members-heading">
       <div><span className="eyebrow">COMMUNITY</span><h1>Mitglieder</h1><p>Nach Rollen und Namen sortiert.</p></div>
-      <div className="native-members-count"><strong>{visible.length} Treffer</strong>{visible.length > PAGE_SIZE && <small>Seite {page} von {pageCount}</small>}</div>
+      <div className="native-members-heading-actions">
+        <button
+          type="button"
+          className="native-members-online-summary"
+          onClick={showHomeRegionOnline}
+          disabled={!homeRegionId}
+          title={homeRegion ? `Online-Mitglieder in ${homeRegion.name} anzeigen` : "Heimatregion noch nicht festgelegt"}
+        >
+          <span className="native-members-online-dot" aria-hidden="true" />
+          <strong>{onlineHomeMembers.length} online</strong>
+          <small>{homeRegion?.short_name || homeRegion?.name || "Heimatregion"}</small>
+        </button>
+        <div className="native-members-count"><strong>{visible.length} Treffer</strong>{visible.length > PAGE_SIZE && <small>Seite {page} von {pageCount}</small>}</div>
+      </div>
     </div>
 
 
@@ -179,7 +246,8 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
       <label><input type="checkbox" checked={onlineOnly} onChange={(event) => setOnlineOnly(event.target.checked)} /> Nur online</label>
       <div className="native-member-quick-filters">
         <button type="button" className={regionId === "ALL" ? "active" : ""} onClick={() => setRegionId("ALL")}>Alle Regionen</button>
-        {activeRegion?.id && <button type="button" className={regionId === activeRegion.id ? "active" : ""} onClick={() => setRegionId(activeRegion.id)}>Aktuelle Region: {activeRegion.short_name || activeRegion.name}</button>}
+        {homeRegionId && <button type="button" className={regionId === homeRegionId && !onlineOnly ? "active" : ""} onClick={() => { setRegionId(homeRegionId); setOnlineOnly(false); }}>Heimatregion: {homeRegion?.short_name || homeRegion?.name || "Region"}</button>}
+        {activeRegion?.id && activeRegion.id !== homeRegionId && <button type="button" className={regionId === activeRegion.id && !onlineOnly ? "active" : ""} onClick={() => { setRegionId(activeRegion.id); setOnlineOnly(false); }}>Aktuelle Region: {activeRegion.short_name || activeRegion.name}</button>}
       </div>
     </div>
 
