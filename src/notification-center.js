@@ -3,8 +3,8 @@ import { supabase } from "./supabaseClient";
 let uid=null,mounted=false,channel=null,opening=false,badgeTimer=null;
 const el=(t,c,x)=>{const n=document.createElement(t);if(c)n.className=c;if(x!==undefined)n.textContent=x;return n;};
 const fmt=v=>{try{return new Date(v).toLocaleString("de-AT",{day:"2-digit",month:"2-digit",year:"2-digit",hour:"2-digit",minute:"2-digit"})}catch{return""}};
-const icon=t=>t==="MESSAGE"?"💬":t==="FRIEND_REQUEST"?"👥":t==="FORUM_REPLY"?"💭":t==="POKE"?"👋":t==="BUSINESS_ACCOUNT"?"★":t==="SYSTEM_ERROR"?"⚠":"🔔";
-const typeLabel=t=>t==="MESSAGE"?"Nachrichten":t==="FRIEND_REQUEST"?"Freundschaftsanfragen":t==="FORUM_REPLY"?"Antworten":t==="POKE"?"Anstupser":t==="BUSINESS_ACCOUNT"?"Unternehmerkonto":t==="SYSTEM_ERROR"?"Systemfehler":"Benachrichtigungen";
+const icon=t=>t==="MESSAGE"?"💬":t==="FRIEND_REQUEST"?"👥":t==="FORUM_REPLY"?"💭":t==="POKE"?"👋":t==="BUSINESS_ACCOUNT"?"★":t==="SYSTEM_ERROR"?"⚠":t==="PHOTO_LIKE"?"♥":t==="PHOTO_COMMENT"?"💬":t==="WELCOME_GREETING"?"👋":t==="RELATIONSHIP_CONFIRMATION"||t==="RELATIONSHIP_ACCEPTED"?"🤝":t==="ADMIN_FORUM_POST"?"▤":t==="ACTIVITY_REWARD"?"✦":"🔔";
+const typeLabel=t=>t==="MESSAGE"?"Nachrichten":t==="FRIEND_REQUEST"?"Freundschaftsanfragen":t==="FORUM_REPLY"?"Forum-Antworten":t==="POKE"?"Anstupser":t==="BUSINESS_ACCOUNT"?"Unternehmerkonto":t==="SYSTEM_ERROR"?"Systemfehler":t==="PHOTO_LIKE"?"Foto-Likes":t==="PHOTO_COMMENT"?"Fotokommentare":t==="WELCOME_GREETING"?"Willkommensgrüße":t==="RELATIONSHIP_CONFIRMATION"||t==="RELATIONSHIP_ACCEPTED"?"Beziehungen":t==="ADMIN_FORUM_POST"?"Admin-Forum":t==="ACTIVITY_REWARD"?"Aktivitätsbelohnungen":"Benachrichtigungen";
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const withTimeout=(promise,ms=9000,message="Zeitüberschreitung")=>new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error(message)),ms);Promise.resolve(promise).then(v=>{clearTimeout(timer);resolve(v)},e=>{clearTimeout(timer);reject(e)})});
 const isNetworkError=e=>/failed to fetch|networkerror|network request failed|load failed|timeout|zeitüberschreitung/i.test(String(e?.message||e||""));
@@ -29,16 +29,18 @@ function navigate(type){
     window.dispatchEvent(new CustomEvent("ec:open-system-errors"));
     return;
   }
-  const page=type==="MESSAGE"?"messages":type==="FRIEND_REQUEST"?"requests":type==="FORUM_REPLY"?"forum":type==="POKE"?"members":"home";
+  const page=type==="MESSAGE"?"messages":type==="FRIEND_REQUEST"?"requests":type==="FORUM_REPLY"?"forum":type==="ADMIN_FORUM_POST"?"admin-forum":type==="POKE"||type==="RELATIONSHIP_CONFIRMATION"||type==="RELATIONSHIP_ACCEPTED"?"members":type==="PHOTO_LIKE"||type==="PHOTO_COMMENT"?"photos":"home";
   window.dispatchEvent(new CustomEvent("ec:navigate",{detail:{page}}));
 }
 
 async function prefs(){
+  const fallback={notify_message_popup:true,notify_friend_request_popup:true,notify_forum_reply_popup:true,notify_social_popup:true,notify_admin_popup:true,notify_reward_popup:false};
   try{
-    const result=await retry(()=>withTimeout(supabase.rpc("member_notification_settings"),7000,"Benachrichtigungseinstellungen antworten nicht."));
+    let result=await retry(()=>withTimeout(supabase.rpc("member_notification_settings_v2"),7000,"Benachrichtigungseinstellungen antworten nicht."));
+    if(result.error&&/function|schema cache|does not exist/i.test(String(result.error.message||"")))result=await retry(()=>withTimeout(supabase.rpc("member_notification_settings"),7000));
     if(result.error)throw result.error;
-    return result.data?.[0]||{notify_message_popup:true,notify_friend_request_popup:true,notify_forum_reply_popup:true};
-  }catch{return{notify_message_popup:true,notify_friend_request_popup:true,notify_forum_reply_popup:true}}
+    return {...fallback,...(result.data?.[0]||{})};
+  }catch{return fallback}
 }
 
 async function markRead(id){
@@ -48,7 +50,9 @@ async function markRead(id){
 
 async function popup(n){
   const p=await prefs();
-  const allowed=n.type==="MESSAGE"?p.notify_message_popup:n.type==="FRIEND_REQUEST"?p.notify_friend_request_popup:n.type==="FORUM_REPLY"?p.notify_forum_reply_popup:true;
+  const socialTypes=new Set(["POKE","PHOTO_LIKE","PHOTO_COMMENT","WELCOME_GREETING","RELATIONSHIP_CONFIRMATION","RELATIONSHIP_ACCEPTED"]);
+  const adminTypes=new Set(["SYSTEM_ERROR","ADMIN_FORUM_POST","BUSINESS_ACCOUNT"]);
+  const allowed=n.type==="MESSAGE"?p.notify_message_popup:n.type==="FRIEND_REQUEST"?p.notify_friend_request_popup:n.type==="FORUM_REPLY"?p.notify_forum_reply_popup:socialTypes.has(n.type)?p.notify_social_popup:adminTypes.has(n.type)?p.notify_admin_popup:n.type==="ACTIVITY_REWARD"?p.notify_reward_popup:true;
   if(!allowed)return;
   let host=document.querySelector(".ec-toast-host");
   if(!host){host=el("div","ec-toast-host");host.setAttribute("aria-live","polite");document.body.append(host)}
@@ -124,8 +128,28 @@ async function openCenter(){
 
     const settings=document.createElement("details");settings.className="ec-notification-settings";settings.innerHTML="<summary>Popup-Einstellungen</summary><div></div>";
     const box=settings.lastElementChild,pr=await prefs();
-    [["Private Nachrichten","notify_message_popup"],["Freundschaftsanfragen","notify_friend_request_popup"],["Antworten auf meine Forenbeiträge","notify_forum_reply_popup"]].forEach(([label,key])=>{const l=el("label"),c=el("input");c.type="checkbox";c.checked=!!pr[key];l.append(c,document.createTextNode(label));box.append(l)});
-    const save=el("button","primary-button","Speichern");save.type="button";save.onclick=async()=>{const c=[...box.querySelectorAll("input")];save.disabled=true;try{const r=await withTimeout(supabase.rpc("member_update_notification_settings",{p_message:c[0].checked,p_friend:c[1].checked,p_forum:c[2].checked}),8000);if(r.error)throw r.error;settings.open=false}catch(error){window.alert(isNetworkError(error)?"Einstellungen konnten wegen einer Verbindungsunterbrechung nicht gespeichert werden.":error.message)}finally{save.disabled=false}};box.append(save);
+    const options=[
+      ["Private Nachrichten","notify_message_popup","Nachrichten erscheinen sofort als Popup."],
+      ["Freundschaftsanfragen","notify_friend_request_popup","Neue Anfragen direkt anzeigen."],
+      ["Forum-Antworten","notify_forum_reply_popup","Antworten auf eigene Beiträge hervorheben."],
+      ["Soziale Aktivitäten","notify_social_popup","Likes, Kommentare, Grüße, Anstupser und Beziehungen."],
+      ["Admin- & Systemhinweise","notify_admin_popup","Admin-Forum, Systemfehler und administrative Hinweise."],
+      ["Aktivitätsbelohnungen","notify_reward_popup","Punkte- und Aktivitätserfolge als Popup anzeigen."]
+    ];
+    options.forEach(([label,key,help])=>{const l=el("label","ec-notification-setting-row"),c=el("input"),copy=el("span");c.type="checkbox";c.dataset.pref=key;c.checked=!!pr[key];copy.append(el("strong",null,label),el("small",null,help));l.append(c,copy);box.append(l)});
+    const save=el("button","primary-button","Speichern");save.type="button";save.onclick=async()=>{
+      const value=key=>!!box.querySelector(`input[data-pref="${key}"]`)?.checked;
+      save.disabled=true;
+      save.textContent="Wird gespeichert …";
+      try{
+        let r=await withTimeout(supabase.rpc("member_update_notification_settings_v2",{p_message:value("notify_message_popup"),p_friend:value("notify_friend_request_popup"),p_forum:value("notify_forum_reply_popup"),p_social:value("notify_social_popup"),p_admin:value("notify_admin_popup"),p_reward:value("notify_reward_popup")}),8000);
+        if(r.error&&/function|schema cache|does not exist/i.test(String(r.error.message||"")))r=await withTimeout(supabase.rpc("member_update_notification_settings",{p_message:value("notify_message_popup"),p_friend:value("notify_friend_request_popup"),p_forum:value("notify_forum_reply_popup")}),8000);
+        if(r.error)throw r.error;
+        save.textContent="✓ Gespeichert";
+        setTimeout(()=>{save.textContent="Speichern";settings.open=false},900);
+      }catch(error){save.textContent="Speichern";window.alert(isNetworkError(error)?"Einstellungen konnten wegen einer Verbindungsunterbrechung nicht gespeichert werden.":error.message)}
+      finally{save.disabled=false}
+    };box.append(save);
     card.append(settings,el("div","ec-notification-list","Lade …"));overlay.append(card);document.body.append(overlay);document.body.classList.add("ec-notification-open");
     overlay.onclick=e=>{if(e.target===overlay)closeCenter()};
     void renderList(card);
