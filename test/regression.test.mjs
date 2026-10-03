@@ -428,7 +428,9 @@ test("session bootstrap recovers without requiring a manual Ctrl+R", async()=>{
   const app=await source("src/App.jsx");
   const main=await source("src/main.jsx");
   assert.match(app,/bootstrapRetry = useRef/);
-  assert.match(app,/bootstrapRetry\.current\.count < 3/);
+  assert.match(app,/const attempt = \+\+bootstrapRetry\.current\.count/);
+  assert.match(app,/window\.setTimeout\(\(\) => \{/);
+  assert.match(app,/void loadAllRef\.current\?\.\(\)/);
   assert.match(app,/addEventListener\("pageshow", handlePageShow\)/);
   assert.match(app,/visibilitychange/);
   assert.match(app,/15000/);
@@ -770,8 +772,8 @@ test("forum replies support helpful community marks", async()=>{
   const runtime=await source("src/forum-helpful.js");
   const css=await source("src/forum-helpful.css");
   const migration=await source("supabase/migrations/20260925164500_forum_reply_helpful.sql");
-  assert.match(app,/item\.dataset\.replyId = reply\.id/);
-  assert.match(app,/item\.dataset\.authorId = reply\.author_id/);
+  assert.match(app,/className=\{mineHelpful \? "forum-helpful-button is-active" : "forum-helpful-button"\}/);
+  assert.match(app,/onClick=\{\(\) => toggleHelpful\(reply\)\}/);
   assert.match(runtime,/forum_reply_helpful/);
   assert.match(runtime,/Hilfreich/);
   assert.match(runtime,/Eigene Antworten können nicht als hilfreich markiert werden/);
@@ -849,9 +851,9 @@ test("profile photo crop drag never changes zoom automatically", async()=>{
   assert.match(editor,/min="0"[\s\S]*max="100"/);
   assert.match(editor,/zoomFromSlider/);
   assert.match(editor,/onInput=\{e => setZoom\(zoomFromSlider\(e\.currentTarget\.value\)\)\}/);
-  assert.match(editor,/EXTRA_ZOOM_OUT_FACTOR = 0\.55/);
-  assert.match(editor,/const minZoom = Math\.max\(0\.08, fitZoom \* EXTRA_ZOOM_OUT_FACTOR\)/);
-  assert.match(editor,/onClick=\{zoomFurtherOut\}>Weiter raus<\/button>/);
+  assert.match(editor,/const minZoom = Math\.max\(0\.1, circleFillZoom\)/);
+  assert.match(editor,/const scale = containScale \* 0\.88/);
+  assert.match(editor,/const offsetY = .*\* freeY/);
 });
 
 

@@ -6,7 +6,7 @@ const source = async (path) => readFile(new URL(`../${path}`, import.meta.url), 
 
 test("mobile profile photo picker accepts phone image formats and resets same-file selection", async () => {
   const app = await source("src/App.jsx");
-  assert.match(app, /accept="image\/\*,\.heic,\.heif"/);
+  assert.match(app, /accept="image\/\*,\.heic,\.heif,\.avif"/);
   assert.match(app, /e\.currentTarget\.value = ""/);
   assert.match(app, /25 \* 1024 \* 1024/);
   assert.match(app, /heic\|heif\|avif/);
@@ -23,6 +23,6 @@ test("mobile avatar file input remains natively interactive", async () => {
 test("profile photo editor surfaces image decode errors", async () => {
   const editor = await source("src/ProfilePhotoEditor.jsx");
   assert.match(editor, /loadError/);
-  assert.match(editor, /Bild kann nicht geöffnet werden/);
-  assert.match(editor, /speichere es auf dem Handy als JPG\/PNG/);
+  assert.match(editor, /Vorschau kann nicht geöffnet werden/);
+  assert.match(editor, /Foto kann trotzdem direkt als Profilbild hochgeladen werden/);
 });
