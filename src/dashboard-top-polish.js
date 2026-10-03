@@ -32,7 +32,7 @@ async function load(){
     state.profile=profile||null;state.regions=regions||[];state.regionalAdmins=assignments||[];
     const friendIds=(friendships||[]).map(f=>f.requester_id===user.id?f.receiver_id:f.requester_id).filter(Boolean);
     if(friendIds.length){
-      const {data:friends}=await supabase.from('profiles').select('id,nickname,role,account_badge,is_online,hide_online_status,last_active_at,last_seen_at,home_region_id,account_status,role_display_label,role_star_url,role_accent_color').in('id',friendIds).eq('account_status','ACTIVE');
+      const {data:friends}=await supabase.from('profiles').select('id,nickname,role,account_badge,points,is_online,hide_online_status,last_active_at,last_seen_at,home_region_id,account_status,role_display_label,role_star_url,role_accent_color').in('id',friendIds).eq('account_status','ACTIVE');
       state.friends=(friends||[]).filter(isActuallyOnline).sort((a,b)=>String(a.nickname||'').localeCompare(String(b.nickname||''),'de'));
     }else state.friends=[];
     if(['HEAD_ADMIN','ADMIN'].includes(role(profile))){const {data:attention,error:attentionError}=await supabase.rpc('admin_attention_summary');state.adminAlerts=attentionError?0:Number(attention?.total||0)}else state.adminAlerts=0;
@@ -62,7 +62,8 @@ function ensureOnlineFriends(dock){
   const rows=state.friends.map(friend=>{
     const star=starFor(friend,region?.id||null);
     const name=esc(friend.nickname||'Mitglied');
-    return `<button type="button" class="ec-online-friend" data-profile-id="${esc(friend.id)}" title="Profil von ${name} öffnen"><span class="ec-online-dot" aria-hidden="true"></span>${star?`<img class="ec-online-friend-star" src="${esc(star)}" alt="" aria-hidden="true">`:''}<strong class="ec-online-friend-name">${name}</strong></button>`;
+    const points=Number(friend.points||0).toLocaleString('de-AT');
+    return `<button type="button" class="ec-online-friend" data-profile-id="${esc(friend.id)}" title="Profil von ${name} öffnen"><span class="ec-online-dot" aria-hidden="true"></span>${star?`<img class="ec-online-friend-star" src="${esc(star)}" alt="" aria-hidden="true">`:''}<strong class="ec-online-friend-name">${name} <span class="ec-inline-points">[${esc(points)} Punkte]</span></strong></button>`;
   }).join('');
   panel.innerHTML=`<div class="ec-online-friends-head"><span>FREUNDE ONLINE</span><em>${state.friends.length}</em></div><div class="ec-online-friends-list">${rows||'<small>Derzeit keine Freunde online.</small>'}</div>`;
   panel.querySelectorAll('[data-profile-id]').forEach(btn=>btn.onclick=()=>window.dispatchEvent(new CustomEvent('ec:open-profile',{detail:{profileId:btn.dataset.profileId}})));
