@@ -1,5 +1,12 @@
-// Legacy event-form DOM injector disabled.
-// Event creation is handled natively in App.jsx using the active region and the
-// caller's admin/community-photographer permissions. Injecting labels/selects
-// into a React-owned form can break React reconciliation.
-export {};
+// Legacy event-form injection is disabled because React owns the form.
+// Event creation now uses App.jsx and the active region directly.
+function eventForm(){
+  return document.querySelector('.admin-community-tools form');
+}
+async function ensureRegionSelect(){
+  const form=eventForm();
+  if(!form)return;
+  // Async DOM enhancers must revalidate before any mutation.
+  if(!form.isConnected || form !== eventForm())return;
+}
+export { eventForm, ensureRegionSelect };
