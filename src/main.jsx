@@ -177,6 +177,7 @@ import "./friendship-icon-fit.css";
 import "./navigation-cleanup-final.css";
 import "./topbar-theme-final.css";
 import "./navigation-cleanup-final.js";
+import "./literal-newline-cleanup.js";
 
 /* Absolute final chat styling: legacy message CSS must not override this. */
 import "./chat-final-authority.css";

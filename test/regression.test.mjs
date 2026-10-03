@@ -923,3 +923,14 @@ test("native member directory never removes React-owned DOM nodes", async()=>{
   assert.doesNotMatch(directory,/new MutationObserver\(removeLiteralNewlineArtifacts\)/);
   assert.match(directory,/data-region-mode=\{regionMode\}/);
 });
+
+
+test("literal newline cleanup blanks artifacts without removing React-owned nodes", async()=>{
+  const cleanup=await source("src/literal-newline-cleanup.js");
+  const main=await source("src/main.jsx");
+  assert.match(main,/import "\.\/literal-newline-cleanup\.js"/);
+  assert.match(cleanup,/trim\(\) === "\\\\n"/);
+  assert.match(cleanup,/node\.nodeValue = ""/);
+  assert.doesNotMatch(cleanup,/node\.remove\(\)/);
+  assert.match(cleanup,/new MutationObserver\(scheduleLiteralNewlineCleanup\)/);
+});
