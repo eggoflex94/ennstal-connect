@@ -885,3 +885,10 @@ test("new profile photo uploads open the editor before storage upload", async()=
   assert.match(app,/uploadProfileImage=\{selectProfilePhotoForEdit\}/);
   assert.match(app,/setProfilePhotoEditFile\(file\)/);
 });
+
+
+test("signed-in member card keeps age visible when directory payload omits birth date", async()=>{
+  const card=await source("src/MemberCardView.jsx");
+  assert.match(card,/member\.birth_date \|\| \(member\.id === profile\?\.id \? profile\?\.birth_date : null\)/);
+  assert.match(card,/const age = getAge\(birthDate\)/);
+});
