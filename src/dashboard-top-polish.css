@@ -28,3 +28,15 @@
   margin-left:0!important;
   padding-left:0!important;
 }
+
+
+/* Compact score next to nicknames in online-friend and profile-visit surfaces. */
+.ec-inline-points{
+  display:inline!important;
+  margin-left:3px!important;
+  color:#68788a!important;
+  font-size:.82em!important;
+  font-weight:800!important;
+  white-space:nowrap!important;
+}
+.ec-online-friend .ec-inline-points{color:#7b6571!important;font-size:.78em!important}
