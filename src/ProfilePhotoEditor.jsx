@@ -84,7 +84,7 @@ function drawEditedImage(canvas, source, { zoom, x, y, rotation, mode = "cover" 
   if (mode === "contain") {
     // Keep the complete source visible, but leave a small safe margin so the
     // user can still move it up/down (and left/right) without cropping it.
-    const scale = containScale * 0.88;
+    const scale = containScale * 0.78;
     const drawW = source.naturalWidth * scale;
     const drawH = source.naturalHeight * scale;
     const renderedW = quarterTurn ? drawH : drawW;
@@ -130,7 +130,7 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
   const [x, setX] = useState(0);
   const [y, setY] = useState(0);
   const [rotation, setRotation] = useState(0);
-  const [mode, setMode] = useState("cover");
+  const [mode, setMode] = useState("contain");
   const [busy, setBusy] = useState(false);
   const [loadError, setLoadError] = useState("");
   const [saveError, setSaveError] = useState("");
@@ -225,7 +225,7 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
     setX(0);
     setY(0);
     setRotation(0);
-    setMode("cover");
+    setMode("contain");
   };
 
   const nudge = (dx, dy) => {
@@ -278,11 +278,22 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
   };
 
   const saveOriginal = async () => {
-    if (!file || busy) return;
+    if (!source || busy) return;
     setBusy(true);
     setSaveError("");
     try {
-      await onSave(file);
+      const canvas = exportCanvasRef.current;
+      drawEditedImage(canvas, source, { zoom: 1, x: 0, y: 0, rotation, mode: "contain" }, SIZE);
+      const blob = await new Promise((resolve) =>
+        canvas.toBlob(resolve, "image/webp", 0.92)
+      );
+      if (!blob) throw new Error("Profilbild konnte nicht verarbeitet werden.");
+      const wholePhoto = new File(
+        [blob],
+        `profilbild-ganz-${Date.now()}.webp`,
+        { type: "image/webp" }
+      );
+      await onSave(wholePhoto);
     } catch (error) {
       setSaveError(error?.message || "Profilbild konnte nicht gespeichert werden.");
     } finally {
@@ -318,7 +329,7 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
           {source
             ? <canvas ref={previewCanvasRef} aria-label="Profilbild-Vorschau"/>
             : loadError
-              ? <div className="ec-photo-editor-load-error"><strong>Vorschau kann nicht geöffnet werden.</strong><span>{loadError}</span><small>Das Foto kann trotzdem direkt als Profilbild hochgeladen werden.</small><button type="button" className="primary-button" onClick={saveOriginal} disabled={busy}>{busy ? "Wird hochgeladen …" : "Foto ohne Zuschnitt verwenden"}</button></div>
+              ? <div className="ec-photo-editor-load-error"><strong>Vorschau kann nicht geöffnet werden.</strong><span>{loadError}</span><small>Das Foto kann trotzdem direkt als Profilbild hochgeladen werden.</small><button type="button" className="primary-button" onClick={saveOriginal} disabled={busy}>{busy ? "Wird hochgeladen …" : "Ganzes Foto verwenden"}</button></div>
               : <span>Bild wird geladen …</span>}
           <div className="ec-photo-editor-circle" aria-hidden="true"/>
         </div>
@@ -379,7 +390,7 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
       {saveError && <div className="ec-photo-editor-save-error" role="alert">{saveError}</div>}
       <footer>
         <button type="button" className="secondary-button" onClick={onCancel} disabled={busy}>Abbrechen</button>
-        <button type="button" className="secondary-button" onClick={saveOriginal} disabled={busy}>{busy ? "Wird hochgeladen …" : "Ohne Zuschnitt verwenden"}</button>
+        <button type="button" className="secondary-button" onClick={saveOriginal} disabled={busy}>{busy ? "Wird hochgeladen …" : "Ganzes Foto verwenden"}</button>
         <button type="button" className="primary-button" onClick={exportImage} disabled={busy || !source}>
           {busy ? "Wird gespeichert …" : "Profilbild übernehmen"}
         </button>
