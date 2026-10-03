@@ -41,7 +41,14 @@ export default function ProfileRelationshipSection({ member, currentUserId }) {
       .eq("owner_id", member.id)
       .order("created_at", { ascending: true });
 
-    const tasks = [relationshipQuery];
+    const confirmedForPartnerQuery = supabase
+      .from("profile_relationships")
+      .select("id,owner_id,status_type,partner_user_id,partner_name,confirmation_status,created_at,updated_at")
+      .eq("partner_user_id", member.id)
+      .eq("confirmation_status", "ACCEPTED")
+      .order("created_at", { ascending: true });
+
+    const tasks = [relationshipQuery, confirmedForPartnerQuery];
     if (mine) {
       tasks.push(
         supabase
@@ -64,18 +71,24 @@ export default function ProfileRelationshipSection({ member, currentUserId }) {
 
     const result = await Promise.all(tasks);
     const ownResult = result[0];
+    const confirmedPartnerResult = result[1];
     const ownRows = ownResult.error ? [] : (ownResult.data || []);
-    setRows(ownRows);
+    const confirmedPartnerRows = confirmedPartnerResult.error ? [] : (confirmedPartnerResult.data || []);
+    setRows([
+      ...ownRows.map((row) => ({ ...row, perspective: "OWNER" })),
+      ...confirmedPartnerRows.map((row) => ({ ...row, perspective: "PARTNER" })),
+    ]);
 
     let pendingRows = [];
     if (mine) {
-      pendingRows = result[1]?.error ? [] : (result[1]?.data || []);
+      pendingRows = result[2]?.error ? [] : (result[2]?.data || []);
       setIncoming(pendingRows);
-      if (!result[2]?.error) setMembers(result[2]?.data || []);
+      if (!result[3]?.error) setMembers(result[3]?.data || []);
     }
 
     const ids = [...new Set([
       ...ownRows.map((row) => row.partner_user_id),
+      ...confirmedPartnerRows.map((row) => row.owner_id),
       ...pendingRows.map((row) => row.owner_id),
     ].filter(Boolean))];
     if (ids.length) {
@@ -157,20 +170,21 @@ export default function ProfileRelationshipSection({ member, currentUserId }) {
 
     {visibleRows.length > 0 ? <div className="profile-relationship-list">
       {visibleRows.map((row) => {
-        const linked = peopleById.get(row.partner_user_id);
+        const linkedUserId = row.perspective === "PARTNER" ? row.owner_id : row.partner_user_id;
+        const linked = peopleById.get(linkedUserId);
         const pending = row.confirmation_status === "PENDING";
         const rejected = row.confirmation_status === "REJECTED";
         return <article className="profile-relationship-card" key={row.id}>
           <div>
             <strong>{STATUS_LABELS[row.status_type] || row.status_type}</strong>
-            {row.partner_user_id && row.confirmation_status === "ACCEPTED" && <button type="button" className="profile-relationship-person" onClick={() => window.dispatchEvent(new CustomEvent("ec:open-profile", { detail: { profileId: row.partner_user_id } }))}>
+            {linkedUserId && row.confirmation_status === "ACCEPTED" && <button type="button" className="profile-relationship-person" onClick={() => window.dispatchEvent(new CustomEvent("ec:open-profile", { detail: { profileId: linkedUserId } }))}>
               mit {personName(linked)}
             </button>}
             {!row.partner_user_id && row.partner_name && <span>mit {row.partner_name}</span>}
             {mine && pending && <small>Bestätigung der verlinkten Person ausstehend</small>}
             {mine && rejected && <small>Verknüpfung wurde abgelehnt</small>}
           </div>
-          {mine && <button type="button" className="profile-relationship-remove" onClick={() => removeRelationship(row.id)}>Entfernen</button>}
+          {mine && row.perspective === "OWNER" && <button type="button" className="profile-relationship-remove" onClick={() => removeRelationship(row.id)}>Entfernen</button>}
         </article>;
       })}
     </div> : <p className="profile-relationship-empty">Noch kein Beziehungsstatus angegeben.</p>}
