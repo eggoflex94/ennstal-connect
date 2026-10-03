@@ -166,6 +166,7 @@ export default function App() {
   const [loginPending, setLoginPending] = useState(false);
   const [loginFeedback, setLoginFeedback] = useState("");
   const [sectionStatus, setSectionStatus] = useState({ pending: [], failed: [] });
+  const [networkIssue, setNetworkIssue] = useState(() => !globalThis.navigator?.onLine);
   const [incomingMessage, setIncomingMessage] = useState(null);
   const [messageText, setMessageText] = useState("");
   const [adminTarget, setAdminTarget] = useState("");
@@ -251,6 +252,22 @@ export default function App() {
     window.addEventListener("ec:navigate", handleNavigation);
     return () => window.removeEventListener("ec:navigate", handleNavigation);
   }, [profile?.role, profile?.account_status]);
+
+  useEffect(() => {
+    const markOffline = () => setNetworkIssue(true);
+    const markOnline = () => { setNetworkIssue(false); void loadAllRef.current?.(); };
+    const markRequestIssue = () => setNetworkIssue(true);
+    window.addEventListener("offline", markOffline);
+    window.addEventListener("online", markOnline);
+    window.addEventListener("ec:network-error", markRequestIssue);
+    window.addEventListener("ec:network-restored", markOnline);
+    return () => {
+      window.removeEventListener("offline", markOffline);
+      window.removeEventListener("online", markOnline);
+      window.removeEventListener("ec:network-error", markRequestIssue);
+      window.removeEventListener("ec:network-restored", markOnline);
+    };
+  }, []);
 
   useEffect(() => {
     if (page !== "admin" || !profile?.is_primary_head_admin) return;
@@ -1575,7 +1592,7 @@ useEffect(() => {
         </nav>
         <button className="sidebar-logout" onClick={logout}>⇥ <span>Abmelden</span></button>
       </aside>
-      <main className="modern-main"><div className="content-root">{(sectionStatus.pending.length > 0 || sectionStatus.failed.length > 0) && <aside className="panel" role="status" aria-live="polite">{sectionStatus.pending.length > 0 && <p>Weitere Inhalte werden geladen …</p>}{sectionStatus.failed.length > 0 && <><p>Noch nicht aktualisiert: {sectionStatus.failed.join(", ")}. Bereits geladene Inhalte bleiben verfügbar.</p><button type="button" className="secondary-button" disabled={sectionStatus.pending.length > 0} onClick={() => void loadAllRef.current()}>Erneut laden</button></>}</aside>}{notice && <div className="toast">{notice}</div>}{incomingMessage && <aside className="incoming-message-popup" role="status"><strong>✉ Neue Nachricht von {incomingMessage.senderName}</strong><p>{incomingMessage.content || "Du hast eine neue private Nachricht erhalten."}</p><div><button className="primary-button" onClick={() => { const sender = members.find((member) => member.id === incomingMessage.senderId); setIncomingMessage(null); if (sender) openChat(sender); else setPage("messages"); }}>Nachricht öffnen</button><button className="secondary-button" onClick={() => setIncomingMessage(null)}>Später</button></div></aside>}
+      <main className="modern-main"><div className="content-root">{networkIssue && <aside className="network-recovery-banner" role="status" aria-live="polite"><div><strong>Verbindung unterbrochen</strong><span>Ennstal Connect bleibt geöffnet. Bereits geladene Inhalte sind weiter sichtbar.</span></div><button type="button" className="secondary-button" onClick={() => { setNetworkIssue(false); void loadAllRef.current?.(); }}>Erneut versuchen</button></aside>}{(sectionStatus.pending.length > 0 || sectionStatus.failed.length > 0) && <aside className="panel" role="status" aria-live="polite">{sectionStatus.pending.length > 0 && <p>Weitere Inhalte werden geladen …</p>}{sectionStatus.failed.length > 0 && <><p>Noch nicht aktualisiert: {sectionStatus.failed.join(", ")}. Bereits geladene Inhalte bleiben verfügbar.</p><button type="button" className="secondary-button" disabled={sectionStatus.pending.length > 0} onClick={() => void loadAllRef.current()}>Erneut laden</button></>}</aside>}{notice && <div className="toast">{notice}</div>}{incomingMessage && <aside className="incoming-message-popup" role="status"><strong>✉ Neue Nachricht von {incomingMessage.senderName}</strong><p>{incomingMessage.content || "Du hast eine neue private Nachricht erhalten."}</p><div><button className="primary-button" onClick={() => { const sender = members.find((member) => member.id === incomingMessage.senderId); setIncomingMessage(null); if (sender) openChat(sender); else setPage("messages"); }}>Nachricht öffnen</button><button className="secondary-button" onClick={() => setIncomingMessage(null)}>Später</button></div></aside>}
         {page === "home" && (
           <Home profile={profile} user={user} activeRegion={activeRegion} isHeadAdmin={isHeadAdmin} homepageSections={regionFilter(homepageSections)} canEdit={isHeadAdmin(profile?.role)} createHomepageSection={createHomepageSection} editHomepageSection={editHomepageSection} deleteHomepageSection={deleteHomepageSection} uploadHomepageImage={uploadHomepageImage} weeklyPoll={weeklyPoll?.region_id && weeklyPoll.region_id !== activeRegionId ? null : weeklyPoll} welcomeBadges={welcomeBadges} groups={regionFilter(groups)} featuredGroup={featuredGroup?.region_id && featuredGroup.region_id !== activeRegionId ? null : featuredGroup} communityRequests={regionFilter(communityRequests)} events={regionFilter(communityEvents)} eventRsvps={eventRsvps} forumPosts={regionFilter(forumPosts)} forumReplies={forumReplies} friendships={friendships} members={regionalMembers} welcomeGreetings={welcomeGreetings} onSendWelcome={sendWelcomeGreeting} onReplyForum={createForumReply} onRespondEvent={respondToCommunityEvent} onVote={voteWeeklyPoll} onCreatePoll={createWeeklyPoll} onFeatureGroup={featureCommunityGroup} onCreateRequest={createCommunityRequest} onCloseRequest={closeCommunityRequest} onOpenGroup={(group) => { setSelectedGroup(group); setPage("groups"); }}/>
         )}
@@ -1644,7 +1661,40 @@ function Home({ profile, user, activeRegion, isHeadAdmin, homepageSections, canE
   const chooseImage = async (index, event) => { const file = event.target.files?.[0]; if (!file) return; updateFrame(index, { status: "Bild wird hochgeladen …" }); try { const imageUrl = await uploadHomepageImage(file); updateFrame(index, { imageUrl, status: "✓ Bild bereit – Rahmen jetzt veröffentlichen." }); } catch (error) { updateFrame(index, { status: `Upload fehlgeschlagen: ${error?.message || "Unbekannter Fehler"}` }); } };
   const saveFrame = async (index, event) => { const saved = await createHomepageSection(event); if (saved) updateFrame(index, { imageUrl: "", status: "" }); };
   const frameForm = (label, index) => <section className="homepage-builder panel"><span className="eyebrow">{label}</span><h2>Rahmen gestalten</h2><form onSubmit={(event) => saveFrame(index, event)} className="homepage-form"><input name="title" placeholder="Rahmen-Überschrift" required/><textarea name="content" placeholder="Text für den Rahmen" required/><input name="image_url" value={frames[index].imageUrl} onChange={(event) => updateFrame(index, { imageUrl: event.target.value })} placeholder="Bild-URL (optional)"/><label className="homepage-image-picker">Foto hochladen<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(event) => chooseImage(index, event)}/></label>{frames[index].imageUrl && <img className="homepage-upload-preview" src={frames[index].imageUrl} alt="Bildvorschau"/>}{frames[index].status && <p className="homepage-upload-status" aria-live="polite">{frames[index].status}</p>}<select name="frame_style" defaultValue="standard"><option value="standard">Standard</option><option value="accent">Akzent</option><option value="soft">Soft</option><option value="dark">Dunkel</option></select><button className="primary-button">Rahmen veröffentlichen</button></form></section>;
-  return <section className="home-page"><div className="page-heading"><div><span className="eyebrow">REGION {activeRegion?.name || "ENNSTAL CONNECT"}</span><h1>Willkommen, {getName(profile)}</h1><p>Entdecke Beiträge, Gruppen und gemeinsame Aktivitäten in {activeRegion?.name || "deiner Region"}.</p></div>{isHeadAdmin(profile?.role) && <div className="head-admin-profile-badge">★ Hauptadmin · Betreiber</div>}</div><MunicipalityWelcome profile={profile} activeRegion={activeRegion}/><ReturnPulse profile={profile} user={user} members={members} groups={groups} events={events} forumPosts={forumPosts}/><MemberInviteCard profile={profile} user={user}/><MemberActivationPanel profile={profile} user={user} poll={weeklyPoll} groups={groups} events={events} eventRsvps={eventRsvps} forumPosts={forumPosts} forumReplies={forumReplies} friendships={friendships}/><OneSmallAction user={user} members={members} forumPosts={forumPosts} forumReplies={forumReplies} events={events} eventRsvps={eventRsvps} welcomeGreetings={welcomeGreetings} onReplyForum={onReplyForum} onRespondEvent={onRespondEvent} onSendWelcome={onSendWelcome}/><RegionalDiscovery user={user} members={members} groups={groups} events={events} eventRsvps={eventRsvps} friendships={friendships} onOpenGroup={onOpenGroup}/><NewMemberWelcome user={user} members={members} greetings={welcomeGreetings} onSendWelcome={onSendWelcome}/><EngagementPanel poll={weeklyPoll} badges={welcomeBadges} groups={groups} featuredGroup={featuredGroup} requests={communityRequests} user={user} isHeadAdmin={isHeadAdmin(profile?.role)} onVote={onVote} onCreatePoll={onCreatePoll} onFeatureGroup={onFeatureGroup} onCreateRequest={onCreateRequest} onCloseRequest={onCloseRequest} onOpenGroup={onOpenGroup}/>{canEdit && <details className="homepage-editor-toggle"><summary>Startseite für {activeRegion?.name || "diese Region"} gestalten</summary><div className="homepage-builder-grid">{frameForm("NEUER BEITRAG", 0)}{frameForm("WEITERER BEITRAG", 1)}</div></details>}{homepageSections.length > 0 && <div className="homepage-sections">{homepageSections.map((x) => <article className={`homepage-frame ${x.frame_style || "standard"}`} key={x.id}>{x.image_url && <img src={x.image_url} alt=""/>}<div><span className="frame-kicker">{activeRegion?.name || "ENNSTAL CONNECT"}</span><h2>{x.title}</h2><p>{x.content}</p>{canEdit && <div className="content-manage-actions"><button onClick={() => editHomepageSection(x)}>Bearbeiten</button><button className="danger-button" onClick={() => deleteHomepageSection(x)}>Löschen</button></div>}</div></article>)}</div>}</section>;
+  return <section className="home-page"><div className="page-heading"><div><span className="eyebrow">REGION {activeRegion?.name || "ENNSTAL CONNECT"}</span><h1>Willkommen, {getName(profile)}</h1><p>Entdecke Beiträge, Gruppen und gemeinsame Aktivitäten in {activeRegion?.name || "deiner Region"}.</p></div>{isHeadAdmin(profile?.role) && <div className="head-admin-profile-badge">★ Hauptadmin · Betreiber</div>}</div><MunicipalityWelcome profile={profile} activeRegion={activeRegion}/><TodayInRegion activeRegion={activeRegion} user={user} members={members} groups={groups} events={events} forumPosts={forumPosts}/><ReturnPulse profile={profile} user={user} members={members} groups={groups} events={events} forumPosts={forumPosts}/><MemberInviteCard profile={profile} user={user}/><MemberActivationPanel profile={profile} user={user} poll={weeklyPoll} groups={groups} events={events} eventRsvps={eventRsvps} forumPosts={forumPosts} forumReplies={forumReplies} friendships={friendships}/><OneSmallAction user={user} members={members} forumPosts={forumPosts} forumReplies={forumReplies} events={events} eventRsvps={eventRsvps} welcomeGreetings={welcomeGreetings} onReplyForum={onReplyForum} onRespondEvent={onRespondEvent} onSendWelcome={onSendWelcome}/><RegionalDiscovery user={user} members={members} groups={groups} events={events} eventRsvps={eventRsvps} friendships={friendships} onOpenGroup={onOpenGroup}/><NewMemberWelcome user={user} members={members} greetings={welcomeGreetings} onSendWelcome={onSendWelcome}/><EngagementPanel poll={weeklyPoll} badges={welcomeBadges} groups={groups} featuredGroup={featuredGroup} requests={communityRequests} user={user} isHeadAdmin={isHeadAdmin(profile?.role)} onVote={onVote} onCreatePoll={onCreatePoll} onFeatureGroup={onFeatureGroup} onCreateRequest={onCreateRequest} onCloseRequest={onCloseRequest} onOpenGroup={onOpenGroup}/>{canEdit && <details className="homepage-editor-toggle"><summary>Startseite für {activeRegion?.name || "diese Region"} gestalten</summary><div className="homepage-builder-grid">{frameForm("NEUER BEITRAG", 0)}{frameForm("WEITERER BEITRAG", 1)}</div></details>}{homepageSections.length > 0 && <div className="homepage-sections">{homepageSections.map((x) => <article className={`homepage-frame ${x.frame_style || "standard"}`} key={x.id}>{x.image_url && <img src={x.image_url} alt=""/>}<div><span className="frame-kicker">{activeRegion?.name || "ENNSTAL CONNECT"}</span><h2>{x.title}</h2><p>{x.content}</p>{canEdit && <div className="content-manage-actions"><button onClick={() => editHomepageSection(x)}>Bearbeiten</button><button className="danger-button" onClick={() => deleteHomepageSection(x)}>Löschen</button></div>}</div></article>)}</div>}</section>;
+}
+
+function TodayInRegion({ activeRegion, user, members, groups, events, forumPosts }) {
+  const now = new Date();
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const endOfDay = startOfDay + 86400000;
+  const today = (value) => {
+    const time = value ? new Date(value).getTime() : 0;
+    return time >= startOfDay && time < endOfDay;
+  };
+  const onlineMembers = members.filter((member) =>
+    member?.id !== user?.id &&
+    member?.account_status !== "SUSPENDED" &&
+    !member?.is_test_account &&
+    !member?.hide_online_status &&
+    member?.is_online
+  ).length;
+  const newMembers = members.filter((member) => member?.id !== user?.id && today(member?.created_at)).length;
+  const newPosts = forumPosts.filter((post) => post?.scope === "COMMUNITY" && today(post?.created_at)).length;
+  const todayEvents = events.filter((event) => event?.status !== "CANCELLED" && today(event?.event_at)).length;
+  const newGroups = groups.filter((group) => today(group?.created_at)).length;
+  const go = (page) => window.dispatchEvent(new CustomEvent("ec:navigate", { detail: { page, source: "today-in-region" } }));
+  const cards = [
+    { key:"online", count:onlineMembers, label:"gerade online", page:"members" },
+    { key:"members", count:newMembers, label:"heute neu", page:"members" },
+    { key:"forum", count:newPosts, label:"neue Forumsbeiträge", page:"forum" },
+    { key:"events", count:todayEvents, label:"Termine heute", page:"community" },
+    { key:"groups", count:newGroups, label:"neue Gruppen", page:"groups" }
+  ];
+  return <section className="today-in-region panel">
+    <div className="today-in-region-heading"><div><span className="eyebrow">HEUTE IN DEINER REGION</span><h2>{activeRegion?.name || "Ennstal Connect"} auf einen Blick</h2><p>Das Wichtigste aus deiner Region, ohne lange suchen zu müssen.</p></div><span className="today-in-region-date">{now.toLocaleDateString("de-AT", { weekday:"long", day:"2-digit", month:"2-digit" })}</span></div>
+    <div className="today-in-region-grid">{cards.map((card) => <button type="button" key={card.key} onClick={() => go(card.page)}><strong>{card.count}</strong><span>{card.label}</span><small>Öffnen →</small></button>)}</div>
+  </section>;
 }
 
 function ReturnPulse({ profile, user, members, groups, events, forumPosts }) {
