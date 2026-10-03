@@ -1,0 +1,126 @@
+/* Neon Pink reward theme — intentionally late authority for readable high-energy pink UI. */
+html[data-ec-theme="neon-pink"]{
+  --ec-orange:#ff1bb8;
+  --ec-ink:#fff7fd;
+  --ec-line:#ff55cf;
+  --ec-soft:#210015;
+  background:#16000f!important;
+}
+html[data-ec-theme="neon-pink"] body{
+  background:
+    radial-gradient(circle at 18% 12%,rgba(255,20,184,.30),transparent 28%),
+    radial-gradient(circle at 86% 8%,rgba(255,105,220,.22),transparent 24%),
+    linear-gradient(160deg,#12000c 0%,#330020 42%,#13000d 100%)!important;
+  color:#fff7fd!important;
+}
+.layout-theme-neon-pink{
+  background:transparent!important;
+  color:#fff7fd!important;
+}
+.layout-theme-neon-pink .modern-main,
+html[data-ec-theme="neon-pink"] .modern-main{
+  background:
+    radial-gradient(circle at 15% 8%,rgba(255,21,184,.20),transparent 30%),
+    linear-gradient(145deg,#1b0012 0%,#330020 55%,#15000e 100%)!important;
+  color:#fff7fd!important;
+}
+html[data-ec-theme="neon-pink"] .ec-brand-masthead,
+html[data-ec-theme="neon-pink"] .ec-top-nav{
+  background:linear-gradient(100deg,#220014,#67003f 50%,#260018)!important;
+  border-color:#ff45c8!important;
+  box-shadow:0 0 20px rgba(255,26,184,.34)!important;
+}
+html[data-ec-theme="neon-pink"] .ec-brand-image,
+.layout-theme-neon-pink .brand img,
+.layout-theme-neon-pink img[alt="Ennstal Connect"]{
+  filter:brightness(0) invert(1) sepia(1) saturate(20) hue-rotate(285deg) drop-shadow(0 0 7px #ff2bbb) drop-shadow(0 0 16px #ff68d8)!important;
+}
+.layout-theme-neon-pink .panel,
+.layout-theme-neon-pink .content-card,
+.layout-theme-neon-pink .home-section,
+.layout-theme-neon-pink .news-card,
+.layout-theme-neon-pink .empty-card,
+html[data-ec-theme="neon-pink"] .ec-right-dock{
+  background:linear-gradient(145deg,rgba(92,0,55,.96),rgba(34,0,24,.98))!important;
+  color:#fff9fd!important;
+  border:1px solid #ff58cf!important;
+  box-shadow:0 0 0 1px rgba(255,255,255,.04),0 12px 30px rgba(255,0,153,.18),inset 0 0 26px rgba(255,45,190,.07)!important;
+}
+.layout-theme-neon-pink h1,
+.layout-theme-neon-pink h2,
+.layout-theme-neon-pink h3,
+.layout-theme-neon-pink strong,
+.layout-theme-neon-pink label,
+.layout-theme-neon-pink p,
+.layout-theme-neon-pink span,
+.layout-theme-neon-pink small,
+html[data-ec-theme="neon-pink"] .ec-right-dock,
+html[data-ec-theme="neon-pink"] .ec-right-dock *{
+  color:#fff9fd!important;
+}
+.layout-theme-neon-pink .eyebrow,
+html[data-ec-theme="neon-pink"] .eyebrow{
+  color:#ff73dc!important;
+  text-shadow:0 0 9px rgba(255,34,190,.9)!important;
+}
+.layout-theme-neon-pink input,
+.layout-theme-neon-pink textarea,
+.layout-theme-neon-pink select{
+  background:#210017!important;
+  color:#fff!important;
+  border:1px solid #ff62d5!important;
+  box-shadow:inset 0 0 12px rgba(255,38,184,.08)!important;
+}
+.layout-theme-neon-pink select option{
+  background:#240018!important;
+  color:#fff!important;
+}
+.layout-theme-neon-pink .primary-button,
+.layout-theme-neon-pink button.primary-button,
+.layout-theme-neon-pink .modern-nav button:hover,
+.layout-theme-neon-pink .modern-nav button.active,
+html[data-ec-theme="neon-pink"] .ec-top-nav button:hover,
+html[data-ec-theme="neon-pink"] .ec-top-nav button:focus-visible{
+  background:linear-gradient(110deg,#ff008f,#ff36c9 48%,#ff84e3)!important;
+  color:#fff!important;
+  border-color:#ff88e4!important;
+  box-shadow:0 0 12px rgba(255,0,153,.75),0 0 26px rgba(255,57,203,.38)!important;
+  text-shadow:0 1px 2px rgba(73,0,43,.6)!important;
+}
+.layout-theme-neon-pink .secondary-button,
+.layout-theme-neon-pink .text-button{
+  color:#ff9bea!important;
+  border-color:#ff5fd1!important;
+}
+.layout-theme-neon-pink .member-card,
+.layout-theme-neon-pink .my-profile-card{
+  border-color:#ff4ecb!important;
+  box-shadow:0 0 18px rgba(255,25,179,.34),0 16px 32px rgba(44,0,27,.38)!important;
+}
+html[data-ec-theme="neon-pink"] .ec-right-dock button{
+  background:rgba(255,255,255,.06)!important;
+  border-color:rgba(255,112,220,.34)!important;
+}
+html[data-ec-theme="neon-pink"] .ec-right-dock button:hover,
+html[data-ec-theme="neon-pink"] .ec-right-dock button.is-open{
+  background:linear-gradient(110deg,#a00064,#ff1bb8)!important;
+  color:#fff!important;
+}
+html[data-ec-theme="neon-pink"] .ec-dock-section-label{
+  color:#ff8ee6!important;
+}
+html[data-ec-theme="neon-pink"] .ec-logout{
+  background:#12000c!important;
+  border:1px solid #ff54ce!important;
+  color:#fff!important;
+}
+@media (prefers-reduced-motion:no-preference){
+  .layout-theme-neon-pink .primary-button,
+  html[data-ec-theme="neon-pink"] .ec-brand-image{
+    animation:ec-neon-pink-pulse 2.8s ease-in-out infinite;
+  }
+}
+@keyframes ec-neon-pink-pulse{
+  0%,100%{filter:brightness(1)}
+  50%{filter:brightness(1.12)}
+}
