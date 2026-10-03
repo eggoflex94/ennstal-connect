@@ -29,7 +29,7 @@ async function loadContext(targetId){
     supabase.from('user_permissions').select('manage_community_photographers').eq('user_id',targetId).maybeSingle()
   ]);
   const viewer=viewerResult.data,target=targetResult.data;if(!viewer||!target||viewer.account_status!=='ACTIVE')return null;
-  const isHead=role(viewer.role)==='HEAD_ADMIN';
+  const isHead=role(viewer.role)==='HEAD_ADMIN'&&bool(viewer.is_primary_head_admin);
   const isGlobalAdmin=role(viewer.role)==='ADMIN';
   const targetRegionalAdmins=(targetRegionalAdminResult.data||[]).filter(x=>x.active!==false);
   const targetProtected=role(target.role)==='HEAD_ADMIN'||role(target.role)==='ADMIN'||targetRegionalAdmins.length>0;
