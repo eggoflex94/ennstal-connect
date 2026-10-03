@@ -852,7 +852,7 @@ test("profile photo crop drag never changes zoom automatically", async()=>{
   assert.match(editor,/zoomFromSlider/);
   assert.match(editor,/onInput=\{e => setZoom\(zoomFromSlider\(e\.currentTarget\.value\)\)\}/);
   assert.match(editor,/const minZoom = Math\.max\(0\.1, circleFillZoom\)/);
-  assert.match(editor,/const scale = containScale \* 0\.88/);
+  assert.match(editor,/const scale = containScale \* 0\.78/);
   assert.match(editor,/const offsetY = .*\* freeY/);
 });
 
@@ -877,4 +877,11 @@ test("delegated Head Admins require explicit permissions", async()=>{
   assert.match(migration,/Alle Verwaltungsrechte sind zunächst deaktiviert/);
   assert.match(migration,/ec_has_admin_permission\('manage_roles'\)/);
   assert.match(migration,/ec_has_admin_permission\('manage_members'\)/);
+});
+
+
+test("new profile photo uploads open the editor before storage upload", async()=>{
+  const app=await source("src/App.jsx");
+  assert.match(app,/uploadProfileImage=\{selectProfilePhotoForEdit\}/);
+  assert.match(app,/setProfilePhotoEditFile\(file\)/);
 });
