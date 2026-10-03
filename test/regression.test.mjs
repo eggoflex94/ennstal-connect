@@ -1134,3 +1134,16 @@ test("member profile admin actions remain React-owned", async()=>{
   assert.doesNotMatch(unified,/document\.createElement\('button'\)[\s\S]*ec-profile-admin-open/);
   assert.match(runtime,/ecOpenUnifiedProfilePointHistory/);
 });
+
+
+test("profile visits authenticate realtime before subscribing", async()=>{
+  const realtime=await source("src/profile-visits-realtime.js");
+  const dashboard=await source("src/dashboard-community-realtime.js");
+  assert.match(realtime,/getSession\(\)/);
+  assert.match(realtime,/supabase\.realtime\.setAuth\(token\)/);
+  assert.match(realtime,/event: 'INSERT'[\s\S]*table: 'profile_visits'/);
+  assert.match(realtime,/realtime-insert/);
+  assert.match(dashboard,/supabase\.realtime\.setAuth\(session\.access_token\)/);
+  assert.doesNotMatch(dashboard,/table:'profile_visits'/);
+  assert.match(dashboard,/ec:profile-visits-changed/);
+});

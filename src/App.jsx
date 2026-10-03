@@ -235,6 +235,10 @@ export default function App() {
     };
     const handleVisitsChanged = (event) => {
       if (event.detail?.userId && event.detail.userId !== user.id) return;
+      const visit = event.detail?.visit;
+      if (visit?.profile_id === user.id && visit?.visitor_id) {
+        setProfileVisits((current) => [visit, ...current.filter((row) => row.id ? row.id !== visit.id : !(row.visitor_id === visit.visitor_id && row.visited_at === visit.visited_at))].slice(0, 50));
+      }
       void refreshProfileVisits();
     };
     window.addEventListener("ec:profile-visits-changed", handleVisitsChanged);

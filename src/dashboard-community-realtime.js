@@ -125,17 +125,25 @@ function queue(delay = 80) {
 }
 
 async function start() {
-  const { data:{ user } } = await supabase.auth.getUser();
-  if (!user?.id) return;
+  const { data:{ session } } = await supabase.auth.getSession();
+  const user = session?.user;
+  if (!user?.id || !session?.access_token) return;
   userId = user.id;
+  supabase.realtime.setAuth(session.access_token);
   await refresh();
   if (channel) await supabase.removeChannel(channel);
-  channel = supabase.channel(`dashboard-community-${user.id}`)
-    .on('postgres_changes',{event:'*',schema:'public',table:'profile_visits',filter:`profile_id=eq.${user.id}`},() => queue())
+  const nextChannel = supabase.channel(`dashboard-community-${user.id}-${Date.now()}`)
     .on('postgres_changes',{event:'*',schema:'public',table:'public_profile_updates'},() => queue())
     .on('postgres_changes',{event:'*',schema:'public',table:'profile_activity'},() => queue())
-    .on('postgres_changes',{event:'*',schema:'public',table:'news'},() => queue())
-    .subscribe();
+    .on('postgres_changes',{event:'*',schema:'public',table:'news'},() => queue());
+  channel = nextChannel;
+  nextChannel.subscribe((status) => {
+    if (channel !== nextChannel) return;
+    if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+      channel = null;
+      window.setTimeout(() => { if (!document.hidden) void start(); }, 1000);
+    }
+  });
 }
 
 window.addEventListener('ec:region-change',() => queue());
@@ -146,3 +154,9 @@ new MutationObserver(() => {
 }).observe(document.documentElement,{childList:true,subtree:true});
 
 void start();
+
+
+window.addEventListener('ec:profile-visits-changed', (event) => {
+  if (event.detail?.userId && event.detail.userId !== userId) return;
+  queue(0);
+});
