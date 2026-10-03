@@ -95,3 +95,45 @@
     flex-wrap:wrap;
   }
 }
+
+
+/* Desktop photo editor authority */
+@media (min-width: 901px) {
+  .ec-photo-editor-backdrop{
+    padding:24px;
+  }
+  .ec-photo-editor{
+    width:min(1080px,calc(100vw - 48px))!important;
+    max-width:min(1080px,calc(100vw - 48px))!important;
+    padding:24px!important;
+    overflow-x:hidden!important;
+  }
+  .ec-photo-editor>header p{
+    max-width:760px;
+  }
+  .ec-photo-editor-workspace{
+    grid-template-columns:minmax(420px,470px) minmax(360px,1fr)!important;
+    gap:34px!important;
+    align-items:start!important;
+  }
+  .ec-photo-editor-preview{
+    width:min(460px,100%)!important;
+  }
+  .ec-photo-editor-controls{
+    width:100%;
+    align-self:stretch;
+  }
+  .ec-photo-editor-controls label{
+    grid-template-columns:120px minmax(180px,1fr) 56px!important;
+    gap:14px!important;
+  }
+  .ec-photo-editor-rotate{
+    grid-template-columns:repeat(2,minmax(150px,1fr))!important;
+  }
+  .ec-photo-editor-nudges{
+    grid-template-columns:repeat(4,minmax(64px,1fr))!important;
+  }
+  .ec-photo-editor>footer{
+    flex-wrap:wrap;
+  }
+}
