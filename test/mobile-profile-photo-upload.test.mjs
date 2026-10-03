@@ -7,7 +7,8 @@ const source = async (path) => readFile(new URL(`../${path}`, import.meta.url), 
 test("mobile profile photo picker accepts phone image formats and resets same-file selection", async () => {
   const app = await source("src/App.jsx");
   assert.match(app, /accept="image\/\*,\.heic,\.heif,\.avif"/);
-  assert.match(app, /e\.currentTarget\.value = ""/);
+  assert.match(app, /const input = e\.currentTarget/);
+  assert.match(app, /input\.value = ""/);
   assert.match(app, /25 \* 1024 \* 1024/);
   assert.match(app, /heic\|heif\|avif/);
 });
