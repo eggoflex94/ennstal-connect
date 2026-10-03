@@ -205,6 +205,7 @@ import "./community-photographer.css";
 /* Absolute final personal-dock authority. */
 import "./personal-dock-final-authority.css";
 import "./neon-pink-theme.css";
+import "./header-scroll-authority.css";
 
 class AppErrorBoundary extends React.Component {
   constructor(props) {
