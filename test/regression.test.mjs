@@ -1176,3 +1176,14 @@ test("primary Head Admin uses community oversight label", async()=>{
   const directory=await source("src/NativeMembersDirectory.jsx");
   assert.match(directory,/Hauptverantwortlicher · Community/);
 });
+
+
+test("Head Admin assignment uses protected direct RPC", async()=>{
+  const runtime=await source("src/profile-admin-tools-runtime.js");
+  const app=await source("src/App.jsx");
+  const migration=await source("supabase/migrations/20261004003500_head_admin_set_role.sql");
+  assert.match(runtime,/head_admin_set_role/);
+  assert.match(app,/normalizedRole === "HEAD_ADMIN" \? "head_admin_set_role" : "admin_set_role"/);
+  assert.match(migration,/if not public\.ec_is_head_admin\(\)/);
+  assert.match(migration,/perform public\.admin_set_role\(target_user, new_role\)/);
+});
