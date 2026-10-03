@@ -27,6 +27,8 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
   const [query, setQuery] = useState("");
   const [regionId, setRegionId] = useState(profile?.home_region_id || "ALL");
   const [onlineOnly, setOnlineOnly] = useState(false);
+  const [memberType, setMemberType] = useState("ALL");
+  const [newOnly, setNewOnly] = useState(false);
   const [regionalAssignments, setRegionalAssignments] = useState([]);
   const [presenceUpdates, setPresenceUpdates] = useState({});
   const [page, setPage] = useState(1);
@@ -140,10 +142,24 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
       .filter((member) => regionId === "ALL" || member.home_region_id === regionId)
       .filter((member) => !onlineOnly || (!member.hide_online_status && presenceOnline(member)))
       .filter((member) => {
+        if (memberType === "ALL") return true;
+        if (memberType === "ADMIN") return isGlobalAdmin(member) || isRegionalAdmin(member);
+        if (memberType === "MUNICIPALITY") return normalized(member?.role) === "MUNICIPALITY";
+        if (memberType === "BUSINESS") return isBusiness(member);
+        if (memberType === "SUPPORTER") return normalized(member?.role) === "SUPPORTER";
+        return normalized(member?.role) === "MEMBER" && !isBusiness(member);
+      })
+      .filter((member) => {
+        if (!newOnly) return true;
+        const created = new Date(member?.created_at || 0).getTime();
+        return Number.isFinite(created) && Date.now() - created <= 30 * 24 * 60 * 60 * 1000;
+      })
+      .filter((member) => {
         if (!q) return true;
         const region = regionById[member.home_region_id]?.name || "";
         const roleWord = isHeadAdmin(member) || member?.is_primary_head_admin ? "hauptadmin hauptverantwortlicher alle regionen" : isGlobalAdmin(member) || isRegionalAdmin(member) ? "admin" : normalized(member?.role) === "MUNICIPALITY" ? "gemeinde" : isBusiness(member) ? "unternehmer" : normalized(member?.role) === "SUPPORTER" ? "supporter" : "mitglied";
-        return [member.nickname, member.first_name, member.last_name, region, roleWord].filter(Boolean).join(" ").toLowerCase().includes(q);
+        const interests = Array.isArray(member?.interests) ? member.interests.join(" ") : String(member?.interests || "");
+        return [member.nickname, member.first_name, member.last_name, member.location, member.company_name, interests, region, roleWord].filter(Boolean).join(" ").toLowerCase().includes(q);
       })
       .sort((a, b) => {
         const aRank = groupRank(a);
@@ -151,7 +167,7 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
         if (aRank !== bRank) return aRank - bRank;
         return displayName(a).localeCompare(displayName(b), "de", { sensitivity: "base" });
       });
-  }, [liveMembers, regionId, onlineOnly, query, regionById, regionalAdminByUser, activeRegion?.id]);
+  }, [liveMembers, regionId, onlineOnly, memberType, newOnly, query, regionById, regionalAdminByUser, activeRegion?.id]);
 
   const pageCount = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
   const pagedVisible = useMemo(() => {
@@ -161,7 +177,7 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
 
   useEffect(() => {
     setPage(1);
-  }, [query, regionId, onlineOnly, activeRegion?.id]);
+  }, [query, regionId, onlineOnly, memberType, newOnly, activeRegion?.id]);
 
   // The native directory is the only authority for member filtering.
   // Remove any regional context block left behind by an older shell build so
@@ -238,16 +254,26 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
 
 
     <div className="native-member-search panel">
-      <input className="search-input" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name, Rolle oder Region suchen …" />
+      <input className="search-input" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name, Ort, Interesse, Unternehmen oder Rolle suchen …" />
       <select value={regionId} onChange={(event) => setRegionId(event.target.value)} aria-label="Region auswählen">
         <option value="ALL">Alle Regionen</option>
         {regions.map((region) => <option value={region.id} key={region.id}>{region.name}</option>)}
       </select>
+      <select value={memberType} onChange={(event) => setMemberType(event.target.value)} aria-label="Mitgliedertyp auswählen">
+        <option value="ALL">Alle Typen</option>
+        <option value="MEMBER">Mitglieder</option>
+        <option value="BUSINESS">Unternehmenskonten</option>
+        <option value="SUPPORTER">Supporter</option>
+        <option value="MUNICIPALITY">Gemeinden</option>
+        <option value="ADMIN">Administration</option>
+      </select>
       <label><input type="checkbox" checked={onlineOnly} onChange={(event) => setOnlineOnly(event.target.checked)} /> Nur online</label>
+      <label><input type="checkbox" checked={newOnly} onChange={(event) => setNewOnly(event.target.checked)} /> Neu seit 30 Tagen</label>
       <div className="native-member-quick-filters">
         <button type="button" className={regionId === "ALL" ? "active" : ""} onClick={() => setRegionId("ALL")}>Alle Regionen</button>
         {homeRegionId && <button type="button" className={regionId === homeRegionId && !onlineOnly ? "active" : ""} onClick={() => { setRegionId(homeRegionId); setOnlineOnly(false); }}>Heimatregion: {homeRegion?.short_name || homeRegion?.name || "Region"}</button>}
         {activeRegion?.id && activeRegion.id !== homeRegionId && <button type="button" className={regionId === activeRegion.id && !onlineOnly ? "active" : ""} onClick={() => { setRegionId(activeRegion.id); setOnlineOnly(false); }}>Aktuelle Region: {activeRegion.short_name || activeRegion.name}</button>}
+        {(query || regionId === "ALL" || onlineOnly || memberType !== "ALL" || newOnly) && <button type="button" className="native-member-reset-filter" onClick={() => { setQuery(""); setRegionId(homeRegionId || "ALL"); setOnlineOnly(false); setMemberType("ALL"); setNewOnly(false); }}>Filter zurücksetzen</button>}
       </div>
     </div>
 
