@@ -4,6 +4,7 @@ const THEMES = {
   'layout-theme-red': { key: 'red', logo: '/ennstal-connect-wordmark-red.svg' },
   'layout-theme-blue': { key: 'blue', logo: '/ennstal-connect-wordmark-blue.svg' },
   'layout-theme-neon': { key: 'neon', logo: '/ennstal-connect-wordmark-neon.svg' },
+  'layout-theme-neon-pink': { key: 'neon-pink', logo: '/ennstal-connect-wordmark.svg' },
   'layout-theme-alpine': { key: 'alpine', logo: '/ennstal-connect-wordmark-alpine.svg' },
   'layout-theme-teal': { key: 'teal', logo: '/ennstal-connect-wordmark-teal.svg' },
   'layout-theme-violet': { key: 'violet', logo: '/ennstal-connect-wordmark-violet.svg' },
@@ -59,6 +60,7 @@ function layoutOptions(state) {
     ['theme-violet', unlocked(450) ? 'Enzian Violett – Modern & Edel' : '🔒 Enzian Violett – ab 450 Aktivitätspunkten', unlocked(450)],
     ['theme-copper', unlocked(650) ? 'Kupfer Nacht – Kupfer & Tiefpetrol' : '🔒 Kupfer Nacht – ab 650 Aktivitätspunkten', unlocked(650)],
     ['theme-aurora', unlocked(900) ? 'Polarlicht – Cyan, Magenta & Nachtblau' : '🔒 Polarlicht – ab 900 Aktivitätspunkten', unlocked(900)],
+    ['theme-neon-pink', unlocked(1000) ? 'Neon Pink – Ultra Pink & Nacht' : '🔒 Neon Pink – ab 1000 Aktivitätspunkten', unlocked(1000)],
     ['theme-neon', unlocked(1200) ? 'Neon Grün – Giftgrün & Dunkel' : '🔒 Neon Grün – ab 1200 Aktivitätspunkten', unlocked(1200)],
   ];
 }
@@ -101,6 +103,7 @@ function rewardText(state) {
     [450, 'Enzian Violett'],
     [650, 'Kupfer Nacht'],
     [900, 'Polarlicht'],
+    [1000, 'Neon Pink'],
     [1200, 'Neon Grün'],
   ].find(([minimum]) => score < minimum);
   if (!next) return 'Alle Layoutfarben freigeschaltet.';
@@ -156,6 +159,7 @@ function renderProgress(section) {
     [450,'Enzian Violett'],
     [650,'Kupfer Nacht'],
     [900,'Polarlicht'],
+    [1000,'Neon Pink'],
     [1200,'Neon Grün'],
   ].map(([minimum,label]) => {
     const open = privilegedThemeUnlocked || businessUnlocked || score >= minimum;
