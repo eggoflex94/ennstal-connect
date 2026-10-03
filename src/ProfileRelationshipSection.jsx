@@ -35,20 +35,9 @@ export default function ProfileRelationshipSection({ member, currentUserId }) {
 
   async function load() {
     if (!supabase || !member?.id) return;
-    const relationshipQuery = supabase
-      .from("profile_relationships")
-      .select("id,owner_id,status_type,partner_user_id,partner_name,confirmation_status,created_at,updated_at")
-      .eq("owner_id", member.id)
-      .order("created_at", { ascending: true });
+    const publicRelationshipsQuery = supabase.rpc("profile_relationships_for_profile", { p_profile_id: member.id });
 
-    const confirmedForPartnerQuery = supabase
-      .from("profile_relationships")
-      .select("id,owner_id,status_type,partner_user_id,partner_name,confirmation_status,created_at,updated_at")
-      .eq("partner_user_id", member.id)
-      .eq("confirmation_status", "ACCEPTED")
-      .order("created_at", { ascending: true });
-
-    const tasks = [relationshipQuery, confirmedForPartnerQuery];
+    const tasks = [publicRelationshipsQuery];
     if (mine) {
       tasks.push(
         supabase
@@ -70,25 +59,19 @@ export default function ProfileRelationshipSection({ member, currentUserId }) {
     }
 
     const result = await Promise.all(tasks);
-    const ownResult = result[0];
-    const confirmedPartnerResult = result[1];
-    const ownRows = ownResult.error ? [] : (ownResult.data || []);
-    const confirmedPartnerRows = confirmedPartnerResult.error ? [] : (confirmedPartnerResult.data || []);
-    setRows([
-      ...ownRows.map((row) => ({ ...row, perspective: "OWNER" })),
-      ...confirmedPartnerRows.map((row) => ({ ...row, perspective: "PARTNER" })),
-    ]);
+    const relationshipResult = result[0];
+    const loadedRows = relationshipResult.error ? [] : (relationshipResult.data || []);
+    setRows(loadedRows);
 
     let pendingRows = [];
     if (mine) {
-      pendingRows = result[2]?.error ? [] : (result[2]?.data || []);
+      pendingRows = result[1]?.error ? [] : (result[1]?.data || []);
       setIncoming(pendingRows);
-      if (!result[3]?.error) setMembers(result[3]?.data || []);
+      if (!result[2]?.error) setMembers(result[2]?.data || []);
     }
 
     const ids = [...new Set([
-      ...ownRows.map((row) => row.partner_user_id),
-      ...confirmedPartnerRows.map((row) => row.owner_id),
+      ...loadedRows.map((row) => row.perspective === "PARTNER" ? row.owner_id : row.partner_user_id),
       ...pendingRows.map((row) => row.owner_id),
     ].filter(Boolean))];
     if (ids.length) {
@@ -157,7 +140,7 @@ export default function ProfileRelationshipSection({ member, currentUserId }) {
     }
   }
 
-  const visibleRows = rows.filter((row) => mine || row.confirmation_status === "ACCEPTED" || row.confirmation_status === "NOT_REQUIRED");
+  const visibleRows = rows.filter((row) => row.confirmation_status !== "REJECTED");
 
   return <section className="profile-relationship-section">
     <div className="profile-relationship-heading">
@@ -181,7 +164,7 @@ export default function ProfileRelationshipSection({ member, currentUserId }) {
               mit {personName(linked)}
             </button>}
             {!row.partner_user_id && row.partner_name && <span>mit {row.partner_name}</span>}
-            {mine && pending && <small>Bestätigung der verlinkten Person ausstehend</small>}
+            {pending && <small>{mine ? "Bestätigung der verlinkten Person ausstehend" : "Verknüpfte Person noch nicht bestätigt"}</small>}
             {mine && rejected && <small>Verknüpfung wurde abgelehnt</small>}
           </div>
           {mine && row.perspective === "OWNER" && <button type="button" className="profile-relationship-remove" onClick={() => removeRelationship(row.id)}>Entfernen</button>}
