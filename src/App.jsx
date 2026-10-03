@@ -236,8 +236,20 @@ export default function App() {
       void refreshProfileVisits();
     };
     window.addEventListener("ec:profile-visits-changed", handleVisitsChanged);
+
+    // Always load a fresh snapshot after login. This avoids a startup race
+    // where the realtime helper can emit before React has attached its listener.
+    void refreshProfileVisits();
+
+    // Mobile backgrounding and sleeping tabs can temporarily lose the realtime
+    // websocket. Keep a small visible-tab fallback so the list self-heals.
+    const pollId = window.setInterval(() => {
+      if (!document.hidden) void refreshProfileVisits();
+    }, 15000);
+
     return () => {
       cancelled = true;
+      window.clearInterval(pollId);
       window.removeEventListener("ec:profile-visits-changed", handleVisitsChanged);
     };
   }, [user?.id]);
