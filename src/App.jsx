@@ -972,20 +972,22 @@ export default function App() {
   async function resolveReport(id, status) { const promptText = status === "CONFIRMED" ? "Was wurde aufgrund der Meldung unternommen?" : "Warum wurde die Meldung abgelehnt?"; const note = prompt(promptText, status === "CONFIRMED" ? "Die Meldung wurde geprüft und geeignete Maßnahmen wurden gesetzt." : "Nach Prüfung konnte kein Regelverstoß festgestellt werden."); if (note === null || note.trim().length < 3) return showNotice("Bitte einen nachvollziehbaren Grund angeben."); const { error } = await supabase.rpc("admin_resolve_report", { p_report_id: id, p_status: status, p_action_note: note.trim() }); if (error) return showNotice(error.message); showNotice("Meldung bearbeitet – der Melder wurde automatisch informiert."); await loadAll(); }
 
   async function updateMemberRole(m, newRole) {
-    if (!isHeadAdmin(profile?.role)) return showNotice("Nur der Global Admin darf Rollen ändern.");
-    if (!m?.id || m.id === user.id || m.role === "HEAD_ADMIN") return showNotice("Der Global Admin kann nicht verändert werden.");
+    if (!profile?.is_primary_head_admin && !hasAdminPermission("manage_roles")) return showNotice("Keine Berechtigung zur Rollenverwaltung.");
+    if (!m?.id || m.id === user.id || m.is_primary_head_admin) return showNotice("Der primäre Head Admin ist geschützt.");
     const normalizedRole = String(newRole || "").trim().toUpperCase();
-    if (!["MEMBER", "SUPPORTER", "ADMIN", "MUNICIPALITY"].includes(normalizedRole)) return showNotice("Bitte eine gültige Rolle auswählen.");
-    const { error } = await supabase.rpc("admin_set_role", { target_user: m.id, new_role: normalizedRole });
+    if (!["MEMBER", "SUPPORTER", "ADMIN", "MUNICIPALITY", "HEAD_ADMIN"].includes(normalizedRole)) return showNotice("Bitte eine gültige Rolle auswählen.");
+    if (normalizedRole === "HEAD_ADMIN" && !profile?.is_primary_head_admin) return showNotice("Nur der primäre Head Admin darf weitere Head Admins ernennen.");
+    const rpcName = normalizedRole === "HEAD_ADMIN" ? "head_admin_set_role" : "admin_set_role";
+    const { error } = await supabase.rpc(rpcName, { target_user: m.id, new_role: normalizedRole });
     if (error) return showNotice(error.message);
     const { data: changed, error: verifyError } = await supabase.from("profiles").select("id,role").eq("id", m.id).maybeSingle();
-    if (verifyError || !changed || changed.role !== normalizedRole) return showNotice("Die Rolle wurde nicht bestätigt. Bitte führe den Datenbank-Fix aus und versuche es erneut.");
+    if (verifyError || !changed || changed.role !== normalizedRole) return showNotice("Die Rollenänderung konnte nicht bestätigt werden.");
     showNotice(normalizedRole === "HEAD_ADMIN" ? `${getName(m)} ist jetzt Head Admin. Vergib jetzt die Rechte einzeln.` : `${getName(m)} ist jetzt ${roleLabel(normalizedRole)}.`);
     await loadAll();
     if (normalizedRole === "HEAD_ADMIN") await loadPermissions(m.id);
   }
 
-  async function toggleSuspension(m) {
+    async function toggleSuspension(m) {
     if (!(profile?.is_primary_head_admin || hasAdminPermission("manage_members")) || m.role === "HEAD_ADMIN") return showNotice("Keine Berechtigung.");
     const next = m.account_status === "SUSPENDED" ? "ACTIVE" : "SUSPENDED";
     const reason = next === "SUSPENDED" ? prompt(`Warum wird ${getName(m)} gesperrt?`, "Verstoß gegen die Community-Regeln") : null;
