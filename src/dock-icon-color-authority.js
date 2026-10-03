@@ -70,9 +70,23 @@ function applyButton(button) {
     icon.innerHTML = ICONS[label];
     icon.dataset.ecModernIcon = label;
   }
-  [...button.children].forEach((child) => {
-    if (child !== icon && child.matches?.('span,b,i,.icon')) child.classList.add('ec-compact-menu-label');
-  });
+  if (isAdminTool) {
+    // Admin shortcuts are injected by several runtimes and can arrive with
+    // legacy glyphs (<b>/<i>) still inside the button. Normalize them to one
+    // SVG icon + one text label so icons never overlap.
+    [...button.children].forEach((child) => {
+      if (child === icon || child.matches?.('.ec-dock-notification-badge')) return;
+      child.remove();
+    });
+    const labelNode = document.createElement('span');
+    labelNode.className = 'ec-compact-menu-label';
+    labelNode.textContent = label;
+    button.appendChild(labelNode);
+  } else {
+    [...button.children].forEach((child) => {
+      if (child !== icon && child.matches?.('span,b,i,.icon')) child.classList.add('ec-compact-menu-label');
+    });
+  }
 }
 
 function applyAll() {
