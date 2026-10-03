@@ -261,7 +261,7 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
         const cardMember = member?.is_primary_head_admin
           ? { ...member, directory_admin: true, directory_role_star: roleStarSrc(member), directory_responsibility_label: "Hauptverantwortlicher · Community" }
           : isHeadAdmin(member)
-            ? { ...member, directory_admin: true, directory_role_star: roleStarSrc(member), directory_responsibility_label: "Head Admin · alle Regionen" }
+            ? { ...member, directory_admin: true, directory_role_star: roleStarSrc(member), directory_responsibility_label: "Hauptadmin · alle Regionen" }
             : normalized(member?.role) === "ADMIN"
               ? { ...member, directory_admin: true, directory_role_star: roleStarSrc(member), directory_responsibility_label: `Global Admin · Region ${homeRegionLabel}` }
               : isRegionalAdmin(member)
