@@ -37,13 +37,14 @@ function cropGeometry(source, rotation, size) {
   const rotatedWidth = quarterTurn ? source.naturalHeight : source.naturalWidth;
   const rotatedHeight = quarterTurn ? source.naturalWidth : source.naturalHeight;
   const coverScale = Math.max(size / rotatedWidth, size / rotatedHeight);
+  const containScale = Math.min(size / rotatedWidth, size / rotatedHeight);
   const visibleDiameter = size * (1 - CIRCLE_INSET_RATIO * 2);
   const renderedMinDimension = Math.min(rotatedWidth * coverScale, rotatedHeight * coverScale);
   const circleFillZoom = Math.max(0.1, visibleDiameter / Math.max(renderedMinDimension, 0.0001));
-  return { quarterTurn, coverScale, circleFillZoom };
+  return { quarterTurn, coverScale, containScale, circleFillZoom };
 }
 
-function drawEditedImage(canvas, source, { zoom, x, y, rotation }, size) {
+function drawEditedImage(canvas, source, { zoom, x, y, rotation, mode = "cover" }, size) {
   if (!canvas || !source) return;
   canvas.width = size;
   canvas.height = size;
@@ -54,22 +55,55 @@ function drawEditedImage(canvas, source, { zoom, x, y, rotation }, size) {
   ctx.fillStyle = "#f3f6f8";
   ctx.fillRect(0, 0, size, size);
 
-  const { quarterTurn, coverScale } = cropGeometry(source, rotation, size);
+  const { quarterTurn, coverScale, containScale } = cropGeometry(source, rotation, size);
+  const radians = rotation * Math.PI / 180;
+
+  if (mode === "contain") {
+    // Fill the square with a soft version of the same image so the complete
+    // photo can stay visible without ugly empty bars in the round avatar.
+    const bgScale = coverScale;
+    const bgW = source.naturalWidth * bgScale;
+    const bgH = source.naturalHeight * bgScale;
+    ctx.save();
+    ctx.filter = "blur(28px) brightness(.78)";
+    ctx.translate(size / 2, size / 2);
+    ctx.rotate(radians);
+    ctx.drawImage(source, -bgW / 2, -bgH / 2, bgW, bgH);
+    ctx.restore();
+    ctx.filter = "none";
+
+    const scale = containScale * Math.max(0.35, zoom);
+    const drawW = source.naturalWidth * scale;
+    const drawH = source.naturalHeight * scale;
+    const renderedW = quarterTurn ? drawH : drawW;
+    const renderedH = quarterTurn ? drawW : drawH;
+    const freeX = Math.max(0, (size - renderedW) / 2);
+    const freeY = Math.max(0, (size - renderedH) / 2);
+    const offsetX = (Math.max(-PAN_X_LIMIT, Math.min(PAN_X_LIMIT, x)) / PAN_X_LIMIT) * freeX;
+    const yLimit = y < 0 ? PAN_Y_UP_LIMIT : PAN_Y_DOWN_LIMIT;
+    const offsetY = (Math.max(-yLimit, Math.min(yLimit, y)) / Math.max(1, yLimit)) * freeY;
+
+    ctx.save();
+    ctx.translate(size / 2 + offsetX, size / 2 + offsetY);
+    ctx.rotate(radians);
+    ctx.drawImage(source, -drawW / 2, -drawH / 2, drawW, drawH);
+    ctx.restore();
+    return;
+  }
+
   const scale = coverScale * zoom;
   const drawW = source.naturalWidth * scale;
   const drawH = source.naturalHeight * scale;
   const renderedW = quarterTurn ? drawH : drawW;
   const renderedH = quarterTurn ? drawW : drawH;
-  // The visible avatar is circular and inset from the square canvas.
-  // Allow movement as long as the circle remains covered; the square corners
-  // are outside the final avatar and must not unnecessarily lock panning.
   const visibleDiameter = size * (1 - CIRCLE_INSET_RATIO * 2);
   const maxOffsetX = Math.max(0, (renderedW - visibleDiameter) / 2);
   const maxOffsetY = Math.max(0, (renderedH - visibleDiameter) / 2);
-  const requested = panOffsets(x, y, size);
-  const offsetX = Math.max(-maxOffsetX, Math.min(maxOffsetX, requested.x));
-  const offsetY = Math.max(-maxOffsetY, Math.min(maxOffsetY, requested.y));
-  const radians = rotation * Math.PI / 180;
+
+  // Slider extremes now always map to the maximum useful movement.
+  const offsetX = (Math.max(-PAN_X_LIMIT, Math.min(PAN_X_LIMIT, x)) / PAN_X_LIMIT) * maxOffsetX;
+  const yLimit = y < 0 ? PAN_Y_UP_LIMIT : PAN_Y_DOWN_LIMIT;
+  const offsetY = (Math.max(-yLimit, Math.min(yLimit, y)) / Math.max(1, yLimit)) * maxOffsetY;
 
   ctx.save();
   ctx.translate(size / 2 + offsetX, size / 2 + offsetY);
@@ -84,6 +118,7 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
   const [x, setX] = useState(0);
   const [y, setY] = useState(0);
   const [rotation, setRotation] = useState(0);
+  const [mode, setMode] = useState("cover");
   const [busy, setBusy] = useState(false);
   const [loadError, setLoadError] = useState("");
   const [saveError, setSaveError] = useState("");
@@ -119,13 +154,13 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
     drawEditedImage(
       previewCanvasRef.current,
       source,
-      { zoom, x, y, rotation },
+      { zoom, x, y, rotation, mode },
       PREVIEW_SIZE
     );
-  }, [source, zoom, x, y, rotation]);
+  }, [source, zoom, x, y, rotation, mode]);
 
   const circleFillZoom = source ? cropGeometry(source, rotation, PREVIEW_SIZE).circleFillZoom : 0.84;
-  const minZoom = Math.max(0.1, circleFillZoom);
+  const minZoom = mode === "contain" ? 0.55 : Math.max(0.1, circleFillZoom);
   const zoomSliderValue = Math.max(0, Math.min(100,
     ((zoom - minZoom) / Math.max(0.0001, MAX_ZOOM - minZoom)) * 100
   ));
@@ -178,6 +213,7 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
     setX(0);
     setY(0);
     setRotation(0);
+    setMode("cover");
   };
 
   const nudge = (dx, dy) => {
@@ -185,7 +221,15 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
   };
 
   const fillCircle = () => {
-    setZoom(minZoom);
+    setMode("cover");
+    setZoom(Math.max(1, circleFillZoom));
+    setX(0);
+    setY(0);
+  };
+
+  const showWholePhoto = () => {
+    setMode("contain");
+    setZoom(1);
     setX(0);
     setY(0);
   };
@@ -201,7 +245,7 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
     setSaveError("");
     try {
       const canvas = exportCanvasRef.current;
-      drawEditedImage(canvas, source, { zoom, x, y, rotation }, SIZE);
+      drawEditedImage(canvas, source, { zoom, x, y, rotation, mode }, SIZE);
 
       const blob = await new Promise((resolve) =>
         canvas.toBlob(resolve, "image/webp", 0.92)
@@ -242,7 +286,7 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
         <div>
           <span className="eyebrow">PROFILBILD</span>
           <h2>Foto anpassen</h2>
-          <p>Ziehe das Bild direkt im Kreis oder nutze die Regler. Der sichtbare Profilkreis bleibt dabei immer vollständig mit deinem Foto gefüllt.</p>
+          <p>Ziehe das Bild direkt im Kreis oder nutze die Regler. Du kannst zwischen engem Profil-Ausschnitt und vollständigem Foto wechseln.</p>
         </div>
         <button type="button" className="ec-photo-editor-close" onClick={onCancel} aria-label="Schließen">×</button>
       </header>
@@ -268,6 +312,10 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
         </div>
 
         <div className="ec-photo-editor-controls">
+          <div className="ec-photo-editor-mode" role="group" aria-label="Bildmodus">
+            <button type="button" className={mode === "cover" ? "is-active" : ""} onClick={() => { setMode("cover"); setZoom(Math.max(1, circleFillZoom)); setX(0); setY(0); }}>Profilkreis füllen</button>
+            <button type="button" className={mode === "contain" ? "is-active" : ""} onClick={showWholePhoto}>Ganzes Foto</button>
+          </div>
           <label>
             <span>Zoom</span>
             <input
@@ -299,7 +347,8 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
             <button type="button" onClick={() => nudge(0,12)} aria-label="Bild nach unten">↓</button>
           </div>
           <div className="ec-photo-editor-rotate">
-            <button type="button" onClick={fillCircle}>Kreis vollständig füllen</button>
+            <button type="button" onClick={fillCircle}>Profilkreis füllen</button>
+            <button type="button" onClick={showWholePhoto}>Ganzes Foto</button>
             <button type="button" onClick={centerImage}>Bild zentrieren</button>
             <button type="button" onClick={() => setRotation(v => v - 90)}>↶ Links drehen</button>
             <button type="button" onClick={() => setRotation(v => v + 90)}>↷ Rechts drehen</button>
