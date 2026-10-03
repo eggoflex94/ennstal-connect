@@ -64,3 +64,14 @@ test("profile photo zoom-out never exposes a flat white or light canvas backgrou
   assert.match(editor, /drawSoftBackdrop\(ctx, source, rotation, size, coverScale\)/);
   assert.doesNotMatch(editor, /fillStyle = "#f3f6f8"/);
 });
+
+
+test("whole photo mode always shows the complete image without white letterboxing", async () => {
+  const editor = await source("src/ProfilePhotoEditor.jsx");
+  assert.match(editor, /if \(mode === "contain"\)/);
+  assert.match(editor, /const scale = containScale;/);
+  assert.match(editor, /Zoom\/pan are intentionally ignored here/);
+  assert.match(editor, /brightness\(\.56\) saturate\(1\.12\)/);
+  assert.match(editor, /fillStyle = "rgba\(10, 24, 36, 0\.22\)"/);
+  assert.match(editor, /Das komplette Foto wird zentriert und ohne Zuschnitt angezeigt/);
+});
