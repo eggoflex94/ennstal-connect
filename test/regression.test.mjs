@@ -900,3 +900,17 @@ test("member card leaves enough room for responsibility and age", async()=>{
   assert.match(css,/\.ec-member-responsibility\{/);
   assert.match(css,/\.ec-member-age\{[\s\S]*display:block!important/);
 });
+
+
+test("personal dock separates only authorized admin shortcuts below normal quick actions", async()=>{
+  const icons=await source("src/dock-icon-color-authority.js");
+  const css=await source("src/personal-dock-final-authority.css");
+  assert.match(icons,/const ADMIN_TOOL_LABELS = new Set/);
+  for(const label of ["Admin-Zentrale","Team-Aktivitäten","Fake-Erkennung","Werbung","Beweissicherung","News-Popups"]){
+    assert.ok(icons.includes(`'${label}'`));
+  }
+  assert.match(icons,/button\.dataset\.ecAdminTool = isAdminTool \? '1' : '0'/);
+  assert.match(icons,/grid\.classList\.toggle\('ec-has-admin-tools', hasAdminTools\)/);
+  assert.match(css,/content:"ADMIN TOOLS"/);
+  assert.match(css,/\[data-ec-admin-tool="1"\]/);
+});

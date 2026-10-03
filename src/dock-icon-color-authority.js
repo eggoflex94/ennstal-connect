@@ -22,6 +22,15 @@ const TONES = {
   'Fake-Erkennung': 'rose', 'Werbung': 'pink', 'Beweissicherung': 'indigo'
 };
 
+const ADMIN_TOOL_LABELS = new Set([
+  'Admin-Zentrale',
+  'Team-Aktivitäten',
+  'Fake-Erkennung',
+  'Werbung',
+  'Beweissicherung',
+  'News-Popups'
+]);
+
 function clean(value) { return String(value || '').replace(/\s+/g, ' ').trim(); }
 
 function labelFor(button) {
@@ -48,6 +57,9 @@ function applyButton(button) {
   button.title = label;
   button.setAttribute('aria-label', label);
   button.classList.add('ec-colored-dock-icon');
+  const isAdminTool = ADMIN_TOOL_LABELS.has(label);
+  button.dataset.ecAdminTool = isAdminTool ? '1' : '0';
+  button.classList.toggle('ec-dock-admin-tool', isAdminTool);
   let icon = button.querySelector(':scope > .ec-compact-menu-icon');
   if (!icon) {
     icon = document.createElement('span');
@@ -67,6 +79,8 @@ function applyAll() {
   const grid = document.querySelector('.ec-right-dock .ec-compact-menu-grid');
   if (!grid) return false;
   grid.querySelectorAll(':scope > button, :scope > a, :scope > [role="button"]').forEach(applyButton);
+  const hasAdminTools = Boolean(grid.querySelector(':scope > [data-ec-admin-tool="1"]'));
+  grid.classList.toggle('ec-has-admin-tools', hasAdminTools);
   return true;
 }
 
