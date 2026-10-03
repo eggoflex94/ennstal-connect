@@ -9,16 +9,20 @@ function profileTargetId() {
 async function currentRole() {
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user?.id) return { role: '', error: authError || new Error('Nicht eingeloggt.') };
-  const { data, error } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
-  return { role: String(data?.role || '').toUpperCase(), error };
+  const { data, error } = await supabase.from('profiles').select('role,is_primary_head_admin').eq('id', user.id).maybeSingle();
+  return {
+    role: String(data?.role || '').toUpperCase(),
+    isPrimaryHead: data?.is_primary_head_admin === true,
+    error
+  };
 }
 
 async function handleRoleAction(button, action) {
   if (!supabase || roleActionBusy) return;
   const targetId = profileTargetId();
   const nextRole = String(action.split(':')[1] || '').toUpperCase();
-  if (!targetId || !['MEMBER', 'SUPPORTER', 'ADMIN', 'MUNICIPALITY'].includes(nextRole)) {
-    window.alert('Rollenänderung konnte nicht vorbereitet werden.');
+  if (!targetId || !['MEMBER', 'SUPPORTER', 'ADMIN', 'MUNICIPALITY', 'HEAD_ADMIN'].includes(nextRole)) {
+    window.alert('Ungültige Rollenänderung.');
     return;
   }
 
@@ -30,21 +34,27 @@ async function handleRoleAction(button, action) {
   try {
     const actor = await currentRole();
     if (actor.error) throw actor.error;
-    if (actor.role !== 'HEAD_ADMIN') throw new Error('Nur der Head Admin darf Rollen vergeben oder entfernen.');
+    if (actor.role !== 'HEAD_ADMIN') throw new Error('Nur ein Head Admin darf Rollen vergeben oder entfernen.');
+    if (nextRole === 'HEAD_ADMIN' && !actor.isPrimaryHead) {
+      throw new Error('Nur der primäre Head Admin darf weitere Head Admins ernennen.');
+    }
 
-    const { error } = await supabase.rpc('admin_set_role', {
+    const rpcName = nextRole === 'HEAD_ADMIN' ? 'head_admin_set_role' : 'admin_set_role';
+    const { error } = await supabase.rpc(rpcName, {
       target_user: targetId,
       new_role: nextRole
     });
     if (error) throw error;
 
-    window.alert(nextRole === 'ADMIN'
-      ? 'Community Admin wurde erfolgreich vergeben.'
-      : nextRole === 'MUNICIPALITY'
-        ? 'Gemeinderolle wurde erfolgreich vergeben.'
-        : nextRole === 'MEMBER'
-          ? 'Die Admin-/Supporter-/Gemeinderolle wurde erfolgreich entfernt.'
-          : 'Supporter-Rolle wurde erfolgreich vergeben.');
+    window.alert(nextRole === 'HEAD_ADMIN'
+      ? 'Head Admin wurde erfolgreich vergeben. Die Einzelrechte bleiben zunächst deaktiviert.'
+      : nextRole === 'ADMIN'
+        ? 'Community Admin wurde erfolgreich vergeben.'
+        : nextRole === 'MUNICIPALITY'
+          ? 'Gemeinderolle wurde erfolgreich vergeben.'
+          : nextRole === 'MEMBER'
+            ? 'Die Admin-/Supporter-/Gemeinderolle wurde erfolgreich entfernt.'
+            : 'Supporter-Rolle wurde erfolgreich vergeben.');
     window.location.reload();
   } catch (error) {
     console.error('Profilrolle konnte nicht aktualisiert werden:', error);
