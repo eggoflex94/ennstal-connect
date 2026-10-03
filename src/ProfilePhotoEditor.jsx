@@ -51,12 +51,19 @@ function drawSoftBackdrop(ctx, source, rotation, size, coverScale) {
   const bgH = source.naturalHeight * backdropScale;
 
   ctx.save();
-  ctx.filter = "blur(28px) brightness(.78)";
+  ctx.filter = "blur(34px) brightness(.56) saturate(1.12)";
   ctx.translate(size / 2, size / 2);
   ctx.rotate(radians);
   ctx.drawImage(source, -bgW / 2, -bgH / 2, bgW, bgH);
   ctx.restore();
   ctx.filter = "none";
+
+  // Darken the image-derived backdrop slightly so exposed space can never
+  // turn into a white/light letterbox, even with very bright source photos.
+  ctx.save();
+  ctx.fillStyle = "rgba(10, 24, 36, 0.22)";
+  ctx.fillRect(0, 0, size, size);
+  ctx.restore();
 }
 
 function drawEditedImage(canvas, source, { zoom, x, y, rotation, mode = "cover" }, size) {
@@ -75,19 +82,14 @@ function drawEditedImage(canvas, source, { zoom, x, y, rotation, mode = "cover" 
   drawSoftBackdrop(ctx, source, rotation, size, coverScale);
 
   if (mode === "contain") {
-    const scale = containScale * Math.max(0.35, zoom);
+    // "Ganzes Foto" is a strict fit mode: always show the complete source
+    // image, centered and uncropped. Zoom/pan are intentionally ignored here.
+    const scale = containScale;
     const drawW = source.naturalWidth * scale;
     const drawH = source.naturalHeight * scale;
-    const renderedW = quarterTurn ? drawH : drawW;
-    const renderedH = quarterTurn ? drawW : drawH;
-    const freeX = Math.max(0, (size - renderedW) / 2);
-    const freeY = Math.max(0, (size - renderedH) / 2);
-    const offsetX = (Math.max(-PAN_X_LIMIT, Math.min(PAN_X_LIMIT, x)) / PAN_X_LIMIT) * freeX;
-    const yLimit = y < 0 ? PAN_Y_UP_LIMIT : PAN_Y_DOWN_LIMIT;
-    const offsetY = (Math.max(-yLimit, Math.min(yLimit, y)) / Math.max(1, yLimit)) * freeY;
 
     ctx.save();
-    ctx.translate(size / 2 + offsetX, size / 2 + offsetY);
+    ctx.translate(size / 2, size / 2);
     ctx.rotate(radians);
     ctx.drawImage(source, -drawW / 2, -drawH / 2, drawW, drawH);
     ctx.restore();
@@ -163,7 +165,7 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
   }, [source, zoom, x, y, rotation, mode]);
 
   const circleFillZoom = source ? cropGeometry(source, rotation, PREVIEW_SIZE).circleFillZoom : 0.84;
-  const minZoom = mode === "contain" ? 0.55 : Math.max(0.1, circleFillZoom);
+  const minZoom = Math.max(0.1, circleFillZoom);
   const zoomSliderValue = Math.max(0, Math.min(100,
     ((zoom - minZoom) / Math.max(0.0001, MAX_ZOOM - minZoom)) * 100
   ));
@@ -319,36 +321,42 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
             <button type="button" className={mode === "cover" ? "is-active" : ""} onClick={() => { setMode("cover"); setZoom(Math.max(1, circleFillZoom)); setX(0); setY(0); }}>Profilkreis füllen</button>
             <button type="button" className={mode === "contain" ? "is-active" : ""} onClick={showWholePhoto}>Ganzes Foto</button>
           </div>
-          <label>
-            <span>Zoom</span>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              step="1"
-              value={zoomSliderValue}
-              onInput={e => setZoom(zoomFromSlider(e.currentTarget.value))}
-              onChange={e => setZoom(zoomFromSlider(e.currentTarget.value))}
-              aria-label="Profilbild Zoom"
-            />
-            <b>{zoomSliderValue <= 1 ? "Weit" : Math.round(zoom * 100) + "%"}</b>
-          </label>
-          <label>
-            <span>Links / rechts</span>
-            <input type="range" min={-PAN_X_LIMIT} max={PAN_X_LIMIT} step="1" value={x} onChange={e => applyPan(Number(e.target.value), y)}/>
-            <b>{x}</b>
-          </label>
-          <label>
-            <span>Oben / unten</span>
-            <input type="range" min={-PAN_Y_UP_LIMIT} max={PAN_Y_DOWN_LIMIT} step="1" value={y} onChange={e => applyPan(x, Number(e.target.value))}/>
-            <b>{y}</b>
-          </label>
-          <div className="ec-photo-editor-nudges" aria-label="Bild fein verschieben">
-            <button type="button" onClick={() => nudge(0,-12)} aria-label="Bild nach oben">↑</button>
-            <button type="button" onClick={() => nudge(-12,0)} aria-label="Bild nach links">←</button>
-            <button type="button" onClick={() => nudge(12,0)} aria-label="Bild nach rechts">→</button>
-            <button type="button" onClick={() => nudge(0,12)} aria-label="Bild nach unten">↓</button>
-          </div>
+          {mode === "contain" ? (
+            <div className="ec-photo-editor-whole-note" role="status">
+              Das komplette Foto wird zentriert und ohne Zuschnitt angezeigt. Freie Fläche wird mit dem Foto selbst gefüllt – ohne weißen Hintergrund.
+            </div>
+          ) : <>
+            <label>
+              <span>Zoom</span>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                value={zoomSliderValue}
+                onInput={e => setZoom(zoomFromSlider(e.currentTarget.value))}
+                onChange={e => setZoom(zoomFromSlider(e.currentTarget.value))}
+                aria-label="Profilbild Zoom"
+              />
+              <b>{zoomSliderValue <= 1 ? "Weit" : Math.round(zoom * 100) + "%"}</b>
+            </label>
+            <label>
+              <span>Links / rechts</span>
+              <input type="range" min={-PAN_X_LIMIT} max={PAN_X_LIMIT} step="1" value={x} onChange={e => applyPan(Number(e.target.value), y)}/>
+              <b>{x}</b>
+            </label>
+            <label>
+              <span>Oben / unten</span>
+              <input type="range" min={-PAN_Y_UP_LIMIT} max={PAN_Y_DOWN_LIMIT} step="1" value={y} onChange={e => applyPan(x, Number(e.target.value))}/>
+              <b>{y}</b>
+            </label>
+            <div className="ec-photo-editor-nudges" aria-label="Bild fein verschieben">
+              <button type="button" onClick={() => nudge(0,-12)} aria-label="Bild nach oben">↑</button>
+              <button type="button" onClick={() => nudge(-12,0)} aria-label="Bild nach links">←</button>
+              <button type="button" onClick={() => nudge(12,0)} aria-label="Bild nach rechts">→</button>
+              <button type="button" onClick={() => nudge(0,12)} aria-label="Bild nach unten">↓</button>
+            </div>
+          </>}
           <div className="ec-photo-editor-rotate">
             <button type="button" onClick={fillCircle}>Profilkreis füllen</button>
             <button type="button" onClick={showWholePhoto}>Ganzes Foto</button>
