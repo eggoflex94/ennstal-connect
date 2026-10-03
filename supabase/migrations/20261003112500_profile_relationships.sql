@@ -74,6 +74,7 @@ to authenticated
 using (owner_id = (select auth.uid()));
 
 revoke all on table public.profile_relationships from anon;
+revoke all on table public.profile_relationships from authenticated;
 grant select, insert, delete on table public.profile_relationships to authenticated;
 
 create or replace function public.profile_relationship_request_normalize()
