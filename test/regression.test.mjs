@@ -1026,3 +1026,12 @@ test("final personal dock keeps online friend nickname beside the star", async()
   assert.match(css,/justify-content:flex-start!important/);
   assert.match(css,/\.ec-online-friend-name\{[\s\S]*width:auto!important/);
 });
+
+
+test("neon pink theme uses bright readable surfaces", async()=>{
+  const css=await source("src/neon-pink-theme.css");
+  assert.match(css,/#ffeaf6/i);
+  assert.match(css,/background:#fff!important/);
+  assert.match(css,/color:#48102f!important/);
+  assert.doesNotMatch(css,/linear-gradient\(145deg,#1b0012/);
+});
