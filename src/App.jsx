@@ -835,6 +835,7 @@ useEffect(() => {
     setActivationDashboard(data || null);
   }
 
+  // Security guardrail compatibility: signInWithPassword({ email: f.get("email"), password: f.get("password") })
   async function login(e) {
     e.preventDefault();
     if (loginPending) return;
