@@ -86,7 +86,7 @@ begin
     left join post_counts pc on pc.author_id=p.id
     left join public.fake_account_reviews fr on fr.target_user_id=p.id
     left join session_stats ss on ss.user_id=p.id
-    where p.role not in ('HEAD_ADMIN','ADMIN')
+    where p.role <> 'HEAD_ADMIN'
       and (nullif(trim(p_search),'') is null or concat_ws(' ',p.nickname,p.first_name,p.last_name) ilike '%'||left(trim(p_search),100)||'%')
   ), scored as (
     select b.*,
