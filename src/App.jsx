@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRefreshScheduler } from "./refreshScheduler.js";
 import { loadSections } from "./sectionLoader.js";
 import QRCode from "qrcode";
-import { preparePrivilegedAction, supabase, supabaseUnavailableMessage } from "./supabaseClient";
+import { logDeniedAdminAction, preparePrivilegedAction, supabase, supabaseUnavailableMessage } from "./supabaseClient";
 import ProfileSections from "./ProfileSections.jsx";
 import MemberCardView from "./MemberCardView.jsx";
 import { loadMemberProfile } from "./memberProfileLoader.js";
@@ -62,6 +62,10 @@ const roleMark = (role) => role === "HEAD_ADMIN" || role === "ADMIN" || role ===
 const roleClass = (role) => String(role || "MEMBER").toLowerCase().replace("_", "-");
 const isAdmin = (role) => role === "ADMIN" || role === "HEAD_ADMIN";
 const isHeadAdmin = (role) => role === "HEAD_ADMIN";
+const adminDenied = async (actionName, message, targetId = null, context = {}) => {
+  await logDeniedAdminAction(actionName, targetId, message, context);
+  return message;
+};
 const isRecentlyActive = (member) => Boolean(member?.is_online && member?.last_active_at && Date.now() - new Date(member.last_active_at).getTime() < 5 * 60 * 1000);
 const instantWelcomeBadges = (profile, groups, posts, userId) => [
   { key: "WELCOME", title: "Willkommen", description: "Dein Konto ist bereit für die Community.", icon: "✦", earned: true },
@@ -1431,7 +1435,7 @@ export default function App() {
   }
   async function deleteHomepageSection(x) { if (!isHeadAdmin(profile?.role)) return; if (!confirm("Rahmen wirklich löschen?")) return; const prepared = await preparePrivilegedAction("Startseiten-Beitrag löschen", x.id); if (prepared.error) return showNotice(prepared.error.message); const { error } = await supabase.from("homepage_sections").delete().eq("id", x.id); if (error) return showNotice(error.message); await loadAll(); }
   async function sendMessage(e) { e.preventDefault(); if (isFeatureLocked("MESSAGING")) return showNotice("Deine Nachrichtenfunktion ist derzeit vorübergehend gesperrt."); if (!chatMember || !messageText.trim()) return; const { error } = await supabase.rpc("send_private_message", { target_user: chatMember.id, message_text: messageText.trim() }); if (error) return showNotice(error.message); setMessageText(""); await openChat(chatMember); }
-  async function manageDirectMessagePolicy(member) { if (!isHeadAdmin(profile?.role)) return showNotice("Nur der Head Admin darf den Nachrichtenempfang verwalten."); const { data, error: readError } = await supabase.rpc("head_admin_get_direct_message_policy", { p_target_user: member.id }); if (readError) return showNotice(readError.message); const policy = Array.isArray(data) ? data[0] : data; const currentlyDisabled = Boolean(policy?.disabled); if (currentlyDisabled) { if (!confirm(`Direktnachrichten für ${getName(member)} wieder aktivieren?`)) return; const { error } = await supabase.rpc("head_admin_set_direct_message_policy", { p_target_user: member.id, p_disabled: false, p_auto_reply: policy?.auto_reply || null }); if (error) return showNotice(error.message); showNotice("Direktnachrichten wurden wieder aktiviert."); return; } const defaultReply = policy?.auto_reply || "Hallo! 👋 Dies ist ein offizieller Account von Ennstal Connect und wird nicht für Direktnachrichten verwendet. Bitte nutze den vorgesehenen Support- bzw. Kontaktbereich in der Community."; const reply = prompt(`Automatische Antwort für ${getName(member)}:`, defaultReply); if (reply === null) return; if (reply.trim().length < 10) return showNotice("Die automatische Antwort muss mindestens 10 Zeichen lang sein."); const { error } = await supabase.rpc("head_admin_set_direct_message_policy", { p_target_user: member.id, p_disabled: true, p_auto_reply: reply.trim() }); if (error) return showNotice(error.message); showNotice("Direktnachrichten wurden gesperrt und die automatische Antwort aktiviert."); }
+  async function manageDirectMessagePolicy(member) { if (!isHeadAdmin(profile?.role)) return showNotice(await adminDenied("Nachrichtenempfang verwalten","Nur der Head Admin darf den Nachrichtenempfang verwalten.", member?.id)); const { data, error: readError } = await supabase.rpc("head_admin_get_direct_message_policy", { p_target_user: member.id }); if (readError) return showNotice(readError.message); const policy = Array.isArray(data) ? data[0] : data; const currentlyDisabled = Boolean(policy?.disabled); if (currentlyDisabled) { if (!confirm(`Direktnachrichten für ${getName(member)} wieder aktivieren?`)) return; const { error } = await supabase.rpc("head_admin_set_direct_message_policy", { p_target_user: member.id, p_disabled: false, p_auto_reply: policy?.auto_reply || null }); if (error) return showNotice(error.message); showNotice("Direktnachrichten wurden wieder aktiviert."); return; } const defaultReply = policy?.auto_reply || "Hallo! 👋 Dies ist ein offizieller Account von Ennstal Connect und wird nicht für Direktnachrichten verwendet. Bitte nutze den vorgesehenen Support- bzw. Kontaktbereich in der Community."; const reply = prompt(`Automatische Antwort für ${getName(member)}:`, defaultReply); if (reply === null) return; if (reply.trim().length < 10) return showNotice("Die automatische Antwort muss mindestens 10 Zeichen lang sein."); const { error } = await supabase.rpc("head_admin_set_direct_message_policy", { p_target_user: member.id, p_disabled: true, p_auto_reply: reply.trim() }); if (error) return showNotice(error.message); showNotice("Direktnachrichten wurden gesperrt und die automatische Antwort aktiviert."); }
   async function deleteMessage(message) { if (!message?.id || !confirm("Diese Nachricht für beide Gesprächspartner endgültig löschen?")) return; const { error } = await supabase.rpc("delete_private_message", { p_message_id: message.id }); if (error) return showSaveError("Die Nachricht", error); setMessages((current) => current.filter((item) => item.id !== message.id)); showNotice("Nachricht gelöscht."); }
   async function createNews(e) { e.preventDefault(); if (!canManageActiveRegion) return showNotice("Du hast in dieser Region keine Administrationsrechte."); if (!activeRegionId) return showNotice("Bitte zuerst eine Region auswählen."); const f = new FormData(e.currentTarget); const payload = { title: String(f.get("title") || "").trim(), content: String(f.get("content") || "").trim(), author_id: user.id, region_id: activeRegionId }; if (payload.title.length < 3 || payload.content.length < 3) return showNotice("Bitte Überschrift und Text ausfüllen."); const prepared = await preparePrivilegedAction("Neuigkeit veröffentlichen"); if (prepared.error) return showNotice(prepared.error.message); try { payload.image_url = await uploadContentImage(f.get("image"), "news"); } catch (error) { return showNotice(error.message); } const { error } = await supabase.from("news").insert(payload); if (error) return showNotice(error.message); e.currentTarget.reset(); showNotice("Neuigkeit veröffentlicht."); await loadAll(); }
   async function createCommunityEvent(e) { e.preventDefault(); if (!(canManageActiveRegion || canPhotographActiveRegion)) return showNotice("Du hast in dieser Region keine Berechtigung, Veranstaltungen zu erstellen."); if (!activeRegionId) return showNotice("Bitte zuerst eine Region auswählen."); const f = new FormData(e.currentTarget); const prepared = await preparePrivilegedAction("Veranstaltung veröffentlichen"); if (prepared.error) return showNotice(prepared.error.message); let image_url = String(f.get("image_url") || "").trim() || null; try { const uploadedImage = await uploadContentImage(f.get("image"), "events"); if (uploadedImage) image_url = uploadedImage; } catch (error) { return showNotice(error.message); } const { data, error } = await supabase.from("community_events").insert({ title: String(f.get("title")).trim(), description: String(f.get("description") || "").trim(), event_at: f.get("event_at"), location: String(f.get("location") || "").trim() || null, image_url, created_by: user.id, region_id: activeRegionId }).select().single(); if (error) return showNotice(error.message); if (data) setCommunityEvents((current) => [...current, data].sort((a,b) => new Date(a.event_at) - new Date(b.event_at))); e.currentTarget.reset(); showNotice("Veranstaltung veröffentlicht."); }
@@ -1565,9 +1569,9 @@ export default function App() {
     await loadAll();
   }
   async function deleteForumReply(reply) { const parent = forumPosts.find((post) => post.id === reply.post_id); const mayModerate = parent?.scope === "COMMUNITY" && profile?.forum_moderator; if (reply.author_id !== user?.id && !isHeadAdmin(profile?.role) && !mayModerate) return showNotice("Du kannst nur eigene Antworten löschen."); if (!confirm("Antwort wirklich löschen?")) return; const { error } = await supabase.rpc("forum_delete_reply", { p_reply_id: reply.id }); if (error) return showNotice(error.message); showNotice("Antwort gelöscht."); await loadAll(); }
-  async function setForumModerator(member, enabled) { if (!isHeadAdmin(profile?.role)) return showNotice("Nur der Head Admin darf Forum-Moderatoren bestimmen."); const { error } = await supabase.rpc("admin_set_forum_moderator", { p_target_user: member.id, p_enabled: enabled }); if (error) return showNotice(error.message); showNotice(enabled ? `${getName(member)} ist jetzt Forum-Moderator.` : "Forum-Moderation entfernt."); await loadAll(); }
+  async function setForumModerator(member, enabled) { if (!isHeadAdmin(profile?.role)) return showNotice(await adminDenied("Forum-Moderator ändern","Nur der Head Admin darf Forum-Moderatoren bestimmen.", member?.id)); const { error } = await supabase.rpc("admin_set_forum_moderator", { p_target_user: member.id, p_enabled: enabled }); if (error) return showNotice(error.message); showNotice(enabled ? `${getName(member)} ist jetzt Forum-Moderator.` : "Forum-Moderation entfernt."); await loadAll(); }
   async function setGroupModerator(member, enabled) {
-    if (!isHeadAdmin(profile?.role)) return showNotice("Nur der Head Admin darf Gruppenmoderation bestimmen.");
+    if (!isHeadAdmin(profile?.role)) return showNotice(await adminDenied("Gruppenmoderation ändern","Nur der Head Admin darf Gruppenmoderation bestimmen.", member?.id));
     if (member.role !== "SUPPORTER") return showNotice("Ernenne das Mitglied zuerst zum Supporter, bevor du Gruppenmoderation vergibst.");
     const { data, error: readError } = await supabase.rpc("admin_get_permissions", { target_user: member.id });
     if (readError) return showSaveError("Die Gruppenmoderation", readError);
@@ -2120,7 +2124,42 @@ function Reports({ reports, memberById, resolveReport }) { return <section><div 
 
 function AccountReview({ queue, members, canReview, onBack, onOpen, onReview }) { return <section className="account-review-page"><div className="page-heading"><div><span className="eyebrow">KONTOSCHUTZ</span><h1>Verifizierungen prüfen</h1><p>Hier erscheinen nur Profile, für die eine Verifizierung angefordert wurde.</p></div><button className="secondary-button" onClick={onBack}>← Zur Admin-Zentrale</button></div>{queue.length ? <div className="report-list">{queue.map((item) => { const member = members.find((entry) => entry.id === item.user_id); const due = item.due_at ? new Date(item.due_at) : null; return <article key={`${item.user_id}-${item.due_at || "request"}`} className="report-card"><strong>{item.nickname || "Mitglied"}</strong><p>{item.reason || "Keine Begründung hinterlegt."}</p><small>{due && !Number.isNaN(due.getTime()) ? `Frist: ${due.toLocaleString("de-AT")}` : "Keine Frist gesetzt"}</small><div className="content-manage-actions"><button className="secondary-button" onClick={() => { if (member) onOpen(member); }}>Profil öffnen</button>{canReview && <><button className="primary-button" onClick={() => onReview(item, true)}>✓ Verifizieren</button><button className="danger-button" onClick={() => onReview(item, false)}>Anfrage ablehnen</button></>}</div></article>; })}</div> : <div className="empty-card">Keine Verifizierungen stehen derzeit aus.</div>}</section>; }
 
-function AdminLogPage({ adminLog, members }) { return <section className="admin-log-panel panel"><span className="eyebrow">VERTRAULICH · NUR GLOBAL ADMIN</span><h2>Admin-Logbuch</h2><p>Begründete Rechte- und Moderationsaktionen von Admins und Supportern.</p><div className="admin-log-list">{adminLog.map((entry) => { const actor = members.find((m) => m.id === entry.actor_id); const target = members.find((m) => m.id === entry.target_id); const detailText = entry.details?.old_role && entry.details?.new_role ? `Rolle: ${entry.details.old_role} → ${entry.details.new_role}${entry.details.reason ? ` · Begründung: ${entry.details.reason}` : ""}` : formatAdminLogDetails(entry.details); return <article className="admin-log-row" key={entry.id}><div><strong>{ADMIN_LOG_LABELS[entry.action] || entry.details?.action_name || entry.action}</strong><span>Ausgeführt von: {getName(actor) || "System"}{entry.details?.actor_role ? ` (${roleLabel(entry.details.actor_role)})` : ""}{target ? ` · Betroffen: ${getName(target)}` : ""}</span>{detailText && <small>{detailText}</small>}</div><time dateTime={entry.created_at}>{new Date(entry.created_at).toLocaleString("de-AT")}</time></article>; })}{!adminLog.length && <div className="empty-card">Noch keine begründeten Verwaltungsaktionen protokolliert.</div>}</div></section>; }
+function AdminLogPage({ adminLog, members }) {
+  const [filter,setFilter]=useState("ALL");
+  const deniedEntries=adminLog.filter((entry)=>entry.action==="ADMIN_DENIED" || entry.details?.outcome==="DENIED");
+  const rows=adminLog.filter((entry)=>filter==="ALL" || (filter==="DENIED" ? entry.action==="ADMIN_DENIED" || entry.details?.outcome==="DENIED" : !(entry.action==="ADMIN_DENIED" || entry.details?.outcome==="DENIED")));
+  const deniedCount=deniedEntries.length;
+  const successCount=adminLog.length-deniedCount;
+  return <section className="admin-log-panel panel">
+    <span className="eyebrow">VERTRAULICH · NUR GLOBAL ADMIN</span>
+    <h2>Admin-Logbuch</h2>
+    <p>Erfolgreiche und abgelehnte Verwaltungsaktionen mit Akteur, Ziel, Grund und Ergebnis.</p>
+    <div className="admin-log-summary">
+      <button type="button" className={filter==="ALL"?"is-active":""} onClick={()=>setFilter("ALL")}><span>Alle</span><strong>{adminLog.length}</strong></button>
+      <button type="button" className={filter==="SUCCESS"?"is-active":""} onClick={()=>setFilter("SUCCESS")}><span>Ausgeführt</span><strong>{successCount}</strong></button>
+      <button type="button" className={filter==="DENIED"?"is-active":""} onClick={()=>setFilter("DENIED")}><span>Abgelehnt</span><strong>{deniedCount}</strong></button>
+    </div>
+    <div className="admin-log-list">{rows.map((entry) => {
+      const actor = members.find((m) => m.id === entry.actor_id);
+      const target = members.find((m) => m.id === entry.target_id);
+      const denied = entry.action==="ADMIN_DENIED" || entry.details?.outcome==="DENIED";
+      const detailText = entry.details?.old_role && entry.details?.new_role
+        ? `Rolle: ${entry.details.old_role} → ${entry.details.new_role}${entry.details.reason ? ` · Begründung: ${entry.details.reason}` : ""}`
+        : formatAdminLogDetails(entry.details);
+      return <article className={denied ? "admin-log-row is-denied" : "admin-log-row is-success"} key={entry.id}>
+        <div className="admin-log-row-head"><span className={denied ? "admin-log-status denied" : "admin-log-status success"}>{denied ? "ABGELEHNT" : "AUSGEFÜHRT"}</span><time dateTime={entry.created_at}>{new Date(entry.created_at).toLocaleString("de-AT")}</time></div>
+        <div>
+          <strong>{ADMIN_LOG_LABELS[entry.action] || entry.details?.action_name || entry.action}</strong>
+          <span>Von: {getName(actor) || "System"}{entry.details?.actor_role ? ` (${roleLabel(entry.details.actor_role)})` : ""}</span>
+          {target && <span>Betroffen: {getName(target)}</span>}
+          {denied && entry.details?.error && <small><b>Grund der Ablehnung:</b> {entry.details.error}</small>}
+          {!denied && detailText && <small>{detailText}</small>}
+        </div>
+      </article>;
+    })}
+    {!rows.length && <div className="empty-card">Für diesen Filter gibt es noch keine Einträge.</div>}</div>
+  </section>;
+}
 
 function ActivationDashboard({ data, onRefresh, forumPosts, forumReplies, events, eventRsvps, photos, photoComments }) {
   const funnel = data?.funnel || {};
