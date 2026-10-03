@@ -1120,7 +1120,7 @@ test("Neon Pink About Me section keeps bio text readable", async()=>{
 test("admin member cards show the current responsibility labels", async()=>{
   const directory=await source("src/NativeMembersDirectory.jsx");
   assert.match(directory,/member\?\.is_primary_head_admin[\s\S]*Hauptverantwortlicher · Community/);
-  assert.match(directory,/isHeadAdmin\(member\)[\s\S]*Head Admin · alle Regionen/);
+  assert.match(directory,/isHeadAdmin\(member\)[\s\S]*Hauptadmin · alle Regionen/);
   assert.match(directory,/Global Admin · Region/);
   assert.match(directory,/Regional Admin · Region/);
 });
@@ -1160,7 +1160,7 @@ test("global and regional admin cards show region", async()=>{
   const directory=await source("src/NativeMembersDirectory.jsx");
   assert.match(directory,/Global Admin · Region/);
   assert.match(directory,/Regional Admin · Region/);
-  assert.match(directory,/Head Admin · alle Regionen/);
+  assert.match(directory,/Hauptadmin · alle Regionen/);
 });
 
 
