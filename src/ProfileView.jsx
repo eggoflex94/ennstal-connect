@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "./supabaseClient";
+import ProfileRelationshipSection from "./ProfileRelationshipSection.jsx";
 import "./ProfileView.css";
 
 const DEFAULT_AVATAR = "/default-avatar.svg";
@@ -376,6 +377,8 @@ export default function ProfileView({
       </div>
       <button className="profile-primary-button" type="submit" disabled={saving || avatarUploading}>{avatarUploading ? "Profilbild wird gespeichert …" : saving ? "Wird gespeichert …" : "✓ Änderungen speichern"}</button>
     </form>}
+
+    <ProfileRelationshipSection member={member} currentUserId={currentUserId} />
 
     <div className="integrated-profile-details">
       <div className="profile-detail-card"><span>INTERESSEN</span><p>{Array.isArray(draft.interests) ? draft.interests.join(", ") : draft.interests || member.interests || "Keine Interessen angegeben."}</p></div>
