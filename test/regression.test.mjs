@@ -1170,3 +1170,9 @@ test("profile visit realtime channel setup is serialized", async()=>{
   assert.match(realtime,/const nextChannel = supabase\.channel\(topic\);[\s\S]*nextChannel\.on\([\s\S]*nextChannel\.subscribe/);
   assert.doesNotMatch(realtime,/start\(\{ force: true \}\)/);
 });
+
+
+test("primary Head Admin uses community oversight label", async()=>{
+  const directory=await source("src/NativeMembersDirectory.jsx");
+  assert.match(directory,/Hauptverantwortlicher · Community/);
+});
