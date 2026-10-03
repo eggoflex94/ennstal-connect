@@ -203,9 +203,8 @@ async function openHub() {
   overlay.querySelectorAll('[data-admin-hub-action]').forEach((button) => {
     button.onclick = async () => {
       const action = button.dataset.adminHubAction;
-      if (action === 'admin-forum') return openAdminForum(overlay, ctx);
       overlay.remove();
-      window.dispatchEvent(new CustomEvent('ec:navigate', { detail: { page: action } }));
+      window.dispatchEvent(new CustomEvent('ec:navigate', { detail: { page: action, source: 'admin-central' } }));
     };
   });
 }
@@ -283,6 +282,7 @@ function scheduleRefresh(delay = 80) {
   }, delay);
 }
 
+window.addEventListener('ec:open-admin-central', () => void openHub());
 window.addEventListener('focus', () => scheduleRefresh(30));
 window.addEventListener('ec:navigate', scheduleMountAttempts);
 window.addEventListener('ec:region-change', () => scheduleRefresh(30));
