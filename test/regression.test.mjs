@@ -1162,3 +1162,11 @@ test("global and regional admin cards show region", async()=>{
   assert.match(directory,/Regional Admin · Region/);
   assert.match(directory,/Head Admin · alle Regionen/);
 });
+
+
+test("profile visit realtime channel setup is serialized", async()=>{
+  const realtime=await source("src/profile-visits-realtime.js");
+  assert.match(realtime,/if \(startPromise\) return startPromise/);
+  assert.match(realtime,/const nextChannel = supabase\.channel\(topic\);[\s\S]*nextChannel\.on\([\s\S]*nextChannel\.subscribe/);
+  assert.doesNotMatch(realtime,/start\(\{ force: true \}\)/);
+});
