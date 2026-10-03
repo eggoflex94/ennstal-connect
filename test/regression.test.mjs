@@ -1075,3 +1075,10 @@ test("desktop logo and navigation do not stay fixed while page scrolls", async()
   assert.match(css,/\.ec-top-nav[\s\S]*position:absolute!important/);
   assert.match(css,/@media \(min-width:901px\)/);
 });
+
+
+test("database layout unlock trigger allows Neon Pink at 1000 points", async()=>{
+  const migration=await source("supabase/migrations/20261003203000_allow_neon_pink_profile_layout.sql");
+  assert.match(migration,/'theme-neon-pink'/);
+  assert.match(migration,/when 'theme-neon-pink' then 1000/);
+});
