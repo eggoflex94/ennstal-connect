@@ -1107,3 +1107,11 @@ test("profile bio no longer renders or uploads a second portrait image", async()
   assert.doesNotMatch(app,/Bild zu „Über mich“/);
   assert.doesNotMatch(app,/\["bio_image_url", "Über-mich-Bild"\]/);
 });
+
+
+test("Neon Pink About Me section keeps bio text readable", async()=>{
+  const css=await source("src/neon-pink-theme.css");
+  assert.match(css,/\.panel:has\(\.member-profile-bio\)/);
+  assert.match(css,/\.member-profile-bio\{[\s\S]*color:#351126!important/);
+  assert.match(css,/background:linear-gradient\(145deg,#fff,#fff0f8\)!important/);
+});
