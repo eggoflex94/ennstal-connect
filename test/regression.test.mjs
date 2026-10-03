@@ -1044,3 +1044,14 @@ test("neon pink profile editor has explicit dark text on light panels", async()=
   assert.match(css,/\.profile-form\.profile-editor \.privacy-settings[\s\S]*background:linear-gradient/);
   assert.match(css,/body\.ec-regional-ui \.modern-main/);
 });
+
+
+test("admin tool buttons normalize legacy glyphs to one icon and label", async()=>{
+  const js=await source("src/dock-icon-color-authority.js");
+  const css=await source("src/personal-dock-final-authority.css");
+  assert.match(js,/if \(isAdminTool\)/);
+  assert.match(js,/child\.remove\(\)/);
+  assert.match(js,/labelNode\.textContent = label/);
+  assert.match(css,/\[data-ec-admin-tool="1"\][\s\S]*grid-template-rows:24px auto!important/);
+  assert.match(css,/\.ec-compact-menu-icon svg\{[\s\S]*width:22px!important/);
+});
