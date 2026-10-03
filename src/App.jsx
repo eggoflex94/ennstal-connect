@@ -432,7 +432,7 @@ export default function App() {
       bootstrapRetry.current.count = 0;
       window.clearTimeout(bootstrapRetry.current.timer);
       bootstrapRetry.current.timer = null;
-      setProfile(p); setBlockedUsers(bs); setFeatureLocks(locks); setRulesAccepted(Boolean(ruleAcceptance)); setCanViewPersonalData(Boolean(personalDataAllowed)); setMyAdminPermissions(loadedAdminPermissions || {});
+      setNetworkIssue(false); setProfile(p); setBlockedUsers(bs); setFeatureLocks(locks); setRulesAccepted(Boolean(ruleAcceptance)); setCanViewPersonalData(Boolean(personalDataAllowed)); setMyAdminPermissions(loadedAdminPermissions || {});
       const readMemberDirectory = async () => {
         const { data, error } = await supabase.rpc("community_member_directory");
         if (error) throw error;
@@ -486,7 +486,7 @@ export default function App() {
         const attempt = ++bootstrapRetry.current.count;
         window.clearTimeout(bootstrapRetry.current.timer);
         bootstrapRetry.current.timer = window.setTimeout(() => {
-          if (!globalThis.document?.hidden && user) void loadAllRef.current?.();
+          if (!globalThis.document?.hidden) void loadAllRef.current?.();
         }, Math.min(30000, 1500 * Math.max(1, attempt)));
       }
     }
@@ -2235,7 +2235,7 @@ function Forum({ title, intro, scope, posts, members, profile, createPost, editP
       };
       if (next.title.trim() || next.content.trim()) {
         localStorage.setItem(draftKey, JSON.stringify(next));
-        setDraftState({ restored: draftState.restored, saved: true });
+        setDraftState((current) => ({ ...current, saved: true }));
       } else {
         localStorage.removeItem(draftKey);
         setDraftState({ restored: false, saved: false });
