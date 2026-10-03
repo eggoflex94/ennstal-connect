@@ -1065,3 +1065,13 @@ test("neon pink members page keeps heading, checkboxes and member cards readable
   assert.match(css,/data-role-theme="member"[\s\S]*color:#40102d!important/);
   assert.doesNotMatch(css,/html\[data-ec-theme="neon-pink"\] \.ec-brand-image\{[\s\S]*animation:ec-neon-pink-pulse/);
 });
+
+
+test("desktop logo and navigation do not stay fixed while page scrolls", async()=>{
+  const main=await source("src/main.jsx");
+  const css=await source("src/header-scroll-authority.css");
+  assert.match(main,/import "\.\/header-scroll-authority\.css"/);
+  assert.match(css,/\.ec-brand-masthead[\s\S]*position:absolute!important/);
+  assert.match(css,/\.ec-top-nav[\s\S]*position:absolute!important/);
+  assert.match(css,/@media \(min-width:901px\)/);
+});
