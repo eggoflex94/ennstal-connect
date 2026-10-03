@@ -1416,21 +1416,53 @@ useEffect(() => {
     const ownsPost = post.author_id === user?.id;
     if (!ownsPost && !mayModerate) return showNotice("Du kannst nur eigene Beiträge bearbeiten.");
 
-    // The old dynamically inserted editor was invisible in some mobile and
-    // deployed layouts. Native dialogs are attached directly to the click and
-    // therefore work consistently in every browser.
-    const title = window.prompt("Überschrift bearbeiten:", post.title || "");
-    if (title === null) return;
-    const content = window.prompt("Beitrag bearbeiten:", post.content || "");
-    if (content === null) return;
-    if (title.trim().length < 3 || content.trim().length < 3) return showNotice("Überschrift und Beitrag müssen mindestens drei Zeichen haben.");
-    const reason = ownsPost ? "Vom Autor bearbeitet" : window.prompt("Grund der Bearbeitung:", "Von der Forum-Moderation bearbeitet");
-    if (reason === null || reason.trim().length < 3) return showNotice("Bitte einen Bearbeitungsgrund angeben.");
+    const fields = [
+      { name: "title", label: "Überschrift", value: post.title || "", required: true, placeholder: "Überschrift des Beitrags" },
+      { name: "content", label: "Beitrag", type: "textarea", value: post.content || "", required: true, rows: 14, placeholder: "Beitrag bearbeiten …" }
+    ];
+    if (!ownsPost) {
+      fields.push({
+        name: "reason",
+        label: "Grund der Bearbeitung",
+        type: "textarea",
+        value: "Von der Forum-Moderation bearbeitet",
+        required: true,
+        rows: 3,
+        placeholder: "Warum wird dieser Beitrag bearbeitet?"
+      });
+    }
 
-    let { error } = await supabase.rpc("forum_update_post", { p_post_id: post.id, p_title: title.trim(), p_content: content.trim(), p_reason: reason.trim() });
-    if (error && ownsPost && /function|schema cache|does not exist/i.test(error.message || "")) ({ error } = await supabase.rpc("forum_update_own_post", { p_post_id: post.id, p_title: title.trim(), p_content: content.trim() }));
-    if (error && isHeadAdmin(profile?.role) && /function|schema cache|does not exist/i.test(error.message || "")) ({ error } = await supabase.rpc("admin_edit_forum_post", { p_post_id: post.id, p_title: title.trim(), p_content: content.trim(), p_reason: reason.trim() }));
+    const values = await openContentEditor({
+      title: "Forumsbeitrag bearbeiten",
+      description: ownsPost
+        ? "Ändere Überschrift und Inhalt. Die Bearbeitung wird am Beitrag gekennzeichnet."
+        : "Du bearbeitest einen fremden Beitrag als Moderation. Der Änderungsgrund wird protokolliert.",
+      fields
+    });
+    if (!values) return;
+
+    const title = String(values.title || "").trim();
+    const content = String(values.content || "").trim();
+    const reason = ownsPost ? "Vom Autor bearbeitet" : String(values.reason || "").trim();
+
+    if (title.length < 3) return showNotice("Die Überschrift muss mindestens drei Zeichen haben.");
+    if (content.length < 3) return showNotice("Der Beitrag muss mindestens drei Zeichen haben.");
+    if (!ownsPost && reason.length < 3) return showNotice("Bitte einen Bearbeitungsgrund angeben.");
+
+    let { error } = await supabase.rpc("forum_update_post", {
+      p_post_id: post.id,
+      p_title: title,
+      p_content: content,
+      p_reason: reason
+    });
+    if (error && ownsPost && /function|schema cache|does not exist/i.test(error.message || "")) {
+      ({ error } = await supabase.rpc("forum_update_own_post", { p_post_id: post.id, p_title: title, p_content: content }));
+    }
+    if (error && isHeadAdmin(profile?.role) && /function|schema cache|does not exist/i.test(error.message || "")) {
+      ({ error } = await supabase.rpc("admin_edit_forum_post", { p_post_id: post.id, p_title: title, p_content: content, p_reason: reason }));
+    }
     if (error) return showSaveError("Der Forumsbeitrag", error);
+
     showNotice("Beitrag wurde gespeichert und als bearbeitet gekennzeichnet.");
     await loadAll();
   }
