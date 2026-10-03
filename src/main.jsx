@@ -47,8 +47,6 @@ import "./deferred-admin-enhancements.js";
 // Deferred admin wiring remains explicit for regression visibility:
 // ./admin-dashboard-modern.js ./admin-compact-enhancements.js
 import "./profile-visits-realtime.js";
-import "./points-system-ui.css";
-import "./points-system-ui.js";
 import "./points-rewards-runtime.js";
 import "./navigation-stability.js";
 import "./admin-forum-cross-region.js";
