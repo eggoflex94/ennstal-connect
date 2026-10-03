@@ -148,8 +148,7 @@ html[data-ec-theme="neon-pink"] .ec-online-friend{
   border-color:#ffd0e9!important;
 }
 @media (prefers-reduced-motion:no-preference){
-  .layout-theme-neon-pink .primary-button,
-  html[data-ec-theme="neon-pink"] .ec-brand-image{
+  .layout-theme-neon-pink .primary-button{
     animation:ec-neon-pink-pulse 2.8s ease-in-out infinite;
   }
 }
@@ -243,4 +242,106 @@ html[data-ec-theme="neon-pink"] .profile-form.profile-editor .text-button{
 html[data-ec-theme="neon-pink"] .profile-form.profile-editor .secondary-button *,
 html[data-ec-theme="neon-pink"] .profile-form.profile-editor .text-button *{
   color:inherit!important;
+}
+
+
+/* Members page authority for Neon Pink: keep the heading in document flow,
+   normalize checkbox controls and keep light member cards readable. */
+html[data-ec-theme="neon-pink"] .native-members-directory{
+  padding-top:12px!important;
+}
+html[data-ec-theme="neon-pink"] .native-members-heading{
+  position:relative!important;
+  inset:auto!important;
+  top:auto!important;
+  left:auto!important;
+  right:auto!important;
+  bottom:auto!important;
+  transform:none!important;
+  z-index:1!important;
+  display:flex!important;
+  align-items:flex-end!important;
+  justify-content:space-between!important;
+  gap:16px!important;
+  width:100%!important;
+  margin:0!important;
+  padding:16px 18px!important;
+  box-sizing:border-box!important;
+  border:1px solid #ffabd9!important;
+  border-radius:18px!important;
+  background:linear-gradient(145deg,#fff,#fff0f8)!important;
+  box-shadow:0 8px 22px rgba(180,22,105,.08)!important;
+}
+html[data-ec-theme="neon-pink"] .native-members-heading h1{
+  margin:2px 0 3px!important;
+  color:#351126!important;
+  font-size:clamp(28px,3vw,42px)!important;
+  line-height:1!important;
+  text-shadow:none!important;
+}
+html[data-ec-theme="neon-pink"] .native-members-heading p,
+html[data-ec-theme="neon-pink"] .native-members-heading small,
+html[data-ec-theme="neon-pink"] .native-members-heading strong{
+  color:#5f2948!important;
+  text-shadow:none!important;
+}
+html[data-ec-theme="neon-pink"] .native-member-search{
+  background:rgba(255,255,255,.90)!important;
+  border:1px solid #ff79c9!important;
+}
+html[data-ec-theme="neon-pink"] .native-member-search > label{
+  color:#4a1635!important;
+  background:#fff7fb!important;
+  border-color:#ffb2dd!important;
+}
+html[data-ec-theme="neon-pink"] .native-member-search input[type="checkbox"]{
+  appearance:auto!important;
+  -webkit-appearance:checkbox!important;
+  width:18px!important;
+  height:18px!important;
+  min-width:18px!important;
+  min-height:18px!important;
+  max-width:18px!important;
+  max-height:18px!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+  box-shadow:none!important;
+  accent-color:#ff149f!important;
+  flex:0 0 18px!important;
+}
+html[data-ec-theme="neon-pink"] article.member-card[data-role-theme="member"]{
+  background:linear-gradient(150deg,#fffdfd 0%,#ffe8f5 100%)!important;
+  border-color:#ff9fd5!important;
+  --ec-card-muted:#7a4864!important;
+}
+html[data-ec-theme="neon-pink"] article.member-card[data-role-theme="member"] .member-nickname,
+html[data-ec-theme="neon-pink"] article.member-card[data-role-theme="member"] .ec-member-realname,
+html[data-ec-theme="neon-pink"] article.member-card[data-role-theme="member"] .ec-member-age,
+html[data-ec-theme="neon-pink"] article.member-card[data-role-theme="member"] .ec-member-responsibility,
+html[data-ec-theme="neon-pink"] article.member-card[data-role-theme="member"] .member-status,
+html[data-ec-theme="neon-pink"] article.member-card[data-role-theme="member"] .member-status *{
+  color:#40102d!important;
+  text-shadow:none!important;
+}
+html[data-ec-theme="neon-pink"] article.member-card[data-role-theme="member"] > .member-status{
+  background:rgba(255,255,255,.72)!important;
+  border-color:#e7b5d1!important;
+}
+html[data-ec-theme="neon-pink"] .native-member-quick-filters button{
+  background:#fff!important;
+  color:#65133f!important;
+  border-color:#ffadd9!important;
+}
+html[data-ec-theme="neon-pink"] .native-member-quick-filters button.active{
+  background:linear-gradient(110deg,#ff149f,#ff58c5)!important;
+  color:#fff!important;
+  border-color:#ff149f!important;
+}
+@media(max-width:700px){
+  html[data-ec-theme="neon-pink"] .native-members-heading{
+    display:grid!important;
+    align-items:start!important;
+    padding:14px!important;
+  }
 }
