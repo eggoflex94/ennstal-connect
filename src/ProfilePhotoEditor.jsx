@@ -81,6 +81,7 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
   const [rotation, setRotation] = useState(0);
   const [busy, setBusy] = useState(false);
   const [loadError, setLoadError] = useState("");
+  const [saveError, setSaveError] = useState("");
   const previewCanvasRef = useRef(null);
   const exportCanvasRef = useRef(null);
   const dragRef = useRef(null);
@@ -189,6 +190,7 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
   const exportImage = async () => {
     if (!source || busy) return;
     setBusy(true);
+    setSaveError("");
     try {
       const canvas = exportCanvasRef.current;
       drawEditedImage(canvas, source, { zoom, x, y, rotation }, SIZE);
@@ -204,6 +206,21 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
         { type: "image/webp" }
       );
       await onSave(edited);
+    } catch (error) {
+      setSaveError(error?.message || "Profilbild konnte nicht gespeichert werden.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const saveOriginal = async () => {
+    if (!file || busy) return;
+    setBusy(true);
+    setSaveError("");
+    try {
+      await onSave(file);
+    } catch (error) {
+      setSaveError(error?.message || "Profilbild konnte nicht gespeichert werden.");
     } finally {
       setBusy(false);
     }
@@ -237,7 +254,7 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
           {source
             ? <canvas ref={previewCanvasRef} aria-label="Profilbild-Vorschau"/>
             : loadError
-              ? <div className="ec-photo-editor-load-error"><strong>Bild kann nicht geöffnet werden.</strong><span>{loadError}</span><small>Bitte wähle ein anderes Foto oder speichere es auf dem Handy als JPG/PNG.</small></div>
+              ? <div className="ec-photo-editor-load-error"><strong>Vorschau kann nicht geöffnet werden.</strong><span>{loadError}</span><small>Das Foto kann trotzdem direkt als Profilbild hochgeladen werden.</small><button type="button" className="primary-button" onClick={saveOriginal} disabled={busy}>{busy ? "Wird hochgeladen …" : "Foto ohne Zuschnitt verwenden"}</button></div>
               : <span>Bild wird geladen …</span>}
           <div className="ec-photo-editor-circle" aria-hidden="true"/>
         </div>
@@ -277,8 +294,10 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
         </div>
       </div>
 
+      {saveError && <div className="ec-photo-editor-save-error" role="alert">{saveError}</div>}
       <footer>
         <button type="button" className="secondary-button" onClick={onCancel} disabled={busy}>Abbrechen</button>
+        <button type="button" className="secondary-button" onClick={saveOriginal} disabled={busy}>{busy ? "Wird hochgeladen …" : "Ohne Zuschnitt verwenden"}</button>
         <button type="button" className="primary-button" onClick={exportImage} disabled={busy || !source}>
           {busy ? "Wird gespeichert …" : "Profilbild übernehmen"}
         </button>
