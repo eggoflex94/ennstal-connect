@@ -857,3 +857,43 @@ body .ec-right-dock .ec-online-friend .ec-online-friend-name{
   padding:0!important;
   text-align:left!important;
 }
+
+
+/* Final Admin Tools alignment: equal cards, one centered icon, clean label. */
+body .ec-right-dock.ec-compact-personal-dock .ec-compact-menu-grid > [data-ec-admin-tool="1"]{
+  min-height:66px!important;
+  display:grid!important;
+  grid-template-rows:24px auto!important;
+  grid-template-columns:1fr!important;
+  place-items:center!important;
+  align-content:center!important;
+  gap:5px!important;
+  padding:7px 4px!important;
+}
+body .ec-right-dock.ec-compact-personal-dock .ec-compact-menu-grid > [data-ec-admin-tool="1"] > .ec-compact-menu-icon{
+  display:grid!important;
+  place-items:center!important;
+  width:22px!important;
+  height:22px!important;
+  min-width:22px!important;
+  margin:0!important;
+  padding:0!important;
+  line-height:1!important;
+}
+body .ec-right-dock.ec-compact-personal-dock .ec-compact-menu-grid > [data-ec-admin-tool="1"] > .ec-compact-menu-icon svg{
+  display:block!important;
+  width:22px!important;
+  height:22px!important;
+  overflow:visible!important;
+}
+body .ec-right-dock.ec-compact-personal-dock .ec-compact-menu-grid > [data-ec-admin-tool="1"] > .ec-compact-menu-label{
+  display:block!important;
+  width:100%!important;
+  margin:0!important;
+  padding:0 2px!important;
+  font-size:8px!important;
+  line-height:1.05!important;
+  font-weight:850!important;
+  text-align:center!important;
+  white-space:normal!important;
+}
