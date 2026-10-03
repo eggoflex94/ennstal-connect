@@ -111,7 +111,7 @@ article.member-card[data-role-theme]>.member-meta{
   left:10px!important;
   right:10px!important;
   width:auto!important;
-  height:56px!important;
+  height:64px!important;
   margin:0!important;
   padding:0!important;
   display:flex!important;
@@ -146,6 +146,19 @@ article.member-card[data-role-theme] .ec-member-realname{
   line-height:1.05!important;
   font-weight:900!important;
 }
+article.member-card[data-role-theme] .ec-member-responsibility{
+  display:block!important;
+  max-width:100%!important;
+  margin:0!important;
+  padding:0!important;
+  color:var(--ec-card-muted)!important;
+  font-size:9px!important;
+  line-height:1.05!important;
+  font-weight:700!important;
+  text-align:center!important;
+  white-space:normal!important;
+}
+
 article.member-card[data-role-theme] .ec-member-age{
   display:block!important;
   margin:0!important;
