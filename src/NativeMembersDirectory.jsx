@@ -259,7 +259,7 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
           .filter(Boolean);
         const regionalLabel = assignedRegionNames.length ? assignedRegionNames.join(", ") : homeRegionLabel;
         const cardMember = member?.is_primary_head_admin
-          ? { ...member, directory_admin: true, directory_role_star: roleStarSrc(member), directory_responsibility_label: "Hauptverantwortlicher · alle Regionen" }
+          ? { ...member, directory_admin: true, directory_role_star: roleStarSrc(member), directory_responsibility_label: "Hauptverantwortlicher · Community" }
           : isHeadAdmin(member)
             ? { ...member, directory_admin: true, directory_role_star: roleStarSrc(member), directory_responsibility_label: "Head Admin · alle Regionen" }
             : normalized(member?.role) === "ADMIN"
