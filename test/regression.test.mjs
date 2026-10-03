@@ -892,3 +892,11 @@ test("signed-in member card keeps age visible when directory payload omits birth
   assert.match(card,/member\.birth_date \|\| \(member\.id === profile\?\.id \? profile\?\.birth_date : null\)/);
   assert.match(card,/const age = getAge\(birthDate\)/);
 });
+
+
+test("member card leaves enough room for responsibility and age", async()=>{
+  const css=await source("src/member-card-exact-authority.css");
+  assert.match(css,/height:64px!important/);
+  assert.match(css,/\.ec-member-responsibility\{/);
+  assert.match(css,/\.ec-member-age\{[\s\S]*display:block!important/);
+});
