@@ -55,3 +55,12 @@ test("profile photo editor keeps expanded vertical range", async () => {
   assert.match(editor, /min=\{-PAN_Y_UP_LIMIT\} max=\{PAN_Y_DOWN_LIMIT\}/);
   assert.match(editor, /\* 300/);
 });
+
+
+test("profile photo zoom-out never exposes a flat white or light canvas background", async () => {
+  const editor = await source("src/ProfilePhotoEditor.jsx");
+  assert.match(editor, /function drawSoftBackdrop/);
+  assert.match(editor, /backdropScale = coverScale \* 1\.12/);
+  assert.match(editor, /drawSoftBackdrop\(ctx, source, rotation, size, coverScale\)/);
+  assert.doesNotMatch(editor, /fillStyle = "#f3f6f8"/);
+});
