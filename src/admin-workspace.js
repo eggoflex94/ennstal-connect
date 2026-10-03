@@ -13,14 +13,14 @@ async function resolveAccess(){
   const {data:{user}}=await supabase.auth.getUser();
   if(!user){allowed=false;isHead=false;isGlobalAdmin=false;isRegionalAdmin=false;return false;}
   const [{data:p},{data:regions},{data:assignments}]=await Promise.all([
-    supabase.from("profiles").select("role,account_status,home_region_id").eq("id",user.id).maybeSingle(),
+    supabase.from("profiles").select("role,account_status,home_region_id,is_primary_head_admin").eq("id",user.id).maybeSingle(),
     supabase.from("regions").select("id,slug").eq("is_active",true),
     supabase.from("regional_admin_assignments").select("region_id,active").eq("user_id",user.id).eq("active",true)
   ]);
   const role=String(p?.role||'').toUpperCase();
   const activeId=(regions||[]).find(r=>r.slug===activeRegionSlug())?.id||p?.home_region_id||null;
   isRegionalAdmin=Boolean(activeId&&(assignments||[]).some(a=>a.active&&a.region_id===activeId));
-  isHead=role==="HEAD_ADMIN"&&p?.account_status==="ACTIVE";
+  isHead=role==="HEAD_ADMIN"&&p?.account_status==="ACTIVE"&&p?.is_primary_head_admin===true;
   isGlobalAdmin=role==="ADMIN"&&p?.account_status==="ACTIVE";
   allowed=p?.account_status==="ACTIVE"&&(isHead||isGlobalAdmin||isRegionalAdmin);
   return allowed;
