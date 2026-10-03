@@ -12,3 +12,19 @@
 .ec-dashboard-municipality-switch{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:7px;margin:8px 0 0;font-size:8px;font-weight:900;color:#5e7468}.ec-dashboard-municipality-switch select{width:100%;min-width:0;border:1px solid #cfddd5;border-radius:8px;padding:5px 7px;background:#fff;font-size:9px}
 .ec-dashboard-municipality-actions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin-top:9px}.ec-dashboard-municipality-actions button{position:relative;display:grid;place-items:center;gap:2px;min-width:0;min-height:48px;padding:5px 2px;border:1px solid #d5e4dc;border-radius:9px;background:#fff;color:#173a2b}.ec-dashboard-municipality-actions button:hover{border-color:var(--ec-municipality-dashboard-accent,#20a866);background:#f5fbf7}.ec-dashboard-municipality-actions button>b{font-size:14px;color:var(--ec-municipality-dashboard-accent,#168b54)}.ec-dashboard-municipality-actions button>span{font-size:8px;font-weight:900;white-space:nowrap}.ec-dashboard-municipality-actions button>em{position:absolute;top:-5px;right:-4px;display:grid;place-items:center;min-width:17px;height:17px;padding:0 4px;border-radius:999px;background:#ef4b1f;color:#fff;font-size:8px;font-weight:950;font-style:normal}
 .ec-dashboard-municipality-open{width:100%;margin-top:7px;padding:8px 9px;border:0;border-radius:9px;background:var(--ec-municipality-dashboard-accent,#168b54);color:#fff;font-size:9px;font-weight:950;letter-spacing:.02em}
+
+
+/* Online friends: keep nickname directly beside the role star. */
+.ec-online-friend{
+  grid-template-columns:9px auto minmax(0,1fr)!important;
+  column-gap:6px!important;
+  justify-content:start!important;
+}
+.ec-online-friend-star{
+  margin:0!important;
+}
+.ec-online-friend-name{
+  justify-self:start!important;
+  margin-left:0!important;
+  padding-left:0!important;
+}
