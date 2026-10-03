@@ -179,36 +179,10 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
     setPage(1);
   }, [query, regionId, onlineOnly, memberType, newOnly, activeRegion?.id]);
 
-  // The native directory is the only authority for member filtering.
-  // Remove any regional context block left behind by an older shell build so
-  // "Alle Regionen" can never look or behave like an active-region filter.
-  useEffect(() => {
-    const root = document.querySelector(".native-members-directory");
-    if (!root) return;
-    root.querySelectorAll(".ec-region-context").forEach((node) => node.remove());
-    root.dataset.regionMode = regionId === "ALL" ? "all" : "region";
-  }, [regionId, visible.length]); // native directory removes stale regional shell context
-
-  useEffect(() => {
-    const root = document.querySelector(".native-members-directory");
-    if (!root) return undefined;
-
-    const removeLiteralNewlineArtifacts = () => {
-      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-      const stale = [];
-      let node = walker.nextNode();
-      while (node) {
-        if (String(node.nodeValue || "").trim() === "\\n") stale.push(node);
-        node = walker.nextNode();
-      }
-      stale.forEach((textNode) => textNode.remove());
-    };
-
-    removeLiteralNewlineArtifacts();
-    const observer = new MutationObserver(removeLiteralNewlineArtifacts);
-    observer.observe(root, { childList: true, subtree: true, characterData: true });
-    return () => observer.disconnect();
-  }, []);
+  // Do not mutate React-owned member-directory children from effects.
+  // Older cleanup code removed text/element nodes behind React's back, which
+  // could make the next reconciliation fail with insertBefore NotFoundError.
+  const regionMode = regionId === "ALL" ? "all" : "region";
 
   useEffect(() => {
     if (page > pageCount) setPage(pageCount);
@@ -233,7 +207,7 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
     });
   };
 
-  return <section className="native-members-directory">
+  return <section className="native-members-directory" data-region-mode={regionMode}>
     <div className="page-heading native-members-heading">
       <div><span className="eyebrow">COMMUNITY</span><h1>Mitglieder</h1><p>Nach Rollen und Namen sortiert.</p></div>
       <div className="native-members-heading-actions">
