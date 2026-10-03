@@ -914,3 +914,12 @@ test("personal dock separates only authorized admin shortcuts below normal quick
   assert.match(css,/content:"ADMIN TOOLS"/);
   assert.match(css,/\[data-ec-admin-tool="1"\]/);
 });
+
+
+test("native member directory never removes React-owned DOM nodes", async()=>{
+  const directory=await source("src/NativeMembersDirectory.jsx");
+  assert.doesNotMatch(directory,/textNode\.remove\(\)/);
+  assert.doesNotMatch(directory,/querySelectorAll\("\\.ec-region-context"\).*\.remove\(\)/s);
+  assert.doesNotMatch(directory,/new MutationObserver\(removeLiteralNewlineArtifacts\)/);
+  assert.match(directory,/data-region-mode=\{regionMode\}/);
+});
