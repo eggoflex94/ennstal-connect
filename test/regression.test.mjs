@@ -1187,3 +1187,12 @@ test("Head Admin assignment uses protected direct RPC", async()=>{
   assert.match(migration,/if not public\.ec_is_head_admin\(\)/);
   assert.match(migration,/perform public\.admin_set_role\(target_user, new_role\)/);
 });
+
+
+test("role click interceptor supports protected Head Admin assignment", async()=>{
+  const source=await readFile(new URL("../src/profile-admin-role-actions.js", import.meta.url), "utf8");
+  assert.match(source,/\['MEMBER', 'SUPPORTER', 'ADMIN', 'MUNICIPALITY', 'HEAD_ADMIN'\]/);
+  assert.match(source,/nextRole === 'HEAD_ADMIN' \? 'head_admin_set_role' : 'admin_set_role'/);
+  assert.match(source,/is_primary_head_admin/);
+  assert.doesNotMatch(source,/Rollenänderung konnte nicht vorbereitet werden/);
+});
