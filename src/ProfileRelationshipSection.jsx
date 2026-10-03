@@ -24,6 +24,7 @@ export default function ProfileRelationshipSection({ member, currentUserId }) {
   const [rows, setRows] = useState([]);
   const [incoming, setIncoming] = useState([]);
   const [members, setMembers] = useState([]);
+  const [relatedPeople, setRelatedPeople] = useState([]);
   const [statusType, setStatusType] = useState("RELATIONSHIP");
   const [partnerUserId, setPartnerUserId] = useState("");
   const [partnerName, setPartnerName] = useState("");
@@ -63,10 +64,28 @@ export default function ProfileRelationshipSection({ member, currentUserId }) {
 
     const result = await Promise.all(tasks);
     const ownResult = result[0];
-    if (!ownResult.error) setRows(ownResult.data || []);
+    const ownRows = ownResult.error ? [] : (ownResult.data || []);
+    setRows(ownRows);
+
+    let pendingRows = [];
     if (mine) {
-      if (!result[1]?.error) setIncoming(result[1]?.data || []);
+      pendingRows = result[1]?.error ? [] : (result[1]?.data || []);
+      setIncoming(pendingRows);
       if (!result[2]?.error) setMembers(result[2]?.data || []);
+    }
+
+    const ids = [...new Set([
+      ...ownRows.map((row) => row.partner_user_id),
+      ...pendingRows.map((row) => row.owner_id),
+    ].filter(Boolean))];
+    if (ids.length) {
+      const { data: people, error: peopleError } = await supabase
+        .from("profiles")
+        .select("id,nickname,first_name,last_name,avatar_url")
+        .in("id", ids);
+      if (!peopleError) setRelatedPeople(people || []);
+    } else {
+      setRelatedPeople([]);
     }
   }
 
@@ -74,7 +93,7 @@ export default function ProfileRelationshipSection({ member, currentUserId }) {
     void load();
   }, [member?.id, currentUserId]);
 
-  const peopleById = useMemo(() => new Map(members.map((person) => [person.id, person])), [members]);
+  const peopleById = useMemo(() => new Map([...members, ...relatedPeople].map((person) => [person.id, person])), [members, relatedPeople]);
 
   async function addRelationship(event) {
     event.preventDefault();
@@ -161,7 +180,7 @@ export default function ProfileRelationshipSection({ member, currentUserId }) {
       {incoming.map((row) => <article key={row.id}>
         <div>
           <strong>{STATUS_LABELS[row.status_type] || row.status_type}</strong>
-          <span>Ein Mitglied möchte dich in diesem Beziehungsstatus verlinken.</span>
+          <span>{personName(peopleById.get(row.owner_id))} möchte dich in diesem Beziehungsstatus verlinken.</span>
         </div>
         <div className="profile-relationship-request-actions">
           <button type="button" onClick={() => respond(row.id, true)}>✓ Bestätigen</button>
