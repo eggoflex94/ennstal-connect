@@ -242,7 +242,7 @@ export default function App() {
         home: "home", members: "members", forum: "forum", groups: "groups", photos: "photos",
         community: "community", events: "community", news: "news", ads: "community", profile: "profile",
         messages: "messages", notifications: "notifications", friends: "friends", requests: "friend-requests",
-        blocked: "blocked", admin: "admin", municipality: "municipality"
+        blocked: "blocked", admin: "admin", "admin-forum": "admin-forum", municipality: "municipality"
       };
       if (pageMap[requested]) setPage(pageMap[requested]);
     };
