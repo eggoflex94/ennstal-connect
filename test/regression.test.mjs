@@ -1196,3 +1196,14 @@ test("role click interceptor supports protected Head Admin assignment", async()=
   assert.match(source,/is_primary_head_admin/);
   assert.doesNotMatch(source,/Rollenänderung konnte nicht vorbereitet werden/);
 });
+
+
+test("delegated Head Admin never gets legal evidence or primary system head access", async()=>{
+  const legal=await source("src/legal-evidence-admin.js");
+  const workspace=await source("src/admin-workspace.js");
+  const hub=await source("src/admin-central-hub.js");
+  assert.match(legal,/is_primary_head_admin/);
+  assert.match(legal,/Beweissicherung ist ausschließlich dem primären Head Admin vorbehalten/);
+  assert.match(workspace,/role==="HEAD_ADMIN"[\s\S]*is_primary_head_admin===true/);
+  assert.match(hub,/role === 'HEAD_ADMIN' && profile\?\.is_primary_head_admin === true/);
+});

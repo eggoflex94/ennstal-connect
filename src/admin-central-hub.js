@@ -36,7 +36,7 @@ function selectedRegionId(regions, profile) {
 
 function rightsFor({ profile, permissions, regionalAdmin, regionalPermissions }) {
   const role = String(profile?.role || '').toUpperCase();
-  const head = role === 'HEAD_ADMIN';
+  const head = role === 'HEAD_ADMIN' && profile?.is_primary_head_admin === true;
   const global = role === 'ADMIN';
   const p = permissions || {};
   const rp = new Set(regionalPermissions || []);
@@ -64,7 +64,7 @@ async function loadAccess() {
     if (!user) { access = null; return null; }
 
     const [profileResult, permissionResult, regionalResult, moderationResult, regionResult] = await Promise.all([
-      supabase.from('profiles').select('id,nickname,role,account_status,forum_moderator,home_region_id').eq('id', user.id).maybeSingle(),
+      supabase.from('profiles').select('id,nickname,role,account_status,forum_moderator,home_region_id,is_primary_head_admin').eq('id', user.id).maybeSingle(),
       supabase.from('user_permissions').select('*').eq('user_id', user.id).maybeSingle(),
       supabase.from('regional_admin_assignments').select('region_id,active').eq('user_id', user.id).eq('active', true),
       supabase.from('regional_moderation_assignments').select('region_id,permissions,active').eq('user_id', user.id).eq('active', true),
