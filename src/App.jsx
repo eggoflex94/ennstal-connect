@@ -215,6 +215,29 @@ export default function App() {
   }, [members, viewingMember?.id]);
 
   useEffect(() => {
+    if (!user?.id) return undefined;
+    let cancelled = false;
+    const refreshProfileVisits = async () => {
+      const { data, error } = await supabase
+        .from("profile_visits")
+        .select("*")
+        .eq("profile_id", user.id)
+        .order("visited_at", { ascending: false })
+        .limit(50);
+      if (!cancelled && !error) setProfileVisits(data || []);
+    };
+    const handleVisitsChanged = (event) => {
+      if (event.detail?.userId && event.detail.userId !== user.id) return;
+      void refreshProfileVisits();
+    };
+    window.addEventListener("ec:profile-visits-changed", handleVisitsChanged);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("ec:profile-visits-changed", handleVisitsChanged);
+    };
+  }, [user?.id]);
+
+  useEffect(() => {
     if (!user?.id || !members.length) return undefined;
     const openProfileById = (profileId, nickname = "") => {
       const wantedName = String(nickname || "").trim().toLowerCase();
