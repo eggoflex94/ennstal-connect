@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { loadMemberScores } from './member-score.js';
 
 const ADMIN_STAR='/role-star-red.svg';
 const SUPPORTER_STAR='/supporter-star.svg';
@@ -33,7 +34,7 @@ async function load(){
     const friendIds=(friendships||[]).map(f=>f.requester_id===user.id?f.receiver_id:f.requester_id).filter(Boolean);
     if(friendIds.length){
       const {data:friends}=await supabase.from('profiles').select('id,nickname,role,account_badge,points,is_online,hide_online_status,last_active_at,last_seen_at,home_region_id,account_status,role_display_label,role_star_url,role_accent_color').in('id',friendIds).eq('account_status','ACTIVE');
-      state.friends=(friends||[]).filter(isActuallyOnline).sort((a,b)=>String(a.nickname||'').localeCompare(String(b.nickname||''),'de'));
+      const onlineFriends=(friends||[]).filter(isActuallyOnline);const scores=await loadMemberScores(onlineFriends.map(friend=>friend.id));state.friends=onlineFriends.map(friend=>({...friend,total_score:scores.get(String(friend.id))??Number(friend.points||0)})).sort((a,b)=>String(a.nickname||'').localeCompare(String(b.nickname||''),'de'));
     }else state.friends=[];
     if(['HEAD_ADMIN','ADMIN'].includes(role(profile))){const {data:attention,error:attentionError}=await supabase.rpc('admin_attention_summary');state.adminAlerts=attentionError?0:Number(attention?.total||0)}else state.adminAlerts=0;
     state.municipalities=[];
@@ -62,7 +63,7 @@ function ensureOnlineFriends(dock){
   const rows=state.friends.map(friend=>{
     const star=starFor(friend,region?.id||null);
     const name=esc(friend.nickname||'Mitglied');
-    const points=Number(friend.points||0).toLocaleString('de-AT');
+    const points=Number(friend.total_score??friend.points??0).toLocaleString('de-AT');
     return `<button type="button" class="ec-online-friend" data-profile-id="${esc(friend.id)}" title="Profil von ${name} öffnen"><span class="ec-online-dot" aria-hidden="true"></span>${star?`<img class="ec-online-friend-star" src="${esc(star)}" alt="" aria-hidden="true">`:''}<strong class="ec-online-friend-name"><span class="ec-online-nickname">${name}</span><span class="ec-inline-points">[${esc(points)}]</span></strong></button>`;
   }).join('');
   panel.innerHTML=`<div class="ec-online-friends-head"><span>FREUNDE ONLINE</span><em>${state.friends.length}</em></div><div class="ec-online-friends-list">${rows||'<small>Derzeit keine Freunde online.</small>'}</div>`;
