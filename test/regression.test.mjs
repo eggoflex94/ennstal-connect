@@ -957,3 +957,19 @@ test("every member-profile navigation records a profile visit centrally", async(
   assert.match(app,/profile_id: viewingMember\.id/);
   assert.match(app,/visitor_id: user\.id/);
 });
+
+
+test("neon pink layout is selectable, point-gated, and fully themed", async()=>{
+  const app=await source("src/App.jsx");
+  const runtime=await source("src/standard-theme-runtime.js");
+  const main=await source("src/main.jsx");
+  const css=await source("src/neon-pink-theme.css");
+  assert.match(app,/theme-neon-pink/);
+  assert.match(app,/Neon Pink – Ultra Pink & Nacht/);
+  assert.match(app,/layoutPointsRequired = \{ "theme-neon-pink": 1000 \}/);
+  assert.match(runtime,/layout-theme-neon-pink/);
+  assert.match(runtime,/Neon Pink – ab 1000 Aktivitätspunkten/);
+  assert.match(main,/import "\.\/neon-pink-theme\.css"/);
+  assert.match(css,/data-ec-theme="neon-pink"/);
+  assert.match(css,/#ff1bb8/i);
+});
