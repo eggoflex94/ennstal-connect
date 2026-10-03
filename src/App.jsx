@@ -161,6 +161,8 @@ export default function App() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState("home");
   const [notice, setNotice] = useState("");
+  const [loginPending, setLoginPending] = useState(false);
+  const [loginFeedback, setLoginFeedback] = useState("");
   const [sectionStatus, setSectionStatus] = useState({ pending: [], failed: [] });
   const [incomingMessage, setIncomingMessage] = useState(null);
   const [messageText, setMessageText] = useState("");
@@ -499,13 +501,26 @@ export default function App() {
       const nextId = session?.user?.id || null;
       if (event === "PASSWORD_RECOVERY") setPasswordRecovery(true);
       if (event === "TOKEN_REFRESHED" && sessionUserId === nextId) return;
-      if (event === "SIGNED_IN" && sessionUserId === nextId) return;
-      loadVersion.current++;
-      if (sessionUserId !== nextId || event === "SIGNED_OUT") resetSession();
+      if (event === "SIGNED_OUT") {
+        loadVersion.current++;
+        sessionUserId = null;
+        resetSession();
+        return;
+      }
+      if (event === "SIGNED_IN") {
+        sessionUserId = nextId;
+        if (session?.user) setUser(session.user);
+        refresh();
+        return;
+      }
+      if (sessionUserId && sessionUserId !== nextId) {
+        loadVersion.current++;
+        resetSession();
+      }
       sessionUserId = nextId;
       refresh();
     });
-    const handlePageShow = () => refresh();
+        const handlePageShow = () => refresh();
     const handleVisibility = () => {
       if (!globalThis.document?.hidden) refresh();
     };
@@ -821,24 +836,59 @@ useEffect(() => {
   }
 
   async function login(e) {
-    e.preventDefault(); if (!supabase) return showNotice(supabaseUnavailableMessage); const f = new FormData(e.currentTarget);
+    e.preventDefault();
+    if (loginPending) return;
+    if (!supabase) {
+      setLoginFeedback(supabaseUnavailableMessage);
+      return showNotice(supabaseUnavailableMessage);
+    }
+
+    const f = new FormData(e.currentTarget);
+    const email = String(f.get("email") || "").trim().toLowerCase();
+    const password = String(f.get("password") || "");
+    if (!email || !password) {
+      const text = "Bitte E-Mail-Adresse und Passwort vollständig eingeben.";
+      setLoginFeedback(text);
+      return showNotice(text);
+    }
+
+    setLoginPending(true);
+    setLoginFeedback("Anmeldung wird geprüft …");
     try {
-      const { data, error } = await withTimeout(supabase.auth.signInWithPassword({ email: f.get("email"), password: f.get("password") }), supabaseUnavailableMessage);
-      if (error) return showNotice(error.message);
-      const signedInUser = data?.user || data?.session?.user || null;
-      const { data: accessProfile } = await supabase.from("profiles")
-        .select("account_status,suspension_reason")
-        .eq("id", signedInUser?.id || "")
-        .maybeSingle();
-      if (accessProfile?.account_status === "SUSPENDED") {
-        await supabase.auth.signOut();
-        return showNotice(`Dein Konto ist gesperrt. Grund: ${String(accessProfile.suspension_reason || "Kein Grund wurde hinterlegt.").trim()}`);
+      const { data, error } = await withTimeout(
+        supabase.auth.signInWithPassword({ email, password }),
+        "Die Anmeldung dauert zu lange. Bitte prüfe deine Verbindung und versuche es erneut."
+      );
+
+      if (error) {
+        const text = /invalid login credentials|invalid_credentials/i.test(String(error.message || error))
+          ? "E-Mail-Adresse oder Passwort stimmen nicht. Bitte prüfe die Eingaben oder nutze „Passwort vergessen?“."
+          : String(error.message || supabaseUnavailableMessage);
+        setLoginFeedback(text);
+        showNotice(text);
+        return;
       }
-      // Render the signed-in shell immediately. Profile and community data are
-      // refreshed separately so a slow database request cannot block login.
+
+      const signedInUser = data?.user || data?.session?.user || null;
+      if (!signedInUser?.id) {
+        const text = "Die Anmeldung wurde bestätigt, aber die Sitzung konnte nicht geladen werden. Bitte versuche es erneut.";
+        setLoginFeedback(text);
+        showNotice(text);
+        return;
+      }
+
+      // Switch away from the login screen immediately after Auth succeeds.
+      // Profile/community reads happen separately and must never block login.
+      setLoginFeedback("Anmeldung erfolgreich. Community wird geladen …");
       setUser(signedInUser);
       void loadAll();
-    } catch (error) { showNotice(error?.message || supabaseUnavailableMessage); }
+    } catch (error) {
+      const text = String(error?.message || supabaseUnavailableMessage);
+      setLoginFeedback(text);
+      showNotice(text);
+    } finally {
+      setLoginPending(false);
+    }
   }
   async function register(e) {
     e.preventDefault(); if (!supabase) return showNotice(supabaseUnavailableMessage); const f = new FormData(e.currentTarget);
@@ -1464,7 +1514,7 @@ useEffect(() => {
   async function openMember(m) { if (!m) return; if (m.id === user.id) return setPage("profile"); setViewingMember(m); setViewingFriends([]); setPage("member-profile"); void loadMemberProfile(m).then((fresh) => { if (fresh?.id === m.id) setViewingMember((current) => current?.id === m.id ? fresh : current); }).catch((error) => console.warn("Profil konnte nicht im Hintergrund aktualisiert werden:", error?.message || error)); const [{ data: connections }, { error: visitError }] = await Promise.all([supabase.from("friendships").select("requester_id,receiver_id").eq("status", "ACCEPTED").or(`requester_id.eq.${m.id},receiver_id.eq.${m.id}`), supabase.from("profile_visits").insert({ profile_id: m.id, visitor_id: user.id, visited_at: new Date().toISOString() })]); if (connections) { const ids = connections.map((connection) => connection.requester_id === m.id ? connection.receiver_id : connection.requester_id); setViewingFriends(members.filter((member) => ids.includes(member.id))); } if (visitError) console.warn(visitError.message); }
 
   if (passwordRecovery) return <PasswordReset finishPasswordReset={finishPasswordReset} notice={notice}/>;
-  if (!user) return <div className="auth-page"><NewAuth login={login} register={register}/><button className="forgot-password-button" onClick={requestPasswordReset}>Passwort vergessen?</button>{notice && <div className="toast">{notice}</div>}</div>;
+  if (!user) return <div className="auth-page"><NewAuth login={login} register={register} loginPending={loginPending} loginFeedback={loginFeedback}/><button className="forgot-password-button" onClick={requestPasswordReset}>Passwort vergessen?</button>{notice && <div className="toast">{notice}</div>}</div>;
 
   const unread = messages.filter((m) => m.receiver_id === user.id && !m.is_read).length;
   const unreadNotifications = notifications.filter((item) => !item.read_at).length;
@@ -2130,7 +2180,7 @@ function MemberProfile({ member, friends, groups = [], photos = [], onOpenGroup,
 
 function PublicProfileUpdatesPreview() { const [updates, setUpdates] = useState([]); useEffect(() => { if (!supabase) return; supabase.from("public_profile_updates").select("nickname, role, is_verified, avatar_url, activity_type, created_at").order("created_at", { ascending: false }).limit(5).then(({ data }) => setUpdates(data || [])); }, []); if (!updates.length) return null; return <section className="public-auth-updates"><span className="eyebrow">ÖFFENTLICHE AKTUALISIERUNGEN</span><h2>Aus der Community</h2>{updates.map((entry, index) => <div className={`hub-row ${roleClass(entry.role)}`} key={`${entry.nickname}-${entry.created_at}-${index}`}><img src={entry.avatar_url || DEFAULT_AVATAR} alt=""/><div><strong><RoleStar member={entry}/> {entry.nickname}{entry.is_verified ? " ✓" : ""}</strong><span>{entry.activity_type}</span></div></div>)}</section>; }
 function PasswordReset({ finishPasswordReset, notice }) { return <div className="auth-page"><div className="auth-welcome ec-auth-welcome"><section className="auth-intro ec-auth-intro"><img className="ec-auth-logo" src="/ennstal-connect-wordmark.svg" alt="Ennstal Connect"/><span className="eyebrow">KONTO-SICHERHEIT</span><h1>Neues Passwort festlegen.</h1><p>Wähle ein sicheres neues Passwort für dein Ennstal-Connect-Konto.</p></section><div className="auth-box ec-auth-box"><form className="panel" onSubmit={finishPasswordReset}><h2>Passwort zurücksetzen</h2><input name="password" type="password" minLength={6} placeholder="Neues Passwort (mindestens 6 Zeichen)" required/><input name="confirm_password" type="password" minLength={6} placeholder="Passwort wiederholen" required/><button className="primary-button">Passwort speichern</button></form></div></div>{notice && <div className="toast">{notice}</div>}</div>; }
-function NewAuth({ login, register }) {
+function NewAuth({ login, register, loginPending = false, loginFeedback = "" }) {
   const inviter = String(new URLSearchParams(location.search).get("ref") || "").trim();
   const [mode, setMode] = useState(inviter ? "register" : "login");
   return <div className="auth-welcome ec-auth-welcome">
@@ -2156,7 +2206,7 @@ function NewAuth({ login, register }) {
       <PublicProfileUpdatesPreview/>
     </section>
     <div className="auth-box ec-auth-box">{inviter && <div className="auth-referral-note"><strong>Du wurdest eingeladen</strong><span>Ein Mitglied von Ennstal Connect hat dir diesen Registrierungslink geschickt.</span></div>}{mode === "login" ?
-      <form className="panel" onSubmit={login}><span className="eyebrow">WILLKOMMEN</span><h2>Anmelden</h2><input name="email" type="email" autoComplete="email" placeholder="E-Mail *" required/><input name="password" type="password" autoComplete="current-password" placeholder="Passwort *" required/><button className="primary-button">Anmelden</button><button type="button" className="text-button" onClick={() => setMode("register")}>Noch kein Konto? Jetzt registrieren</button></form> :
+      <form className="panel" onSubmit={login}><span className="eyebrow">WILLKOMMEN</span><h2>Anmelden</h2><input name="email" type="email" inputMode="email" autoCapitalize="none" autoCorrect="off" spellCheck="false" autoComplete="email" placeholder="E-Mail *" required/><input name="password" type="password" autoCapitalize="none" autoCorrect="off" spellCheck="false" autoComplete="current-password" placeholder="Passwort *" required/>{loginFeedback && <p className="auth-login-feedback" role="status" aria-live="polite">{loginFeedback}</p>}<button className="primary-button" type="submit" disabled={loginPending}>{loginPending ? "Anmeldung läuft …" : "Anmelden"}</button><button type="button" className="text-button" disabled={loginPending} onClick={() => setMode("register")}>Noch kein Konto? Jetzt registrieren</button></form> :
       <form className="panel" onSubmit={register}><span className="eyebrow">NEUES KONTO</span><h2>Registrieren</h2><p className="auth-form-note">Dein Nickname ist sichtbar. Vor- und Nachname müssen gemäß Community-Regeln vollständig und richtig angegeben werden. Wähle die Heimatregion, in der dein Profil geführt wird.</p><input name="nickname" placeholder="Nickname *" required/><input name="first_name" placeholder="Vorname *" minLength={2} required/><input name="last_name" placeholder="Nachname *" minLength={2} required/><input name="birth_date" type="date" required/><select name="gender" defaultValue="" required><option value="">Geschlecht auswählen *</option><option value="männlich">Männlich</option><option value="weiblich">Weiblich</option><option value="divers">Divers</option></select><label className="region-register-label"><span>Deine Heimatregion</span><small>Dort bist du in der Mitgliederliste sichtbar.</small><select name="home_region_slug" defaultValue="ennstal" required><option value="ennstal">Ennstal</option><option value="leoben-bruck-muerzzuschlag">Leoben – Bruck – Mürzzuschlag</option><option value="salzkammergut">Salzkammergut</option></select></label><input name="email" type="email" autoComplete="email" placeholder="E-Mail *" required/><input name="password" type="password" autoComplete="new-password" minLength={6} placeholder="Passwort *" required/><button className="primary-button">Konto erstellen</button><button type="button" className="text-button" onClick={() => setMode("login")}>Bereits registriert? Anmelden</button></form>}
     </div>
   </div>;
