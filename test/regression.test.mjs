@@ -971,7 +971,7 @@ test("neon pink layout is selectable, point-gated, and fully themed", async()=>{
   assert.match(runtime,/Neon Pink – ab 1000 Aktivitätspunkten/);
   assert.match(main,/import "\.\/neon-pink-theme\.css"/);
   assert.match(css,/data-ec-theme="neon-pink"/);
-  assert.match(css,/#ff1bb8/i);
+  assert.match(css,/#ff149f/i);
 });
 
 
