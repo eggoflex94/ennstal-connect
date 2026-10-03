@@ -947,3 +947,13 @@ test("profile visits have one realtime owner and refresh both dock and React sta
   assert.match(app,/window\.addEventListener\("ec:profile-visits-changed", handleVisitsChanged\)/);
   assert.match(app,/setProfileVisits\(data \|\| \[\]\)/);
 });
+
+
+test("every member-profile navigation records a profile visit centrally", async()=>{
+  const app=await source("src/App.jsx");
+  assert.match(app,/page !== "member-profile"/);
+  assert.match(app,/lastRecordedProfileVisit/);
+  assert.match(app,/supabase\.from\("profile_visits"\)\.insert/);
+  assert.match(app,/profile_id: viewingMember\.id/);
+  assert.match(app,/visitor_id: user\.id/);
+});
