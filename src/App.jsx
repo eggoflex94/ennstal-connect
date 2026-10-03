@@ -1136,6 +1136,32 @@ useEffect(() => {
     return /\.(png|jpe?g|webp|gif|heic|heif|avif)$/i.test(String(file.name || ""));
   }
 
+
+  function imageContentType(file) {
+    if (String(file?.type || "").startsWith("image/")) return file.type;
+    const name = String(file?.name || "").toLowerCase();
+    if (/\.png$/.test(name)) return "image/png";
+    if (/\.webp$/.test(name)) return "image/webp";
+    if (/\.gif$/.test(name)) return "image/gif";
+    if (/\.avif$/.test(name)) return "image/avif";
+    if (/\.hei[cf]$/.test(name)) return "image/heic";
+    return "image/jpeg";
+  }
+
+  const isTransientUploadWriteError = (error) => /failed to fetch|load failed|network|timeout|antwortet nicht|aborted|thread killed/i.test(String(error?.message || error || ""));
+
+  async function retryProfileUpdate(patch, attempts = 3) {
+    let lastError = null;
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+      const { error } = await supabase.from("profiles").update(patch).eq("id", user.id);
+      if (!error) return null;
+      lastError = error;
+      if (!isTransientUploadWriteError(error) || attempt === attempts - 1) break;
+      await new Promise((resolve) => setTimeout(resolve, 700 * (attempt + 1)));
+    }
+    return lastError;
+  }
+
   function selectProfilePhotoForEdit(file) {
     if (!file) return;
     setProfilePhotoEditingExisting(false);
@@ -1194,10 +1220,7 @@ useEffect(() => {
       const { data: publicData } = supabase.storage.from("profile-avatars").getPublicUrl(newPath);
       const newUrl = publicData.publicUrl;
 
-      const { error: profileUpdateError } = await supabase
-        .from("profiles")
-        .update({ avatar_url: newUrl })
-        .eq("id", user.id);
+      const profileUpdateError = await retryProfileUpdate({ avatar_url: newUrl });
 
       if (profileUpdateError) {
         await supabase.storage.from("profile-avatars").remove([newPath]);
@@ -1238,13 +1261,13 @@ useEffect(() => {
 
   async function uploadProfileImage(file) {
     if (!file || !user) return null;
-    if (!file.type.startsWith("image/")) { showNotice("Bitte ein Bild auswählen."); return null; }
+    if (!isProfileImageFile(file)) { showNotice("Bitte ein Bild auswählen."); return null; }
     if (file.size > 5 * 1024 * 1024) { showNotice("Maximal 5 MB."); return null; }
     const ext = file.name.split(".").pop()?.toLowerCase() || "jpg"; const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
-    const { error } = await supabase.storage.from("profile-avatars").upload(path, file, { upsert: false, contentType: file.type }); if (error) { showNotice(error.message); return null; }
+    const { error } = await supabase.storage.from("profile-avatars").upload(path, file, { upsert: false, contentType: imageContentType(file) }); if (error) { showNotice(error.message); return null; }
     const { data } = supabase.storage.from("profile-avatars").getPublicUrl(path);
     const publicUrl = data.publicUrl;
-    const { error: updateError } = await supabase.from("profiles").update({ avatar_url: publicUrl }).eq("id", user.id); if (updateError) { showNotice(updateError.message); return null; }
+    const updateError = await retryProfileUpdate({ avatar_url: publicUrl }); if (updateError) { showNotice("Bild wurde hochgeladen, aber das Profil konnte wegen einer Verbindungsstörung noch nicht aktualisiert werden. Bitte erneut versuchen."); return null; }
     setProfile((current) => current ? { ...current, avatar_url: publicUrl } : current);
     const { data: albumPhoto, error: albumError } = await supabase.from("member_photos").select("*").eq("owner_id", user.id).eq("image_url", publicUrl).maybeSingle();
     if (albumError) console.warn("Profilbild konnte im Fotoalbum nicht geprüft werden:", albumError);
@@ -1256,7 +1279,7 @@ useEffect(() => {
   }
   function selectProfileCoverForEdit(file) {
     if (!file) return;
-    if (!file.type.startsWith("image/")) return showNotice("Bitte ein Bild auswählen.");
+    if (!isProfileImageFile(file)) return showNotice("Bitte ein Bild auswählen.");
     if (file.size > 8 * 1024 * 1024) return showNotice("Das Coverbild darf maximal 8 MB groß sein.");
     setProfileCoverEditFile(file);
   }
@@ -1268,7 +1291,7 @@ useEffect(() => {
       if (file.size > 8 * 1024 * 1024) return showNotice("Das Coverbild darf maximal 8 MB groß sein.");
       const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
       const path = `${user.id}/backgrounds/${crypto.randomUUID()}.${ext}`;
-      const { error } = await supabase.storage.from("profile-avatars").upload(path, file, { upsert:false, contentType:file.type });
+      const { error } = await supabase.storage.from("profile-avatars").upload(path, file, { upsert:false, contentType:imageContentType(file) });
       if (error) return showNotice(error.message);
       const { data } = supabase.storage.from("profile-avatars").getPublicUrl(path);
       backgroundUrl = data.publicUrl;
@@ -1281,7 +1304,7 @@ useEffect(() => {
       profile_background_zoom: Number(settings?.zoom ?? 1),
       profile_background_overlay: Number(settings?.overlay ?? 0.18)
     };
-    const { error:updateError } = await supabase.from("profiles").update(patch).eq("id", user.id);
+    const updateError = await retryProfileUpdate(patch);
     if (updateError) return showNotice(updateError.message);
     setProfile((current) => current ? { ...current, ...patch } : current);
     setProfileCoverEditFile(null);
@@ -1308,21 +1331,21 @@ useEffect(() => {
   }
 
   async function uploadProfileBackground(file) {
-    if (!file || !user) return; if (!file.type.startsWith("image/")) return showNotice("Bitte ein Bild auswählen."); if (file.size > 5 * 1024 * 1024) return showNotice("Maximal 5 MB.");
+    if (!file || !user) return; if (!isProfileImageFile(file)) return showNotice("Bitte ein Bild auswählen."); if (file.size > 5 * 1024 * 1024) return showNotice("Maximal 5 MB.");
     const ext = file.name.split(".").pop()?.toLowerCase() || "jpg"; const path = `${user.id}/backgrounds/${crypto.randomUUID()}.${ext}`;
-    const { error } = await supabase.storage.from("profile-avatars").upload(path, file, { upsert: false, contentType: file.type }); if (error) return showNotice(error.message);
-    const { data } = supabase.storage.from("profile-avatars").getPublicUrl(path); const { error: updateError } = await supabase.from("profiles").update({ profile_background: data.publicUrl }).eq("id", user.id); if (updateError) return showNotice(updateError.message); await logProfileActivity("Hintergrundfoto geändert"); setProfile((current) => current ? { ...current, profile_background: data.publicUrl } : current); await loadAll();
+    const { error } = await supabase.storage.from("profile-avatars").upload(path, file, { upsert: false, contentType: imageContentType(file) }); if (error) return showNotice(error.message);
+    const { data } = supabase.storage.from("profile-avatars").getPublicUrl(path); const updateError = await retryProfileUpdate({ profile_background: data.publicUrl }); if (updateError) return showNotice(updateError.message); await logProfileActivity("Hintergrundfoto geändert"); setProfile((current) => current ? { ...current, profile_background: data.publicUrl } : current); await loadAll();
   }
   async function uploadProfileBioImage(file) {
-    if (!file || !user) return; if (!file.type.startsWith("image/")) return showNotice("Bitte ein Bild auswählen."); if (file.size > 5 * 1024 * 1024) return showNotice("Maximal 5 MB.");
+    if (!file || !user) return; if (!isProfileImageFile(file)) return showNotice("Bitte ein Bild auswählen."); if (file.size > 5 * 1024 * 1024) return showNotice("Maximal 5 MB.");
     const ext = file.name.split(".").pop()?.toLowerCase() || "jpg"; const path = `${user.id}/bio/${crypto.randomUUID()}.${ext}`;
-    const { error } = await supabase.storage.from("profile-avatars").upload(path, file, { upsert: false, contentType: file.type }); if (error) return showNotice(error.message);
-    const { data } = supabase.storage.from("profile-avatars").getPublicUrl(path); const { error: updateError } = await supabase.from("profiles").update({ bio_image_url: data.publicUrl }).eq("id", user.id); if (updateError) return showNotice(updateError.message); await logProfileActivity("Über-mich-Bild geändert"); setProfile((current) => current ? { ...current, bio_image_url: data.publicUrl } : current); await loadAll();
+    const { error } = await supabase.storage.from("profile-avatars").upload(path, file, { upsert: false, contentType: imageContentType(file) }); if (error) return showNotice(error.message);
+    const { data } = supabase.storage.from("profile-avatars").getPublicUrl(path); const updateError = await retryProfileUpdate({ bio_image_url: data.publicUrl }); if (updateError) return showNotice(updateError.message); await logProfileActivity("Über-mich-Bild geändert"); setProfile((current) => current ? { ...current, bio_image_url: data.publicUrl } : current); await loadAll();
   }
   async function uploadMemberPhoto(file, caption = "", visibility = "PUBLIC") {
-    if (!file || !user) return; if (!file.type.startsWith("image/")) return showNotice("Bitte ein Bild auswählen."); if (file.size > 5 * 1024 * 1024) return showNotice("Maximal 5 MB pro Foto.");
+    if (!file || !user) return; if (!isProfileImageFile(file)) return showNotice("Bitte ein Bild auswählen."); if (file.size > 5 * 1024 * 1024) return showNotice("Maximal 5 MB pro Foto.");
     const ext = file.name.split(".").pop()?.toLowerCase() || "jpg"; const path = `${user.id}/gallery/${crypto.randomUUID()}.${ext}`;
-    const { error: uploadError } = await supabase.storage.from("profile-avatars").upload(path, file, { upsert: false, contentType: file.type });
+    const { error: uploadError } = await supabase.storage.from("profile-avatars").upload(path, file, { upsert: false, contentType: imageContentType(file) });
     if (uploadError) return showNotice(uploadError.message);
     const { data } = supabase.storage.from("profile-avatars").getPublicUrl(path);
     const { error } = await supabase.from("member_photos").insert({ owner_id: user.id, image_url: data.publicUrl, caption: caption.trim(), visibility: visibility === "FRIENDS" ? "FRIENDS" : "PUBLIC" });
@@ -1333,13 +1356,13 @@ useEffect(() => {
   async function addPhotoComment(photoId, text) { if (!text.trim()) return; const { data, error } = await supabase.from("member_photo_comments").insert({ photo_id: photoId, author_id: user.id, content: text.trim() }).select().single(); if (error) return showNotice(error.message); setPhotoComments((comments) => [...comments, data]); }
   async function deleteMemberPhoto(photo) { if (photo.owner_id !== user?.id || !confirm("Dieses Profilfoto wirklich löschen?")) return; const { error } = await supabase.from("member_photos").delete().eq("id", photo.id).eq("owner_id", user.id); if (error) return showNotice(error.message); setMemberPhotos((current) => current.filter((entry) => entry.id !== photo.id)); showNotice("Profilfoto gelöscht."); }
   async function uploadHomepageImage(file) {
-    if (!file) return null; if (!user) throw new Error("Bitte zuerst anmelden."); if (!file.type.startsWith("image/")) throw new Error("Bitte ein Bild auswählen."); if (file.size > 5 * 1024 * 1024) throw new Error("Das Bild darf höchstens 5 MB groß sein.");
+    if (!file) return null; if (!user) throw new Error("Bitte zuerst anmelden."); if (!isProfileImageFile(file)) throw new Error("Bitte ein Bild auswählen."); if (file.size > 5 * 1024 * 1024) throw new Error("Das Bild darf höchstens 5 MB groß sein.");
     const ext = file.name.split(".").pop()?.toLowerCase() || "jpg"; const path = `${user.id}/homepage/${crypto.randomUUID()}.${ext}`;
     let bucket = "community-media";
-    let { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: false, contentType: file.type });
+    let { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: false, contentType: imageContentType(file) });
     // Existing projects may not have the optional community-media bucket yet.
     // Profile avatars already use this bucket, so it is a safe immediate fallback.
-    if (error && /bucket not found/i.test(error.message || "")) { bucket = "profile-avatars"; ({ error } = await supabase.storage.from(bucket).upload(path, file, { upsert: false, contentType: file.type })); }
+    if (error && /bucket not found/i.test(error.message || "")) { bucket = "profile-avatars"; ({ error } = await supabase.storage.from(bucket).upload(path, file, { upsert: false, contentType: imageContentType(file) })); }
     if (error) throw error;
     const { data } = supabase.storage.from(bucket).getPublicUrl(path); if (!data?.publicUrl) throw new Error("Für das Bild konnte keine öffentliche URL erstellt werden."); return data.publicUrl;
   }
@@ -1348,11 +1371,11 @@ useEffect(() => {
     // left blank. Treat that as "no image" instead of rejecting the whole
     // group/news form as an invalid image upload.
     if (!file || !user || !file.name || file.size === 0) return null;
-    if (!file.type.startsWith("image/")) throw new Error("Bitte eine Bilddatei auswählen.");
+    if (!isProfileImageFile(file)) throw new Error("Bitte eine Bilddatei auswählen.");
     if (file.size > 5 * 1024 * 1024) throw new Error("Das Bild darf höchstens 5 MB groß sein.");
     const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
     const path = `${user.id}/${category}/${crypto.randomUUID()}.${ext}`;
-    const { error } = await supabase.storage.from("profile-avatars").upload(path, file, { upsert: false, contentType: file.type });
+    const { error } = await supabase.storage.from("profile-avatars").upload(path, file, { upsert: false, contentType: imageContentType(file) });
     if (error) throw error;
     const { data } = supabase.storage.from("profile-avatars").getPublicUrl(path);
     if (!data?.publicUrl) throw new Error("Für das Bild konnte keine öffentliche URL erstellt werden.");
@@ -2018,7 +2041,7 @@ function Profile({ profile, user, isHeadAdmin, saveProfile, uploadProfileImage, 
   <fieldset className="profile-editor-section">
     <legend>Bilder</legend>
     <div className="profile-editor-grid">
-      <div className="profile-upload-field profile-upload-field-avatar"><span>Profilbild</span><small>Handyfotos, PNG, JPG, WebP, GIF, HEIC/HEIF · danach zuschneiden, zoomen und ausrichten</small><input id="profile-avatar-file" className="profile-avatar-file-input" type="file" accept="image/*,.heic,.heif" onClick={(e) => { e.currentTarget.value = ""; }} onChange={(e) => { const file = e.currentTarget.files?.[0]; if (file) uploadProfileImage(file); }}/>{profile?.avatar_url && <div className="profile-cover-inline-actions"><button type="button" className="text-button" onClick={editProfileImage}>Profilbild ausrichten</button></div>}</div>
+      <div className="profile-upload-field profile-upload-field-avatar"><span>Profilbild</span><small>Handyfotos, PNG, JPG, WebP, GIF, HEIC/HEIF · danach zuschneiden, zoomen und ausrichten</small><input id="profile-avatar-file" className="profile-avatar-file-input" type="file" accept="image/*,.heic,.heif,.avif" onChange={(e) => { const input = e.currentTarget; const file = input.files?.[0]; if (file) uploadProfileImage(file); window.setTimeout(() => { input.value = ""; }, 0); }}/>{profile?.avatar_url && <div className="profile-cover-inline-actions"><button type="button" className="text-button" onClick={editProfileImage}>Profilbild ausrichten</button></div>}</div>
       <label className="profile-upload-field"><span>Profil-Cover</span><small>Breites Titelbild · danach Ausschnitt, Zoom und Abdunklung einstellen</small><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(e) => e.target.files?.[0] && uploadProfileBackground(e.target.files[0])}/>{isImage && <span className="profile-cover-inline-actions"><button type="button" className="text-button" onClick={editProfileCover}>Ausschnitt anpassen</button><button type="button" className="text-button profile-cover-remove" onClick={removeProfileCover}>Hintergrund entfernen</button></span>}</label>
       <label className="profile-upload-field profile-editor-field-wide"><span>Bild zu „Über mich“</span><small>Optionales zusätzliches Profilbild</small><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(e) => e.target.files?.[0] && uploadProfileBioImage(e.target.files[0])}/></label>
     </div>
