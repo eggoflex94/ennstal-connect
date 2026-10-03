@@ -1343,14 +1343,46 @@ useEffect(() => {
     const { data } = supabase.storage.from("profile-avatars").getPublicUrl(path); const updateError = await retryProfileUpdate({ bio_image_url: data.publicUrl }); if (updateError) return showNotice(updateError.message); await logProfileActivity("Über-mich-Bild geändert"); setProfile((current) => current ? { ...current, bio_image_url: data.publicUrl } : current); await loadAll();
   }
   async function uploadMemberPhoto(file, caption = "", visibility = "PUBLIC") {
-    if (!file || !user) return; if (!isProfileImageFile(file)) return showNotice("Bitte ein Bild auswählen."); if (file.size > 5 * 1024 * 1024) return showNotice("Maximal 5 MB pro Foto.");
-    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg"; const path = `${user.id}/gallery/${crypto.randomUUID()}.${ext}`;
-    const { error: uploadError } = await supabase.storage.from("profile-avatars").upload(path, file, { upsert: false, contentType: imageContentType(file) });
-    if (uploadError) return showNotice(uploadError.message);
+    if (!file || !user) return false;
+    if (!isProfileImageFile(file)) { showNotice("Bitte ein Bild auswählen."); return false; }
+    if (file.size > 12 * 1024 * 1024) { showNotice("Maximal 12 MB pro Foto."); return false; }
+
+    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+    const path = `${user.id}/gallery/${crypto.randomUUID()}.${ext}`;
+    const { error: uploadError } = await supabase.storage.from("profile-avatars").upload(path, file, {
+      upsert: false,
+      contentType: imageContentType(file)
+    });
+    if (uploadError) { showNotice(uploadError.message); return false; }
+
     const { data } = supabase.storage.from("profile-avatars").getPublicUrl(path);
-    const { error } = await supabase.from("member_photos").insert({ owner_id: user.id, image_url: data.publicUrl, caption: caption.trim(), visibility: visibility === "FRIENDS" ? "FRIENDS" : "PUBLIC" });
-    if (error) return showNotice(error.message); showNotice("Foto wurde veröffentlicht.");
-    const { data: photos } = await supabase.from("member_photos").select("*").order("created_at", { ascending: false }).limit(24); if (photos) setMemberPhotos(photos);
+    const photoId = crypto.randomUUID();
+    const payload = {
+      id: photoId,
+      owner_id: user.id,
+      image_url: data.publicUrl,
+      caption: caption.trim(),
+      visibility: visibility === "FRIENDS" ? "FRIENDS" : "PUBLIC"
+    };
+
+    let insertError = null;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const result = await supabase.from("member_photos").insert(payload);
+      insertError = result.error;
+      if (!insertError || insertError.code === "23505") { insertError = null; break; }
+      if (!isTransientUploadWriteError(insertError) || attempt === 2) break;
+      await new Promise((resolve) => setTimeout(resolve, 700 * (attempt + 1)));
+    }
+
+    if (insertError) {
+      showNotice("Das Bild liegt bereits im Speicher, aber die Veröffentlichung konnte wegen einer Verbindungsstörung nicht abgeschlossen werden. Bitte erneut versuchen.");
+      return false;
+    }
+
+    showNotice("Foto wurde veröffentlicht.");
+    const { data: photos } = await supabase.from("member_photos").select("*").order("created_at", { ascending: false }).limit(24);
+    if (photos) setMemberPhotos(photos);
+    return true;
   }
   async function togglePhotoLike(photoId) { const mine = photoLikes.find((like) => like.photo_id === photoId && like.user_id === user.id); const { error } = mine ? await supabase.from("member_photo_likes").delete().eq("photo_id", photoId).eq("user_id", user.id) : await supabase.from("member_photo_likes").insert({ photo_id: photoId, user_id: user.id }); if (error) return showNotice(error.message); setPhotoLikes((likes) => mine ? likes.filter((like) => like !== mine) : [...likes, { photo_id: photoId, user_id: user.id }]); }
   async function addPhotoComment(photoId, text) { if (!text.trim()) return; const { data, error } = await supabase.from("member_photo_comments").insert({ photo_id: photoId, author_id: user.id, content: text.trim() }).select().single(); if (error) return showNotice(error.message); setPhotoComments((comments) => [...comments, data]); }
