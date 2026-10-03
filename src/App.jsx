@@ -1105,7 +1105,7 @@ export default function App() {
   }
   async function logProfileActivity(label) { if (!user?.id) return; let { error } = await supabase.rpc("log_profile_change", { p_activity: label }); if (error) ({ error } = await supabase.from("profile_activity").insert({ profile_id: user.id, actor_id: user.id, target_user_id: user.id, activity_type: label, text: label })); if (error) { console.warn(error.message); showNotice("Profil gespeichert, aber die Aktualisierung konnte nicht protokolliert werden: " + error.message); return; } setProfileActivities((current) => [{ id: `local-${Date.now()}`, profile_id: user.id, actor_id: user.id, activity_type: label, created_at: new Date().toISOString() }, ...current].slice(0, 20)); }
   async function deleteProfileDesignImage(field, label, currentUrl) {
-    if (!user?.id || !["avatar_url", "profile_background", "bio_image_url"].includes(field)) return;
+    if (!user?.id || !["avatar_url", "profile_background"].includes(field)) return;
     if (!confirm(`${label} wirklich löschen?`)) return;
     const replacement = field === "profile_background" ? "#1b1f26" : null;
     const { error } = await supabase.from("profiles").update({ [field]: replacement }).eq("id", user.id);
@@ -2466,7 +2466,7 @@ function ProfileModal({ selectedMember, user, profile, friendship, setSelectedMe
 }
 
 function HeadAdminProfileMediaTools({ member, onRemove }) {
-  const items = [["avatar_url", "Profilbild"], ["profile_background", "Hintergrundfoto"], ["bio_image_url", "Über-mich-Bild"]].filter(([field]) => String(member?.[field] || "").startsWith("http"));
+  const items = [["avatar_url", "Profilbild"], ["profile_background", "Hintergrundfoto"]].filter(([field]) => String(member?.[field] || "").startsWith("http"));
   if (!items.length) return null;
   return <section className="head-admin-media-tools panel"><span className="eyebrow">HEAD-ADMIN · PROFILMEDIEN</span><h2>Bilder bei Regelverstoß entfernen</h2><p>Jede Entfernung verlangt eine Begründung und wird im Admin-Logbuch festgehalten.</p><div>{items.map(([field, label]) => <button type="button" className="danger-button" key={field} onClick={() => onRemove(member, field, label)}>{label} entfernen</button>)}</div></section>;
 }
