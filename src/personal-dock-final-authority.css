@@ -831,3 +831,29 @@ body .ec-right-dock.ec-compact-personal-dock .ec-compact-menu-grid.ec-has-admin-
 body .ec-right-dock.ec-compact-personal-dock .ec-compact-menu-grid > [data-ec-admin-tool="1"]{
   order:3!important;
 }
+
+
+/* Absolute final online-friend row authority: keep status, star and nickname
+   together instead of stretching the nickname to the far edge. */
+body .ec-right-dock .ec-online-friend{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  gap:6px!important;
+  width:100%!important;
+}
+body .ec-right-dock .ec-online-friend .ec-online-dot{
+  flex:0 0 8px!important;
+}
+body .ec-right-dock .ec-online-friend .ec-online-friend-star{
+  flex:0 0 22px!important;
+  margin:0!important;
+}
+body .ec-right-dock .ec-online-friend .ec-online-friend-name{
+  flex:0 1 auto!important;
+  width:auto!important;
+  max-width:calc(100% - 48px)!important;
+  margin:0!important;
+  padding:0!important;
+  text-align:left!important;
+}

@@ -1018,3 +1018,11 @@ test("online friend nickname sits directly beside role star", async()=>{
   assert.match(css,/grid-template-columns:9px auto minmax\(0,1fr\)/);
   assert.match(css,/\.ec-online-friend-name\{[\s\S]*justify-self:start/);
 });
+
+
+test("final personal dock keeps online friend nickname beside the star", async()=>{
+  const css=await source("src/personal-dock-final-authority.css");
+  assert.match(css,/body \.ec-right-dock \.ec-online-friend\{[\s\S]*display:flex!important/);
+  assert.match(css,/justify-content:flex-start!important/);
+  assert.match(css,/\.ec-online-friend-name\{[\s\S]*width:auto!important/);
+});
