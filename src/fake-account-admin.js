@@ -44,7 +44,7 @@ function ensurePortal() {
     </div>`;
   document.body.appendChild(portal);
   portal.querySelector('.ec-fake-refresh').onclick = () => void load();
-  portal.querySelector('.ec-fake-filter').onchange = renderRows;
+  portal.querySelector('.ec-fake-filter').onchange = () => { const filter=portal.querySelector('.ec-fake-filter').value; if(filter==='all'){ portal.querySelector('.ec-fake-search').value=''; void load(); } else renderRows(); };
   portal.querySelector('.ec-fake-search').addEventListener('keydown', (event) => { if (event.key === 'Enter') void load(); });
   return portal;
 }
@@ -72,7 +72,7 @@ function renderRows() {
   const list = portal.querySelector('.ec-fake-list');
   const summary = portal.querySelector('.ec-fake-summary');
   const rows = filteredRows();
-  summary.textContent = `${currentRows.filter((row) => Number(row.risk_score || 0) >= 40).length} mit erhöhter Prüfpriorität · ${rows.length} angezeigt`;
+  const reviewed=currentRows.filter(row=>['SAFE','FAKE'].includes(String(row.review_state||'REVIEW'))).length; summary.textContent = `${currentRows.filter((row) => Number(row.risk_score || 0) >= 40).length} mit erhöhter Prüfpriorität · ${reviewed} bereits geprüft · ${rows.length} angezeigt`;
   list.replaceChildren();
   if (!rows.length) {
     list.innerHTML = '<p class="ec-fake-empty">Keine Konten für diesen Filter gefunden.</p>';
