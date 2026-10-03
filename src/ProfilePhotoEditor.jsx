@@ -44,6 +44,21 @@ function cropGeometry(source, rotation, size) {
   return { quarterTurn, coverScale, containScale, circleFillZoom };
 }
 
+function drawSoftBackdrop(ctx, source, rotation, size, coverScale) {
+  const radians = rotation * Math.PI / 180;
+  const backdropScale = coverScale * 1.12;
+  const bgW = source.naturalWidth * backdropScale;
+  const bgH = source.naturalHeight * backdropScale;
+
+  ctx.save();
+  ctx.filter = "blur(28px) brightness(.78)";
+  ctx.translate(size / 2, size / 2);
+  ctx.rotate(radians);
+  ctx.drawImage(source, -bgW / 2, -bgH / 2, bgW, bgH);
+  ctx.restore();
+  ctx.filter = "none";
+}
+
 function drawEditedImage(canvas, source, { zoom, x, y, rotation, mode = "cover" }, size) {
   if (!canvas || !source) return;
   canvas.width = size;
@@ -52,26 +67,14 @@ function drawEditedImage(canvas, source, { zoom, x, y, rotation, mode = "cover" 
   const ctx = canvas.getContext("2d", { alpha: false });
   if (!ctx) return;
 
-  ctx.fillStyle = "#f3f6f8";
-  ctx.fillRect(0, 0, size, size);
-
   const { quarterTurn, coverScale, containScale } = cropGeometry(source, rotation, size);
   const radians = rotation * Math.PI / 180;
 
-  if (mode === "contain") {
-    // Fill the square with a soft version of the same image so the complete
-    // photo can stay visible without ugly empty bars in the round avatar.
-    const bgScale = coverScale;
-    const bgW = source.naturalWidth * bgScale;
-    const bgH = source.naturalHeight * bgScale;
-    ctx.save();
-    ctx.filter = "blur(28px) brightness(.78)";
-    ctx.translate(size / 2, size / 2);
-    ctx.rotate(radians);
-    ctx.drawImage(source, -bgW / 2, -bgH / 2, bgW, bgH);
-    ctx.restore();
-    ctx.filter = "none";
+  // Always paint the empty area with a blurred version of the photo.
+  // This keeps zoomed-out avatars free of white/light letterboxing in every mode.
+  drawSoftBackdrop(ctx, source, rotation, size, coverScale);
 
+  if (mode === "contain") {
     const scale = containScale * Math.max(0.35, zoom);
     const drawW = source.naturalWidth * scale;
     const drawH = source.naturalHeight * scale;
