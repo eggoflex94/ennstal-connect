@@ -106,7 +106,7 @@ export function createNetworkFetch(fetchImpl, timeoutMs = 12_000, readCacheMs = 
     const effectiveTimeoutMs = isResumableStorageWrite
       ? Math.max(timeoutMs, 180_000)
       : isStorageWrite
-        ? Math.max(timeoutMs, 30_000)
+        ? Math.max(timeoutMs, 90_000)
         : timeoutMs;
 
     const execute = async () => {
