@@ -2153,12 +2153,65 @@ function GroupDetails({ group, members, profile, user, onClose, onJoin, onLeave,
 }
 
 function Forum({ title, intro, scope, posts, members, profile, createPost, editPost, deletePost, locked, onBack }) {
+  const draftKey = `ec-forum-draft:${profile?.id || "anon"}:${scope}`;
+  const [draftState, setDraftState] = useState({ restored: false, saved: false });
+  const composerRef = useRef(null);
+
+  useEffect(() => {
+    const form = composerRef.current;
+    if (!form || locked) return undefined;
+    let draft = null;
+    try { draft = JSON.parse(localStorage.getItem(draftKey) || "null"); } catch {}
+    if (draft && (draft.title || draft.content)) {
+      const titleField = form.elements.namedItem("title");
+      const contentField = form.elements.namedItem("content");
+      const fontField = form.elements.namedItem("font_family");
+      const sizeField = form.elements.namedItem("font_size");
+      const emphasisField = form.elements.namedItem("emphasis");
+      if (titleField) titleField.value = draft.title || "";
+      if (contentField) contentField.value = draft.content || "";
+      if (fontField && draft.font_family) fontField.value = draft.font_family;
+      if (sizeField && draft.font_size) sizeField.value = draft.font_size;
+      if (emphasisField && draft.emphasis) emphasisField.value = draft.emphasis;
+      setDraftState({ restored: true, saved: true });
+    }
+    const persist = () => {
+      const values = new FormData(form);
+      const next = {
+        title: String(values.get("title") || ""),
+        content: String(values.get("content") || ""),
+        font_family: String(values.get("font_family") || "modern"),
+        font_size: String(values.get("font_size") || "normal"),
+        emphasis: String(values.get("emphasis") || "normal"),
+        saved_at: new Date().toISOString()
+      };
+      if (next.title.trim() || next.content.trim()) {
+        localStorage.setItem(draftKey, JSON.stringify(next));
+        setDraftState({ restored: draftState.restored, saved: true });
+      } else {
+        localStorage.removeItem(draftKey);
+        setDraftState({ restored: false, saved: false });
+      }
+    };
+    form.addEventListener("input", persist);
+    form.addEventListener("change", persist);
+    return () => { form.removeEventListener("input", persist); form.removeEventListener("change", persist); };
+  }, [draftKey, locked]);
+
+  const submitPost = async (event) => {
+    const ok = await createPost(event, scope);
+    if (ok) {
+      try { localStorage.removeItem(draftKey); } catch {}
+      setDraftState({ restored: false, saved: false });
+    }
+  };
+
   const visiblePosts = posts.filter((post) => post.scope === scope);
   const memberFor = (id) => members.find((member) => member.id === id);
   const nameFor = (id) => getName(memberFor(id));
   const identityFor = (id) => { const member = memberFor(id); return member ? `${roleMark(member.role)} ${getName(member)} · ${roleLabel(member.role)}`.trim() : "Unbekanntes Mitglied"; };
   const forumContacts = scope === "COMMUNITY" ? members.filter((member) => member.account_status !== "SUSPENDED" && !member.is_test_account && (isAdmin(member.role) || (member.role === "SUPPORTER" && (member.forum_moderator || (member.admin_responsibilities || []).some((item) => /forum/i.test(String(item))))))) : [];
-  return <section className={`forum-page${scope === "ADMIN" ? " admin-forum-page" : ""}`}>{scope === "ADMIN" && <div className="admin-forum-page-toolbar"><button type="button" className="secondary-button admin-forum-back-button" onClick={onBack}>← Zur Admin-Zentrale</button><span>Interner Team-Bereich · überregional</span></div>}<div className="page-heading admin-forum-page-heading"><div><span className="eyebrow">{scope === "ADMIN" ? "ADMIN · INTERN" : "COMMUNITY"}</span><h1>{title}</h1><p>{intro}</p></div>{scope === "ADMIN" && <div className="admin-forum-page-badge"><strong>Nur Team</strong><small>Admins & berechtigte Moderation</small></div>}</div>{forumContacts.length > 0 && <aside className="forum-contacts panel"><span className="eyebrow">ZUSTÄNDIG IM FORUM</span><h2>Forum-Moderation & Ansprechpartner</h2><div>{forumContacts.map((member) => <span className={`forum-contact ${roleClass(member.role)}`} key={member.id}>{roleMark(member.role)} {getName(member)} <small>· {member.forum_moderator ? "Forum-Moderation" : roleLabel(member.role)}</small></span>)}</div></aside>}<form className="forum-composer panel" onSubmit={(event) => createPost(event, scope)}><h2>Neuen Beitrag schreiben</h2>{locked && <p className="forum-locked">Deine Schreibfunktion im Forum ist momentan gesperrt.</p>}<input name="title" placeholder="Überschrift" minLength="3" required disabled={locked}/><textarea name="content" placeholder="Teile deinen Beitrag mit der Community …" minLength="3" required disabled={locked}/><div className="form-grid"><label>Schriftart<select name="font_family" defaultValue="modern" disabled={locked}><option value="modern">Modern</option><option value="serif">Klassisch</option><option value="handwritten">Handschriftlich</option></select></label><label>Schriftgröße<select name="font_size" defaultValue="normal" disabled={locked}><option value="small">Klein</option><option value="normal">Normal</option><option value="large">Groß</option></select></label></div><label>Betonung<select name="emphasis" defaultValue="normal" disabled={locked}><option value="normal">Normal</option><option value="bold">Fett</option><option value="italic">Kursiv</option></select></label>{!isAdmin(profile?.role) && <label className="ai-content-option"><input type="checkbox" name="is_ai_generated" disabled={locked}/><span>Dieser Inhalt wurde mit KI erstellt oder wesentlich mit KI unterstützt.</span></label>}<button className="primary-button" disabled={locked}>Beitrag veröffentlichen</button></form><div className="forum-post-list">{visiblePosts.map((post) => { const canManage = post.author_id === profile?.id || isAdmin(profile?.role) || (post.scope === "COMMUNITY" && profile?.forum_moderator); return <article className="forum-post panel" key={post.id}><div className="forum-post-head"><div><span className="eyebrow">{scope === "ADMIN" ? "ADMIN-FORUM" : "FORUM"}</span>{post.is_ai_generated && <span className="ai-content-badge">✦ KI-Inhalt</span>}<h2>{post.title}</h2><p>von <strong>{nameFor(post.author_id)}</strong> · {new Date(post.created_at).toLocaleString("de-AT")}</p></div>{canManage && <div className="forum-post-actions"><button type="button" className="secondary-button" onClick={() => editPost(post)}>✎ Bearbeiten</button><button type="button" className="danger-button" onClick={() => deletePost(post)}>Löschen</button></div>}</div><p className={`forum-content ${post.font_family || "modern"} ${post.font_size || "normal"} ${post.emphasis || "normal"}`}>{post.content}</p>{post.edited_at && <small className="forum-edited">✎ Bearbeitet von {identityFor(post.edited_by)}{post.edit_reason ? ` · ${post.edit_reason}` : ""}</small>}</article>; })}{!visiblePosts.length && <div className="empty-card">Noch keine Beiträge. Starte die Diskussion!</div>}</div></section>;
+  return <section className={`forum-page${scope === "ADMIN" ? " admin-forum-page" : ""}`}>{scope === "ADMIN" && <div className="admin-forum-page-toolbar"><button type="button" className="secondary-button admin-forum-back-button" onClick={onBack}>← Zur Admin-Zentrale</button><span>Interner Team-Bereich · überregional</span></div>}<div className="page-heading admin-forum-page-heading"><div><span className="eyebrow">{scope === "ADMIN" ? "ADMIN · INTERN" : "COMMUNITY"}</span><h1>{title}</h1><p>{intro}</p></div>{scope === "ADMIN" && <div className="admin-forum-page-badge"><strong>Nur Team</strong><small>Admins & berechtigte Moderation</small></div>}</div>{forumContacts.length > 0 && <aside className="forum-contacts panel"><span className="eyebrow">ZUSTÄNDIG IM FORUM</span><h2>Forum-Moderation & Ansprechpartner</h2><div>{forumContacts.map((member) => <span className={`forum-contact ${roleClass(member.role)}`} key={member.id}>{roleMark(member.role)} {getName(member)} <small>· {member.forum_moderator ? "Forum-Moderation" : roleLabel(member.role)}</small></span>)}</div></aside>}<form ref={composerRef} className="forum-composer panel" onSubmit={submitPost}><h2>Neuen Beitrag schreiben</h2>{draftState.restored && <div className="forum-draft-notice"><strong>Entwurf wiederhergestellt</strong><span>Dein nicht veröffentlichter Text wurde automatisch gespeichert.</span><button type="button" onClick={() => { localStorage.removeItem(draftKey); composerRef.current?.reset(); setDraftState({ restored:false, saved:false }); }}>Entwurf verwerfen</button></div>}{!draftState.restored && draftState.saved && <small className="forum-draft-saved">✓ Entwurf automatisch gespeichert</small>}{locked && <p className="forum-locked">Deine Schreibfunktion im Forum ist momentan gesperrt.</p>}<input name="title" placeholder="Überschrift" minLength="3" required disabled={locked}/><textarea name="content" placeholder="Teile deinen Beitrag mit der Community …" minLength="3" required disabled={locked}/><div className="form-grid"><label>Schriftart<select name="font_family" defaultValue="modern" disabled={locked}><option value="modern">Modern</option><option value="serif">Klassisch</option><option value="handwritten">Handschriftlich</option></select></label><label>Schriftgröße<select name="font_size" defaultValue="normal" disabled={locked}><option value="small">Klein</option><option value="normal">Normal</option><option value="large">Groß</option></select></label></div><label>Betonung<select name="emphasis" defaultValue="normal" disabled={locked}><option value="normal">Normal</option><option value="bold">Fett</option><option value="italic">Kursiv</option></select></label>{!isAdmin(profile?.role) && <label className="ai-content-option"><input type="checkbox" name="is_ai_generated" disabled={locked}/><span>Dieser Inhalt wurde mit KI erstellt oder wesentlich mit KI unterstützt.</span></label>}<button className="primary-button" disabled={locked}>Beitrag veröffentlichen</button></form><div className="forum-post-list">{visiblePosts.map((post) => { const canManage = post.author_id === profile?.id || isAdmin(profile?.role) || (post.scope === "COMMUNITY" && profile?.forum_moderator); return <article className="forum-post panel" key={post.id}><div className="forum-post-head"><div><span className="eyebrow">{scope === "ADMIN" ? "ADMIN-FORUM" : "FORUM"}</span>{post.is_ai_generated && <span className="ai-content-badge">✦ KI-Inhalt</span>}<h2>{post.title}</h2><p>von <strong>{nameFor(post.author_id)}</strong> · {new Date(post.created_at).toLocaleString("de-AT")}</p></div>{canManage && <div className="forum-post-actions"><button type="button" className="secondary-button" onClick={() => editPost(post)}>✎ Bearbeiten</button><button type="button" className="danger-button" onClick={() => deletePost(post)}>Löschen</button></div>}</div><p className={`forum-content ${post.font_family || "modern"} ${post.font_size || "normal"} ${post.emphasis || "normal"}`}>{post.content}</p>{post.edited_at && <small className="forum-edited">✎ Bearbeitet von {identityFor(post.edited_by)}{post.edit_reason ? ` · ${post.edit_reason}` : ""}</small>}</article>; })}{!visiblePosts.length && <div className="empty-card">Noch keine Beiträge. Starte die Diskussion!</div>}</div></section>;
 }
 
 function FeatureUnlocks({ member, setMemberFeatureLock }) { return <section className="member-admin-tools feature-unlocks"><span className="eyebrow">FUNKTIONEN FREIGEBEN</span><h2>Sperren aufheben</h2><p>Nur verwenden, wenn die Funktion für dieses Mitglied wieder erlaubt sein soll.</p><div><button className="secondary-button" onClick={() => setMemberFeatureLock(member, "FORUM_POSTING", false)}>Forum freigeben</button><button className="secondary-button" onClick={() => setMemberFeatureLock(member, "MESSAGING", false)}>Nachrichten freigeben</button><button className="secondary-button" onClick={() => setMemberFeatureLock(member, "FRIEND_REQUESTS", false)}>Anfragen freigeben</button></div></section>; }
