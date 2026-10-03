@@ -16,7 +16,7 @@ test("admin UI validates role choices before RPC", async () => {
   const app = await source("src/App.jsx");
   const manager = await source("src/admin-role-manager.js");
   assert.match(app, /normalizedRole = String\(newRole \|\| ""\)\.trim\(\)\.toUpperCase\(\)/);
-  assert.match(app, /\["MEMBER", "SUPPORTER", "ADMIN", "MUNICIPALITY"\]\.includes\(normalizedRole\)/);
+  assert.match(app, /\["MEMBER", "SUPPORTER", "ADMIN", "MUNICIPALITY", "HEAD_ADMIN"\]\.includes\(normalizedRole\)/);
   assert.match(manager, /nextRole=String\(role\|\|''\)\.trim\(\)\.toUpperCase\(\)/);
   assert.match(manager, /\['MEMBER','SUPPORTER','ADMIN','MUNICIPALITY'\]\.includes\(nextRole\)/);
 });
