@@ -253,15 +253,19 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
 
     <div className="member-grid native-member-grid">
       {pagedVisible.map((member) => {
-        const headRegionLabel = regionById[member.home_region_id]?.name || "Hauptregion";
+        const homeRegionLabel = regionById[member.home_region_id]?.name || "Hauptregion";
+        const assignedRegionNames = [...(regionalAdminByUser.get(member?.id) || [])]
+          .map((regionId) => regionById[regionId]?.name)
+          .filter(Boolean);
+        const regionalLabel = assignedRegionNames.length ? assignedRegionNames.join(", ") : homeRegionLabel;
         const cardMember = member?.is_primary_head_admin
-          ? { ...member, directory_admin: true, directory_role_star: roleStarSrc(member), directory_responsibility_label: `Hauptverantwortlich · zuständig für Region ${headRegionLabel}` }
+          ? { ...member, directory_admin: true, directory_role_star: roleStarSrc(member), directory_responsibility_label: "Hauptverantwortlicher · alle Regionen" }
           : isHeadAdmin(member)
-            ? { ...member, directory_admin: true, directory_role_star: roleStarSrc(member), directory_responsibility_label: `Hauptverantwortlich · zuständig für Region ${headRegionLabel}` }
+            ? { ...member, directory_admin: true, directory_role_star: roleStarSrc(member), directory_responsibility_label: "Head Admin · alle Regionen" }
             : normalized(member?.role) === "ADMIN"
-              ? { ...member, directory_admin: true, directory_role_star: roleStarSrc(member), directory_responsibility_label: "Global Admin · alle Regionen" }
+              ? { ...member, directory_admin: true, directory_role_star: roleStarSrc(member), directory_responsibility_label: `Global Admin · Region ${homeRegionLabel}` }
               : isRegionalAdmin(member)
-                ? { ...member, directory_admin: true, directory_role_star: roleStarSrc(member), directory_responsibility_label: `Regional Admin · zuständig für Region ${regionById[member.home_region_id]?.name || activeRegion?.name || "Hauptregion"}` }
+                ? { ...member, directory_admin: true, directory_role_star: roleStarSrc(member), directory_responsibility_label: `Regional Admin · Region ${regionalLabel}` }
                 : { ...member, directory_role_star: roleStarSrc(member) };
         return <MemberCardView
           key={member.id}
