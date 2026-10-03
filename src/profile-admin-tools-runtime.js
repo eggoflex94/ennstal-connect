@@ -223,4 +223,20 @@ async function handleAction(ctx,action,modal){
 
 async function openTools(targetId){if(busy)return;busy=true;try{document.querySelector('.ec-profile-admin-overlay')?.remove();const ctx=await loadContext(targetId);if(!ctx)return notify('Für dieses Profil stehen dir keine Admin Tools zur Verfügung.');document.body.insertAdjacentHTML('beforeend',buildModal(ctx));const modal=document.querySelector('.ec-profile-admin-overlay');modal.querySelector('.ec-profile-admin-close').onclick=()=>modal.remove();modal.onclick=e=>{if(e.target===modal)modal.remove();};modal.querySelectorAll('[data-admin-action]').forEach(button=>button.onclick=()=>handleAction(ctx,button.dataset.adminAction,modal));}finally{busy=false;}}
 
+async function openPointHistoryDirect(targetId){
+  if(busy)return;
+  busy=true;
+  try{
+    document.querySelector('.ec-profile-admin-overlay')?.remove();
+    const ctx=await loadContext(targetId);
+    if(!ctx||!canPoints(ctx))return notify('Für dieses Profil steht dir keine Punkteliste zur Verfügung.');
+    document.body.insertAdjacentHTML('beforeend',buildModal(ctx));
+    const modal=document.querySelector('.ec-profile-admin-overlay');
+    modal.querySelector('.ec-profile-admin-close').onclick=()=>modal.remove();
+    modal.onclick=e=>{if(e.target===modal)modal.remove();};
+    await showPointHistory(ctx,modal);
+  }finally{busy=false;}
+}
+
 window.ecOpenUnifiedProfileAdminTools=openTools;
+window.ecOpenUnifiedProfilePointHistory=openPointHistoryDirect;
