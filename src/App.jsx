@@ -237,9 +237,13 @@ export default function App() {
       if (event.detail?.userId && event.detail.userId !== user.id) return;
       const visit = event.detail?.visit;
       if (visit?.profile_id === user.id && visit?.visitor_id) {
-        setProfileVisits((current) => [visit, ...current.filter((row) => row.id ? row.id !== visit.id : !(row.visitor_id === visit.visitor_id && row.visited_at === visit.visited_at))].slice(0, 50));
+        setProfileVisits((current) => [
+          visit,
+          ...current.filter((row) => row.id !== visit.id && row.visitor_id !== visit.visitor_id)
+        ].sort((a, b) => new Date(b.visited_at) - new Date(a.visited_at)).slice(0, 50));
       }
-      void refreshProfileVisits();
+      // Reconcile after the immediate websocket update; do not block UI on it.
+      window.setTimeout(() => void refreshProfileVisits(), 250);
     };
     window.addEventListener("ec:profile-visits-changed", handleVisitsChanged);
 
@@ -251,7 +255,7 @@ export default function App() {
     // websocket. Keep a small visible-tab fallback so the list self-heals.
     const pollId = window.setInterval(() => {
       if (!document.hidden) void refreshProfileVisits();
-    }, 15000);
+    }, 60000);
 
     return () => {
       cancelled = true;
@@ -270,8 +274,6 @@ export default function App() {
       if (error) {
         lastRecordedProfileVisit.current = { profileId: "", at: 0 };
         console.warn("Profilbesuch konnte nicht gespeichert werden:", error.message);
-      } else {
-        window.dispatchEvent(new CustomEvent("ec:profile-visits-changed", { detail: { userId: viewingMember.id } }));
       }
     });
   }, [page, viewingMember?.id, user?.id]);
