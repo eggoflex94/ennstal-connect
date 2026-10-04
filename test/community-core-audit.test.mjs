@@ -19,7 +19,7 @@ test("all primary top navigation destinations have a React route target", async 
     ["members", "members"],
     ["forum", "forum"],
     ["groups", "groups"],
-    ["events", "community"],
+    ["events", "events"],
     ["news", "news"],
     ["community", "community"],
   ];
