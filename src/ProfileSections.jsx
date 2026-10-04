@@ -47,7 +47,7 @@ function PrivateImage({ path, alt }) {
       if (current) URL.revokeObjectURL(current);
     };
   }, [path]);
-  return url ? <img src={url} alt={alt || 'Profilfoto'} loading="lazy"/> : <span className="profile-image-loading">Bild wird geladen …</span>;
+  return url ? <span className="profile-watermarked-image"><img src={url} alt={alt || 'Profilfoto'} loading="lazy"/><span className="ec-image-watermark" aria-hidden="true"/></span> : <span className="profile-image-loading">Bild wird geladen …</span>;
 }
 
 export default function ProfileSections({ member, editable = false, preview = false, isFriend = false, children }) {
