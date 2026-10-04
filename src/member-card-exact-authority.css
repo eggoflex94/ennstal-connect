@@ -111,7 +111,7 @@ article.member-card[data-role-theme]>.member-meta{
   left:10px!important;
   right:10px!important;
   width:auto!important;
-  height:64px!important;
+  height:68px!important;
   margin:0!important;
   padding:0!important;
   display:flex!important;
@@ -156,7 +156,10 @@ article.member-card[data-role-theme] .ec-member-responsibility{
   line-height:1.05!important;
   font-weight:700!important;
   text-align:center!important;
-  white-space:normal!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  min-height:10px!important;
 }
 
 article.member-card[data-role-theme] .ec-member-age{
@@ -167,6 +170,8 @@ article.member-card[data-role-theme] .ec-member-age{
   white-space:nowrap!important;
   font-size:11px!important;
   line-height:1!important;
+  min-height:12px!important;
+  flex:0 0 auto!important;
 }
 
 article.member-card[data-role-theme]>.member-status{
