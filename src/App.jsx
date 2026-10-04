@@ -1411,7 +1411,10 @@ export default function App() {
       owner_id: user.id,
       image_url: data.publicUrl,
       caption: caption.trim(),
-      visibility: visibility === "FRIENDS" ? "FRIENDS" : "PUBLIC"
+      visibility: visibility === "FRIENDS" ? "FRIENDS" : "PUBLIC",
+      watermark_version: 2,
+      watermark_mode: "standard",
+      watermarked_at: new Date().toISOString()
     };
 
     let insertError = null;
