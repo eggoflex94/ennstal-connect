@@ -377,7 +377,6 @@ export default function EventPhotosPage({ user, profile, members = [], regions =
         return <article className="event-photo-card" key={photo.id}>
           <button className="event-photo-image-button" type="button" onClick={() => void openPhoto(photo)}>
             <img src={publicUrl(photo.storage_path)} alt={photo.caption || `Eventfoto von ${memberName(photographer)}`} loading="lazy" decoding="async"/>
-            <span className="event-photo-visible-watermark" aria-hidden="true">ENNSTAL CONNECT</span>
           </button>
           <div className="event-photo-card-body">
             <div className="event-photo-author"><span className="event-photo-camera" aria-hidden="true">📷</span><strong>{memberName(photographer)}</strong><small>Community-Fotograf</small></div>
@@ -397,7 +396,7 @@ export default function EventPhotosPage({ user, profile, members = [], regions =
     {selectedPhoto && <div className="event-photo-lightbox" role="dialog" aria-modal="true" onClick={(event) => { if (event.target === event.currentTarget) setSelectedPhoto(null); }}>
       <section className="event-photo-lightbox-card">
         <button className="event-photo-lightbox-close" type="button" onClick={() => setSelectedPhoto(null)} aria-label="Schließen">×</button>
-        <div className="event-photo-lightbox-image"><img src={publicUrl(selectedPhoto.storage_path)} alt={selectedPhoto.caption || "Eventfoto"}/><span className="event-photo-visible-watermark is-lightbox" aria-hidden="true">ENNSTAL CONNECT</span></div>
+        <div className="event-photo-lightbox-image"><img src={publicUrl(selectedPhoto.storage_path)} alt={selectedPhoto.caption || "Eventfoto"}/></div>
         <aside>
           <div className="event-photo-author"><span className="event-photo-camera">📷</span><strong>{memberName(memberById.get(selectedPhoto.uploaded_by))}</strong><small>Community-Fotograf</small></div>
           {selectedPhoto.caption && <p>{selectedPhoto.caption}</p>}
