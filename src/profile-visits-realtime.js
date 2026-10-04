@@ -81,11 +81,11 @@ async function ensureRealtimeChannel() {
     // after subscribe has been called.
     nextChannel.on(
       'postgres_changes',
-      { event: 'INSERT', schema: 'public', table: 'profile_visits', filter: `profile_id=eq.${user.id}` },
+      { event: '*', schema: 'public', table: 'profile_visits', filter: `profile_id=eq.${user.id}` },
       (payload) => {
-        const visit = payload?.new || null;
+        const visit = payload?.new || payload?.old || null;
         if (visit?.profile_id && visit.profile_id !== user.id) return;
-        queueRefresh(0, 'realtime-insert', visit);
+        queueRefresh(0, `realtime-${String(payload?.eventType || 'change').toLowerCase()}`, visit);
       }
     );
 
