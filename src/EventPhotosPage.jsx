@@ -125,29 +125,35 @@ export default function EventPhotosPage({ user, profile, members = [], regions =
   const [uploading, setUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState("");
   const [regionFilter, setRegionFilter] = useState(activeRegion?.id || "ALL");
+  const [photoAssignments, setPhotoAssignments] = useState([]);
 
   const memberById = useMemo(() => new Map(members.map((member) => [member.id, member])), [members]);
   const regionById = useMemo(() => new Map(regions.map((region) => [region.id, region])), [regions]);
 
   const canUploadEvent = (event) => {
-    if (!event || !profile) return false;
+    if (!event || !profile || String(event.status || "ACTIVE").toUpperCase() === "CANCELLED") return false;
     if (String(profile.role || "").toUpperCase() === "HEAD_ADMIN") return true;
-    if (profile.community_photographer_global) return true;
-    return Array.isArray(profile.community_photographer_region_ids) && profile.community_photographer_region_ids.includes(event.region_id);
+    return photoAssignments.some((assignment) =>
+      assignment?.active === true &&
+      (assignment.scope === "GLOBAL" || (assignment.scope === "REGIONAL" && assignment.region_id === event.region_id))
+    );
   };
 
   const refresh = async () => {
     if (!user?.id) return;
-    const [{ data: eventRows, error: eventError }, { data: photoRows, error: photoError }, { data: myLikes }] = await Promise.all([
+    const [{ data: eventRows, error: eventError }, { data: photoRows, error: photoError }, { data: myLikes }, { data: assignments, error: assignmentError }] = await Promise.all([
       supabase.from("community_events").select("id,title,event_at,location,region_id,status,image_url").order("event_at", { ascending: false }).limit(120),
       supabase.from("event_photos").select("id,event_id,uploaded_by,storage_path,caption,status,like_count,comment_count,created_at,updated_at").order("created_at", { ascending: false }).limit(500),
-      supabase.from("event_photo_likes").select("photo_id").eq("user_id", user.id)
+      supabase.from("event_photo_likes").select("photo_id").eq("user_id", user.id),
+      supabase.from("community_photographer_assignments").select("scope,region_id,active").eq("user_id", user.id).eq("active", true)
     ]);
     if (eventError) return showNotice?.(eventError.message);
     if (photoError) return showNotice?.(photoError.message);
+    if (assignmentError) console.warn("Foto-Berechtigungen konnten nicht geladen werden:", assignmentError.message);
     setEvents(eventRows || []);
     setPhotos(photoRows || []);
     setLikedIds(new Set((myLikes || []).map((row) => row.photo_id)));
+    setPhotoAssignments(assignments || []);
     setSelectedEventId((current) => current || eventRows?.[0]?.id || "");
   };
 
@@ -304,8 +310,8 @@ export default function EventPhotosPage({ user, profile, members = [], regions =
     <div className="page-heading">
       <div>
         <span className="eyebrow">COMMUNITY FOTOS</span>
-        <h1>Fotos</h1>
-        <p>Eventmomente aus der Community – fotografiert von unseren Community-Fotografen.</p>
+        <h1>Eventfotos</h1>
+        <p>Fotos zu Veranstaltungen ansehen, kommentieren und – mit Foto-Berechtigung – direkt hochladen.</p>
       </div>
     </div>
 
