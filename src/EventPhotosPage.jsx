@@ -131,15 +131,9 @@ export default function EventPhotosPage({ user, profile, members = [], regions =
   const [uploadStatus, setUploadStatus] = useState("");
   const [regionFilter, setRegionFilter] = useState(activeRegion?.id || "ALL");
   const [photoAssignments, setPhotoAssignments] = useState([]);
-  const [photoAwards, setPhotoAwards] = useState([]);
-  const [pointDrafts, setPointDrafts] = useState({});
-  const [awardingPhotoId, setAwardingPhotoId] = useState("");
 
   const memberById = useMemo(() => new Map(members.map((member) => [member.id, member])), [members]);
   const regionById = useMemo(() => new Map(regions.map((region) => [region.id, region])), [regions]);
-
-  const canAwardPhotoPoints = ["HEAD_ADMIN", "ADMIN"].includes(String(profile?.role || "").toUpperCase());
-  const roleStarFor = (member) => member?.role_star_url || (String(member?.role || "").toUpperCase() === "HEAD_ADMIN" ? "/role-star-red.svg" : String(member?.role || "").toUpperCase() === "ADMIN" ? "/role-star-blue.svg" : String(member?.role || "").toUpperCase() === "SUPPORTER" ? "/supporter-star.svg" : null);
 
   const canUploadEvent = (event) => {
     if (!event || !profile || String(event.status || "ACTIVE").toUpperCase() === "CANCELLED") return false;
@@ -165,19 +159,6 @@ export default function EventPhotosPage({ user, profile, members = [], regions =
     setPhotos(photoRows || []);
     setLikedIds(new Set((myLikes || []).map((row) => row.photo_id)));
     setPhotoAssignments(assignments || []);
-    const photoIds = (photoRows || []).map((row) => row.id);
-    if (photoIds.length) {
-      const { data: awardRows } = await supabase
-        .from("point_transactions")
-        .select("id,member_id,actor_id,amount,reason,source_id,created_at")
-        .eq("source_type", "EVENT_PHOTO_ADMIN")
-        .in("source_id", photoIds)
-        .order("created_at", { ascending: false })
-        .limit(500);
-      setPhotoAwards(awardRows || []);
-    } else {
-      setPhotoAwards([]);
-    }
     setSelectedEventId((current) => current || eventRows?.[0]?.id || "");
   };
 
@@ -186,6 +167,19 @@ export default function EventPhotosPage({ user, profile, members = [], regions =
   useEffect(() => {
     if (activeRegion?.id) setRegionFilter(activeRegion.id);
   }, [activeRegion?.id]);
+
+  useEffect(() => {
+    const handleOpenEventPhotos = (event) => {
+      const eventId = String(event.detail?.eventId || "");
+      if (!eventId) return;
+      setSelectedEventId(eventId);
+      const target = events.find((item) => item.id === eventId);
+      if (target?.region_id) setRegionFilter(target.region_id);
+      window.setTimeout(() => document.querySelector(".event-photos-page")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+    };
+    window.addEventListener("ec:open-event-photos", handleOpenEventPhotos);
+    return () => window.removeEventListener("ec:open-event-photos", handleOpenEventPhotos);
+  }, [events]);
 
   const visibleEvents = useMemo(() => {
     return events.filter((event) => regionFilter === "ALL" || event.region_id === regionFilter);
@@ -328,30 +322,6 @@ export default function EventPhotosPage({ user, profile, members = [], regions =
     showNotice?.("Eventfoto wurde gelöscht.");
   };
 
-  const awardPhotoPoints = async (photo) => {
-    if (!canAwardPhotoPoints || !photo?.uploaded_by) return;
-    const amount = Math.max(1, Math.min(100, Number(pointDrafts[photo.id] || 5) || 5));
-    const event = events.find((item) => item.id === photo.event_id);
-    const photographer = memberById.get(photo.uploaded_by);
-    if (!window.confirm(`${amount} Punkte an ${memberName(photographer)} für dieses Foto vergeben?`)) return;
-    setAwardingPhotoId(photo.id);
-    const { error } = await supabase.rpc("award_member_points", {
-      target_user: photo.uploaded_by,
-      point_delta: amount,
-      reason_text: `Punkte erhalten für Fotos${event?.title ? ` · ${event.title}` : ""}`,
-      category_text: "EVENT_PHOTO_REWARD",
-      notify_member: true,
-      source_type_text: "EVENT_PHOTO_ADMIN",
-      source_id_value: photo.id
-    });
-    setAwardingPhotoId("");
-    if (error) return showNotice?.(error.message);
-    showNotice?.(`+${amount} Punkte für das Eventfoto vergeben.`);
-    await refresh();
-  };
-
-  const awardsForPhoto = (photoId) => photoAwards.filter((award) => award.source_id === photoId);
-
   const eventPhotoCount = (eventId) => photos.filter((photo) => photo.event_id === eventId).length;
 
   return <section className="event-photos-page">
@@ -414,9 +384,7 @@ export default function EventPhotosPage({ user, profile, members = [], regions =
               <button type="button" onClick={() => void toggleLike(photo)}>{liked ? "♥" : "♡"} {Number(photo.like_count || 0)}</button>
               <button type="button" onClick={() => void openPhoto(photo)}>💬 {Number(photo.comment_count || 0)}</button>
               <button type="button" onClick={() => void reportPhoto(photo)}>⚑ Melden</button>
-            </div>
-            {canAwardPhotoPoints && <div className="event-photo-points-award"><input type="number" min="1" max="100" value={pointDrafts[photo.id] ?? 5} onChange={(event) => setPointDrafts((current) => ({ ...current, [photo.id]: event.target.value }))}/><button type="button" disabled={awardingPhotoId === photo.id} onClick={() => void awardPhotoPoints(photo)}>{awardingPhotoId === photo.id ? "Vergibt …" : "★ Punkte vergeben"}</button></div>}
-            {awardsForPhoto(photo.id).map((award) => { const actor = memberById.get(award.actor_id); const star = roleStarFor(actor); return <div className="event-photo-points-entry" key={award.id}>{star && <img src={star} alt="" aria-hidden="true"/>}<strong>{memberName(actor)}</strong><span>+{award.amount} Punkte erhalten für Fotos</span></div>; })}
+            </div></strong><span>+{award.amount} Punkte erhalten für Fotos</span></div>; })}
             {own && <div className="event-photo-owner-actions"><button type="button" onClick={() => void editCaption(photo)}>✎ Bearbeiten</button><button type="button" className="danger-button" onClick={() => void deletePhoto(photo)}>Löschen</button></div>}
           </div>
         </article>;
