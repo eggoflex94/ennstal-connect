@@ -1143,8 +1143,10 @@ test("profile visits authenticate realtime before subscribing", async()=>{
   const dashboard=await source("src/dashboard-community-realtime.js");
   assert.match(realtime,/getSession\(\)/);
   assert.match(realtime,/supabase\.realtime\.setAuth\(token\)/);
-  assert.match(realtime,/event: '\*'[\s\S]*table: 'profile_visits'/);
-  assert.match(realtime,/realtime-\$\{String\(payload\?\.eventType/);
+  assert.match(realtime,/event: 'INSERT'[\s\S]*table: 'profile_visits'/);
+  assert.match(realtime,/event: 'UPDATE'[\s\S]*table: 'profile_visits'/);
+  assert.match(realtime,/handleVisitChange\('INSERT'\)/);
+  assert.match(realtime,/handleVisitChange\('UPDATE'\)/);
   assert.match(dashboard,/supabase\.realtime\.setAuth\(session\.access_token\)/);
   assert.doesNotMatch(dashboard,/table:'profile_visits'/);
   assert.match(dashboard,/ec:profile-visits-changed/);
@@ -1168,7 +1170,8 @@ test("global and regional admin cards show region", async()=>{
 test("profile visit realtime channel setup is serialized", async()=>{
   const realtime=await source("src/profile-visits-realtime.js");
   assert.match(realtime,/if \(startPromise\) return startPromise/);
-  assert.match(realtime,/const nextChannel = supabase\.channel\(topic\);[\s\S]*nextChannel\.on\([\s\S]*nextChannel\.subscribe/);
+  assert.match(realtime,/const nextChannel = supabase\.channel\(topic\);[\s\S]*nextChannel[\s\S]*\.on\([\s\S]*nextChannel\.subscribe/);
+  assert.match(realtime,/Register INSERT and UPDATE explicitly before subscribe/);
   assert.doesNotMatch(realtime,/start\(\{ force: true \}\)/);
 });
 
