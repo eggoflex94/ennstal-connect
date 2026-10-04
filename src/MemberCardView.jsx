@@ -22,6 +22,23 @@ function isRecentlyActive(member) {
   return Number.isFinite(lastActive) && Date.now() - lastActive < 5 * 60 * 1000;
 }
 
+function compactResponsibilityLabel(value) {
+  const label = String(value || "").trim();
+  if (!label) return "";
+  return label.replace(/Region\s+([^·]+)$/i, (match, regionName) => {
+    const clean = String(regionName || "").trim();
+    if (clean.length <= 18) return `Region ${clean}`;
+    const initials = clean
+      .split(/[–—-]|\s+/)
+      .map((part) => part.trim())
+      .filter((part) => part && !/^(und|der|die|das)$/i.test(part))
+      .map((part) => part[0]?.toUpperCase())
+      .join("")
+      .slice(0, 5);
+    return initials ? `Region ${initials}` : match;
+  });
+}
+
 function rolePresentation(member) {
   const role = String(member?.role || "MEMBER").toUpperCase();
   const adminPresentation = ["HEAD_ADMIN", "ADMIN", "GLOBAL_ADMIN", "REGIONAL_ADMIN"].includes(role) || member?.directory_admin === true;
@@ -47,6 +64,7 @@ export default function MemberCardView({ member, profile, friendships, onOpen, i
   const birthDate = member.birth_date || (member.id === profile?.id ? profile?.birth_date : null);
   const age = getAge(birthDate);
   const statusLabel = online ? (String(member?.presence_device || "").toUpperCase() === "MOBILE" ? "Mobil online" : "Online") : "Offline";
+  const responsibilityLabel = compactResponsibilityLabel(member?.directory_responsibility_label || (baseRole === "HEAD_ADMIN" ? "Hauptverantwortlicher · alle Regionen" : ""));
 
   const openProfile = () => {
     if (!interactive) return;
@@ -114,7 +132,7 @@ export default function MemberCardView({ member, profile, friendships, onOpen, i
       <div className="member-meta ec-member-meta">
         <div className="member-name ec-native-member-name">
           <span className="ec-member-realname">{fullName}</span>
-          {(member?.directory_responsibility_label || baseRole === "HEAD_ADMIN") && <small className="ec-member-responsibility">{member?.directory_responsibility_label || "Hauptverantwortlicher · alle Regionen"}</small>}
+          {responsibilityLabel && <small className="ec-member-responsibility" title={member?.directory_responsibility_label || responsibilityLabel}>{responsibilityLabel}</small>}
           {age !== null && <small className="ec-member-age">{age} Jahre</small>}
         </div>
       </div>
