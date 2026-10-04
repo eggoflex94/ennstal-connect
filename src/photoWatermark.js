@@ -1,4 +1,4 @@
-const DEFAULT_LOGO = "/ennstal-connect-logo.svg";
+const DEFAULT_LOGO = "/ennstal-connect-wordmark.svg";
 
 let logoPromise = null;
 
@@ -64,47 +64,41 @@ export async function watermarkPhoto(file, { mode = "standard", maxEdge = 2400, 
   source.close?.();
 
   const logo = await loadLogo();
-  const pad = Math.max(16, Math.round(width * 0.018));
-  const blockWidth = Math.min(Math.max(Math.round(width * 0.28), 220), 560);
-  const logoRatio = logo ? ((logo.naturalHeight || logo.height || 72) / (logo.naturalWidth || logo.width || 300)) : (72 / 300);
-  const logoHeight = Math.max(44, Math.round(blockWidth * logoRatio));
+  const pad = Math.max(18, Math.round(width * 0.02));
+  const logoWidth = Math.min(Math.max(Math.round(width * 0.20), 150), 340);
+  const logoRatio = logo ? ((logo.naturalHeight || logo.height || 70) / (logo.naturalWidth || logo.width || 370)) : (70 / 370);
+  const logoHeight = Math.max(28, Math.round(logoWidth * logoRatio));
   const label = mode === "event" ? "Community Fotograf" : "Ennstal Connect";
-  const fontSize = Math.max(16, Math.round(width * 0.014));
-  const labelGap = Math.max(10, Math.round(fontSize * 0.6));
-  const blockHeight = logoHeight + fontSize + labelGap + 28;
-  const x = width - blockWidth - pad;
-  const y = height - blockHeight - pad;
+  const fontSize = Math.max(14, Math.round(width * 0.012));
+  const x = width - logoWidth - pad;
+  const y = height - logoHeight - fontSize - pad - 6;
 
   ctx.save();
-  ctx.fillStyle = "rgba(255,255,255,0.94)";
-  ctx.strokeStyle = "rgba(23,38,61,0.28)";
-  ctx.lineWidth = Math.max(1.2, Math.round(width * 0.0014));
-  const radius = Math.max(12, Math.round(blockHeight * 0.14));
-  ctx.beginPath();
-  if (typeof ctx.roundRect === "function") ctx.roundRect(x, y, blockWidth, blockHeight, radius);
-  else ctx.rect(x, y, blockWidth, blockHeight);
-  ctx.fill();
-  ctx.stroke();
+  ctx.globalAlpha = 0.68;
+  ctx.shadowColor = "rgba(0,0,0,0.42)";
+  ctx.shadowBlur = Math.max(2, Math.round(width * 0.002));
+  ctx.shadowOffsetY = Math.max(1, Math.round(width * 0.001));
 
   if (logo) {
-    const innerWidth = blockWidth - 28;
-    const innerHeight = Math.min(logoHeight, blockHeight - fontSize - labelGap - 26);
-    ctx.globalAlpha = 1;
-    ctx.drawImage(logo, x + 14, y + 12, innerWidth, innerHeight);
+    ctx.drawImage(logo, x, y, logoWidth, logoHeight);
   } else {
     ctx.fillStyle = "#ffffff";
-    ctx.font = `800 ${Math.max(20, fontSize + 5)}px system-ui, sans-serif`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText("ENNSTAL CONNECT", x + blockWidth / 2, y + Math.max(30, logoHeight / 2));
+    ctx.font = `800 ${Math.max(18, fontSize + 4)}px system-ui, sans-serif`;
+    ctx.textAlign = "right";
+    ctx.textBaseline = "bottom";
+    ctx.fillText("ennstal connect", width - pad, y + logoHeight);
   }
 
-  ctx.globalAlpha = 1;
-  ctx.fillStyle = "#17263d";
+  ctx.globalAlpha = 0.78;
   ctx.font = `800 ${fontSize}px system-ui, sans-serif`;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "bottom";
-  ctx.fillText(label, x + blockWidth / 2, y + blockHeight - 10);
+  ctx.textAlign = "right";
+  ctx.textBaseline = "top";
+  ctx.lineWidth = Math.max(2, Math.round(fontSize * 0.16));
+  ctx.strokeStyle = "rgba(0,0,0,0.46)";
+  ctx.fillStyle = "rgba(255,255,255,0.94)";
+  const labelY = y + logoHeight + 4;
+  ctx.strokeText(label, width - pad, labelY);
+  ctx.fillText(label, width - pad, labelY);
   ctx.restore();
 
   let type = "image/webp";
