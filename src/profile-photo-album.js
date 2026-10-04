@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient';
 import './profile-photo-album.css';
+import { watermarkPhoto } from './photoWatermark.js';
 
 const BUCKET = 'profile-layout-media';
 const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
@@ -227,14 +228,14 @@ function bindAlbum(album, page, profileId, photos) {
     const file = form.elements.photo?.files?.[0];
     if (!file) return;
     if (!IMAGE_TYPES.has(file.type) || file.size > MAX_BYTES) return window.alert('Bitte JPG, PNG, WebP oder GIF bis 8 MB auswählen.');
-    const extension = ({ 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif' })[file.type];
-    const path = `${profileId}/album/${crypto.randomUUID()}.${extension}`;
     const submit = form.querySelector('button[type="submit"]');
     submit.disabled = true;
     try {
       const me = await viewerId(true);
       if (me !== profileId) throw new Error('Bitte melde dich erneut an.');
-      const { error: uploadError } = await supabase.storage.from(BUCKET).upload(path, file, { contentType: file.type, upsert: false });
+      const processed = await watermarkPhoto(file, { mode: 'standard', maxEdge: 2400, quality: 0.9 });
+      const path = `${profileId}/album/${crypto.randomUUID()}.${processed.extension}`;
+      const { error: uploadError } = await supabase.storage.from(BUCKET).upload(path, processed.blob, { contentType: processed.contentType, upsert: false, cacheControl: '31536000' });
       if (uploadError) throw uploadError;
       const folderId = String(form.elements.folder_id?.value || '').trim() || null;
       const { error: insertError } = await supabase.from('member_photos').insert({ owner_id: profileId, image_url: path, caption: String(form.elements.caption?.value || '').trim(), visibility: form.elements.visibility?.value || 'PUBLIC', folder_id: folderId });
