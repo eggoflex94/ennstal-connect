@@ -286,6 +286,14 @@ export default function EventPhotosPage({ user, profile, members = [], regions =
     if (!error) setComments(data || []);
   };
 
+  const moveSelectedPhoto = (offset) => {
+    if (!selectedPhoto || eventPhotos.length < 2) return;
+    const index = eventPhotos.findIndex((photo) => photo.id === selectedPhoto.id);
+    if (index < 0) return;
+    const next = eventPhotos[(index + offset + eventPhotos.length) % eventPhotos.length];
+    if (next) void openPhoto(next);
+  };
+
   const addComment = async (event) => {
     event.preventDefault();
     const clean = commentDraft.trim();
@@ -396,7 +404,12 @@ export default function EventPhotosPage({ user, profile, members = [], regions =
     {selectedPhoto && <div className="event-photo-lightbox" role="dialog" aria-modal="true" onClick={(event) => { if (event.target === event.currentTarget) setSelectedPhoto(null); }}>
       <section className="event-photo-lightbox-card">
         <button className="event-photo-lightbox-close" type="button" onClick={() => setSelectedPhoto(null)} aria-label="Schließen">×</button>
-        <div className="event-photo-lightbox-image"><img src={publicUrl(selectedPhoto.storage_path)} alt={selectedPhoto.caption || "Eventfoto"}/></div>
+        <div className="event-photo-lightbox-image">
+          {eventPhotos.length > 1 && <button type="button" className="event-photo-lightbox-nav prev" onClick={() => moveSelectedPhoto(-1)} aria-label="Vorheriges Foto">‹</button>}
+          <img src={publicUrl(selectedPhoto.storage_path)} alt={selectedPhoto.caption || "Eventfoto"}/>
+          <span className="ec-image-watermark ec-image-watermark-event" aria-hidden="true"/>
+          {eventPhotos.length > 1 && <button type="button" className="event-photo-lightbox-nav next" onClick={() => moveSelectedPhoto(1)} aria-label="Nächstes Foto">›</button>}
+        </div>
         <aside>
           <div className="event-photo-author"><span className="event-photo-camera">📷</span><strong>{memberName(memberById.get(selectedPhoto.uploaded_by))}</strong><small>Community-Fotograf</small></div>
           {selectedPhoto.caption && <p>{selectedPhoto.caption}</p>}
