@@ -646,7 +646,7 @@ test("online friends use municipality role star", async()=>{
 
 test("community event image field is React-owned and avoids imperative DOM mutation", async()=>{
   const app=await source("src/App.jsx");
-  assert.match(app,/<label className="content-image-upload">Bild für die Veranstaltung \(optional\)<input name="image" type="file" accept="image\/\*"\/><\/label>/);
+  assert.match(app,/<label className="content-image-upload">Bild \(optional\)<input name="image" type="file" accept="image\/\*"\/><\/label>/);
   assert.doesNotMatch(app,/eventForm\.appendChild\(label\)/);
   assert.doesNotMatch(app,/eventForm\.insertBefore\(/);
 });
