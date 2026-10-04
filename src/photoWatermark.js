@@ -76,8 +76,8 @@ export async function watermarkPhoto(file, { mode = "standard", maxEdge = 2400, 
   const y = height - blockHeight - pad;
 
   ctx.save();
-  ctx.fillStyle = "rgba(7, 24, 38, 0.70)";
-  ctx.strokeStyle = "rgba(255,255,255,.72)";
+  ctx.fillStyle = "rgba(255,255,255,0.90)";
+  ctx.strokeStyle = "rgba(23,38,61,.28)";
   ctx.lineWidth = Math.max(1, Math.round(width * 0.0012));
   const radius = Math.max(10, Math.round(blockHeight * 0.12));
   ctx.beginPath();
@@ -92,7 +92,7 @@ export async function watermarkPhoto(file, { mode = "standard", maxEdge = 2400, 
     ctx.globalAlpha = 1;
     ctx.drawImage(logo, x + 12, y + 10, innerWidth, innerHeight);
   } else {
-    ctx.fillStyle = "#ffffff";
+    ctx.fillStyle = "#17263d";
     ctx.font = `800 ${Math.max(18, fontSize + 4)}px system-ui, sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -100,7 +100,7 @@ export async function watermarkPhoto(file, { mode = "standard", maxEdge = 2400, 
   }
 
   if (label) {
-    ctx.fillStyle = "#ffffff";
+    ctx.fillStyle = "#17263d";
     ctx.font = `700 ${fontSize}px system-ui, sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "bottom";
