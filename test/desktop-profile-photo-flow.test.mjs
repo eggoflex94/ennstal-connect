@@ -20,8 +20,9 @@ test("existing profile photo alignment downloads from Storage", async () => {
 
 test("realigned profile photos are saved to a fresh Storage path", async () => {
   const app = await source("src/App.jsx");
-  assert.ok(app.includes('const newPath = `${user.id}/${crypto.randomUUID()}.${extension}`;'));
+  assert.ok(app.includes('const newPath = `${user.id}/${crypto.randomUUID()}.${processed.extension}`;'));
   assert.ok(app.includes('upsert: false'));
+  assert.ok(app.includes('processed = await watermarkPhoto(file, { mode: "avatar"'));
   assert.ok(app.includes('getPublicUrl(newPath)'));
   assert.ok(app.includes('remove([oldPath])'));
 });
