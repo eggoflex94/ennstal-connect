@@ -3001,3 +3001,81 @@ img.member-avatar,
 @media(max-width:700px){
   .event-modern-visual>img,.event-modern-placeholder{height:130px}
 }
+
+
+/* FINAL EVENT MEDIA SIZE + WATERMARK OVERRIDE */
+.events-page .events-modern-grid{
+  width:min(100%,1000px)!important;
+  max-width:1000px!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+}
+.events-page .event-modern-card{
+  width:100%!important;
+  max-width:1000px!important;
+}
+.events-page .event-modern-visual{
+  position:relative!important;
+  min-height:0!important;
+  height:140px!important;
+  max-height:140px!important;
+  overflow:hidden!important;
+}
+.events-page .event-modern-visual>img{
+  display:block!important;
+  width:100%!important;
+  height:140px!important;
+  min-height:140px!important;
+  max-height:140px!important;
+  object-fit:cover!important;
+  object-position:center!important;
+}
+.events-page .event-modern-placeholder{
+  height:140px!important;
+  min-height:140px!important;
+  max-height:140px!important;
+}
+.event-card-watermark{
+  position:absolute!important;
+  right:12px!important;
+  bottom:10px!important;
+  z-index:6!important;
+  display:grid!important;
+  place-items:center!important;
+  gap:2px!important;
+  width:138px!important;
+  min-height:48px!important;
+  padding:6px 8px!important;
+  box-sizing:border-box!important;
+  border:1px solid rgba(255,255,255,.42)!important;
+  border-radius:9px!important;
+  background:rgba(7,16,25,.84)!important;
+  box-shadow:0 4px 14px rgba(0,0,0,.3)!important;
+  pointer-events:none!important;
+}
+.event-card-watermark>img{
+  display:block!important;
+  width:112px!important;
+  height:27px!important;
+  object-fit:contain!important;
+  filter:none!important;
+}
+.event-card-watermark>b{
+  display:block!important;
+  color:#fff!important;
+  font-size:9px!important;
+  line-height:1.1!important;
+  font-weight:900!important;
+  text-align:center!important;
+}
+@media(max-width:700px){
+  .events-page .event-modern-visual,
+  .events-page .event-modern-visual>img,
+  .events-page .event-modern-placeholder{
+    height:115px!important;
+    min-height:115px!important;
+    max-height:115px!important;
+  }
+  .event-card-watermark{width:112px!important;right:8px!important;bottom:8px!important}
+  .event-card-watermark>img{width:92px!important;height:22px!important}
+}
