@@ -3079,3 +3079,90 @@ img.member-avatar,
   .event-card-watermark{width:112px!important;right:8px!important;bottom:8px!important}
   .event-card-watermark>img{width:92px!important;height:22px!important}
 }
+
+
+/* TRANSPARENT WATERMARK OVERRIDE — logo sits directly on the image, never in a card. */
+.ec-image-watermark{
+  position:absolute!important;
+  right:12px!important;
+  bottom:12px!important;
+  z-index:6!important;
+  width:clamp(118px,22%,220px)!important;
+  height:58px!important;
+  aspect-ratio:auto!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent url("/ennstal-connect-wordmark.svg") right top/100% auto no-repeat!important;
+  box-shadow:none!important;
+  opacity:.66!important;
+  filter:drop-shadow(0 1px 3px rgba(0,0,0,.45))!important;
+  pointer-events:none!important;
+}
+.ec-image-watermark::after{
+  content:"Ennstal Connect";
+  position:absolute;
+  right:0;
+  bottom:0;
+  left:auto;
+  color:rgba(255,255,255,.94)!important;
+  font-size:11px!important;
+  line-height:1!important;
+  font-weight:900!important;
+  text-align:right!important;
+  text-shadow:0 1px 3px rgba(0,0,0,.65)!important;
+  background:transparent!important;
+}
+.ec-image-watermark-event::after{content:"Community Fotograf";}
+.ec-image-watermark-thumb{
+  right:6px!important;
+  bottom:6px!important;
+  width:72px!important;
+  height:30px!important;
+  opacity:.58!important;
+}
+.ec-image-watermark-thumb::after{display:none!important}
+
+.event-card-watermark{
+  position:absolute!important;
+  right:12px!important;
+  bottom:10px!important;
+  z-index:7!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:flex-end!important;
+  gap:2px!important;
+  width:160px!important;
+  min-height:0!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  opacity:.66!important;
+  filter:drop-shadow(0 1px 3px rgba(0,0,0,.45))!important;
+  pointer-events:none!important;
+}
+.event-card-watermark>img{
+  display:block!important;
+  width:160px!important;
+  height:auto!important;
+  max-height:42px!important;
+  object-fit:contain!important;
+  object-position:right center!important;
+}
+.event-card-watermark>b{
+  display:block!important;
+  color:rgba(255,255,255,.94)!important;
+  font-size:10px!important;
+  line-height:1!important;
+  font-weight:900!important;
+  text-align:right!important;
+  text-shadow:0 1px 3px rgba(0,0,0,.65)!important;
+  background:transparent!important;
+}
+@media(max-width:700px){
+  .event-card-watermark{width:124px!important;right:8px!important;bottom:8px!important}
+  .event-card-watermark>img{width:124px!important;max-height:34px!important}
+  .event-card-watermark>b{font-size:9px!important}
+}
