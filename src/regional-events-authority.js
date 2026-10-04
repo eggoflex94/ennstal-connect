@@ -280,7 +280,7 @@ function renderHome(region, events) {
       card.innerHTML = `${featured.image_url ? `<img src="${esc(featured.image_url)}" alt="">` : ''}<span class="ec-featured-home-event-copy"><small>★ HERVORGEHOBEN</small><strong>${esc(featured.title)}</strong><em>${esc(formatDate(featured.event_at))}${featured.location ? ` · ${esc(featured.location)}` : ''}</em></span><b>Event ansehen →</b>`;
       card.onclick = () => window.dispatchEvent(new CustomEvent('ec:navigate', { detail: { page: 'events', source: 'featured-home-event' } }));
       const heading = upcomingPanel.querySelector('h2')?.parentElement || upcomingPanel.firstElementChild;
-      if (heading?.nextSibling) upcomingPanel.insertBefore(card, heading.nextSibling);
+      if (heading?.parentElement === upcomingPanel) heading.after(card);
       else upcomingPanel.appendChild(card);
     }
   }
