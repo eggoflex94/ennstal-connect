@@ -138,29 +138,29 @@ article.member-card[data-role-theme="member"][data-community-photographer="true"
 }
 .event-photo-grid{
   display:grid;
-  grid-template-columns:repeat(auto-fill,190px);
-  gap:16px;
+  grid-template-columns:repeat(auto-fill,150px);
+  gap:12px;
   align-items:start;
   justify-content:start;
 }
 .event-photo-card{
-  width:190px;
-  min-width:190px;
-  max-width:190px;
+  width:150px;
+  min-width:150px;
+  max-width:150px;
   overflow:hidden;
   border:1px solid rgba(23,48,68,.16);
-  border-radius:19px;
+  border-radius:16px;
   background:linear-gradient(180deg,#fff,#f7fafc);
-  box-shadow:0 12px 30px rgba(15,37,54,.09);
+  box-shadow:0 10px 24px rgba(15,37,54,.08);
 }
 .event-photo-image-button{
   display:block;
-  width:190px;
-  height:250px;
-  min-width:190px;
-  max-width:190px;
-  min-height:250px;
-  max-height:250px;
+  width:150px;
+  height:200px;
+  min-width:150px;
+  max-width:150px;
+  min-height:200px;
+  max-height:200px;
   padding:0;
   border:0;
   background:#e8eef2;
@@ -334,13 +334,13 @@ article.member-card[data-role-theme="member"][data-community-photographer="true"
 }
 
 @media(max-width:1050px){
-  .event-photo-grid{grid-template-columns:repeat(auto-fill,190px);justify-content:center}
+  .event-photo-grid{grid-template-columns:repeat(auto-fill,150px);justify-content:center}
   .event-photo-lightbox-card{grid-template-columns:1fr}
   .event-photo-lightbox-image{min-height:300px}
   .event-photo-lightbox-card>aside{max-height:42vh}
 }
 @media(max-width:650px){
-  .event-photo-grid{grid-template-columns:190px;justify-content:center}
+  .event-photo-grid{grid-template-columns:repeat(2,150px);justify-content:center}
   .event-photo-toolbar,
   .event-photo-upload{align-items:stretch}
   .event-photo-toolbar label,
@@ -349,6 +349,9 @@ article.member-card[data-role-theme="member"][data-community-photographer="true"
   .event-photo-lightbox{padding:8px}
   .event-photo-lightbox-card{width:100%;max-height:96vh;border-radius:14px}
   .event-photo-lightbox-image{min-height:240px}
+}
+@media(max-width:360px){
+  .event-photo-grid{grid-template-columns:150px;justify-content:center}
 }
 @media(pointer:coarse){
   .event-photo-actions button,
