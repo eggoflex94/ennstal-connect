@@ -11,6 +11,7 @@ import NativeMembersDirectory from "./NativeMembersDirectory.jsx";
 import BusinessProfileManager from "./BusinessProfileManager.jsx";
 import ProfilePhotoEditor from "./ProfilePhotoEditor.jsx";
 import ProfileCoverEditor from "./ProfileCoverEditor.jsx";
+import { watermarkPhoto } from "./photoWatermark.js";
 import EventPhotosPage from "./EventPhotosPage.jsx";
 import HeadAdminSelfControls from "./HeadAdminSelfControls.jsx";
 import ProfileSocialTabs from "./ProfileSocialTabs.jsx";
@@ -1388,11 +1389,18 @@ export default function App() {
     if (!isProfileImageFile(file)) { showNotice("Bitte ein Bild auswählen."); return false; }
     if (file.size > 12 * 1024 * 1024) { showNotice("Maximal 12 MB pro Foto."); return false; }
 
-    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-    const path = `${user.id}/gallery/${crypto.randomUUID()}.${ext}`;
-    const { error: uploadError } = await supabase.storage.from("profile-avatars").upload(path, file, {
+    let processed;
+    try {
+      processed = await watermarkPhoto(file, { mode: "standard", maxEdge: 2400, quality: 0.9 });
+    } catch (error) {
+      showNotice(error?.message || "Foto konnte nicht mit Wasserzeichen verarbeitet werden.");
+      return false;
+    }
+    const path = `${user.id}/gallery/${crypto.randomUUID()}.${processed.extension}`;
+    const { error: uploadError } = await supabase.storage.from("profile-avatars").upload(path, processed.blob, {
       upsert: false,
-      contentType: imageContentType(file)
+      contentType: processed.contentType,
+      cacheControl: "31536000"
     });
     if (uploadError) { showNotice(uploadError.message); return false; }
 
