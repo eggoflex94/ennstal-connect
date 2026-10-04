@@ -103,16 +103,45 @@ function renderDetail(rows,type){
 }
 function bindDockDetailRows(panel){panel.querySelectorAll('.ec-dock-detail-row').forEach(row=>row.onclick=()=>{const profileId=row.dataset.profileId;if(profileId&&profileId!==currentProfile.id)window.dispatchEvent(new CustomEvent('ec:open-profile',{detail:{profileId}}));else clickPage(row.dataset.detailTarget==='visits'?'profile':'news');document.body.classList.remove('ec-dock-open')})}
 
-async function refreshProfileVisitDock(){
-  invalidateDockDetails('visits');
-  dockCountsCache={userId:'',at:0,data:null};
-  await Promise.all([
-    syncDockCounts({force:true}),
-    syncDockDetail('visits',{force:true})
-  ]);
+function applyRealtimeProfileVisit(detail){
+  const visit=detail?.visit;
+  if(!visit?.profile_id||visit.profile_id!==currentProfile?.id||!visit.visitor_id)return false;
+
+  const key=dockDetailKey('visits');
+  const cached=dockDetailCache.get(key);
+  const currentRows=cached?.rows||[];
+  const rows=[visit,...currentRows.filter((row)=>row.id!==visit.id&&row.visitor_id!==visit.visitor_id)]
+    .sort((a,b)=>new Date(b.visited_at)-new Date(a.visited_at))
+    .slice(0,10);
+  dockDetailCache.set(key,{at:Date.now(),rows});
+
+  const panel=document.querySelector('.ec-dock-detail[data-panel="visits"]');
+  if(panel){
+    panel.innerHTML=renderDetail(rows,'visits');
+    bindDockDetailRows(panel);
+  }
+
+  if(dockCountsCache.userId===currentProfile.id&&dockCountsCache.data){
+    const nextCount=detail?.eventType==='INSERT'
+      ? Number(dockCountsCache.data.visits||0)+1
+      : Number(dockCountsCache.data.visits||0);
+    dockCountsCache={...dockCountsCache,at:Date.now(),data:{...dockCountsCache.data,visits:nextCount}};
+    renderDockCounts(dockCountsCache.data);
+  }
+  return true;
 }
 
-window.addEventListener('ec:profile-visits-changed',()=>{void refreshProfileVisitDock()});
+async function refreshProfileVisitDock(detail=null){
+  const applied=applyRealtimeProfileVisit(detail);
+  invalidateDockDetails('visits');
+  if(!applied)dockCountsCache={userId:'',at:0,data:null};
+  window.setTimeout(()=>void Promise.all([
+    syncDockCounts({force:true}),
+    syncDockDetail('visits',{force:true})
+  ]),applied?250:0);
+}
+
+window.addEventListener('ec:profile-visits-changed',(event)=>{void refreshProfileVisitDock(event.detail||null)});
 
 async function syncDockDetail(type,{force=false}={}){
   const panel=document.querySelector(`.ec-dock-detail[data-panel="${type}"]`);
