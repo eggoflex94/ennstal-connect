@@ -385,7 +385,7 @@ export default function EventPhotosPage({ user, profile, members = [], regions =
               <button type="button" onClick={() => void toggleLike(photo)}>{liked ? "♥" : "♡"} {Number(photo.like_count || 0)}</button>
               <button type="button" onClick={() => void openPhoto(photo)}>💬 {Number(photo.comment_count || 0)}</button>
               <button type="button" onClick={() => void reportPhoto(photo)}>⚑ Melden</button>
-            </div></strong><span>+{award.amount} Punkte erhalten für Fotos</span></div>; })}
+            </div>
             {own && <div className="event-photo-owner-actions"><button type="button" onClick={() => void editCaption(photo)}>✎ Bearbeiten</button><button type="button" className="danger-button" onClick={() => void deletePhoto(photo)}>Löschen</button></div>}
           </div>
         </article>;
