@@ -266,14 +266,12 @@ export default function App() {
     const previous = lastRecordedProfileVisit.current;
     if (previous.profileId === viewingMember.id && now - previous.at < 5000) return;
     lastRecordedProfileVisit.current = { profileId: viewingMember.id, at: now };
-    void supabase.from("profile_visits").insert({
-      profile_id: viewingMember.id,
-      visitor_id: user.id,
-      visited_at: new Date(now).toISOString()
-    }).then(({ error }) => {
+    void supabase.rpc("record_profile_visit", { target_user: viewingMember.id }).then(({ error }) => {
       if (error) {
         lastRecordedProfileVisit.current = { profileId: "", at: 0 };
         console.warn("Profilbesuch konnte nicht gespeichert werden:", error.message);
+      } else {
+        window.dispatchEvent(new CustomEvent("ec:profile-visits-changed", { detail: { userId: viewingMember.id } }));
       }
     });
   }, [page, viewingMember?.id, user?.id]);
