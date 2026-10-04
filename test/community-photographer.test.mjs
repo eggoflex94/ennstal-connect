@@ -36,11 +36,13 @@ test("Head Admin tools expose global and regional photographer assignment", asyn
 
 test("event photo upload optimizes and watermarks before Storage upload", async () => {
   const photos = await source("src/EventPhotosPage.jsx");
+  const watermark = await source("src/photoWatermark.js");
   assert.match(photos, /MAX_EDGE = 2200/);
   assert.match(photos, /MAX_UPLOAD_BYTES = 5\.5 \* 1024 \* 1024/);
-  assert.match(photos, /canvas\.toBlob/);
-  assert.match(photos, /globalAlpha = 0\.28/);
-  assert.match(photos, /ennstal-connect-wordmark\.svg/);
+  assert.match(photos, /watermarkPhoto\(file, \{ mode: "event"/);
+  assert.match(watermark, /canvas\.toBlob/);
+  assert.match(watermark, /ennstal-connect-logo\.svg/);
+  assert.match(watermark, /Community Fotograf/);
   assert.match(photos, /storage\.from\("event-photos"\)\.upload/);
   assert.match(photos, /cacheControl: "31536000"/);
   assert.match(photos, /loading="lazy"/);
