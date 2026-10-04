@@ -11,14 +11,16 @@ test("Community Photographer badge is shown on member cards", async () => {
   assert.match(card, /ec-card-badge-photographer/);
 });
 
-test("Photos remain reachable from Community without crowding the primary navigation", async () => {
+test("Event photos live inside the standalone Events page without a separate primary nav item", async () => {
   const shell = await source("src/regional-shell.js");
   const app = await source("src/App.jsx");
   const topLinks = shell.match(/const TOP_LINKS=\[(.*?)\];/s)?.[1] || "";
-  assert.doesNotMatch(topLinks, /Fotos/);
-  assert.match(app, /page:"photos"/);
-  assert.match(app, /photos: "photos"/);
-  assert.match(app, /page === "photos"/);
+  assert.match(topLinks, /Events/);
+  assert.doesNotMatch(topLinks, /Eventfotos|Fotos/);
+  assert.match(app, /events: "events"/);
+  assert.match(app, /photos: "events"/);
+  assert.match(app, /page === "events"/);
+  assert.match(app, /<EventsPage/);
   assert.match(app, /<EventPhotosPage/);
 });
 
