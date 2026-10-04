@@ -22,45 +22,38 @@
 @media (max-width:410px){.ec-photo-head-actions{grid-template-columns:1fr}}
 
 
-/* Always-visible profile album watermark fallback. */
+/* Transparent profile album watermark fallback. */
 .ec-photo-image-wrap{position:relative!important}
 .ec-photo-image-wrap::after{
-  content:"Ennstal Connect";
+  content:"";
   position:absolute;
   right:7px;
   bottom:7px;
   z-index:4;
-  width:82px;
-  min-height:31px;
-  padding:22px 5px 4px;
-  box-sizing:border-box;
-  border:1px solid rgba(255,255,255,.38);
-  border-radius:7px;
-  background:rgba(255,255,255,.94) url("/ennstal-connect-wordmark.svg") center 5px/68px auto no-repeat;
-  color:#17263d;
-  font-size:7px;
-  line-height:1;
-  font-weight:900;
-  text-align:center;
+  width:86px;
+  height:28px;
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:transparent url("/ennstal-connect-wordmark.svg") right center/contain no-repeat;
+  opacity:.58;
+  filter:drop-shadow(0 1px 2px rgba(0,0,0,.5));
   pointer-events:none;
 }
 .ec-photo-lightbox{position:fixed}
 .ec-photo-lightbox::before{
-  content:"Ennstal Connect";
+  content:"";
   position:fixed;
   right:max(24px,5vw);
   bottom:max(24px,7vh);
   z-index:100002;
-  width:150px;
-  min-height:54px;
-  padding:37px 8px 6px;
-  box-sizing:border-box;
-  border:1px solid rgba(255,255,255,.42);
-  border-radius:10px;
-  background:rgba(255,255,255,.94) url("/ennstal-connect-wordmark.svg") center 8px/124px auto no-repeat;
-  color:#17263d;
-  font-size:10px;
-  font-weight:900;
-  text-align:center;
+  width:170px;
+  height:44px;
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:transparent url("/ennstal-connect-wordmark.svg") right center/contain no-repeat;
+  opacity:.64;
+  filter:drop-shadow(0 1px 3px rgba(0,0,0,.55));
   pointer-events:none;
 }
