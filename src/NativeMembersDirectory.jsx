@@ -253,9 +253,12 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
 
     <div className="member-grid native-member-grid">
       {pagedVisible.map((member) => {
-        const homeRegionLabel = regionById[member.home_region_id]?.name || "Hauptregion";
+        const homeRegionMeta = regionById[member.home_region_id] || null;
+        const homeRegionLabel = homeRegionMeta?.short_name || homeRegionMeta?.name || "Hauptregion";
         const assignedRegionNames = [...(regionalAdminByUser.get(member?.id) || [])]
-          .map((regionId) => regionById[regionId]?.name)
+          .map((regionId) => regionById[regionId])
+          .filter(Boolean)
+          .map((region) => region.short_name || region.name)
           .filter(Boolean);
         const regionalLabel = assignedRegionNames.length ? assignedRegionNames.join(", ") : homeRegionLabel;
         const cardMember = member?.is_primary_head_admin
