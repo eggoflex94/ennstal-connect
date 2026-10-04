@@ -54,7 +54,7 @@ function openStandaloneImage(src, title = 'Profilfoto') {
   modal.innerHTML = `
     <section class="ec-photo-album-modal ec-profile-image-modal">
       <header><div><span>PROFIL</span><strong>${esc(title)}</strong></div><button type="button" class="ec-photo-album-close" aria-label="Schließen">×</button></header>
-      <div class="ec-photo-album-stage ec-profile-image-stage"><img src="${esc(src)}" alt="${esc(title)}" decoding="async"></div>
+      <div class="ec-photo-album-stage ec-profile-image-stage"><img src="${esc(src)}" alt="${esc(title)}" decoding="async"><span class="ec-image-watermark" aria-hidden="true"></span></div>
     </section>`;
   document.body.appendChild(modal);
   modal.querySelector('.ec-photo-album-close').onclick = closeAlbum;
@@ -103,7 +103,7 @@ function renderFolder(page, data) {
   folder.dataset.photoFolder = '1';
   const thumbs = photos.slice(0, 6).map((photo) => `
     <button type="button" class="ec-profile-photo-thumb" data-photo-id="${photo.id}" aria-label="Foto öffnen">
-      <img src="${esc(photo.image_url)}" alt="${esc(photo.caption || 'Profilfoto')}" loading="lazy" decoding="async">
+      <img src="${esc(photo.image_url)}" alt="${esc(photo.caption || 'Profilfoto')}" loading="lazy" decoding="async"><span class="ec-image-watermark ec-image-watermark-thumb" aria-hidden="true"></span>
     </button>`).join('');
   folder.innerHTML = `
     <div class="ec-profile-photo-folder-head">
@@ -180,6 +180,7 @@ function openAlbum(ownerId, data, selectedId) {
         <div class="ec-photo-album-stage">
           <button type="button" class="ec-photo-nav prev" aria-label="Vorheriges Foto">‹</button>
           <img src="${esc(selected.image_url)}" alt="${esc(selected.caption || 'Profilfoto')}" decoding="async">
+          <span class="ec-image-watermark" aria-hidden="true"></span>
           <button type="button" class="ec-photo-nav next" aria-label="Nächstes Foto">›</button>
         </div>
         <aside class="ec-photo-album-side">
@@ -288,6 +289,11 @@ function startProfileObserver() {
 
 window.addEventListener('ec:navigate', () => { detectProfilePage(); schedule(30, true); });
 window.addEventListener('focus', () => { detectProfilePage(); schedule(80, false); });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modal) closeAlbum(); });
+document.addEventListener('keydown', (e) => {
+  if (!modal) return;
+  if (e.key === 'Escape') closeAlbum();
+  if (e.key === 'ArrowLeft') modal.querySelector('.ec-photo-nav.prev')?.click();
+  if (e.key === 'ArrowRight') modal.querySelector('.ec-photo-nav.next')?.click();
+});
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startProfileObserver, { once: true });
 else startProfileObserver();
