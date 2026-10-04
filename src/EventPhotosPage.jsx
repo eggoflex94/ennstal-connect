@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "./supabaseClient";
+import { watermarkPhoto } from "./photoWatermark.js";
 
 const MAX_SOURCE_BYTES = 20 * 1024 * 1024;
 const MAX_UPLOAD_BYTES = 5.5 * 1024 * 1024;
@@ -51,7 +52,7 @@ function isImageFile(file) {
   return /\.(png|jpe?g|webp|gif|heic|heif|avif)$/i.test(String(file.name || ""));
 }
 
-async function optimizeAndWatermark(file) {
+async function optimizeAndWatermarkLegacy(file) {
   if (!isImageFile(file)) throw new Error("Bitte nur Bilddateien auswählen.");
   if (file.size > MAX_SOURCE_BYTES) throw new Error(`${file.name}: Das Original ist größer als 20 MB.`);
 
@@ -206,7 +207,7 @@ export default function EventPhotosPage({ user, profile, members = [], regions =
     try {
       for (const file of list) {
         setUploadStatus(`Optimiere ${completed + 1} von ${list.length}: ${file.name}`);
-        const optimized = await optimizeAndWatermark(file);
+        const optimized = await watermarkPhoto(file, { mode: "event", maxEdge: MAX_EDGE, quality: 0.84 });
         const filename = `${Date.now()}-${crypto.randomUUID()}.${optimized.extension}`;
         const path = `${user.id}/${selectedEvent.id}/${filename}`;
 
