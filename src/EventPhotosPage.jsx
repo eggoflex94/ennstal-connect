@@ -254,6 +254,7 @@ export default function EventPhotosPage({ user, profile, members = [], regions =
       setCaption("");
       setUploadStatus(`${completed} Foto${completed === 1 ? "" : "s"} veröffentlicht.`);
       await refresh();
+      window.dispatchEvent(new CustomEvent("ec:regional-events-refresh", { detail: { eventId: selectedEvent.id, reason: "photos-uploaded" } }));
     } catch (error) {
       showNotice?.(error?.message || "Foto-Upload fehlgeschlagen.");
       setUploadStatus(completed ? `${completed} Foto(s) wurden bereits hochgeladen.` : "");
