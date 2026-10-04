@@ -1143,8 +1143,8 @@ test("profile visits authenticate realtime before subscribing", async()=>{
   const dashboard=await source("src/dashboard-community-realtime.js");
   assert.match(realtime,/getSession\(\)/);
   assert.match(realtime,/supabase\.realtime\.setAuth\(token\)/);
-  assert.match(realtime,/event: 'INSERT'[\s\S]*table: 'profile_visits'/);
-  assert.match(realtime,/realtime-insert/);
+  assert.match(realtime,/event: '\*'[\s\S]*table: 'profile_visits'/);
+  assert.match(realtime,/realtime-\$\{String\(payload\?\.eventType/);
   assert.match(dashboard,/supabase\.realtime\.setAuth\(session\.access_token\)/);
   assert.doesNotMatch(dashboard,/table:'profile_visits'/);
   assert.match(dashboard,/ec:profile-visits-changed/);
