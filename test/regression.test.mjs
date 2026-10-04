@@ -896,9 +896,11 @@ test("signed-in member card keeps age visible when directory payload omits birth
 
 test("member card leaves enough room for responsibility and age", async()=>{
   const css=await source("src/member-card-exact-authority.css");
-  assert.match(css,/height:64px!important/);
-  assert.match(css,/\.ec-member-responsibility\{/);
-  assert.match(css,/\.ec-member-age\{[\s\S]*display:block!important/);
+  const card=await source("src/MemberCardView.jsx");
+  assert.match(css,/height:68px!important/);
+  assert.match(css,/\.ec-member-responsibility\{[\s\S]*text-overflow:ellipsis!important/);
+  assert.match(css,/\.ec-member-age\{[\s\S]*display:block!important[\s\S]*min-height:12px!important/);
+  assert.match(card,/compactResponsibilityLabel/);
 });
 
 
@@ -953,9 +955,8 @@ test("every member-profile navigation records a profile visit centrally", async(
   const app=await source("src/App.jsx");
   assert.match(app,/page !== "member-profile"/);
   assert.match(app,/lastRecordedProfileVisit/);
-  assert.match(app,/supabase\.from\("profile_visits"\)\.insert/);
-  assert.match(app,/profile_id: viewingMember\.id/);
-  assert.match(app,/visitor_id: user\.id/);
+  assert.match(app,/supabase\.rpc\("record_profile_visit", \{ target_user: viewingMember\.id \}\)/);
+  assert.match(app,/ec:profile-visits-changed/);
 });
 
 
