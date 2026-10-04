@@ -54,10 +54,10 @@ jobs:
           assets = list(Path('dist/assets').glob('*.js'))
           bundle = '\n'.join(path.read_text(errors='ignore') for path in assets)
           required = [
-              'Was machst du gerade?',
-              'Aktuelle Aktivitäten',
-              'Nächste Veranstaltungen',
-              'Aktivität teilen',
+              'Events',
+              'Alle Veranstaltungen',
+              'Veranstaltung erstellen',
+              'Eventfotos',
               'Gemeinde & Service',
               'Interessiert',
               'ec-fake-portal',
