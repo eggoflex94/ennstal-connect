@@ -42,6 +42,14 @@ function overviewPanel() {
     .find((panel) => norm(panel.querySelector('h2')?.textContent) === 'auf einen blick') || null;
 }
 
+function upcomingHomePanel() {
+  return [...document.querySelectorAll('.home-page section,.home-page article,.home-page .panel')]
+    .find((panel) => {
+      const heading = norm(panel.querySelector('h2')?.textContent);
+      return heading === 'heute & demnächst' || heading === 'heute & demnaechst';
+    }) || null;
+}
+
 function formatDate(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
@@ -234,27 +242,48 @@ function renderCommunity(region, events, rsvps) {
 }
 
 function renderHome(region, events) {
-  const panel = overviewPanel();
-  if (!panel) return;
-  const next = events
+  const upcoming = events
     .filter((event) => String(event.status || '').toUpperCase() !== 'CANCELLED' && new Date(event.event_at).getTime() >= Date.now())
-    .sort((a, b) => new Date(a.event_at) - new Date(b.event_at))[0] || null;
-  let bar = panel.querySelector('[data-regional-event-authority-home]');
-  if (!bar) {
-    bar = document.createElement('button');
-    bar.type = 'button';
-    bar.dataset.regionalEventAuthorityHome = '1';
-    bar.className = 'ec-region-next-event-final ec-region-next-event-authority';
-    panel.appendChild(bar);
+    .sort((a, b) => Number(Boolean(b.is_featured)) - Number(Boolean(a.is_featured)) || new Date(a.event_at) - new Date(b.event_at));
+  const next = upcoming[0] || null;
+
+  const panel = overviewPanel();
+  if (panel) {
+    let bar = panel.querySelector('[data-regional-event-authority-home]');
+    if (!bar) {
+      bar = document.createElement('button');
+      bar.type = 'button';
+      bar.dataset.regionalEventAuthorityHome = '1';
+      bar.className = 'ec-region-next-event-final ec-region-next-event-authority';
+      panel.appendChild(bar);
+    }
+    bar.className = `ec-region-next-event-final ec-region-next-event-authority${next?.is_featured ? ` is-featured featured-${next.featured_color || 'gold'}` : ''}`;
+    bar.innerHTML = `<span>${next?.is_featured ? '★ HERVORGEHOBEN' : 'NÄCHSTER TERMIN'} · ${esc(region.name)}</span><strong>${esc(next?.title || `Derzeit kein kommender Termin in ${region.name}`)}</strong><time>${next ? esc(formatDate(next.event_at)) : ''}</time>`;
+    bar.disabled = !next;
+    bar.onclick = next ? () => window.dispatchEvent(new CustomEvent('ec:navigate', { detail: { page: 'events' } })) : null;
+    panel.querySelectorAll('button').forEach((button) => {
+      if (button === bar) return;
+      const text = norm(button.textContent);
+      if (text.includes('nächster termin') || text.includes('naechster termin')) button.classList.add('ec-native-next-event-hidden');
+    });
   }
-  bar.innerHTML = `<span>NÄCHSTER TERMIN · ${esc(region.name)}</span><strong>${esc(next?.title || `Derzeit kein kommender Termin in ${region.name}`)}</strong><time>${next ? esc(formatDate(next.event_at)) : ''}</time>`;
-  bar.disabled = !next;
-  bar.onclick = next ? () => window.dispatchEvent(new CustomEvent('ec:navigate', { detail: { page: 'events' } })) : null;
-  panel.querySelectorAll('button').forEach((button) => {
-    if (button === bar) return;
-    const text = norm(button.textContent);
-    if (text.includes('nächster termin') || text.includes('naechster termin')) button.classList.add('ec-native-next-event-hidden');
-  });
+
+  const upcomingPanel = upcomingHomePanel();
+  if (upcomingPanel) {
+    upcomingPanel.querySelector('[data-featured-home-event]')?.remove();
+    const featured = upcoming.find((event) => event.is_featured);
+    if (featured) {
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.dataset.featuredHomeEvent = featured.id;
+      card.className = `ec-featured-home-event featured-${featured.featured_color || 'gold'}`;
+      card.innerHTML = `${featured.image_url ? `<img src="${esc(featured.image_url)}" alt="">` : ''}<span class="ec-featured-home-event-copy"><small>★ HERVORGEHOBEN</small><strong>${esc(featured.title)}</strong><em>${esc(formatDate(featured.event_at))}${featured.location ? ` · ${esc(featured.location)}` : ''}</em></span><b>Event ansehen →</b>`;
+      card.onclick = () => window.dispatchEvent(new CustomEvent('ec:navigate', { detail: { page: 'events', source: 'featured-home-event' } }));
+      const heading = upcomingPanel.querySelector('h2')?.parentElement || upcomingPanel.firstElementChild;
+      if (heading?.nextSibling) upcomingPanel.insertBefore(card, heading.nextSibling);
+      else upcomingPanel.appendChild(card);
+    }
+  }
 }
 
 async function refresh() {
