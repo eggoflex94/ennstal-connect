@@ -3166,3 +3166,16 @@ img.member-avatar,
   .event-card-watermark>img{width:124px!important;max-height:34px!important}
   .event-card-watermark>b{font-size:9px!important}
 }
+
+.event-points-error{
+  grid-column:1/-1;
+  display:block;
+  margin-top:2px;
+  padding:8px 10px;
+  border:1px solid #f0b7b7;
+  border-radius:9px;
+  background:#fff3f3;
+  color:#9b1c1c;
+  font-size:.78rem;
+  font-weight:800;
+}
