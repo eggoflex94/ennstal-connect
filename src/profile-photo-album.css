@@ -20,3 +20,47 @@
 .ec-photo-folder-section{margin-top:18px}.ec-photo-folder-section>h3{margin:0 0 10px;font-size:15px}.ec-photo-folder-section+.ec-photo-folder-section{padding-top:16px;border-top:1px solid rgba(100,116,139,.16)}
 @media (max-width:700px){.ec-photo-head-actions{width:100%;display:grid;grid-template-columns:1fr 1fr}.ec-photo-head-actions button{width:100%}}
 @media (max-width:410px){.ec-photo-head-actions{grid-template-columns:1fr}}
+
+
+/* Always-visible profile album watermark fallback. */
+.ec-photo-image-wrap{position:relative!important}
+.ec-photo-image-wrap::after{
+  content:"Ennstal Connect";
+  position:absolute;
+  right:7px;
+  bottom:7px;
+  z-index:4;
+  width:82px;
+  min-height:31px;
+  padding:22px 5px 4px;
+  box-sizing:border-box;
+  border:1px solid rgba(255,255,255,.38);
+  border-radius:7px;
+  background:rgba(7,16,25,.82) url("/ennstal-connect-logo.svg") center 5px/68px auto no-repeat;
+  color:#fff;
+  font-size:7px;
+  line-height:1;
+  font-weight:900;
+  text-align:center;
+  pointer-events:none;
+}
+.ec-photo-lightbox{position:fixed}
+.ec-photo-lightbox::before{
+  content:"Ennstal Connect";
+  position:fixed;
+  right:max(24px,5vw);
+  bottom:max(24px,7vh);
+  z-index:100002;
+  width:150px;
+  min-height:54px;
+  padding:37px 8px 6px;
+  box-sizing:border-box;
+  border:1px solid rgba(255,255,255,.42);
+  border-radius:10px;
+  background:rgba(7,16,25,.84) url("/ennstal-connect-logo.svg") center 8px/124px auto no-repeat;
+  color:#fff;
+  font-size:10px;
+  font-weight:900;
+  text-align:center;
+  pointer-events:none;
+}
