@@ -2876,3 +2876,23 @@ img.member-avatar,
     width:100%;
   }
 }
+
+
+/* 2026-10: make event creation obvious and simple */
+.community-create-event-cta{flex:0 0 auto;min-height:46px;padding:0 18px!important;border-radius:14px!important;font-weight:850!important;box-shadow:0 10px 24px rgba(255,107,37,.18)}
+.admin-community-tools{scroll-margin-top:120px}
+.admin-community-tools-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:18px}
+.admin-community-tools-heading h2{margin:4px 0 0}
+.admin-community-tools-heading p{margin:0;color:#66788b;max-width:520px}
+.community-event-create-form{scroll-margin-top:120px;display:grid;gap:12px;padding:18px!important;border:2px solid rgba(255,107,37,.18)!important;background:linear-gradient(180deg,#fffaf6,#fff)!important}
+.community-event-create-form h3{margin:0;font-size:1.35rem}
+.community-event-create-help{margin:-4px 0 4px;color:#66788b}
+.community-event-create-form>label,.community-event-create-row>label,.community-event-create-advanced label{display:grid;gap:6px;font-weight:750;color:#405166}
+.community-event-create-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.community-event-create-form input,.community-event-create-form textarea{width:100%}
+.community-event-create-form textarea{min-height:110px;resize:vertical}
+.community-event-create-advanced{border:1px solid #d9e1e9;border-radius:12px;padding:10px 12px;background:#fff}
+.community-event-create-advanced summary{cursor:pointer;font-weight:800;color:#5f7082}
+.community-event-create-advanced[open]{display:grid;gap:10px}
+.community-event-publish-button{min-height:48px;font-size:1rem!important}
+@media(max-width:760px){.community-create-event-cta{width:100%}.community-event-create-row{grid-template-columns:1fr}.admin-community-tools-heading{align-items:flex-start}}
