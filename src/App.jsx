@@ -1335,7 +1335,7 @@ export default function App() {
       showNotice("Profilbild mit Wasserzeichen gespeichert.");
       await loadAll();
     } else {
-      await uploadProfileImage(processed.file);
+      await uploadProfileImage(file);
     }
 
     setProfilePhotoEditFile(null);
