@@ -2918,9 +2918,9 @@ img.member-avatar,
 .event-modern-card.is-featured{border-width:2px}
 .event-modern-card.has-new-photos{box-shadow:0 14px 34px rgba(31,129,93,.12)}
 .event-modern-card.is-cancelled{opacity:.72}
-.event-modern-visual{position:relative;min-height:190px;background:linear-gradient(135deg,#eef3f6,#dce7ed)}
-.event-modern-visual>img{width:100%;height:230px;object-fit:cover;display:block}
-.event-modern-placeholder{display:grid;place-items:center;height:230px;font-size:2rem;font-weight:950;letter-spacing:.18em;color:#6a7f8f}
+.event-modern-visual{position:relative;min-height:0;background:linear-gradient(135deg,#eef3f6,#dce7ed)}
+.event-modern-visual>img{width:100%;height:160px;object-fit:cover;display:block}
+.event-modern-placeholder{display:grid;place-items:center;height:160px;font-size:2rem;font-weight:950;letter-spacing:.18em;color:#6a7f8f}
 .event-modern-badges{position:absolute;left:14px;top:14px;display:flex;gap:8px;flex-wrap:wrap}
 .event-modern-badges span{padding:7px 10px;border-radius:999px;background:rgba(15,31,45,.82);color:#fff;font-size:.72rem;font-weight:900;letter-spacing:.04em;backdrop-filter:blur(7px)}
 .event-modern-badges .new-photos{background:rgba(20,135,87,.9)}
@@ -2957,4 +2957,47 @@ img.member-avatar,
   .event-points-award-form button{grid-column:1/-1}
   .event-points-history-row{grid-template-columns:1fr}
   .event-points-history-row small{white-space:normal}
+}
+
+
+/* Visible fallback watermark for all profile/event photo surfaces.
+   The file watermark remains the canonical watermark; this makes old/backfill-in-progress images visibly marked immediately. */
+.ec-image-watermark{
+  position:absolute!important;
+  right:12px!important;
+  bottom:12px!important;
+  z-index:3!important;
+  width:clamp(120px,24%,220px)!important;
+  aspect-ratio:300/92!important;
+  pointer-events:none!important;
+  border:1px solid rgba(255,255,255,.38)!important;
+  border-radius:10px!important;
+  background:rgba(8,18,28,.82) url("/ennstal-connect-logo.svg") center 10px/82% auto no-repeat!important;
+  box-shadow:0 4px 18px rgba(0,0,0,.28)!important;
+}
+.ec-image-watermark::after{
+  content:"Ennstal Connect";
+  position:absolute;
+  left:8px;
+  right:8px;
+  bottom:7px;
+  text-align:center;
+  color:#fff;
+  font-size:11px;
+  line-height:1;
+  font-weight:900;
+  letter-spacing:.02em;
+}
+.ec-image-watermark-event::after{content:"Community Fotograf";}
+.ec-image-watermark-thumb{
+  right:6px!important;
+  bottom:6px!important;
+  width:64px!important;
+  border-radius:7px!important;
+  background-position:center 5px!important;
+}
+.ec-image-watermark-thumb::after{display:none!important;}
+
+@media(max-width:700px){
+  .event-modern-visual>img,.event-modern-placeholder{height:130px}
 }
