@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from './supabaseClient';
+import { watermarkPhoto } from './photoWatermark.js';
 import './profile-sections.css';
 
 const VISIBILITY = { PUBLIC: 'Alle Mitglieder', FRIENDS: 'Nur Freunde', PRIVATE: 'Nur ich' };
@@ -133,8 +134,13 @@ export default function ProfileSections({ member, editable = false, preview = fa
       if (file) {
         const extensions = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif' };
         if (!extensions[file.type] || file.size > 5 * 1024 * 1024) throw new Error('Bitte JPG, PNG, WebP oder GIF bis 5 MB auswählen.');
-        uploaded = `${user.id}/${crypto.randomUUID()}.${extensions[file.type]}`;
-        const { error: uploadError } = await supabase.storage.from(BUCKET).upload(uploaded, file, { contentType: file.type, upsert: false });
+        const processed = await watermarkPhoto(file, { mode: 'standard', maxEdge: 2400, quality: 0.9 });
+        uploaded = `${user.id}/${crypto.randomUUID()}.${processed.extension}`;
+        const { error: uploadError } = await supabase.storage.from(BUCKET).upload(uploaded, processed.blob, {
+          contentType: processed.contentType,
+          upsert: false,
+          cacheControl: '31536000'
+        });
         if (uploadError) throw uploadError;
       }
       if (['IMAGE', 'PHOTO'].includes(draft.kind) && !uploaded && !draft.media_path) throw new Error('Bitte ein Bild auswählen.');
