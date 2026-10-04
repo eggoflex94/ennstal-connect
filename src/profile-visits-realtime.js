@@ -27,7 +27,7 @@ function startFallbackPolling() {
   clearInterval(pollTimer);
   pollTimer = window.setInterval(() => {
     if (!document.hidden && currentUserId) queueRefresh(0, 'fallback-poll');
-  }, 8000);
+  }, 60000);
 }
 
 function scheduleRestart(delay = 700) {
@@ -77,17 +77,28 @@ async function ensureRealtimeChannel() {
     const topic = `profile-visits-${user.id}-${++channelSequence}`;
     const nextChannel = supabase.channel(topic);
 
-    // Register every callback before subscribe(). Do not mutate this channel
-    // after subscribe has been called.
-    nextChannel.on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table: 'profile_visits', filter: `profile_id=eq.${user.id}` },
-      (payload) => {
-        const visit = payload?.new || payload?.old || null;
-        if (visit?.profile_id && visit.profile_id !== user.id) return;
-        queueRefresh(0, `realtime-${String(payload?.eventType || 'change').toLowerCase()}`, visit);
-      }
-    );
+    // Register INSERT and UPDATE explicitly before subscribe().
+    // A first visit is an INSERT; repeat visits update visited_at on the same
+    // profile/visitor row. Both must reach the profile owner immediately.
+    const handleVisitChange = (eventType) => (payload) => {
+      const visit = payload?.new || null;
+      if (!visit?.profile_id || visit.profile_id !== user.id) return;
+      window.dispatchEvent(new CustomEvent('ec:profile-visits-changed', {
+        detail: { userId: user.id, reason: 'realtime', eventType, visit, at: Date.now() }
+      }));
+    };
+
+    nextChannel
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'profile_visits', filter: `profile_id=eq.${user.id}` },
+        handleVisitChange('INSERT')
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'profile_visits', filter: `profile_id=eq.${user.id}` },
+        handleVisitChange('UPDATE')
+      );
 
     channel = nextChannel;
     nextChannel.subscribe((status, error) => {
