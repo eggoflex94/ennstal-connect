@@ -1718,7 +1718,7 @@ export default function App() {
         {page === "news" && <News news={regionFilter(news)} members={members} profile={profile} canManage={canManageActiveRegion} activeRegion={activeRegion} createNews={createNews} editNews={editNews} deleteNews={deleteNews}/>}
         {page === "municipality" && <section className="municipality-loading-host" aria-live="polite"><div id="ec-municipality-runtime-host" className="ec-municipality-runtime-host" /></section>}
         {page === "community" && <><CommunityHub members={regionalMembers} ads={regionFilter(communityAds)} photos={memberPhotos} profile={profile} profileUpdates={publicProfileUpdates} activeRegion={activeRegion} onDeleteAd={deleteCommunityAd}/>{isHeadAdmin(profile?.role) && <AdminCommunityTools members={regionalMembers} createAd={createCommunityAd} setBusinessAccount={setBusinessAccount}/>}</>}
-        {page === "events" && <><EventsPage members={regionalMembers} events={regionFilter(communityEvents)} eventRsvps={eventRsvps} user={user} profile={profile} activeRegion={activeRegion} canCreateEvent={canManageActiveRegion || canPhotographActiveRegion} createEvent={createCommunityEvent} onToggleEventFeatured={toggleCommunityEventFeatured} onRespondEvent={respondToCommunityEvent} onShareEvent={shareCommunityEvent} onEditEvent={editCommunityEvent} onCancelEvent={cancelCommunityEvent} onDeleteEvent={deleteCommunityEvent}/><EventPhotosPage user={user} profile={profile} members={members} regions={regions} activeRegion={activeRegion} showNotice={showNotice}/></>}
+        {page === "events" && <><EventsPage members={members} events={regionFilter(communityEvents)} eventRsvps={eventRsvps} user={user} profile={profile} activeRegion={activeRegion} canCreateEvent={canManageActiveRegion || canPhotographActiveRegion} createEvent={createCommunityEvent} onToggleEventFeatured={toggleCommunityEventFeatured} onRespondEvent={respondToCommunityEvent} onShareEvent={shareCommunityEvent} onEditEvent={editCommunityEvent} onCancelEvent={cancelCommunityEvent} onDeleteEvent={deleteCommunityEvent}/><EventPhotosPage user={user} profile={profile} members={members} regions={regions} activeRegion={activeRegion} showNotice={showNotice}/></>}
         {page === "groups" && <GroupsPage groups={regionFilter(groups)} members={members} profile={profile} user={user} transferRequests={groupOwnerChanges} onCreate={createGroup} onJoin={joinGroup} onLeave={leaveGroup} onEdit={editGroup} onDelete={deleteGroup} onTransfer={requestGroupOwnerChange} onReviewTransfer={reviewGroupOwnerChange} onOpen={setSelectedGroup}/>}
         {page === "groups" && selectedGroup && <GroupDetails group={groups.find((group) => group.id === selectedGroup.id) || selectedGroup} members={members} profile={profile} user={user} onClose={() => setSelectedGroup(null)} onJoin={joinGroup} onLeave={leaveGroup} onEdit={editGroup} onDelete={deleteGroup}/>}
         {page === "forum" && (
@@ -2673,9 +2673,166 @@ function CommunityHub({ members, ads, photos, profile, profileUpdates, activeReg
 }
 function MemberBusinessTool({ member, setBusinessAccount }) { const business = member.account_badge === "BUSINESS"; return <section className="member-business-tool panel"><span className="eyebrow">ADMIN-WERKZEUG</span><h2>Unternehmenskonto</h2><p>Unternehmenskonten erhalten einen blauen Rahmen und Stern, aber keine zusätzlichen Rechte.</p><button className="secondary-button" onClick={() => setBusinessAccount(member.id, !business)}>{business ? "★ Unternehmenskonto entfernen" : "★ Zum Unternehmenskonto ernennen"}</button></section>; }
 function EventsPage({ members, events, eventRsvps, user, profile, activeRegion, canCreateEvent, createEvent, onToggleEventFeatured, onRespondEvent, onShareEvent, onEditEvent, onCancelEvent, onDeleteEvent }) {
-  const orderedEvents = [...events].sort((a,b) => Number(Boolean(b.is_featured)) - Number(Boolean(a.is_featured)) || new Date(a.event_at) - new Date(b.event_at));
-  return <section className="events-page"><div className="page-heading"><div><span className="eyebrow">VERANSTALTUNGEN</span><h1>Events · {activeRegion?.name || "Region"}</h1><p>Veranstaltungen entdecken, zusagen, verwalten und Eventfotos ansehen.</p></div>{canCreateEvent && <button type="button" className="primary-button community-create-event-cta" onClick={() => { document.getElementById("event-create")?.scrollIntoView({ behavior:"smooth", block:"start" }); window.setTimeout(() => document.querySelector("#event-create input[name=title]")?.focus(), 450); }}>＋ Veranstaltung erstellen</button>}</div>
-    <article className="panel events-page-list"><span className="eyebrow">TERMINE</span><h2>Alle Veranstaltungen</h2>{orderedEvents.length ? orderedEvents.map((event) => { const responses = eventRsvps.filter((item) => item.event_id === event.id); const going = responses.filter((item) => item.status === "GOING").length; const interested = responses.filter((item) => item.status === "INTERESTED").length; const current = responses.find((item) => item.user_id === user?.id)?.status; const author = members.find((member) => member.id === event.created_by); return <div className={`hub-row community-event-row ${event.is_featured ? `is-featured featured-${event.featured_color || "gold"}` : ""} ${event.status === "CANCELLED" ? "cancelled-event" : ""}`} key={event.id}>{event.image_url && <img src={event.image_url} alt=""/>}<div>{event.is_featured && <span className="community-event-featured-badge">★ Hervorgehoben</span>}<strong>{event.title}</strong><span>{new Date(event.event_at).toLocaleString("de-AT")}{event.location && ` · ${event.location}`}</span>{author && <small className={`event-author role-author ${author.account_badge === "BUSINESS" ? "business" : roleClass(author.role)}`}>Erstellt von {author.account_badge === "BUSINESS" ? "★" : roleMark(author.role)} {getName(author)}</small>}{event.status === "CANCELLED" && <small className="event-cancelled-label">ABGESAGT{event.cancellation_reason ? ` · ${event.cancellation_reason}` : ""}</small>}{event.status !== "CANCELLED" && <div className="event-rsvp-actions"><small className="event-rsvp-social-proof">{going || interested ? `${going} kommen · ${interested} interessiert` : "Sei die erste Person, die Interesse zeigt."}</small><button type="button" className={current === "INTERESTED" ? "primary-button" : "secondary-button"} onClick={() => onRespondEvent(event,"INTERESTED")}>☆ Interessiert</button><button type="button" className={current === "GOING" ? "primary-button" : "secondary-button"} onClick={() => onRespondEvent(event,"GOING")}>✓ Ich komme</button><button type="button" className="secondary-button" onClick={() => onShareEvent(event)}>↗ Auf meinem Profil teilen</button></div>}{isAdmin(profile?.role) && <div className="event-actions"><button type="button" className="secondary-button event-delete-button" onClick={() => onEditEvent(event)}>{event.status === "CANCELLED" ? "Wieder aktivieren" : "✎ Bearbeiten"}</button>{event.status !== "CANCELLED" && <button type="button" className="danger-button event-delete-button" onClick={() => onCancelEvent(event)}>Absagen</button>}<button type="button" className="danger-button event-delete-button" onClick={() => onDeleteEvent(event)}>Löschen</button><button type="button" className="community-event-feature-toggle" onClick={() => onToggleEventFeatured?.(event)}>{event.is_featured ? "Hervorhebung entfernen" : "★ Hervorheben"}</button></div>}</div></div>; }) : <p>Noch keine Termine veröffentlicht.</p>}</article>
+  const [eventPhotos, setEventPhotos] = useState([]);
+  const [eventAwards, setEventAwards] = useState([]);
+  const [awardDrafts, setAwardDrafts] = useState({});
+  const [awardingEventId, setAwardingEventId] = useState("");
+  const canAwardEventPoints = ["HEAD_ADMIN", "ADMIN"].includes(String(profile?.role || "").toUpperCase());
+  const memberById = useMemo(() => new Map(members.map((member) => [member.id, member])), [members]);
+  const eventIds = useMemo(() => events.map((event) => event.id), [events]);
+
+  const loadEventExtras = async () => {
+    if (!eventIds.length) {
+      setEventPhotos([]);
+      setEventAwards([]);
+      return;
+    }
+    const [{ data: photos }, { data: awards }] = await Promise.all([
+      supabase.from("event_photos").select("id,event_id,storage_path,created_at,uploaded_by").in("event_id", eventIds).order("created_at", { ascending: false }).limit(500),
+      supabase.from("event_point_awards").select("id,event_id,recipient_id,actor_id,amount,reason,created_at").in("event_id", eventIds).order("created_at", { ascending: false }).limit(500)
+    ]);
+    setEventPhotos(photos || []);
+    setEventAwards(awards || []);
+  };
+
+  useEffect(() => { void loadEventExtras(); }, [eventIds.join("|")]);
+
+  useEffect(() => {
+    const refresh = () => void loadEventExtras();
+    window.addEventListener("ec:regional-events-refresh", refresh);
+    return () => window.removeEventListener("ec:regional-events-refresh", refresh);
+  }, [eventIds.join("|")]);
+
+  const photosFor = (eventId) => eventPhotos.filter((photo) => photo.event_id === eventId);
+  const awardsFor = (eventId) => eventAwards.filter((award) => award.event_id === eventId);
+  const publicPhotoUrl = (path) => supabase.storage.from("event-photos").getPublicUrl(path).data.publicUrl;
+  const roleStarFor = (member) => member?.role_star_url || (String(member?.role || "").toUpperCase() === "HEAD_ADMIN" ? "/role-star-red.svg" : String(member?.role || "").toUpperCase() === "ADMIN" ? "/role-star-blue.svg" : String(member?.role || "").toUpperCase() === "SUPPORTER" ? "/supporter-star.svg" : null);
+
+  const openEventPhotos = (eventId) => {
+    window.dispatchEvent(new CustomEvent("ec:open-event-photos", { detail: { eventId } }));
+  };
+
+  const awardEventPoints = async (event) => {
+    if (!canAwardEventPoints) return;
+    const draft = awardDrafts[event.id] || {};
+    const recipientId = draft.recipientId || event.created_by || "";
+    const amount = Math.max(1, Math.min(100, Number(draft.amount || 5) || 5));
+    if (!recipientId) return showNotice?.("Bitte wähle einen Empfänger für die Eventpunkte.");
+    const recipient = memberById.get(recipientId);
+    if (!window.confirm(`${amount} Eventpunkte an ${getName(recipient || { nickname: "Mitglied" })} für „${event.title}“ vergeben?`)) return;
+    setAwardingEventId(event.id);
+    const { error } = await supabase.rpc("award_event_points", {
+      p_event_id: event.id,
+      p_recipient_id: recipientId,
+      p_amount: amount,
+      p_reason: `Punkte erhalten für Event · ${event.title}`
+    });
+    setAwardingEventId("");
+    if (error) return showNotice?.(error.message);
+    showNotice?.(`+${amount} Eventpunkte vergeben.`);
+    await loadEventExtras();
+  };
+
+  const orderedEvents = [...events].sort((a,b) => {
+    const aPhotos = photosFor(a.id);
+    const bPhotos = photosFor(b.id);
+    const aRecent = aPhotos.some((photo) => Date.now() - new Date(photo.created_at).getTime() < 72 * 3600000);
+    const bRecent = bPhotos.some((photo) => Date.now() - new Date(photo.created_at).getTime() < 72 * 3600000);
+    return Number(Boolean(b.is_featured)) - Number(Boolean(a.is_featured))
+      || Number(bRecent) - Number(aRecent)
+      || new Date(a.event_at) - new Date(b.event_at);
+  });
+
+  return <section className="events-page">
+    <div className="page-heading">
+      <div><span className="eyebrow">VERANSTALTUNGEN</span><h1>Events · {activeRegion?.name || "Region"}</h1><p>Veranstaltungen, Eventfotos und öffentliche Eventpunkte an einem Ort.</p></div>
+      {canCreateEvent && <button type="button" className="primary-button community-create-event-cta" onClick={() => { document.getElementById("event-create")?.scrollIntoView({ behavior:"smooth", block:"start" }); window.setTimeout(() => document.querySelector("#event-create input[name=title]")?.focus(), 450); }}>＋ Veranstaltung erstellen</button>}
+    </div>
+
+    <div className="events-modern-grid">
+      {orderedEvents.length ? orderedEvents.map((event) => {
+        const responses = eventRsvps.filter((item) => item.event_id === event.id);
+        const going = responses.filter((item) => item.status === "GOING").length;
+        const interested = responses.filter((item) => item.status === "INTERESTED").length;
+        const current = responses.find((item) => item.user_id === user?.id)?.status;
+        const author = memberById.get(event.created_by);
+        const photos = photosFor(event.id);
+        const awards = awardsFor(event.id);
+        const latestPhoto = photos[0] || null;
+        const hasNewPhotos = photos.some((photo) => Date.now() - new Date(photo.created_at).getTime() < 72 * 3600000);
+        const totalPoints = awards.reduce((sum, award) => sum + Number(award.amount || 0), 0);
+        const draft = awardDrafts[event.id] || {};
+        const recipientId = draft.recipientId || event.created_by || "";
+        return <article className={`event-modern-card ${event.is_featured ? `is-featured featured-${event.featured_color || "gold"}` : ""} ${hasNewPhotos ? "has-new-photos" : ""} ${event.status === "CANCELLED" ? "is-cancelled" : ""}`} key={event.id}>
+          <div className="event-modern-visual">
+            {event.image_url ? <img src={event.image_url} alt=""/> : latestPhoto ? <img src={publicPhotoUrl(latestPhoto.storage_path)} alt=""/> : <div className="event-modern-placeholder">EVENT</div>}
+            <div className="event-modern-badges">
+              {event.is_featured && <span>★ Hervorgehoben</span>}
+              {hasNewPhotos && <span className="new-photos">● Neue Fotos</span>}
+            </div>
+          </div>
+
+          <div className="event-modern-main">
+            <div className="event-modern-title-row">
+              <div><h2>{event.title}</h2><p>{new Date(event.event_at).toLocaleString("de-AT")}{event.location && ` · ${event.location}`}</p></div>
+              <button type="button" className={`event-photo-status ${photos.length ? "has-photos" : "no-photos"}`} onClick={() => openEventPhotos(event.id)}>
+                <strong>{photos.length ? `📷 ${photos.length} Eventfoto${photos.length === 1 ? "" : "s"}` : "📷 Noch keine Fotos"}</strong>
+                <span>{photos.length ? "Galerie öffnen →" : "Zu den Eventfotos →"}</span>
+              </button>
+            </div>
+
+            {photos.length > 0 && <button type="button" className="event-photo-preview-strip" onClick={() => openEventPhotos(event.id)}>
+              {photos.slice(0,4).map((photo) => <img key={photo.id} src={publicPhotoUrl(photo.storage_path)} alt="" loading="lazy"/>)}
+              {photos.length > 4 && <span>+{photos.length - 4}</span>}
+            </button>}
+
+            {author && <small className={`event-author role-author ${author.account_badge === "BUSINESS" ? "business" : roleClass(author.role)}`}>Erstellt von {author.account_badge === "BUSINESS" ? "★" : roleMark(author.role)} {getName(author)}</small>}
+            {event.status === "CANCELLED" && <small className="event-cancelled-label">ABGESAGT{event.cancellation_reason ? ` · ${event.cancellation_reason}` : ""}</small>}
+
+            {event.status !== "CANCELLED" && <div className="event-rsvp-actions">
+              <small className="event-rsvp-social-proof">{going || interested ? `${going} kommen · ${interested} interessiert` : "Sei die erste Person, die Interesse zeigt."}</small>
+              <button type="button" className={current === "INTERESTED" ? "primary-button" : "secondary-button"} onClick={() => onRespondEvent(event,"INTERESTED")}>☆ Interessiert</button>
+              <button type="button" className={current === "GOING" ? "primary-button" : "secondary-button"} onClick={() => onRespondEvent(event,"GOING")}>✓ Ich komme</button>
+              <button type="button" className="secondary-button" onClick={() => onShareEvent(event)}>↗ Teilen</button>
+            </div>}
+
+            <section className="event-points-panel">
+              <div className="event-points-heading"><div><span>EVENTPUNKTE</span><strong>{totalPoints > 0 ? `★ ${totalPoints} Punkte vergeben` : "Noch keine Eventpunkte"}</strong></div><small>Für alle Mitglieder sichtbar</small></div>
+
+              {canAwardEventPoints && <div className="event-points-award-form">
+                <select value={recipientId} onChange={(e) => setAwardDrafts((current) => ({ ...current, [event.id]: { ...current[event.id], recipientId: e.target.value } }))}>
+                  <option value="">Empfänger wählen</option>
+                  {members.filter((member) => member.id !== user?.id && !member.is_primary_head_admin).map((member) => <option key={member.id} value={member.id}>{getName(member)}</option>)}
+                </select>
+                <input type="number" min="1" max="100" value={draft.amount ?? 5} onChange={(e) => setAwardDrafts((current) => ({ ...current, [event.id]: { ...current[event.id], amount: e.target.value } }))}/>
+                <button type="button" disabled={awardingEventId === event.id} onClick={() => void awardEventPoints(event)}>{awardingEventId === event.id ? "Vergibt …" : "★ Eventpunkte vergeben"}</button>
+              </div>}
+
+              <div className="event-points-history">
+                {awards.length ? awards.map((award) => {
+                  const actor = memberById.get(award.actor_id);
+                  const recipient = memberById.get(award.recipient_id);
+                  const star = roleStarFor(actor);
+                  return <div className="event-points-history-row" key={award.id}>
+                    <span className="event-points-actor">{star && <img src={star} alt="" aria-hidden="true"/>}<strong>{getName(actor || { nickname:"Admin" })}</strong></span>
+                    <span>vergibt <b>+{award.amount}</b> an <strong>{getName(recipient || { nickname:"Mitglied" })}</strong></span>
+                    <small>{new Date(award.created_at).toLocaleString("de-AT")}</small>
+                  </div>;
+                }) : <p>Noch keine Punkte für dieses Event vergeben.</p>}
+              </div>
+            </section>
+
+            {isAdmin(profile?.role) && <div className="event-actions">
+              <button type="button" className="secondary-button event-delete-button" onClick={() => onEditEvent(event)}>{event.status === "CANCELLED" ? "Wieder aktivieren" : "✎ Bearbeiten"}</button>
+              {event.status !== "CANCELLED" && <button type="button" className="danger-button event-delete-button" onClick={() => onCancelEvent(event)}>Absagen</button>}
+              <button type="button" className="danger-button event-delete-button" onClick={() => onDeleteEvent(event)}>Löschen</button>
+              <button type="button" className="community-event-feature-toggle" onClick={() => onToggleEventFeatured?.(event)}>{event.is_featured ? "Hervorhebung entfernen" : "★ Hervorheben"}</button>
+            </div>}
+          </div>
+        </article>;
+      }) : <div className="panel empty-card">Noch keine Termine veröffentlicht.</div>}
+    </div>
+
     {canCreateEvent && <section id="event-create" className="admin-community-tools panel"><div className="admin-community-tools-heading"><div><span className="eyebrow">NEUER TERMIN</span><h2>Veranstaltung erstellen</h2></div><p>Pflicht sind nur Titel sowie Datum & Uhrzeit.</p></div><form className="community-event-create-form" onSubmit={createEvent}><label>Titel<input name="title" placeholder="z. B. Herbstfest Admont" minLength="3" required/></label><div className="community-event-create-row"><label>Datum & Uhrzeit<input name="event_at" type="datetime-local" required/></label><label>Ort<input name="location" placeholder="z. B. Volkshaus"/></label></div><label>Beschreibung<textarea name="description" placeholder="Was erwartet die Besucher?"/></label><label className="content-image-upload">Bild (optional)<input name="image" type="file" accept="image/*"/></label><details className="community-event-create-advanced"><summary>Weitere Option</summary><label>Bild-URL<input name="image_url" placeholder="https://…"/></label></details><button className="primary-button community-event-publish-button">Veranstaltung veröffentlichen</button></form></section>}
   </section>;
 }
