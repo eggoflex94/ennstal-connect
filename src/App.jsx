@@ -1271,16 +1271,23 @@ export default function App() {
 
   async function saveEditedProfilePhoto(file) {
     const oldUrl = String(profile?.avatar_url || "");
+    let processed;
+    try {
+      processed = await watermarkPhoto(file, { mode: "avatar", maxEdge: 1200, quality: 0.92 });
+    } catch (error) {
+      showNotice(error?.message || "Profilbild konnte nicht mit Wasserzeichen verarbeitet werden.");
+      return;
+    }
+
     if (profilePhotoEditingExisting && oldUrl) {
       const oldPath = storagePathFromPublicUrl(oldUrl);
-      const extension = String(file?.type || "").includes("webp") ? "webp" : "jpg";
-      const newPath = `${user.id}/${crypto.randomUUID()}.${extension}`;
+      const newPath = `${user.id}/${crypto.randomUUID()}.${processed.extension}`;
 
       const { error: uploadError } = await supabase.storage
         .from("profile-avatars")
-        .upload(newPath, file, {
+        .upload(newPath, processed.blob, {
           upsert: false,
-          contentType: file.type || "image/webp",
+          contentType: processed.contentType,
           cacheControl: "31536000"
         });
 
@@ -1291,7 +1298,6 @@ export default function App() {
 
       const { data: publicData } = supabase.storage.from("profile-avatars").getPublicUrl(newPath);
       const newUrl = publicData.publicUrl;
-
       const profileUpdateError = await retryProfileUpdate({ avatar_url: newUrl });
 
       if (profileUpdateError) {
@@ -1302,7 +1308,12 @@ export default function App() {
 
       const { error: photoUpdateError } = await supabase
         .from("member_photos")
-        .update({ image_url: newUrl })
+        .update({
+          image_url: newUrl,
+          watermark_version: 3,
+          watermark_mode: "avatar",
+          watermarked_at: new Date().toISOString()
+        })
         .eq("owner_id", user.id)
         .eq("image_url", oldUrl);
 
@@ -1311,7 +1322,7 @@ export default function App() {
       setProfile((current) => current ? { ...current, avatar_url: newUrl } : current);
       setMemberPhotos((current) => current.map((photo) =>
         photo.owner_id === user.id && photo.image_url === oldUrl
-          ? { ...photo, image_url: newUrl }
+          ? { ...photo, image_url: newUrl, watermark_version: 3, watermark_mode: "avatar", watermarked_at: new Date().toISOString() }
           : photo
       ));
 
@@ -1321,10 +1332,10 @@ export default function App() {
       }
 
       await logProfileActivity("Profilbild neu ausgerichtet");
-      showNotice("Profilbild-Ausschnitt gespeichert.");
+      showNotice("Profilbild mit Wasserzeichen gespeichert.");
       await loadAll();
     } else {
-      await uploadProfileImage(file);
+      await uploadProfileImage(processed.file);
     }
 
     setProfilePhotoEditFile(null);
@@ -1335,17 +1346,38 @@ export default function App() {
     if (!file || !user) return null;
     if (!isProfileImageFile(file)) { showNotice("Bitte ein Bild auswählen."); return null; }
     if (file.size > 12 * 1024 * 1024) { showNotice("Das Bild darf maximal 12 MB groß sein."); return null; }
-    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg"; const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
-    const { error } = await supabase.storage.from("profile-avatars").upload(path, file, { upsert: false, contentType: imageContentType(file) }); if (error) { showNotice(error.message); return null; }
+
+    let processed;
+    try {
+      processed = await watermarkPhoto(file, { mode: "avatar", maxEdge: 1200, quality: 0.92 });
+    } catch (error) {
+      showNotice(error?.message || "Profilbild konnte nicht mit Wasserzeichen verarbeitet werden.");
+      return null;
+    }
+
+    const path = `${user.id}/${crypto.randomUUID()}.${processed.extension}`;
+    const { error } = await supabase.storage.from("profile-avatars").upload(path, processed.blob, {
+      upsert: false,
+      contentType: processed.contentType,
+      cacheControl: "31536000"
+    });
+    if (error) { showNotice(error.message); return null; }
+
     const { data } = supabase.storage.from("profile-avatars").getPublicUrl(path);
     const publicUrl = data.publicUrl;
-    const updateError = await retryProfileUpdate({ avatar_url: publicUrl }); if (updateError) { showNotice("Bild wurde hochgeladen, aber das Profil konnte wegen einer Verbindungsstörung noch nicht aktualisiert werden. Bitte erneut versuchen."); return null; }
+    const updateError = await retryProfileUpdate({ avatar_url: publicUrl });
+    if (updateError) {
+      await supabase.storage.from("profile-avatars").remove([path]);
+      showNotice("Bild wurde hochgeladen, aber das Profil konnte wegen einer Verbindungsstörung noch nicht aktualisiert werden. Bitte erneut versuchen.");
+      return null;
+    }
+
     setProfile((current) => current ? { ...current, avatar_url: publicUrl } : current);
     const { data: albumPhoto, error: albumError } = await supabase.from("member_photos").select("*").eq("owner_id", user.id).eq("image_url", publicUrl).maybeSingle();
     if (albumError) console.warn("Profilbild konnte im Fotoalbum nicht geprüft werden:", albumError);
     if (albumPhoto) setMemberPhotos((current) => [albumPhoto, ...current.filter((entry) => entry.id !== albumPhoto.id)]);
     await logProfileActivity("Profilbild geändert");
-    showNotice("Profilbild geändert und ins Fotoalbum übernommen.");
+    showNotice("Profilbild mit Wasserzeichen gespeichert und ins Fotoalbum übernommen.");
     await loadAll();
     return publicUrl;
   }
@@ -1361,9 +1393,18 @@ export default function App() {
     let backgroundUrl = String(profile?.profile_background || "");
     if (file) {
       if (file.size > 8 * 1024 * 1024) return showNotice("Das Coverbild darf maximal 8 MB groß sein.");
-      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-      const path = `${user.id}/backgrounds/${crypto.randomUUID()}.${ext}`;
-      const { error } = await supabase.storage.from("profile-avatars").upload(path, file, { upsert:false, contentType:imageContentType(file) });
+      let processed;
+      try {
+        processed = await watermarkPhoto(file, { mode: "standard", maxEdge: 2400, quality: 0.9 });
+      } catch (error) {
+        return showNotice(error?.message || "Coverbild konnte nicht mit Wasserzeichen verarbeitet werden.");
+      }
+      const path = `${user.id}/backgrounds/${crypto.randomUUID()}.${processed.extension}`;
+      const { error } = await supabase.storage.from("profile-avatars").upload(path, processed.blob, {
+        upsert:false,
+        contentType:processed.contentType,
+        cacheControl:"31536000"
+      });
       if (error) return showNotice(error.message);
       const { data } = supabase.storage.from("profile-avatars").getPublicUrl(path);
       backgroundUrl = data.publicUrl;
@@ -1382,7 +1423,7 @@ export default function App() {
     setProfileCoverEditFile(null);
     setProfileCoverEditingExisting(false);
     await logProfileActivity("Profil-Cover geändert");
-    showNotice("Profil-Cover gespeichert.");
+    showNotice("Profil-Cover mit Wasserzeichen gespeichert.");
     await loadAll();
     return backgroundUrl;
   }
@@ -1403,17 +1444,55 @@ export default function App() {
   }
 
   async function uploadProfileBackground(file) {
-    if (!file || !user) return; if (!isProfileImageFile(file)) return showNotice("Bitte ein Bild auswählen."); if (file.size > 12 * 1024 * 1024) return showNotice("Das Bild darf maximal 12 MB groß sein.");
-    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg"; const path = `${user.id}/backgrounds/${crypto.randomUUID()}.${ext}`;
-    const { error } = await supabase.storage.from("profile-avatars").upload(path, file, { upsert: false, contentType: imageContentType(file) }); if (error) return showNotice(error.message);
-    const { data } = supabase.storage.from("profile-avatars").getPublicUrl(path); const updateError = await retryProfileUpdate({ profile_background: data.publicUrl }); if (updateError) return showNotice(updateError.message); await logProfileActivity("Hintergrundfoto geändert"); setProfile((current) => current ? { ...current, profile_background: data.publicUrl } : current); await loadAll();
+    if (!file || !user) return;
+    if (!isProfileImageFile(file)) return showNotice("Bitte ein Bild auswählen.");
+    if (file.size > 12 * 1024 * 1024) return showNotice("Das Bild darf maximal 12 MB groß sein.");
+    let processed;
+    try {
+      processed = await watermarkPhoto(file, { mode: "standard", maxEdge: 2400, quality: 0.9 });
+    } catch (error) {
+      return showNotice(error?.message || "Hintergrundfoto konnte nicht mit Wasserzeichen verarbeitet werden.");
+    }
+    const path = `${user.id}/backgrounds/${crypto.randomUUID()}.${processed.extension}`;
+    const { error } = await supabase.storage.from("profile-avatars").upload(path, processed.blob, {
+      upsert:false,
+      contentType:processed.contentType,
+      cacheControl:"31536000"
+    });
+    if (error) return showNotice(error.message);
+    const { data } = supabase.storage.from("profile-avatars").getPublicUrl(path);
+    const updateError = await retryProfileUpdate({ profile_background: data.publicUrl });
+    if (updateError) return showNotice(updateError.message);
+    await logProfileActivity("Hintergrundfoto geändert");
+    setProfile((current) => current ? { ...current, profile_background: data.publicUrl } : current);
+    await loadAll();
   }
+
   async function uploadProfileBioImage(file) {
-    if (!file || !user) return; if (!isProfileImageFile(file)) return showNotice("Bitte ein Bild auswählen."); if (file.size > 12 * 1024 * 1024) return showNotice("Das Bild darf maximal 12 MB groß sein.");
-    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg"; const path = `${user.id}/bio/${crypto.randomUUID()}.${ext}`;
-    const { error } = await supabase.storage.from("profile-avatars").upload(path, file, { upsert: false, contentType: imageContentType(file) }); if (error) return showNotice(error.message);
-    const { data } = supabase.storage.from("profile-avatars").getPublicUrl(path); const updateError = await retryProfileUpdate({ bio_image_url: data.publicUrl }); if (updateError) return showNotice(updateError.message); await logProfileActivity("Über-mich-Bild geändert"); setProfile((current) => current ? { ...current, bio_image_url: data.publicUrl } : current); await loadAll();
+    if (!file || !user) return;
+    if (!isProfileImageFile(file)) return showNotice("Bitte ein Bild auswählen.");
+    if (file.size > 12 * 1024 * 1024) return showNotice("Das Bild darf maximal 12 MB groß sein.");
+    let processed;
+    try {
+      processed = await watermarkPhoto(file, { mode: "standard", maxEdge: 2400, quality: 0.9 });
+    } catch (error) {
+      return showNotice(error?.message || "Bild konnte nicht mit Wasserzeichen verarbeitet werden.");
+    }
+    const path = `${user.id}/bio/${crypto.randomUUID()}.${processed.extension}`;
+    const { error } = await supabase.storage.from("profile-avatars").upload(path, processed.blob, {
+      upsert:false,
+      contentType:processed.contentType,
+      cacheControl:"31536000"
+    });
+    if (error) return showNotice(error.message);
+    const { data } = supabase.storage.from("profile-avatars").getPublicUrl(path);
+    const updateError = await retryProfileUpdate({ bio_image_url: data.publicUrl });
+    if (updateError) return showNotice(updateError.message);
+    await logProfileActivity("Über-mich-Bild geändert");
+    setProfile((current) => current ? { ...current, bio_image_url: data.publicUrl } : current);
+    await loadAll();
   }
+
   async function uploadMemberPhoto(file, caption = "", visibility = "PUBLIC") {
     if (!file || !user) return false;
     if (!isProfileImageFile(file)) { showNotice("Bitte ein Bild auswählen."); return false; }
