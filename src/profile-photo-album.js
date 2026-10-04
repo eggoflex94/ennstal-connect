@@ -238,7 +238,7 @@ function bindAlbum(album, page, profileId, photos) {
       const { error: uploadError } = await supabase.storage.from(BUCKET).upload(path, processed.blob, { contentType: processed.contentType, upsert: false, cacheControl: '31536000' });
       if (uploadError) throw uploadError;
       const folderId = String(form.elements.folder_id?.value || '').trim() || null;
-      const { error: insertError } = await supabase.from('member_photos').insert({ owner_id: profileId, image_url: path, caption: String(form.elements.caption?.value || '').trim(), visibility: form.elements.visibility?.value || 'PUBLIC', folder_id: folderId });
+      const { error: insertError } = await supabase.from('member_photos').insert({ owner_id: profileId, image_url: path, caption: String(form.elements.caption?.value || '').trim(), visibility: form.elements.visibility?.value || 'PUBLIC', folder_id: folderId, watermark_version: 2, watermark_mode: 'standard', watermarked_at: new Date().toISOString() });
       if (insertError) {
         await supabase.storage.from(BUCKET).remove([path]);
         throw insertError;
