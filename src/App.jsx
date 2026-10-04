@@ -2797,6 +2797,7 @@ function EventsPage({ members, showNotice, events, eventRsvps, user, profile, ac
   const [eventAwards, setEventAwards] = useState([]);
   const [awardDrafts, setAwardDrafts] = useState({});
   const [awardingEventId, setAwardingEventId] = useState("");
+  const [awardErrors, setAwardErrors] = useState({});
   const canAwardEventPoints = ["HEAD_ADMIN", "ADMIN"].includes(String(profile?.role || "").toUpperCase());
   const memberById = useMemo(() => new Map(members.map((member) => [member.id, member])), [members]);
   const eventIds = useMemo(() => events.map((event) => event.id), [events]);
@@ -2837,8 +2838,18 @@ function EventsPage({ members, showNotice, events, eventRsvps, user, profile, ac
     const draft = awardDrafts[event.id] || {};
     const recipientId = draft.recipientId || event.created_by || "";
     const amount = Math.max(1, Math.min(100, Number(draft.amount || 5) || 5));
-    if (!recipientId) return showNotice?.("Bitte wähle einen Empfänger für die Eventpunkte.");
+    setAwardErrors((current) => ({ ...current, [event.id]: "" }));
+    if (!recipientId) {
+      const message = "Bitte wähle einen Empfänger für die Eventpunkte.";
+      setAwardErrors((current) => ({ ...current, [event.id]: message }));
+      return showNotice?.(message);
+    }
     const recipient = memberById.get(recipientId);
+    if (String(recipient?.role || "").toUpperCase() === "HEAD_ADMIN") {
+      const message = "Head-Admins können keine Eventpunkte erhalten. Bitte wähle ein anderes Mitglied.";
+      setAwardErrors((current) => ({ ...current, [event.id]: message }));
+      return showNotice?.(message);
+    }
     if (!window.confirm(`${amount} Eventpunkte an ${getName(recipient || { nickname: "Mitglied" })} für „${event.title}“ vergeben?`)) return;
     setAwardingEventId(event.id);
     const { error } = await supabase.rpc("award_event_points", {
@@ -2848,7 +2859,12 @@ function EventsPage({ members, showNotice, events, eventRsvps, user, profile, ac
       p_reason: `Punkte erhalten für Event · ${event.title}`
     });
     setAwardingEventId("");
-    if (error) return showNotice?.(error.message);
+    if (error) {
+      const message = error.message || "Eventpunkte konnten nicht vergeben werden.";
+      setAwardErrors((current) => ({ ...current, [event.id]: message }));
+      return showNotice?.(message);
+    }
+    setAwardErrors((current) => ({ ...current, [event.id]: "" }));
     showNotice?.(`+${amount} Eventpunkte vergeben.`);
     await loadEventExtras();
   };
@@ -2923,10 +2939,11 @@ function EventsPage({ members, showNotice, events, eventRsvps, user, profile, ac
               {canAwardEventPoints && <div className="event-points-award-form">
                 <select value={recipientId} onChange={(e) => setAwardDrafts((current) => ({ ...current, [event.id]: { ...current[event.id], recipientId: e.target.value } }))}>
                   <option value="">Empfänger wählen</option>
-                  {members.filter((member) => member.id !== user?.id && !member.is_primary_head_admin).map((member) => <option key={member.id} value={member.id}>{getName(member)}</option>)}
+                  {members.filter((member) => member.id !== user?.id && String(member.role || "").toUpperCase() !== "HEAD_ADMIN").map((member) => <option key={member.id} value={member.id}>{getName(member)}</option>)}
                 </select>
                 <input type="number" min="1" max="100" value={draft.amount ?? 5} onChange={(e) => setAwardDrafts((current) => ({ ...current, [event.id]: { ...current[event.id], amount: e.target.value } }))}/>
                 <button type="button" disabled={awardingEventId === event.id} onClick={() => void awardEventPoints(event)}>{awardingEventId === event.id ? "Vergibt …" : "★ Eventpunkte vergeben"}</button>
+                {awardErrors[event.id] && <small className="event-points-error" role="alert">{awardErrors[event.id]}</small>}
               </div>}
 
               <div className="event-points-history">
