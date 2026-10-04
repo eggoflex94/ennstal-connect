@@ -279,36 +279,48 @@ export default function App() {
   }, [page, viewingMember?.id, user?.id]);
 
   useEffect(() => {
-    if (!user?.id || !members.length) return undefined;
-    const openProfileById = (profileId, nickname = "") => {
+    if (!user?.id) return undefined;
+
+    const openProfileDirect = (profileId, nickname = "") => {
+      const id = String(profileId || "").trim();
       const wantedName = String(nickname || "").trim().toLowerCase();
-      const member = members.find((item) => item.id === profileId) || members.find((item) => wantedName && String(item.nickname || "").trim().toLowerCase() === wantedName);
-      if (!member) return false;
-      setViewingMember(member.id === user.id ? null : member);
+      if (!id && !wantedName) return false;
+
+      const member = members.find((item) => item.id === id)
+        || members.find((item) => wantedName && String(item.nickname || "").trim().toLowerCase() === wantedName);
+
       setViewingFriends([]);
-      setPage(member.id === user.id ? "profile" : "member-profile");
-      return true;
-    };
-    const sharedProfileId = new URLSearchParams(window.location.search).get("profile");
-    if (sharedProfileId) openProfileById(sharedProfileId);
-    const handleSidebarProfile = (event) => {
-      const profileId = String(event.detail?.profileId || "");
-      const nickname = String(event.detail?.nickname || "");
-      if (openProfileById(profileId, nickname)) {
-        event.preventDefault();
-        return;
+
+      if (member) {
+        setViewingMember(member.id === user.id ? null : member);
+        setPage(member.id === user.id ? "profile" : "member-profile");
+        return true;
       }
-      if (!profileId) return;
-      event.preventDefault();
-      setViewingFriends([]);
-      void loadMemberProfile({ id: profileId, nickname }).then((fresh) => {
+
+      if (!id) return false;
+
+      void loadMemberProfile({ id, nickname }).then((fresh) => {
         if (!fresh?.id) return;
         setViewingMember(fresh.id === user.id ? null : fresh);
         setPage(fresh.id === user.id ? "profile" : "member-profile");
       }).catch((error) => console.warn("Profil konnte nicht geöffnet werden:", error?.message || error));
+      return true;
     };
+
+    window.__ecOpenProfile = openProfileDirect;
+
+    const sharedProfileId = new URLSearchParams(window.location.search).get("profile");
+    if (sharedProfileId) openProfileDirect(sharedProfileId);
+
+    const handleSidebarProfile = (event) => {
+      if (openProfileDirect(event.detail?.profileId, event.detail?.nickname)) event.preventDefault();
+    };
+
     window.addEventListener("ec:open-profile", handleSidebarProfile);
-    return () => window.removeEventListener("ec:open-profile", handleSidebarProfile);
+    return () => {
+      window.removeEventListener("ec:open-profile", handleSidebarProfile);
+      if (window.__ecOpenProfile === openProfileDirect) delete window.__ecOpenProfile;
+    };
   }, [user?.id, members]);
 
   useEffect(() => {
