@@ -290,7 +290,20 @@ export default function App() {
     const sharedProfileId = new URLSearchParams(window.location.search).get("profile");
     if (sharedProfileId) openProfileById(sharedProfileId);
     const handleSidebarProfile = (event) => {
-      if (openProfileById(String(event.detail?.profileId || ""), String(event.detail?.nickname || ""))) event.preventDefault();
+      const profileId = String(event.detail?.profileId || "");
+      const nickname = String(event.detail?.nickname || "");
+      if (openProfileById(profileId, nickname)) {
+        event.preventDefault();
+        return;
+      }
+      if (!profileId) return;
+      event.preventDefault();
+      setViewingFriends([]);
+      void loadMemberProfile({ id: profileId, nickname }).then((fresh) => {
+        if (!fresh?.id) return;
+        setViewingMember(fresh.id === user.id ? null : fresh);
+        setPage(fresh.id === user.id ? "profile" : "member-profile");
+      }).catch((error) => console.warn("Profil konnte nicht geöffnet werden:", error?.message || error));
     };
     window.addEventListener("ec:open-profile", handleSidebarProfile);
     return () => window.removeEventListener("ec:open-profile", handleSidebarProfile);
