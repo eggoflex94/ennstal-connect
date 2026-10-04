@@ -1,7 +1,7 @@
 import { supabase } from './supabaseClient';
 import { loadMemberScores } from './member-score.js';
 
-const TOP_LINKS=[['⌂','Startseite','home'],['♟','Mitglieder','members'],['▤','Forum','forum'],['●','Gruppen','groups'],['▣','Events','events'],['▧','Eventfotos','photos'],['▥','Community','community']];
+const TOP_LINKS=[['⌂','Startseite','home'],['♟','Mitglieder','members'],['▤','Forum','forum'],['●','Gruppen','groups'],['▣','Events','events'],['▥','Community','community']];
 const DOCK_LINKS=[
   ['Mein Profil','profile'],
   ['Nachrichten','messages'],
