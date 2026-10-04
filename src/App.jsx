@@ -2886,6 +2886,7 @@ function EventsPage({ members, showNotice, events, eventRsvps, user, profile, ac
         return <article className={`event-modern-card ${event.is_featured ? `is-featured featured-${event.featured_color || "gold"}` : ""} ${hasNewPhotos ? "has-new-photos" : ""} ${event.status === "CANCELLED" ? "is-cancelled" : ""}`} key={event.id}>
           <div className="event-modern-visual">
             {event.image_url ? <img src={event.image_url} alt=""/> : latestPhoto ? <img src={publicPhotoUrl(latestPhoto.storage_path)} alt=""/> : <div className="event-modern-placeholder">EVENT</div>}
+            {(event.image_url || latestPhoto) && <span className="event-card-watermark" aria-hidden="true"><img src="/ennstal-connect-logo.svg" alt=""/><b>{latestPhoto && !event.image_url ? "Community Fotograf" : "Ennstal Connect"}</b></span>}
             <div className="event-modern-badges">
               {event.is_featured && <span>★ Hervorgehoben</span>}
               {hasNewPhotos && <span className="new-photos">● Neue Fotos</span>}
