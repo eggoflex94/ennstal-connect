@@ -27,3 +27,7 @@
 
 .profile-youtube-open{display:inline-flex;align-items:center;gap:6px;margin-top:9px;padding:7px 10px;border:1px solid rgba(100,116,139,.18);border-radius:10px;background:rgba(248,250,252,.92);color:#334155;font-size:.82rem;font-weight:800;text-decoration:none}
 .profile-youtube-open:hover{background:#fff;border-color:rgba(59,130,246,.28);color:#1d4ed8}
+
+.profile-watermarked-image{position:relative;display:block;width:100%;min-width:0;overflow:hidden;border-radius:12px}
+.profile-watermarked-image>img{display:block}
+.profile-watermarked-image>.ec-image-watermark{right:10px!important;bottom:10px!important}
