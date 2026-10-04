@@ -2922,3 +2922,51 @@ img.member-avatar,
 .event-photo-points-entry img{width:18px!important;height:18px!important;object-fit:contain!important;flex:0 0 18px}
 .event-photo-points-entry strong{color:#19344c}
 .event-photo-points-entry span{margin-left:auto;font-weight:800}
+
+
+/* Modern Events layout */
+.events-modern-grid{display:grid;gap:18px}
+.event-modern-card{overflow:hidden;border:1px solid #dbe4ea;border-radius:20px;background:#fff;box-shadow:0 12px 30px rgba(27,47,66,.07)}
+.event-modern-card.is-featured{border-width:2px}
+.event-modern-card.has-new-photos{box-shadow:0 14px 34px rgba(31,129,93,.12)}
+.event-modern-card.is-cancelled{opacity:.72}
+.event-modern-visual{position:relative;min-height:190px;background:linear-gradient(135deg,#eef3f6,#dce7ed)}
+.event-modern-visual>img{width:100%;height:230px;object-fit:cover;display:block}
+.event-modern-placeholder{display:grid;place-items:center;height:230px;font-size:2rem;font-weight:950;letter-spacing:.18em;color:#6a7f8f}
+.event-modern-badges{position:absolute;left:14px;top:14px;display:flex;gap:8px;flex-wrap:wrap}
+.event-modern-badges span{padding:7px 10px;border-radius:999px;background:rgba(15,31,45,.82);color:#fff;font-size:.72rem;font-weight:900;letter-spacing:.04em;backdrop-filter:blur(7px)}
+.event-modern-badges .new-photos{background:rgba(20,135,87,.9)}
+.event-modern-main{padding:18px}
+.event-modern-title-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:start}
+.event-modern-title-row h2{margin:0 0 4px;font-size:1.35rem;color:#17334a}
+.event-modern-title-row p{margin:0;color:#6b7d8c}
+.event-photo-status{display:grid;gap:2px;min-width:180px;padding:11px 13px;border-radius:13px;border:1px solid #d5e0e7;background:#f8fafb;text-align:left;cursor:pointer}
+.event-photo-status.has-photos{background:linear-gradient(135deg,#edf9f3,#fff);border-color:#bfe3d0}
+.event-photo-status strong{font-size:.88rem;color:#1d3c52}
+.event-photo-status span{font-size:.74rem;color:#6b7d8c}
+.event-photo-preview-strip{display:flex;align-items:center;gap:8px;margin:14px 0;padding:0;border:0;background:transparent;cursor:pointer}
+.event-photo-preview-strip img{width:66px;height:52px;border-radius:10px;object-fit:cover;border:1px solid #dbe3e8}
+.event-photo-preview-strip span{display:grid;place-items:center;width:52px;height:52px;border-radius:10px;background:#eef3f6;font-weight:900;color:#355064}
+.event-points-panel{margin-top:16px;padding:14px;border:1px solid #dce5eb;border-radius:16px;background:linear-gradient(180deg,#fbfcfd,#f6f9fb)}
+.event-points-heading{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:12px}
+.event-points-heading>div{display:grid;gap:2px}
+.event-points-heading span{font-size:.68rem;font-weight:950;letter-spacing:.14em;color:#7a8b98}
+.event-points-heading strong{color:#19384f}
+.event-points-heading small{color:#7a8b98}
+.event-points-award-form{display:grid;grid-template-columns:minmax(180px,1fr) 90px auto;gap:8px;margin-bottom:12px}
+.event-points-award-form select,.event-points-award-form input{min-height:40px;border:1px solid #ccd8e0;border-radius:10px;padding:0 10px;background:#fff}
+.event-points-award-form button{min-height:40px;border:1px solid #e1b347;border-radius:10px;background:#fff5d6;color:#765300;font-weight:900;cursor:pointer}
+.event-points-history{display:grid;gap:7px}
+.event-points-history>p{margin:4px 0;color:#778997}
+.event-points-history-row{display:grid;grid-template-columns:minmax(120px,.8fr) minmax(180px,1.5fr) auto;gap:10px;align-items:center;padding:9px 10px;border-radius:10px;background:#fff;border:1px solid #e4ebef;font-size:.82rem}
+.event-points-history-row small{color:#82919c;white-space:nowrap}
+.event-points-actor{display:flex;align-items:center;gap:6px}
+.event-points-actor img{width:19px;height:19px;object-fit:contain}
+@media(max-width:780px){
+  .event-modern-title-row{grid-template-columns:1fr}
+  .event-photo-status{min-width:0;width:100%}
+  .event-points-award-form{grid-template-columns:1fr 82px}
+  .event-points-award-form button{grid-column:1/-1}
+  .event-points-history-row{grid-template-columns:1fr}
+  .event-points-history-row small{white-space:normal}
+}
