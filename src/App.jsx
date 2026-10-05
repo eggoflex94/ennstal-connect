@@ -869,7 +869,7 @@ export default function App() {
     const setPresence = () => {
       window.clearTimeout(inactiveTimer);
       inactiveTimer = window.setTimeout(clearPresence, 5 * 60 * 1000);
-      if (Date.now() - lastSent < 45000) return;
+      if (Date.now() - lastSent < 120000) return;
       lastSent = Date.now();
       const lastActive = new Date().toISOString();
       void writePresence(true);
