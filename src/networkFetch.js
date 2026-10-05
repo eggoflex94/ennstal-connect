@@ -14,9 +14,12 @@ function emitNetworkError(url, method, detail = {}) {
   if (/\/rpc\/record_client_error(?:[/?#]|$)/i.test(String(url || ""))) return;
   const backgroundTransient = globalThis.document?.visibilityState === "hidden"
     && (detail.kind === "network" || detail.kind === "timeout");
-  const backgroundPresenceAbort = /\/rpc\/record_presence(?:[/?#]|$)/i.test(String(url || ""))
-    && /abort|load failed|failed to fetch|network/i.test(String(detail.message || ""));
-  if (backgroundTransient || backgroundPresenceAbort) return;
+  const presenceTransient = /\/rpc\/record_presence(?:[/?#]|$)/i.test(String(url || ""))
+    && (detail.kind === "network" || detail.kind === "timeout"
+      || /abort|load failed|failed to fetch|network|timeout|antwortet nicht/i.test(String(detail.message || "")));
+  // Presence is a best-effort heartbeat. A delayed heartbeat must not pollute
+  // the Head-Admin error center or look like an application outage.
+  if (backgroundTransient || presenceTransient) return;
   try {
     const parsed = new URL(String(url || ""), globalThis.location?.href || "http://localhost");
     globalThis.window?.dispatchEvent?.(new CustomEvent("ec:network-error", {
