@@ -134,10 +134,10 @@ function renderProgress(section) {
   if (!card) {
     card = document.createElement('div');
     card.className = 'ec-activity-progress';
-    const select = section.querySelector('select[name="profile_layout"]');
-    const directReference = select && select.parentElement === section ? select : null;
-    if (directReference) directReference.before(card);
-    else section.prepend(card);
+    // Keep legacy progress decoration independent from React sibling order.
+    // Using Element.before() on a controlled select can invalidate React's
+    // reconciliation reference and cause insertBefore NotFoundError.
+    if (section.isConnected) section.prepend(card);
   }
 
   if (!progress) {
