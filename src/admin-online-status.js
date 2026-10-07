@@ -24,11 +24,9 @@ async function addAdminOnlineStatusControl() {
     checkbox.name = "hide_online_status";
     checkbox.checked = !!profile.hide_online_status;
     label.append(checkbox, document.createTextNode(" Online- und „zuletzt aktiv“-Status verbergen"));
-    const directAction = [...form.children].find((child) =>
-      child.matches?.("button,.profile-editor-actions")
-    );
-    if (directAction) directAction.before(label);
-    else form.appendChild(label);
+    // Keep React-owned children untouched. Appending to the stable form
+    // container avoids stale sibling references during React reconciliation.
+    if (form.isConnected) form.appendChild(label);
     return true;
   } finally {
     loading = false;
