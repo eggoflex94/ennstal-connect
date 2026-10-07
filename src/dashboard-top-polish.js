@@ -57,7 +57,7 @@ function ensureAdminBadge(dock){const button=dock.querySelector('.ec-admin-icon-
 
 function ensureOnlineFriends(dock){
   let panel=dock.querySelector('.ec-online-friends-panel');
-  if(!panel){panel=document.createElement('section');panel.className='ec-online-friends-panel';const grid=dock.querySelector('.ec-compact-menu-grid');(grid||dock.querySelector('.ec-dock-head'))?.insertAdjacentElement('afterend',panel)}
+  if(!panel){panel=document.createElement('section');panel.className='ec-online-friends-panel';if(dock.isConnected)dock.appendChild(panel)}
   panel.classList.add('is-always-open');panel.hidden=false;panel.removeAttribute('aria-expanded');
   const region=activeRegion();
   const rows=state.friends.map(friend=>{
@@ -99,9 +99,7 @@ function ensureMunicipalityPanel(dock){
   if(!panel){
     panel=document.createElement('section');
     panel.className='ec-dashboard-municipality-panel';
-    const friends=dock.querySelector('.ec-online-friends-panel');
-    if(friends)friends.insertAdjacentElement('afterend',panel);
-    else dock.appendChild(panel);
+    if(dock.isConnected)dock.appendChild(panel);
   }
   const selected=items.find(item=>item.region_id===activeRegion()?.id)||items[0];
   const total=items.reduce((sum,item)=>sum+Number(item.new_total||0),0);
