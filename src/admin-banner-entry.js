@@ -31,8 +31,10 @@ async function mount(){
   card.className='ec-admin-banner-entry';
   card.innerHTML='<div class="ec-admin-banner-entry-head"><div><span>HEAD ADMIN · WERBUNG</span><h3>Werbebanner verwalten</h3><p>Banner hochladen, global oder regional ausspielen, sortieren sowie aktivieren und deaktivieren.</p></div></div><button type="button"><span class="ec-admin-banner-entry-copy"><strong>🖼 Werbebanner öffnen</strong><small>Mehrere Banner verwalten · nur für Head Admin</small></span><span class="ec-admin-banner-entry-arrow">›</span></button>';
   card.querySelector('button').onclick=()=>window.dispatchEvent(new CustomEvent('ec:open-banner-manager'));
-  const anchor=root.querySelector('.ec-admin-modern')||root.firstElementChild;
-  if(anchor)anchor.insertAdjacentElement('afterend',card);else root.prepend(card);
+  // Do not insert relative to React-owned siblings. The admin page itself is
+  // the stable mount container and preserves all banner-manager functionality.
+  if(!root.isConnected)return;
+  root.appendChild(card);
   mounted=true;
 }
 
