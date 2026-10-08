@@ -2925,7 +2925,7 @@ function MemberProfile({ member, friends, groups = [], photos = [], onOpenGroup,
     <div className="member-profile-actions">
       <button className="primary-button" onClick={() => openChat(member)}>💬 Nachricht</button>
       {accepted ? <button className="secondary-button" onClick={() => removeFriend(member)}>♥ Befreundet · entfernen</button> : incoming ? <><button className="primary-button" onClick={() => respond(friendship, true)}>✓ Anfrage annehmen</button><button className="danger-button" onClick={() => respond(friendship, false)}>Ablehnen</button></> : <button className="secondary-button" onClick={() => requestFriend(member)}>{sent ? "⏳ Anfrage gesendet" : "🤝 Freundschaftsanfrage"}</button>}
-      {member.id !== user.id && (viewerIsPrimaryHead || viewerProfile?.role === "ADMIN" || viewerProfile?.forum_moderator) && <button className="primary-button ec-profile-admin-open" onClick={openUnifiedAdminTools}>⚙ Admin Tools</button>}
+      {member.id !== user.id && (viewerIsPrimaryHead || ["ADMIN","HEAD_ADMIN"].includes(String(viewerProfile?.role||"").toUpperCase()) || viewerProfile?.forum_moderator) && <button className="primary-button ec-profile-admin-open" onClick={openUnifiedAdminTools}>⚙ Admin Tools</button>}
       {viewerIsPrimaryHead && member.id !== user.id && !member.is_primary_head_admin && <button className="secondary-button ec-profile-point-history-open" onClick={openUnifiedPointHistory}>★ Punkteliste</button>}
       {!isAdmin(member.role) && <button className="secondary-button" onClick={() => blockUser(member)}>🚫 Blockieren</button>}
       <button className="danger-button" onClick={() => reportUser(member)}>🚩 Nutzer melden</button>
