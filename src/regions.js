@@ -18,8 +18,7 @@ export const publicDistrict = (member) => member?.show_district !== false ? dist
 
 export const COMMUNITY_REGIONS = [
   { slug: "ennstal", name: "Ennstal", shortName: "Ennstal" },
-  { slug: "leoben-bruck-muerzzuschlag", name: "Mur-Mürz-Zentralraum", shortName: "Mur-Mürz" },
-  { slug: "salzkammergut", name: "Salzkammergut", shortName: "Salzkammergut" },
+  { slug: "leoben-bruck-muerzzuschlag", name: "Alpenraum", shortName: "Alpenraum" },
 ];
 
 export const DEFAULT_REGION_SLUG = "ennstal";
