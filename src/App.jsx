@@ -1,3 +1,4 @@
+import { STYRIAN_DISTRICTS } from "./regions.js";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRefreshScheduler } from "./refreshScheduler.js";
 import { loadSections } from "./sectionLoader.js";
@@ -1155,6 +1156,14 @@ export default function App() {
     // The database enforces both earned online-time rewards and purchased layouts.
     // Do not apply obsolete client-only point thresholds here.
     if (isAdmin(profile?.role)) payload.hide_online_status = f.get("hide_online_status") === "on";
+    const districtCode=String(f.get("district_code")||"");
+    const districtVisibility=String(f.get("district_visibility")||"PUBLIC");
+    if(!STYRIAN_DISTRICTS.some(([code])=>code===districtCode))return showNotice("Bitte einen steirischen Bezirk auswählen.");
+    if(!["PUBLIC","FRIENDS"].includes(districtVisibility))return showNotice("Bitte die Bezirks-Sichtbarkeit auswählen.");
+    const {error:districtError}=await supabase.from("member_district_privacy").upsert({user_id:user.id,district_code:districtCode,visibility:districtVisibility},{onConflict:"user_id"});
+    if(districtError)return showNotice(districtError.message);
+    payload.district_code=districtVisibility==="PUBLIC"?districtCode:null;
+    payload.show_district=districtVisibility==="PUBLIC";
     let { error } = await supabase.from("profiles").update(payload).eq("id", user.id);
     // Older live databases may not yet include the optional presentation fields.
     // Save the rest of the profile instead of blocking the whole form.
