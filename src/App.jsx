@@ -9,6 +9,7 @@ import MemberCardView from "./MemberCardView.jsx";
 import { loadMemberProfile } from "./memberProfileLoader.js";
 import NativeMembersDirectory from "./NativeMembersDirectory.jsx";
 import MobileQuickNav from "./MobileQuickNav.jsx";
+import KaufpunkteMarket from "./KaufpunkteMarket.jsx";
 import BusinessProfileManager from "./BusinessProfileManager.jsx";
 import ProfilePhotoEditor from "./ProfilePhotoEditor.jsx";
 import ProfileCoverEditor from "./ProfileCoverEditor.jsx";
@@ -1820,6 +1821,7 @@ export default function App() {
           <button onClick={() => setPage("notifications")}>◎ <span>Aktuelles</span>{unreadNotifications > 0 && <em>{unreadNotifications}</em>}</button>
           <button onClick={() => setPage("news")}>▣ <span>Neuigkeiten</span></button>
           <button onClick={() => setPage("community")}>✦ <span>Community</span></button>
+          <button onClick={() => setPage("marketplace")}>🛍 <span>Marktplatz</span></button>
           <button onClick={() => setPage("groups")}>◉ <span>Gruppen</span></button>
           <button onClick={() => setPage("forum")}>▤ <span>Forum</span></button>
           <button onClick={() => setPage("profile")}>⚙ <span>Mein Profil</span></button>
@@ -1828,6 +1830,7 @@ export default function App() {
         <button className="sidebar-logout" onClick={logout}>⇥ <span>Abmelden</span></button>
       </aside>
       <main className="modern-main"><div className="content-root">{networkIssue && <aside className="network-recovery-banner" role="status" aria-live="polite"><div><strong>Verbindung unterbrochen</strong><span>Ennstal Connect bleibt geöffnet. Bereits geladene Inhalte sind weiter sichtbar.</span></div><button type="button" className="secondary-button" onClick={() => { setNetworkIssue(false); void loadAllRef.current?.(); }}>Erneut versuchen</button></aside>}{(sectionStatus.pending.length > 0 || sectionStatus.failed.length > 0) && <aside className="panel" role="status" aria-live="polite">{sectionStatus.pending.length > 0 && <p>Weitere Inhalte werden geladen …</p>}{sectionStatus.failed.length > 0 && <><p>Noch nicht aktualisiert: {sectionStatus.failed.join(", ")}. Bereits geladene Inhalte bleiben verfügbar.</p><button type="button" className="secondary-button" disabled={sectionStatus.pending.length > 0} onClick={() => void loadAllRef.current()}>Erneut laden</button></>}</aside>}{notice && <div className="toast">{notice}</div>}{incomingMessage && <aside className="incoming-message-popup" role="status"><strong>✉ Neue Nachricht von {incomingMessage.senderName}</strong><p>{incomingMessage.content || "Du hast eine neue private Nachricht erhalten."}</p><div><button className="primary-button" onClick={() => { const sender = members.find((member) => member.id === incomingMessage.senderId); setIncomingMessage(null); if (sender) openChat(sender); else setPage("messages"); }}>Nachricht öffnen</button><button className="secondary-button" onClick={() => setIncomingMessage(null)}>Später</button></div></aside>}
+        {page === "marketplace" && <KaufpunkteMarket user={user} profile={profile} />}
         {page === "home" && (
           <Home profile={profile} user={user} activeRegion={activeRegion} isHeadAdmin={isHeadAdmin} homepageSections={regionFilter(homepageSections)} canEdit={isHeadAdmin(profile?.role)} createHomepageSection={createHomepageSection} editHomepageSection={editHomepageSection} deleteHomepageSection={deleteHomepageSection} uploadHomepageImage={uploadHomepageImage} weeklyPoll={weeklyPoll?.region_id && weeklyPoll.region_id !== activeRegionId ? null : weeklyPoll} welcomeBadges={welcomeBadges} groups={regionFilter(groups)} featuredGroup={featuredGroup?.region_id && featuredGroup.region_id !== activeRegionId ? null : featuredGroup} communityRequests={regionFilter(communityRequests)} events={regionFilter(communityEvents)} eventRsvps={eventRsvps} forumPosts={regionFilter(forumPosts)} forumReplies={forumReplies} friendships={friendships} members={regionalMembers} welcomeGreetings={welcomeGreetings} onSendWelcome={sendWelcomeGreeting} onReplyForum={createForumReply} onRespondEvent={respondToCommunityEvent} onVote={voteWeeklyPoll} onCreatePoll={createWeeklyPoll} onFeatureGroup={featureCommunityGroup} onCreateRequest={createCommunityRequest} onCloseRequest={closeCommunityRequest} onOpenGroup={(group) => { setSelectedGroup(group); setPage("groups"); }}/>
         )}
