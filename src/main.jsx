@@ -83,6 +83,7 @@ import "./member-profile-region-polish.js";
 import "./sidebar-role-pin.js";
 
 import "./dashboard-top-polish.css";
+import "./dashboard-points-wallet.css";
 import "./dashboard-top-polish.js";
 import "./admin-hours-statistics.css";
 import "./admin-hours-statistics.js";

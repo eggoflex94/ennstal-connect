@@ -46,6 +46,7 @@ function rolePresentation(member) {
     return { key: role === "HEAD_ADMIN" ? "head-admin" : "admin", theme: "admin", label: role === "HEAD_ADMIN" ? "Hauptverantwortlicher · Hauptadmin" : "Admin", star: roleStarAsset("/role-star-red.svg") };
   }
   if (role === "SUPPORTER") return { key: "supporter", theme: "supporter", label: "Supporter", star: roleStarAsset("/supporter-star.svg") };
+  if (member?.supporter_until && new Date(member.supporter_until).getTime() > Date.now()) return { key: "supporter", theme: "supporter", label: "Supporter bis " + new Date(member.supporter_until).toLocaleDateString("de-AT"), star: roleStarAsset("/supporter-star.svg") };
   if (role === "MUNICIPALITY") return { key: "municipality", theme: "municipality", label: member?.role_display_label || "Gemeinde", star: member?.role_star_url || roleStarAsset("/role-star-green.svg"), color: member?.role_accent_color || "#20a866" };
   if (member?.account_badge === "BUSINESS") return { key: "business", theme: "business", label: "Unternehmer", star: roleStarAsset("/role-star-blue.svg") };
   return { key: "member", theme: "member", label: "Mitglied", star: null };

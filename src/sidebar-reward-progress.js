@@ -36,13 +36,13 @@ async function load(force=false){
   })();
   return request;
 }
-function ensureCard(){const dock=q('.ec-right-dock');if(!dock)return null;let card=q('.ec-dock-reward-card',dock);if(!card){card=document.createElement('section');card.className='ec-dock-reward-card';card.setAttribute('aria-label','Community-Belohnungen');const communityLabel=[...dock.querySelectorAll(':scope > .ec-dock-section-label')].find(node=>(node.textContent||'').trim().toUpperCase()==='COMMUNITY');if(communityLabel)communityLabel.before(card);else q(':scope > .ec-dock-admin-slot',dock)?.insertAdjacentElement('afterend',card)||dock.appendChild(card)}return card}
+function ensureCard(){const dock=q('.ec-right-dock');if(!dock)return null;let card=q('.ec-dock-reward-card',dock);if(!card){card=document.createElement('section');card.className='ec-dock-reward-card';card.setAttribute('aria-label','Community-Belohnungen');const communityLabel=[...dock.querySelectorAll(':scope > .ec-dock-section-label')].find(node=>(node.textContent||'').trim().toUpperCase()==='COMMUNITY');if(communityLabel)communityLabel.before(card);else q(':scope > .ec-dock-admin-slot',dock)?.insertAdjacentElement('afterend',card)||dock.appendChild(card);card.classList.add('ec-stats-progress-card');}return card}
 function prestigeCopy(state){const score=Number(state.score||0),prestige=state.prestige||'',next=state.prestige_next_score==null?null:Number(state.prestige_next_score);if(score<300)return `Noch ${300-score} Punkte bis Prestige Bronze`;if(!next)return 'Prestige Platin erreicht';return `${prestige} · noch ${Math.max(0,next-score)} Punkte bis zur nächsten Stufe`}
 function render(state){
   const card=ensureCard();if(!card)return;
   if(!state){card.innerHTML='<div class="ec-dock-reward-head"><span>BELOHNUNGEN</span><strong>Derzeit nicht verfügbar</strong></div>';return}
   const score=Number(state.score||0),next=state.next_score==null?null:Number(state.next_score),seconds=Number(state.total_online_seconds||0),onlinePoints=Number(state.components?.online||0),nextCopy=next?`${Math.max(0,next-score)} Punkte bis ${next}`:'Community-Level abgeschlossen';
-  card.innerHTML=`<div class="ec-dock-reward-head"><span>BELOHNUNGEN</span><strong>${String(state.level||'Neu')}</strong><b>${score} Punkte</b></div>
+  card.innerHTML=`<div class="ec-dock-reward-head"><span>STATISTIK · ONLINEZEIT & FORTSCHRITT</span><strong>${String(state.level||'Neu')}</strong><b>${score} Punkte</b></div>
     <div class="ec-dock-reward-row ec-dock-level-row"><span>Community-Level</span><em>${nextCopy}</em></div>
     <div class="ec-dock-reward-bar ec-dock-reward-bar-level"><i style="width:${levelPercent(state)}%"></i></div>
     <div class="ec-dock-reward-meta">
@@ -53,10 +53,24 @@ function render(state){
     <div class="ec-dock-reward-row ec-dock-reward-online-copy"><span>Aktive Onlinezeit</span><em>${formatHours(seconds)}</em></div>
     <div class="ec-dock-reward-bar ec-dock-reward-bar-online"><i style="width:${onlinePercent(seconds)}%"></i></div>
     <small>${onlinePoints}/250 Online-Punkte · +1 Punkt je 2 aktive Stunden · max. 500 Std.</small>
-    <div class="ec-dock-prestige-detail"><span>Prestige-Fortschritt</span><em>${prestigeCopy(state)}</em></div>
+    <div class="ec-online-self-claim-zone"><button type="button" class="ec-online-self-claim">Online-Punkte selbst abholen</button><small class="ec-online-claim-message" role="status">Abholstatus wird geprüft …</small></div><div class="ec-dock-prestige-detail"><span>Prestige-Fortschritt</span><em>${prestigeCopy(state)}</em></div>
     <div class="ec-dock-reward-bar ec-dock-reward-bar-prestige"><i style="width:${prestigePercent(state)}%"></i></div>`;
 }
-async function refresh(force=false){ensureCard();render(await load(force))}
+async function claimOwnOnlinePoints(){
+ const button=q('.ec-online-self-claim');if(button)button.disabled=true;
+ const message=q('.ec-online-claim-message');
+ try{
+  const {data,error}=await supabase.rpc('claim_online_reward');
+  if(error)throw error;
+  const claimText=typeof data?.message==='string'?data.message:'Die Abholung wurde serverseitig geprüft.';
+  window.dispatchEvent(new Event('ec:points-updated'));
+  window.dispatchEvent(new Event('ec:activity-progress-refresh'));
+  await refresh(true);
+  const fresh=q('.ec-online-claim-message');if(fresh)fresh.textContent=claimText;
+ }catch(error){if(message)message.textContent=error?.message||'Die Selbstabhebung konnte nicht durchgeführt werden.';}
+ finally{if(button)button.disabled=false;}
+}
+async function refresh(force=false){ensureCard();render(await load(force));const btn=q('.ec-online-self-claim');btn?.addEventListener('click',()=>void claimOwnOnlinePoints());const msg=q('.ec-online-claim-message');try{const {data:{session}}=await supabase.auth.getSession();if(!session?.user)return;const {data,error}=await supabase.from('daily_online_rewards').select('reward_date,points_awarded').eq('user_id',session.user.id).order('reward_date',{ascending:false}).limit(1);if(!msg?.isConnected||error)return;const last=data?.[0];msg.textContent=last?'Zuletzt abgeholt: '+new Date(last.reward_date+'T12:00:00').toLocaleDateString('de-AT')+' ('+last.points_awarded+' Punkte). Nächste Berechtigung wird beim Abholen geprüft.':'Noch keine Selbstabhebung gespeichert. Berechtigung wird beim Abholen geprüft.';}catch{if(msg?.isConnected)msg.textContent='Berechtigung wird beim Abholen geprüft.';}}
 function boot(){
   void refresh(false);
   window.addEventListener('ec:online-reward',()=>void refresh(true));
