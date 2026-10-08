@@ -131,7 +131,7 @@ function ensurePointsWallet(dock){
   if(!wallet){wallet=document.createElement('div');wallet.className='ec-top-points-wallet';head.insertAdjacentElement('afterend',wallet);}
   const normal=Number(state.profile.points||0).toLocaleString('de-AT');
   const buy=Number(state.profile.purchase_points||0).toLocaleString('de-AT');
-  wallet.innerHTML='<button type="button" class="ec-wallet-points" aria-label="Punkteliste öffnen"><strong>'+normal+' Punkte</strong> <span>('+buy+' [k])</span> <small>→ Punkteliste</small></button>';
+  wallet.innerHTML='<button type="button" class="ec-wallet-points" aria-label="Punkteliste öffnen"><strong>'+normal+'</strong><span class="ec-wallet-divider" aria-hidden="true">|</span><span>'+buy+' [k]</span><small>→ Punkteliste</small></button>';
   wallet.querySelector('button').onclick=async()=>{
     const existing=dock.querySelector('.ec-dock-reward-card .ec-dock-reward-head b');
     if(existing?.classList.contains('ec-points-clickable')){existing.click();return;}
