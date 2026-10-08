@@ -2914,6 +2914,7 @@ function MemberProfile({ member, friends, groups = [], photos = [], onOpenGroup,
       <div>
         <span>{roleLabel(member.role)}</span>
         <h1>{getName(member)}{member.is_verified && <small className="verified-profile-badge"> ✓ Verifiziert</small>}</h1>
+        {member.account_badge === "BUSINESS" && <div className="community-photographer-profile-badge"><img src="/role-star-blue.svg" alt="" aria-hidden="true"/><span><strong>Unternehmeraccount</strong>{member.company_name && <small>{member.company_name}</small>}</span></div>}
         {member.is_community_photographer && <div className="community-photographer-profile-badge"><img src="/community-photographer-camera.svg" alt=""/><span><strong>Community-Fotograf</strong><small>{member.community_photographer_global ? "Alle Regionen" : "Regional"}</small></span></div>}
         {(displayName || age !== null) && <p>{displayName}{displayName && age !== null ? " · " : ""}{age !== null ? `${age} Jahre` : ""}</p>}
         {member.bio && canSee("bio") && <p className="member-profile-bio">{member.bio}</p>}
