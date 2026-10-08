@@ -71,3 +71,25 @@
 
 /* Profile, events, chat and delegated admin tools: avoid clipped horizontal content. */
 @media(max-width:760px){.my-area-layout,.profile-editor,.profile-editor-grid,.profile-editor-grid-main,.member-profile-page,.events-page,.event-photos-page,.admin-central-modern,.ec-profile-admin-modal,.ec-profile-admin-body{min-width:0!important;max-width:100%!important;box-sizing:border-box!important}.profile-editor-grid,.profile-editor-grid-main{display:grid!important;grid-template-columns:minmax(0,1fr)!important}.profile-editor-field,.profile-editor-section,.profile-form fieldset{min-width:0!important;max-width:100%!important}.profile-editor input,.profile-editor select,.profile-editor textarea{width:100%!important;max-width:100%!important;min-width:0!important;box-sizing:border-box!important}.chat-panel,.chat-thread,.chat-composer,.message-thread,.ec-profile-admin-table-wrap{min-width:0!important;max-width:100%!important;box-sizing:border-box!important}.chat-composer{flex-wrap:wrap!important}.chat-composer textarea,.chat-composer input{min-width:0!important;flex:1 1 170px!important}.ec-profile-admin-table-wrap{overflow-x:auto!important;-webkit-overflow-scrolling:touch!important}.ec-profile-admin-modal{max-height:calc(100dvh - 30px)!important;overflow-y:auto!important}.event-photo-upload-button{max-width:100%!important;overflow:hidden!important}}
+
+/* Phone shell: one compact top bar, one compact bottom nav. */
+@media(max-width:760px){
+ html,body,#root,.app{width:100%!important;max-width:100%!important;overflow-x:clip!important}
+ .ec-brand-masthead{height:58px!important;max-width:100vw!important;overflow:hidden!important}
+ .ec-top-nav{top:58px!important;height:48px!important;min-height:48px!important;max-height:48px!important;display:flex!important;flex-flow:row nowrap!important;align-items:center!important;overflow-x:auto!important;overflow-y:hidden!important;padding:3px 106px 3px 6px!important}
+ .ec-top-nav>*{flex:0 0 auto!important;align-self:center!important}
+ .ec-top-nav button{min-height:38px!important;height:38px!important}
+ .ec-region-picker{top:62px!important;right:57px!important;height:39px!important;width:43px!important;overflow:hidden!important}
+ .ec-region-picker select{height:39px!important;width:43px!important}
+ .ec-dock-toggle{top:62px!important;right:7px!important;height:39px!important;width:43px!important}
+ .ec-mobile-quicknav-bar{height:calc(62px + env(safe-area-inset-bottom,0px))!important;min-height:0!important;box-sizing:border-box!important;padding:4px 5px calc(4px + env(safe-area-inset-bottom,0px))!important;align-items:stretch!important}
+ .ec-mobile-quicknav-bar button{min-height:0!important;height:51px!important;font-size:10px!important;line-height:1.1!important;gap:1px!important;padding:3px 1px!important;overflow:hidden!important}
+ .ec-mobile-nav-icon{font-size:21px!important}
+ .ec-mobile-menu-sheet{bottom:calc(62px + env(safe-area-inset-bottom,0px))!important}
+ .app .dashboard-layout>.modern-main{padding-top:116px!important;padding-bottom:calc(85px + env(safe-area-inset-bottom,0px))!important}
+ .chat-page,.chat-panel,.chat-thread,.chat-conversation,.chat-message,.message-bubble,.message-list,.messages-page{max-width:100%!important;min-width:0!important;overflow-wrap:anywhere!important}
+ .chat-message img,.message-bubble img,.chat-attachment img{max-width:100%!important;height:auto!important;object-fit:contain!important}
+ .chat-composer,.message-composer{max-width:100%!important;min-width:0!important}
+ .chat-composer textarea,.message-composer textarea{font-size:16px!important}
+ .ec-mobile-menu-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
