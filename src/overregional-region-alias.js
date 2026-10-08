@@ -1,6 +1,6 @@
 const LEGACY_SLUG='salzkammergut';
-const NEW_SLUG='ueberregional';
-const NEW_LABEL='Überregional';
+const NEW_SLUG='leoben-bruck-muerzzuschlag';
+const NEW_LABEL='Alpenraum';
 
 function normalizePicker(){
   document.querySelectorAll('.ec-region-picker select').forEach(select=>{
