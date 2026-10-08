@@ -187,6 +187,8 @@ import "./chat-final-authority.css";
 
 /* Touch devices keep the desktop layout, with larger reliable tap targets. */
 import "./touch-desktop-stability.css";
+import "./mobile-desktop-parity-2026.css";
+import "./MobileQuickNav.css";
 
 /* Absolute final member-card authority: approved visual mockup. */
 import "./member-card-mockup-final.css";
