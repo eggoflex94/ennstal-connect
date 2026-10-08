@@ -9,6 +9,7 @@ import MemberCardView from "./MemberCardView.jsx";
 import { loadMemberProfile } from "./memberProfileLoader.js";
 import NativeMembersDirectory from "./NativeMembersDirectory.jsx";
 import MobileQuickNav from "./MobileQuickNav.jsx";
+import PushSettings from "./PushSettings.jsx";
 import BusinessProfileManager from "./BusinessProfileManager.jsx";
 import ProfilePhotoEditor from "./ProfilePhotoEditor.jsx";
 import ProfileCoverEditor from "./ProfileCoverEditor.jsx";
@@ -1875,6 +1876,7 @@ export default function App() {
         {page === "rules" && <CommunityRules/>}
       </div></main>
     </div>
+    <PushSettings user={user} />
     <MobileQuickNav page={page} onNavigate={setPage} isAdmin={isAdmin(profile?.role)} unread={unread} unreadNotifications={unreadNotifications} />
     <footer className="site-footer"><strong>Ennstal Connect</strong><div><button onClick={() => setPage("impressum")}>Impressum</button><button onClick={() => setPage("privacy")}>Datenschutz</button><button onClick={() => setPage("rules")}>Community-Regeln</button></div></footer>
     {rulesAccepted === false && <RulesAcceptanceModal accepting={acceptingRules} onAccept={acceptCommunityRules}/>} 
