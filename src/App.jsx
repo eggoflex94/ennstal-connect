@@ -1773,7 +1773,16 @@ export default function App() {
     if (type === "ADMIN_FORUM_POST") return setPage("admin-forum");
     if (type === "FORUM_HELPFUL") return setPage("forum");
     if (type === "FORUM_REPLY") return setPage("forum");
-    if (type === "POKE") return setPage("members");
+    if (type === "POKE" || type === "NUDGE") {
+      setPage("notifications");
+      window.setTimeout(() => {
+        const box = document.querySelector(".nudge-inbox");
+        box?.scrollIntoView({ behavior:"smooth", block:"start" });
+        box?.classList.add("is-focused");
+        window.setTimeout(() => box?.classList.remove("is-focused"), 1800);
+      }, 120);
+      return;
+    }
     if (type === "ACTIVITY_REWARD") return setPage("profile");
     if (type === "EVENT_REMINDER") return setPage("community");
   }
