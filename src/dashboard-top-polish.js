@@ -25,7 +25,7 @@ async function load(){
   try{
     const {data:{session}}=await supabase.auth.getSession();const user=session?.user;if(!user)return;
     const [{data:profile},{data:regions},{data:assignments},{data:friendships}]=await Promise.all([
-      supabase.from('profiles').select('id,nickname,role,home_region_id,account_badge,account_status').eq('id',user.id).maybeSingle(),
+      supabase.from('profiles').select('id,nickname,role,home_region_id,account_badge,account_status,points,purchase_points').eq('id',user.id).maybeSingle(),
       supabase.from('regions').select('id,slug,name').eq('is_active',true).order('sort_order'),
       supabase.from('regional_admin_assignments').select('user_id,region_id,active').eq('active',true),
       supabase.from('friendships').select('requester_id,receiver_id,status').eq('status','ACCEPTED').or(`requester_id.eq.${user.id},receiver_id.eq.${user.id}`)
@@ -125,6 +125,29 @@ function ensureMunicipalityPanel(dock){
   }));
 }
 
-function render(){const dock=document.querySelector('.ec-right-dock');if(!dock)return;dock.classList.add('ec-dashboard-top-integrated');ensureRoleScope(dock);ensureOnlineFriends(dock);ensureMunicipalityPanel(dock);ensureAdminLabel(dock);ensureAdminBadge(dock)}
+function ensurePointsWallet(dock){
+  const head=dock.querySelector('.ec-dock-head');if(!head||!state.profile)return;
+  let wallet=dock.querySelector('.ec-top-points-wallet');
+  if(!wallet){wallet=document.createElement('div');wallet.className='ec-top-points-wallet';head.insertAdjacentElement('afterend',wallet);}
+  const normal=Number(state.profile.points||0).toLocaleString('de-AT');
+  const buy=Number(state.profile.purchase_points||0).toLocaleString('de-AT');
+  wallet.innerHTML='<button type="button" class="ec-wallet-points" aria-label="Punkteliste öffnen"><strong>'+normal+' Punkte</strong> <span>('+buy+' [k])</span> <small>→ Punkteliste</small></button>';
+  wallet.querySelector('button').onclick=async()=>{
+    const existing=dock.querySelector('.ec-dock-reward-card .ec-dock-reward-head b');
+    if(existing?.classList.contains('ec-points-clickable')){existing.click();return;}
+    const overlay=document.createElement('div');overlay.className='ec-self-points-overlay';
+    overlay.innerHTML='<section role="dialog" aria-modal="true" aria-label="Meine Punkteliste"><header><strong>Meine Punkteliste</strong><button type="button" aria-label="Schließen">×</button></header><div class="ec-self-points-rows">Lade deine Buchungen …</div></section>';
+    document.body.appendChild(overlay);
+    const close=()=>overlay.remove();overlay.querySelector('button').onclick=close;overlay.onclick=e=>{if(e.target===overlay)close()};
+    const {data,error}=await supabase.from('point_history').select('delta,amount,reason,created_at').eq('user_id',state.profile.id).order('created_at',{ascending:false}).limit(50);
+    if(!overlay.isConnected)return;
+    const rows=overlay.querySelector('.ec-self-points-rows');
+    if(error){rows.textContent='Die Punkteliste konnte nicht geladen werden.';return;}
+    rows.replaceChildren();
+    if(!data?.length){rows.textContent='Noch keine Punktbuchungen vorhanden.';return;}
+    data.forEach(p=>{const line=document.createElement('p');line.textContent=new Date(p.created_at).toLocaleDateString('de-AT')+' · '+String(p.reason||'Punkte')+' · '+String(p.delta??p.amount??0)+' Punkte';rows.appendChild(line)});
+  };
+}
+function render(){const dock=document.querySelector('.ec-right-dock');if(!dock)return;dock.classList.add('ec-dashboard-top-integrated');ensureRoleScope(dock);ensurePointsWallet(dock);ensureOnlineFriends(dock);ensureMunicipalityPanel(dock);ensureAdminLabel(dock);ensureAdminBadge(dock)}
 function boot(){render();void load();const observer=new MutationObserver(()=>{clearTimeout(window.__ecDashboardTopPolish);window.__ecDashboardTopPolish=setTimeout(render,70)});observer.observe(document.documentElement,{childList:true,subtree:true});window.addEventListener('ec:region-change',()=>setTimeout(()=>{render();void load()},80));window.addEventListener('focus',()=>void load());document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')void load()});setInterval(()=>void load(),30000)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
