@@ -1,3 +1,4 @@
+import { STYRIAN_DISTRICTS, publicDistrict } from "./regions.js";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "./supabaseClient";
 import MemberCardView from "./MemberCardView.jsx";
@@ -28,6 +29,7 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
   const [regionId, setRegionId] = useState(profile?.home_region_id || "ALL");
   const [onlineOnly, setOnlineOnly] = useState(false);
   const [memberType, setMemberType] = useState("ALL");
+  const [districtFilter, setDistrictFilter] = useState("ALL");
   const [newOnly, setNewOnly] = useState(false);
   const [regionalAssignments, setRegionalAssignments] = useState([]);
   const [presenceUpdates, setPresenceUpdates] = useState({});
@@ -140,6 +142,7 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
     return liveMembers
       .filter((member) => member && member.account_status !== "SUSPENDED" && !member.is_test_account)
       .filter((member) => regionId === "ALL" || member.home_region_id === regionId)
+      .filter((member) => districtFilter === "ALL" || (member.district_code === districtFilter && publicDistrict(member)))
       .filter((member) => !onlineOnly || (!member.hide_online_status && presenceOnline(member)))
       .filter((member) => {
         if (memberType === "ALL") return true;
@@ -167,7 +170,7 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
         if (aRank !== bRank) return aRank - bRank;
         return displayName(a).localeCompare(displayName(b), "de", { sensitivity: "base" });
       });
-  }, [liveMembers, regionId, onlineOnly, memberType, newOnly, query, regionById, regionalAdminByUser, activeRegion?.id]);
+  }, [liveMembers, regionId, districtFilter, onlineOnly, memberType, newOnly, query, regionById, regionalAdminByUser, activeRegion?.id]);
 
   const pageCount = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
   const pagedVisible = useMemo(() => {
@@ -177,7 +180,7 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
 
   useEffect(() => {
     setPage(1);
-  }, [query, regionId, onlineOnly, memberType, newOnly, activeRegion?.id]);
+  }, [query, regionId, districtFilter, onlineOnly, memberType, newOnly, activeRegion?.id]);
 
   // Do not mutate React-owned member-directory children from effects.
   // Older cleanup code removed text/element nodes behind React's back, which
@@ -233,6 +236,8 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
         <option value="ALL">Alle Regionen</option>
         {regions.map((region) => <option value={region.id} key={region.id}>{region.name}</option>)}
       </select>
+      <select value={districtFilter} onChange={(event) => setDistrictFilter(event.target.value)} aria-label="Mitglieder nach Bezirk filtern"><option value="ALL">Alle Bezirke</option>{STYRIAN_DISTRICTS.map(([code, name]) => <option key={code} value={code}>{name}</option>)}</select>
+      {profile?.district_code && <button type="button" onClick={() => { setRegionId("ALL"); setDistrictFilter(profile.district_code); }}>Menschen aus deiner Umgebung</button>}
       <select value={memberType} onChange={(event) => setMemberType(event.target.value)} aria-label="Mitgliedertyp auswählen">
         <option value="ALL">Alle Typen</option>
         <option value="MEMBER">Mitglieder</option>
@@ -247,7 +252,7 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
         <button type="button" className={regionId === "ALL" ? "active" : ""} onClick={() => setRegionId("ALL")}>Alle Regionen</button>
         {homeRegionId && <button type="button" className={regionId === homeRegionId && !onlineOnly ? "active" : ""} onClick={() => { setRegionId(homeRegionId); setOnlineOnly(false); }}>Heimatregion: {homeRegion?.short_name || homeRegion?.name || "Region"}</button>}
         {activeRegion?.id && activeRegion.id !== homeRegionId && <button type="button" className={regionId === activeRegion.id && !onlineOnly ? "active" : ""} onClick={() => { setRegionId(activeRegion.id); setOnlineOnly(false); }}>Aktuelle Region: {activeRegion.short_name || activeRegion.name}</button>}
-        {(query || regionId === "ALL" || onlineOnly || memberType !== "ALL" || newOnly) && <button type="button" className="native-member-reset-filter" onClick={() => { setQuery(""); setRegionId(homeRegionId || "ALL"); setOnlineOnly(false); setMemberType("ALL"); setNewOnly(false); }}>Filter zurücksetzen</button>}
+        {(query || regionId === "ALL" || onlineOnly || memberType !== "ALL" || newOnly) && <button type="button" className="native-member-reset-filter" onClick={() => { setQuery(""); setRegionId(homeRegionId || "ALL"); setOnlineOnly(false); setMemberType("ALL"); setDistrictFilter("ALL"); setNewOnly(false); }}>Filter zurücksetzen</button>}
       </div>
     </div>
 
