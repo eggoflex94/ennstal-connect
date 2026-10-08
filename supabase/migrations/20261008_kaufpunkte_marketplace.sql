@@ -51,8 +51,20 @@ begin
  'owned',(select coalesce(jsonb_agg(k.sku),'[]'::jsonb) from public.kaufpunkte_purchases k where k.user_id=uid),
  'highlight_until',(select active_until from public.kaufpunkte_highlights where user_id=uid),
  'wishlist',(select coalesce(jsonb_agg(w.sku),'[]'::jsonb) from public.kaufpunkte_wishlist w where w.user_id=uid),
- 'purchase_history',(select coalesce(jsonb_agg(jsonb_build_object('sku',k.sku,'price',k.price_paid,'date',k.purchased_at) order by k.purchased_at desc),'[]'::jsonb) from public.kaufpunkte_purchases k where k.user_id=uid));
+ 'purchase_history',(select coalesce(jsonb_agg(jsonb_build_object('sku',k.sku,'price',k.spent,'date',k.created_at) order by k.created_at desc),'[]'::jsonb) from public.kaufpunkte_spend_history k where k.user_id=uid));
 end $$;
+-- Audit every point deduction including renewable supporter and highlights.
+create table if not exists public.kaufpunkte_spend_history(
+ id bigint generated always as identity primary key,
+ user_id uuid not null references public.profiles(id) on delete cascade,
+ sku text not null references public.kaufpunkte_catalog(sku),
+ spent integer not null check(spent>=0),
+ created_at timestamptz not null default now()
+);
+alter table public.kaufpunkte_spend_history enable row level security;
+grant select on public.kaufpunkte_spend_history to authenticated;
+create policy "own spend history" on public.kaufpunkte_spend_history
+ for select to authenticated using(user_id=(select auth.uid()));
 create or replace function public.kaufpunkte_buy(p_sku text)
 returns jsonb language plpgsql security definer set search_path=public as $$
 declare uid uuid:=auth.uid(); price_value integer; bal integer;
@@ -76,6 +88,7 @@ begin
  else
    insert into public.kaufpunkte_purchases(user_id,sku,price_paid) values(uid,p_sku,price_value);
  end if;
+ insert into public.kaufpunkte_spend_history(user_id,sku,spent) values(uid,p_sku,price_value);
  return jsonb_build_object('balance',bal-price_value,'sku',p_sku);
 end $$;
 revoke all on function public.kaufpunkte_buy(text) from public,anon;
@@ -144,7 +157,7 @@ begin
  when 'ember' then 70 when 'redwood' then 90 when 'lavender' then 110
  when 'midnight' then 130 when 'sunrise' then 150 when 'neon' then 180
  else 2147483647 end;
- if coalesce(new.total_online_seconds,0) >= v_required_hours * 3600 then return new; end if;
+ if coalesce(new.total_online_seconds,0)::bigint >= v_required_hours::bigint * 3600 then return new; end if;
  raise exception 'Layout erst durch Onlinezeit oder Kaufpunkte-Kauf freischalten.';
 end $$;
 revoke all on function public.enforce_profile_layout_unlock() from public,anon,authenticated;
