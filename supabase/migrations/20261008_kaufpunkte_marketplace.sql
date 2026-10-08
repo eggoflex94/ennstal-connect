@@ -96,7 +96,7 @@ create policy "own wishlist read" on public.kaufpunkte_wishlist for select to au
 create policy "own wishlist add" on public.kaufpunkte_wishlist for insert to authenticated with check(user_id=(select auth.uid()));
 create policy "own wishlist remove" on public.kaufpunkte_wishlist for delete to authenticated using(user_id=(select auth.uid()));
 -- Only real entitlements may be sold. Cosmetic SKUs remain hidden until usable.
-update public.kaufpunkte_catalog set active=false where kind='DECORATION';
+update public.kaufpunkte_catalog set active=false where kind in ('DECORATION','PROFILE_VISITS');
 
 -- Paid visibility is only a decoration; official staff roles always retain ranking priority.
 create table if not exists public.kaufpunkte_highlights (
@@ -130,14 +130,21 @@ begin
 end $$;
 revoke all on function public.kaufpunkte_set_price(text,integer) from public,anon;
 grant execute on function public.kaufpunkte_set_price(text,integer) to authenticated;
--- Existing layouts remain intact. Newly selected paid layouts require prior purchase.
+-- Previously earned online-time layouts remain valid; a purchased layout is an additional route.
 create or replace function public.enforce_profile_layout_unlock()
 returns trigger language plpgsql set search_path=public as $$
+declare v_required_hours integer;
 begin
  if new.profile_layout is not distinct from old.profile_layout then return new; end if;
  if new.profile_layout='standard' then return new; end if;
- if old.profile_layout=new.profile_layout then return new; end if;
+ if new.role::text in ('HEAD_ADMIN','ADMIN','SUPPORTER') or new.account_badge='BUSINESS' then return new; end if;
  if exists(select 1 from public.kaufpunkte_purchases where user_id=new.id and sku=new.profile_layout) then return new; end if;
- raise exception 'Bitte dieses Layout zuerst im Kaufpunkte-Marktplatz erwerben.';
+ v_required_hours := case new.profile_layout
+ when 'alpine' then 5 when 'aurora' then 20 when 'ocean' then 35 when 'slate' then 50
+ when 'ember' then 70 when 'redwood' then 90 when 'lavender' then 110
+ when 'midnight' then 130 when 'sunrise' then 150 when 'neon' then 180
+ else 2147483647 end;
+ if coalesce(new.total_online_seconds,0) >= v_required_hours * 3600 then return new; end if;
+ raise exception 'Layout erst durch Onlinezeit oder Kaufpunkte-Kauf freischalten.';
 end $$;
 revoke all on function public.enforce_profile_layout_unlock() from public,anon,authenticated;
