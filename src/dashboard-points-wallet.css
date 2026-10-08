@@ -6,3 +6,10 @@
 .ec-top-points-wallet .ec-wallet-points>span:not(.ec-wallet-divider){font-size:15px!important;font-weight:750;color:#e65b19;flex:0 0 auto}
 .ec-top-points-wallet .ec-wallet-divider{color:#9caaba;flex:0 0 auto}
 .ec-top-points-wallet .ec-wallet-points small{margin-left:auto;flex:0 1 auto;font-size:11px!important;text-align:right;white-space:nowrap!important}
+
+/* Compact points widget in the personal dock */
+.ec-top-points-wallet{margin:5px 8px 8px!important;padding:7px 9px!important;border-radius:12px!important}
+.ec-top-points-wallet .ec-wallet-points{gap:5px!important;line-height:1.1!important}
+.ec-top-points-wallet .ec-wallet-points strong{font-size:14px!important}
+.ec-top-points-wallet .ec-wallet-points>span:not(.ec-wallet-divider){font-size:12px!important}
+.ec-top-points-wallet .ec-wallet-points small{font-size:10px!important;margin-left:6px!important}
