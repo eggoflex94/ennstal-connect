@@ -1834,7 +1834,7 @@ export default function App() {
         {page === "friend-requests" && <FriendRequests incoming={incomingRequests} sent={sentRequests} memberById={memberById} respond={respondToFriendRequest} cancel={cancelFriendRequest}/>} 
         {page === "blocked" && <Blocked blockedUsers={blockedUsers} memberById={memberById} unblock={unblockUser}/>} 
         {page === "messages" && <Messages user={user} messages={messages} chatMember={chatMember} setChatMember={setChatMember} memberById={memberById} openChat={openChat} messageText={messageText} setMessageText={setMessageText} sendMessage={sendMessage} deleteMessage={deleteMessage}/>}
-        {page === "notifications" && <NotificationCenter notifications={notifications} onOpen={openNotification} onMarkAll={markAllNotificationsRead}/>}
+        {page === "notifications" && <NotificationCenter notifications={notifications} onOpen={openNotification} onMarkAll={markAllNotificationsRead} members={members} onOpenMember={openMember} showNotice={showNotice}/>} 
         {page === "news" && <News news={regionFilter(news)} members={members} profile={profile} canManage={canManageActiveRegion} activeRegion={activeRegion} createNews={createNews} editNews={editNews} deleteNews={deleteNews}/>}
         {page === "municipality" && <section className="municipality-loading-host" aria-live="polite"><div id="ec-municipality-runtime-host" className="ec-municipality-runtime-host" /></section>}
         {page === "community" && <><CommunityHub members={regionalMembers} ads={regionFilter(communityAds)} photos={memberPhotos} profile={profile} profileUpdates={publicProfileUpdates} activeRegion={activeRegion} onDeleteAd={deleteCommunityAd}/>{isHeadAdmin(profile?.role) && <AdminCommunityTools members={regionalMembers} createAd={createCommunityAd} setBusinessAccount={setBusinessAccount}/>}</>}
@@ -2178,8 +2178,34 @@ function MemberCard(props) { return <MemberCardView {...props}/>; }
 function FriendRequests({ incoming, sent, memberById, respond, cancel }) { return <section><div className="page-heading"><div><span className="eyebrow">VERBINDUNGEN</span><h1>Freundschaftsanfragen</h1><p>Anfragen werden erst nach Annahme zu Freunden.</p></div></div><h2>Eingehend</h2><div className="cards">{incoming.map((r) => { const m = memberById(r.requester_id); return <article className="request-card" key={r.id}>{m && <><img src={m.avatar_url || DEFAULT_AVATAR} alt=""/><div><strong>{getName(m)}</strong><span>{roleLabel(m.role)}</span></div><div className="request-actions"><button className="primary-button" onClick={() => respond(r, true)}>✓ Annehmen</button><button className="danger-button" onClick={() => respond(r, false)}>Ablehnen</button></div></>}</article>; })}{!incoming.length && <div className="empty-card">Keine eingehenden Anfragen.</div>}</div><h2>Gesendet</h2><div className="cards">{sent.map((r) => { const m = memberById(r.receiver_id); return <article className="request-card" key={r.id}>{m && <><img src={m.avatar_url || DEFAULT_AVATAR} alt=""/><div><strong>{getName(m)}</strong><span>Wartet auf Antwort</span></div><button className="danger-button" onClick={() => cancel(r)}>Anfrage abbrechen</button></>}</article>; })}{!sent.length && <div className="empty-card">Keine offenen gesendeten Anfragen.</div>}</div></section>; }
 function Blocked({ blockedUsers, memberById, unblock }) { return <section><div className="page-heading"><h1>Blockierliste</h1><p>Blockierte Nutzer sehen dich nicht in deinen normalen Community-Listen.</p></div><div className="member-grid">{blockedUsers.map((b) => { const m = memberById(b.blocked_id); return m && <article className="member-card member" key={b.id}><img className="member-avatar" src={m.avatar_url || DEFAULT_AVATAR} alt=""/><strong className="member-nickname">{getName(m)}</strong><button className="secondary-button" onClick={() => unblock(m.id)}>Entsperren</button></article>; })}{!blockedUsers.length && <div className="empty-card">Keine blockierten Nutzer.</div>}</div></section>; }
 function Messages({ user, messages, chatMember, setChatMember, memberById, openChat, messageText, setMessageText, sendMessage, deleteMessage }) { return <section><div className="page-heading"><h1>Nachrichten</h1></div>{!chatMember ? <div className="message-overview">{messages.filter((m) => m.receiver_id === user.id || m.sender_id === user.id).map((m) => { const other = memberById(m.sender_id === user.id ? m.receiver_id : m.sender_id); return other && <button className="message-preview" key={m.id} onClick={() => openChat(other)}><img src={other.avatar_url || DEFAULT_AVATAR} alt=""/><span><strong>{getName(other)}</strong><small>{m.content}</small></span></button>; })}{!messages.length && <div className="empty-card">Noch keine Nachrichten.</div>}</div> : <div className="chat-box"><div className="chat-header"><button className="back-button" onClick={() => setChatMember(null)}>← Zurück</button><MemberMini member={chatMember}/></div><div className="chat-messages">{messages.filter((m) => (m.sender_id === user.id && m.receiver_id === chatMember.id) || (m.sender_id === chatMember.id && m.receiver_id === user.id)).map((m) => <div className={`chat-message ${m.sender_id === user.id ? "mine" : ""}`} key={m.id}><p>{m.content}</p><small>{new Date(m.created_at).toLocaleString("de-AT")}</small><button className="message-delete-button" onClick={() => deleteMessage(m)} aria-label="Nachricht löschen">×</button></div>)}</div><form className="message-form" onSubmit={sendMessage}><textarea value={messageText} onChange={(e) => setMessageText(e.target.value)} placeholder="Nachricht schreiben …"/><button className="primary-button">Senden</button></form></div>}</section>; }
-function NotificationCenter({ notifications, onOpen, onMarkAll }) {
+function NotificationCenter({ notifications, onOpen, onMarkAll, members, onOpenMember, showNotice }) {
   const unread = notifications.filter((item) => !item.read_at).length;
+  const [nudges, setNudges] = useState([]);
+  const [nudgeBusy, setNudgeBusy] = useState("");
+
+  const loadNudges = async () => {
+    const { data, error } = await supabase.rpc("member_nudge_inbox");
+    if (!error) setNudges(data || []);
+  };
+
+  useEffect(() => {
+    void loadNudges();
+  }, [notifications.length]);
+
+  const nudgeBack = async (senderId) => {
+    if (!senderId || nudgeBusy) return;
+    setNudgeBusy(senderId);
+    const { data, error } = await supabase.rpc("member_nudge", { p_recipient_id: senderId });
+    setNudgeBusy("");
+    if (error) {
+      showNotice?.(error.message);
+      return;
+    }
+    const count = Number(data?.[0]?.nudge_count || 0);
+    showNotice?.(count > 1 ? `Zurückgestupst · schon ${count}× zwischen euch.` : "Zurückgestupst 👋");
+    await loadNudges();
+  };
+
   const iconFor = (type) => {
     const key = String(type || "").toUpperCase();
     if (key === "MESSAGE") return "✉";
@@ -2188,15 +2214,41 @@ function NotificationCenter({ notifications, onOpen, onMarkAll }) {
     if (key === "FORUM_HELPFUL") return "✓";
     if (key === "FORUM_REPLY") return "↩";
     if (key === "ACTIVITY_REWARD") return "✦";
-    if (key === "POKE") return "☝";
+    if (key === "POKE" || key === "NUDGE") return "👋";
     if (key === "ADMIN_FORUM_POST") return "▤";
     if (key === "REFERRAL_JOINED") return "↗";
     if (key === "WELCOME_GREETING") return "👋";
     if (key === "EVENT_REMINDER") return "◷";
     return "◎";
   };
+
   return <section className="notification-center">
     <div className="page-heading"><div><span className="eyebrow">AKTUELLES FÜR DICH</span><h1>Benachrichtigungen</h1><p>Reaktionen, Nachrichten und wichtige Community-Aktivitäten an einem Ort.</p></div>{unread > 0 && <button type="button" className="secondary-button" onClick={onMarkAll}>Alle als gelesen</button>}</div>
+
+    {nudges.length > 0 && <section className="nudge-inbox panel" aria-label="Anstupser">
+      <div className="nudge-inbox-head">
+        <div><span className="eyebrow">👋 ANSTUPSER</span><h2>Wer dich angestupst hat</h2><p>Direkt reagieren – ohne erst ein Profil oder Menü öffnen zu müssen.</p></div>
+        <span className="nudge-inbox-count">{nudges.length}</span>
+      </div>
+      <div className="nudge-inbox-list">
+        {nudges.map((nudge) => {
+          const member = members?.find((item) => item.id === nudge.sender_id);
+          return <article className="nudge-inbox-card" key={nudge.sender_id}>
+            <button type="button" className="nudge-person" onClick={() => member && onOpenMember?.(member)}>
+              <img src={nudge.avatar_url || member?.avatar_url || DEFAULT_AVATAR} alt=""/>
+              <span><strong>{nudge.nickname || getName(member)}</strong><small>{new Date(nudge.last_nudged_at).toLocaleString("de-AT")} · {Number(nudge.nudge_count || 1)}× angestupst</small></span>
+            </button>
+            <div className="nudge-actions">
+              <button type="button" className="nudge-back-button" disabled={nudgeBusy === nudge.sender_id} onClick={() => void nudgeBack(nudge.sender_id)}>
+                {nudgeBusy === nudge.sender_id ? "Wird gestupst …" : "👋 Zurückstupsen"}
+              </button>
+              {member && <button type="button" className="nudge-profile-button" onClick={() => onOpenMember?.(member)}>Profil</button>}
+            </div>
+          </article>;
+        })}
+      </div>
+    </section>}
+
     <div className="notification-list">
       {notifications.map((item) => <button type="button" key={item.id} className={"notification-card panel" + (item.read_at ? "" : " is-unread")} onClick={() => onOpen(item)}>
         <span className="notification-icon">{iconFor(item.type)}</span>
