@@ -29,8 +29,17 @@ function navigate(type){
     window.dispatchEvent(new CustomEvent("ec:open-system-errors"));
     return;
   }
-  const page=type==="MESSAGE"?"messages":type==="FRIEND_REQUEST"?"requests":type==="FORUM_REPLY"?"forum":type==="ADMIN_FORUM_POST"?"admin-forum":type==="POKE"||type==="NUDGE"||type==="RELATIONSHIP_CONFIRMATION"||type==="RELATIONSHIP_ACCEPTED"?"members":type==="PHOTO_LIKE"||type==="PHOTO_COMMENT"?"photos":"home";
-  window.dispatchEvent(new CustomEvent("ec:navigate",{detail:{page}}));
+  const isNudge=type==="POKE"||type==="NUDGE";
+  const page=type==="MESSAGE"?"messages":type==="FRIEND_REQUEST"?"requests":type==="FORUM_REPLY"?"forum":type==="ADMIN_FORUM_POST"?"admin-forum":isNudge?"notifications":type==="RELATIONSHIP_CONFIRMATION"||type==="RELATIONSHIP_ACCEPTED"?"members":type==="PHOTO_LIKE"||type==="PHOTO_COMMENT"?"photos":"home";
+  window.dispatchEvent(new CustomEvent("ec:navigate",{detail:{page,focus:isNudge?"nudges":null}}));
+  if(isNudge){
+    window.setTimeout(()=>{
+      const box=document.querySelector(".nudge-inbox");
+      box?.scrollIntoView({behavior:"smooth",block:"start"});
+      box?.classList.add("is-focused");
+      window.setTimeout(()=>box?.classList.remove("is-focused"),1800);
+    },120);
+  }
 }
 
 async function prefs(){
