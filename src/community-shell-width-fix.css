@@ -39,3 +39,10 @@
  body .ec-regional-ui .dashboard-layout>.modern-main{width:100%!important;max-width:100%!important;margin-left:0!important;padding-left:12px!important;padding-right:12px!important;}
  body .ec-regional-ui .content-root{width:100%!important;max-width:100%!important;min-width:0!important;}
 }
+
+/* Keep the content and personal dock in independent columns on large screens. */
+@media(min-width:901px){
+ body .ec-regional-ui .dashboard-layout>.modern-main{padding-right:clamp(350px,24vw,410px)!important;}
+ body .ec-regional-ui .modern-main>.content-root{overflow:visible!important;}
+ body .ec-regional-ui .ec-right-dock.ec-compact-personal-dock{box-sizing:border-box!important;right:16px!important;max-width:330px!important;}
+}
