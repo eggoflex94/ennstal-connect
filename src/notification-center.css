@@ -22,3 +22,8 @@
   font-weight:600;
   line-height:1.35;
 }
+
+.ec-live-toast-actions{grid-column:1/-1;display:flex;justify-content:flex-end;gap:7px;padding:0 4px 3px 48px}
+.ec-toast-nudge-back{min-height:34px;padding:7px 11px;border:1px solid #ff8a4b;border-radius:10px;background:linear-gradient(135deg,#ff7a2e,#ff5a1f);color:#fff;font:inherit;font-size:.72rem;font-weight:900;cursor:pointer;box-shadow:0 5px 12px rgba(255,103,35,.18)}
+.ec-toast-nudge-back:disabled{opacity:.6;cursor:wait}
+@media(max-width:700px){.ec-live-toast-actions{padding-left:0}.ec-toast-nudge-back{width:100%}}
