@@ -103,6 +103,8 @@ export default function ProfileView({
   const [avatarStatus, setAvatarStatus] = useState("");
   const [saving, setSaving] = useState(false);
   const [viewerIsFriend, setViewerIsFriend] = useState(false);
+  const [visibleDistrictCode, setVisibleDistrictCode] = useState(null);
+  useEffect(()=>{let alive=true;setVisibleDistrictCode(null);if(!member?.id||!currentUserId)return;supabase.rpc("visible_styrian_district",{p_member:member.id}).then(({data,error})=>{if(alive&&!error)setVisibleDistrictCode(data||null)});return()=>{alive=false}},[member?.id,currentUserId]);
   useEffect(() => { let active=true;setViewerIsFriend(false);if(!member?.id||!currentUserId||mine)return;supabase.from("friendships").select("id").eq("status","ACCEPTED").or(`and(requester_id.eq.${currentUserId},receiver_id.eq.${member.id}),and(requester_id.eq.${member.id},receiver_id.eq.${currentUserId})`).limit(1).then(({data,error})=>{if(active&&!error)setViewerIsFriend(Boolean(data?.length));});return()=>{active=false};},[member?.id,currentUserId,mine]);
 
   useEffect(() => {
@@ -250,9 +252,8 @@ export default function ProfileView({
         avatar_url: draft.avatar_url?.trim() || member.avatar_url || null,
         website: draft.website?.trim() || null,
         location: draft.location?.trim() || null,
-        district_code: draft.district_code,
-        district_visibility: draft.district_visibility === 'FRIENDS' ? 'FRIENDS' : 'PUBLIC',
-        show_district: true,
+        district_code: draft.district_visibility === "FRIENDS" ? null : draft.district_code,
+        show_district: draft.district_visibility !== "FRIENDS",
         interests: normalizeInterests(draft.interests),
         updated_at: new Date().toISOString(),
       };
@@ -267,7 +268,10 @@ export default function ProfileView({
         "Zeitüberschreitung beim Speichern des Profils."
       );
       if (error) throw error;
-      setDraft({ ...data, interests: interestsToInput(data.interests) });
+      const {error:districtError}=await supabase.from("member_district_privacy").upsert({user_id:member.id,district_code:draft.district_code,visibility:draft.district_visibility==="FRIENDS"?"FRIENDS":"PUBLIC"},{onConflict:"user_id"});
+      if(districtError)throw districtError;
+      setVisibleDistrictCode(draft.district_code);
+      setDraft({ ...data, district_code:draft.district_code,district_visibility:draft.district_visibility, interests: interestsToInput(data.interests) });
       setEditing(false);
       onProfileSaved?.(data);
       window.dispatchEvent(new CustomEvent("ec:profile-updated", { detail: data }));
@@ -392,7 +396,7 @@ export default function ProfileView({
     <div className="integrated-profile-details">
       <div className="profile-detail-card"><span>INTERESSEN</span><p>{Array.isArray(draft.interests) ? draft.interests.join(", ") : draft.interests || member.interests || "Keine Interessen angegeben."}</p></div>
       <div className="profile-detail-card"><span>WEBSITE</span><p>{draft.website || member.website || "Keine Website angegeben."}</p></div>
-      {(mine || (draft.district_visibility !== "FRIENDS" || viewerIsFriend)) && <div className="profile-detail-card ec-district-card"><span>STEIRISCHER BEZIRK</span><p>📍 {publicDistrict(draft) || (mine ? "Bitte Bezirk auswählen" : "Nicht angegeben")}</p></div>}{!mine && !viewerIsFriend && draft.district_visibility === "FRIENDS" && <div className="profile-detail-card ec-district-card"><span>STEIRISCHER BEZIRK</span><p>🔒 Nur für Freunde sichtbar</p></div>}
+      {(mine || visibleDistrictCode) && <div className="profile-detail-card ec-district-card"><span>STEIRISCHER BEZIRK</span><p>📍 {STYRIAN_DISTRICTS.find(([code])=>code===(mine?draft.district_code:visibleDistrictCode))?.[1] || "Bitte Bezirk auswählen"}</p></div>}{!mine && !visibleDistrictCode && draft.show_district === false && <div className="profile-detail-card ec-district-card"><span>STEIRISCHER BEZIRK</span><p>🔒 Nur für Freunde sichtbar</p></div>}
       <div className="profile-detail-card"><span>WOHNORT</span><p>{draft.location || member.location || "Kein Wohnort angegeben."}</p></div>
     </div>
 
