@@ -2913,8 +2913,9 @@ function MemberProfile({ member, friends, groups = [], photos = [], onOpenGroup,
       <img className={!member.avatar_url ? "member-profile-default-avatar" : ""} src={member.avatar_url || DEFAULT_AVATAR} alt="Standard-Profilbild"/>
       <div>
         <span className="ec-profile-main-role"><RoleStar member={member}/>{roleLabel(member.role)}</span>
+        {(member.account_badge === "BUSINESS" || Boolean(member.company_name)) && <div className="ec-profile-main-role ec-entrepreneur-role" style={{display:"flex",alignItems:"center",gap:8,marginTop:8}}><img src="/role-star-blue.svg" alt="" aria-hidden="true" style={{width:25,height:25}}/><span><strong>Unternehmeraccount</strong>{member.company_name && <small style={{display:"block",fontSize:12}}>{member.company_name}</small>}</span></div>}
         {member.district_code && member.show_district !== false && <p className="member-home-district"><strong>Heimatbezirk:</strong> {HOME_DISTRICT_OPTIONS.find(([code]) => code === member.district_code)?.[1] || member.district_code}</p>}<h1>{getName(member)}{member.is_verified && <small className="verified-profile-badge"> ✓ Verifiziert</small>}</h1>
-        {(member.account_badge === "BUSINESS" || Boolean(member.company_name)) && <div className="community-photographer-profile-badge" data-entrepreneur-badge="true"><img src="/role-star-blue.svg" alt="" aria-hidden="true"/><span><strong>Unternehmeraccount</strong>{member.company_name && <small>{member.company_name}</small>}</span></div>}
+        
         {member.is_community_photographer && <div className="community-photographer-profile-badge"><img src="/community-photographer-camera.svg" alt=""/><span><strong>Community-Fotograf</strong><small>{member.community_photographer_global ? "Alle Regionen" : "Regional"}</small></span></div>}
         {(displayName || age !== null) && <p>{displayName}{displayName && age !== null ? " · " : ""}{age !== null ? `${age} Jahre` : ""}</p>}
         {member.bio && canSee("bio") && <p className="member-profile-bio">{member.bio}</p>}
