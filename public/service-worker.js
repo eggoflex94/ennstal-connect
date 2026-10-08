@@ -45,3 +45,34 @@ self.addEventListener("fetch", (event) => {
     }))
   );
 });
+
+self.addEventListener("push", (event) => {
+  if (!event.data) return;
+  event.waitUntil((async () => {
+    let data;
+    try { data = event.data.json(); } catch { return; }
+    const title = String(data.title || "Ennstal Connect").slice(0, 120);
+    const body = String(data.body || "").slice(0, 300);
+    const target = typeof data.url === "string" && data.url.startsWith("/") && !data.url.startsWith("//") ? data.url : "/";
+    await self.registration.showNotification(title, {
+      body, icon: "/icon-orange-star-192.png", badge: "/icon-orange-star-192.png",
+      tag: String(data.tag || "ec-community").slice(0, 80), data: { url: target }
+    });
+  })());
+});
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = new URL(event.notification.data?.url || "/", self.location.origin);
+  if (url.origin !== self.location.origin) return;
+  event.waitUntil((async () => {
+    const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    for (const client of windows) {
+      if (new URL(client.url).origin === self.location.origin) {
+        await client.focus();
+        await client.navigate(url.href);
+        return;
+      }
+    }
+    await self.clients.openWindow(url.href);
+  })());
+});
