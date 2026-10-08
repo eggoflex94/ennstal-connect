@@ -1,7 +1,7 @@
 -- Kaufpunkte are a spendable balance. Initial funding uses 2x existing normal points.
 create table if not exists public.kaufpunkte_catalog (
  sku text primary key, title text not null, description text not null default '',
- price integer not null check(price>=0), kind text not null check(kind in ('LAYOUT','PROFILE_VISITS')),
+ price integer not null check(price>=0), kind text not null check(kind in ('LAYOUT','PROFILE_VISITS','SUPPORTER')),
  active boolean not null default true
 );
 create table if not exists public.kaufpunkte_purchases (
@@ -15,6 +15,7 @@ insert into public.kaufpunkte_catalog(sku,title,description,price,kind) values
  ('theme-alpine','Alpin','Alpines Profil-Design',65,'LAYOUT'),('theme-teal','Türkis','Türkises Profil-Design',80,'LAYOUT'),
  ('theme-violet','Violett','Violettes Profil-Design',95,'LAYOUT'),('theme-copper','Kupfer','Warmes Kupfer-Design',110,'LAYOUT'),
  ('theme-aurora','Aurora','Aurora Profil-Design',125,'LAYOUT'),('profile-visits','Profilbesuche','Sieh, wer dein Profil besucht hat',100,'PROFILE_VISITS')
+ ,('supporter-3m','Supporter-Stern · 3 Monate','Supporter-Stern für drei Monate',700,'SUPPORTER')
 on conflict(sku) do nothing;
 alter table public.kaufpunkte_catalog enable row level security;
 alter table public.kaufpunkte_purchases enable row level security;
@@ -48,10 +49,14 @@ begin
  select price into price_value from public.kaufpunkte_catalog where sku=p_sku and active for share;
  if not found then raise exception 'Artikel nicht verfügbar'; end if;
  select purchase_points into bal from public.profiles where id=uid for update;
- if exists(select 1 from public.kaufpunkte_purchases where user_id=uid and sku=p_sku) then raise exception 'Bereits gekauft'; end if;
+ if p_sku <> 'supporter-3m' and exists(select 1 from public.kaufpunkte_purchases where user_id=uid and sku=p_sku) then raise exception 'Bereits gekauft'; end if;
  if bal < price_value then raise exception 'Nicht genug Kaufpunkte'; end if;
  update public.profiles set purchase_points=purchase_points-price_value where id=uid;
- insert into public.kaufpunkte_purchases(user_id,sku,price_paid) values(uid,p_sku,price_value);
+ if p_sku='supporter-3m' then
+   update public.profiles set supporter_until=greatest(coalesce(supporter_until,now()),now())+interval '3 months' where id=uid;
+ else
+   insert into public.kaufpunkte_purchases(user_id,sku,price_paid) values(uid,p_sku,price_value);
+ end if;
  return jsonb_build_object('balance',bal-price_value,'sku',p_sku);
 end $$;
 revoke all on function public.kaufpunkte_buy(text) from public,anon;
