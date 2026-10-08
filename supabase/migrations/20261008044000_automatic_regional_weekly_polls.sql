@@ -98,10 +98,10 @@ begin
       continue;
     end if;
 
-    update public.community_weekly_polls
+    update public.community_weekly_polls p
     set is_active=false
-    where region_id=v_region.id
-      and is_active=true;
+    where p.region_id=v_region.id
+      and p.is_active=true;
 
     insert into public.community_weekly_polls(
       question,options,is_active,created_by,region_id
@@ -115,9 +115,9 @@ begin
     )
     returning id into v_poll_id;
 
-    update public.community_weekly_poll_question_bank
+    update public.community_weekly_poll_question_bank q
     set last_used_at=now()
-    where id=v_bank.id;
+    where q.id=v_bank.id;
 
     region_id:=v_region.id;
     region_name:=v_region.name;
