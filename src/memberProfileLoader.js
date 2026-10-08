@@ -46,6 +46,16 @@ export async function loadMemberProfile(member, { force = false } = {}) {
       return null;
     }
     const value = normalize(Array.isArray(data) ? data[0] : data);
+    // Fallback for incomplete directory responses: preserve known business fields.
+    if (value?.id && !value.company_name && value.account_badge !== 'BUSINESS') {
+      const { data: business, error: businessError } = await supabase.from('profiles')
+        .select('account_badge,company_name')
+        .eq('id', id).maybeSingle();
+      if (!businessError && business && (business.account_badge === 'BUSINESS' || business.company_name)) {
+        value.account_badge = business.account_badge;
+        value.company_name = business.company_name;
+      }
+    }
     if (value?.id) profileCache.set(id, { at: Date.now(), value });
     return value;
   })().finally(() => inFlight.delete(id));
