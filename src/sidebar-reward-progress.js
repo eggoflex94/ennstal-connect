@@ -36,7 +36,7 @@ async function load(force=false){
   })();
   return request;
 }
-function ensureCard(){const dock=q('.ec-right-dock');if(!dock)return null;let card=q('.ec-dock-reward-card',dock);if(!card){card=document.createElement('section');card.className='ec-dock-reward-card';card.setAttribute('aria-label','Community-Belohnungen');const communityLabel=[...dock.querySelectorAll(':scope > .ec-dock-section-label')].find(node=>(node.textContent||'').trim().toUpperCase()==='COMMUNITY');if(communityLabel)communityLabel.before(card);else q(':scope > .ec-dock-admin-slot',dock)?.insertAdjacentElement('afterend',card)||dock.appendChild(card);card.classList.add('ec-stats-progress-card');}return card}
+function ensureCard(){const page=q('.ec-statistics-page');const old=q('.ec-right-dock .ec-dock-reward-card');if(!page){old?.remove();return null;}let card=q('.ec-dock-reward-card',page);if(!card){card=old||document.createElement('section');card.className='ec-dock-reward-card ec-stats-progress-card panel';card.setAttribute('aria-label','Meine Onlinezeit und Belohnungen');const personal=q('.ec-hours-personal',page);if(personal)personal.insertAdjacentElement('afterend',card);else page.appendChild(card);}return card}
 function prestigeCopy(state){const score=Number(state.score||0),prestige=state.prestige||'',next=state.prestige_next_score==null?null:Number(state.prestige_next_score);if(score<300)return `Noch ${300-score} Punkte bis Prestige Bronze`;if(!next)return 'Prestige Platin erreicht';return `${prestige} · noch ${Math.max(0,next-score)} Punkte bis zur nächsten Stufe`}
 function render(state){
   const card=ensureCard();if(!card)return;
@@ -77,6 +77,7 @@ function boot(){
   window.addEventListener('ec:activity-progress-refresh',()=>void refresh(true));
   window.addEventListener('ec:region-change',()=>void refresh(false));
   window.addEventListener('focus',()=>{if(Date.now()-loadedAt>120000)void refresh(true)});
-  window.addEventListener('ec:navigate',()=>{if(!q('.ec-dock-reward-card'))void refresh(false)});
+  window.addEventListener('ec:navigate',()=>{if(q('.ec-statistics-page'))void refresh(false)});
+  const observer=new MutationObserver(()=>{if(q('.ec-statistics-page')&&!q('.ec-statistics-page .ec-dock-reward-card'))void refresh(false);else if(!q('.ec-statistics-page'))q('.ec-right-dock .ec-dock-reward-card')?.remove()});observer.observe(document.body,{childList:true,subtree:false});
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
