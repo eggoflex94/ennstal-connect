@@ -279,9 +279,9 @@ function renderHome(region, events) {
       card.className = `ec-featured-home-event featured-${featured.featured_color || 'gold'}`;
       card.innerHTML = `${featured.image_url ? `<img src="${esc(featured.image_url)}" alt="">` : ''}<span class="ec-featured-home-event-copy"><small>★ HERVORGEHOBEN</small><strong>${esc(featured.title)}</strong><em>${esc(formatDate(featured.event_at))}${featured.location ? ` · ${esc(featured.location)}` : ''}</em></span><b>Event ansehen →</b>`;
       card.onclick = () => window.dispatchEvent(new CustomEvent('ec:navigate', { detail: { page: 'events', source: 'featured-home-event' } }));
-      const heading = upcomingPanel.querySelector('h2')?.parentElement || upcomingPanel.firstElementChild;
-      if (heading?.parentElement === upcomingPanel) heading.after(card);
-      else upcomingPanel.appendChild(card);
+      // Keep the featured event inside the stable panel container. Avoid
+      // sibling insertion against React-owned headings during rerenders.
+      if (upcomingPanel.isConnected) upcomingPanel.appendChild(card);
     }
   }
 }
