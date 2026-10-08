@@ -36,13 +36,13 @@ async function load(force=false){
   })();
   return request;
 }
-function ensureCard(){const dock=q('.ec-right-dock');if(!dock)return null;let card=q('.ec-dock-reward-card',dock);if(!card){card=document.createElement('section');card.className='ec-dock-reward-card';card.setAttribute('aria-label','Community-Belohnungen');const communityLabel=[...dock.querySelectorAll(':scope > .ec-dock-section-label')].find(node=>(node.textContent||'').trim().toUpperCase()==='COMMUNITY');if(communityLabel)communityLabel.before(card);else q(':scope > .ec-dock-admin-slot',dock)?.insertAdjacentElement('afterend',card)||dock.appendChild(card)}return card}
+function ensureCard(){const dock=q('.ec-right-dock');if(!dock)return null;let card=q('.ec-dock-reward-card',dock);if(!card){card=document.createElement('section');card.className='ec-dock-reward-card';card.setAttribute('aria-label','Community-Belohnungen');const communityLabel=[...dock.querySelectorAll(':scope > .ec-dock-section-label')].find(node=>(node.textContent||'').trim().toUpperCase()==='COMMUNITY');if(communityLabel)communityLabel.before(card);else q(':scope > .ec-dock-admin-slot',dock)?.insertAdjacentElement('afterend',card)||dock.appendChild(card);card.classList.add('ec-stats-progress-card');}return card}
 function prestigeCopy(state){const score=Number(state.score||0),prestige=state.prestige||'',next=state.prestige_next_score==null?null:Number(state.prestige_next_score);if(score<300)return `Noch ${300-score} Punkte bis Prestige Bronze`;if(!next)return 'Prestige Platin erreicht';return `${prestige} · noch ${Math.max(0,next-score)} Punkte bis zur nächsten Stufe`}
 function render(state){
   const card=ensureCard();if(!card)return;
   if(!state){card.innerHTML='<div class="ec-dock-reward-head"><span>BELOHNUNGEN</span><strong>Derzeit nicht verfügbar</strong></div>';return}
   const score=Number(state.score||0),next=state.next_score==null?null:Number(state.next_score),seconds=Number(state.total_online_seconds||0),onlinePoints=Number(state.components?.online||0),nextCopy=next?`${Math.max(0,next-score)} Punkte bis ${next}`:'Community-Level abgeschlossen';
-  card.innerHTML=`<div class="ec-dock-reward-head"><span>BELOHNUNGEN</span><strong>${String(state.level||'Neu')}</strong><b>${score} Punkte</b></div>
+  card.innerHTML=`<div class="ec-dock-reward-head"><span>STATISTIK · ONLINEZEIT & FORTSCHRITT</span><strong>${String(state.level||'Neu')}</strong><b>${score} Punkte</b></div>
     <div class="ec-dock-reward-row ec-dock-level-row"><span>Community-Level</span><em>${nextCopy}</em></div>
     <div class="ec-dock-reward-bar ec-dock-reward-bar-level"><i style="width:${levelPercent(state)}%"></i></div>
     <div class="ec-dock-reward-meta">
