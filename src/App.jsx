@@ -1811,6 +1811,7 @@ export default function App() {
     <div className="dashboard-layout">
       <aside className="modern-sidebar">
         <div className="sidebar-profile" onClick={() => setPage("profile")}><img src={profile?.avatar_url || DEFAULT_AVATAR} alt=""/><div><strong>{getName(profile)}</strong><span className={`role-badge ${profile?.account_badge === "BUSINESS" ? "business" : roleClass(profile?.role)}`}>{profile?.role === "HEAD_ADMIN" ? "♛" : profile?.role === "ADMIN" ? "★ Community Admin" : profile?.role === "SUPPORTER" ? "★ Supporter" : profile?.account_badge === "BUSINESS" ? "★ Unternehmenskonto" : "Mitglied"}</span></div></div>
+        <div className="ec-points-wallet" style={{padding:"10px 14px",margin:"8px 0",borderRadius:12,background:"rgba(28,74,99,.18)"}}><strong>Punkte: {Number(profile?.points||0).toLocaleString("de-AT")} · {Number(profile?.purchase_points||0).toLocaleString("de-AT")} [k]</strong><small style={{display:"block"}}>Kaufpunkte-Guthaben im Marktplatz verwenden</small></div>
         <nav className="modern-nav">
           <button onClick={() => setPage("home")}>⌂ <span>Startseite</span></button>
           <button onClick={() => setPage("members")}>♙ <span>Mitglieder</span></button>
