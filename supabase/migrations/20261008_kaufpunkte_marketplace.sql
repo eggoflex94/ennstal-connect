@@ -16,8 +16,11 @@ insert into public.kaufpunkte_catalog(sku,title,description,price,kind) values
  ('theme-violet','Violett','Violettes Profil-Design',95,'LAYOUT'),('theme-copper','Kupfer','Warmes Kupfer-Design',110,'LAYOUT'),
  ('theme-aurora','Aurora','Aurora Profil-Design',125,'LAYOUT'),('profile-visits','Profilbesuche','Sieh, wer dein Profil besucht hat',100,'PROFILE_VISITS')
  ,('supporter-3m','Supporter-Stern · 3 Monate','Supporter-Stern für drei Monate',700,'SUPPORTER'),
- ('highlight-7d','Mitglied hervorheben · 7 Tage','Dein Profil erhält sieben Tage eine dezente Hervorhebung – immer unter offiziellen Rollen.',150,'HIGHLIGHT'),
- ('highlight-30d','Mitglied hervorheben · 30 Tage','Dein Profil erhält 30 Tage eine dezente Hervorhebung – immer unter offiziellen Rollen.',450,'HIGHLIGHT'),
+ ('highlight-1d','Mitglied hervorheben · 1 Tag','Dezente Hervorhebung für 24 Stunden, immer unter offiziellen Rollen.',30,'HIGHLIGHT'),
+ ('highlight-3d','Mitglied hervorheben · 3 Tage','Dezente Hervorhebung für drei Tage, immer unter offiziellen Rollen.',90,'HIGHLIGHT'),
+ ('highlight-7d','Mitglied hervorheben · 7 Tage','Dezente Hervorhebung für sieben Tage, immer unter offiziellen Rollen.',200,'HIGHLIGHT'),
+ ('highlight-14d','Mitglied hervorheben · 14 Tage','Dezente Hervorhebung für zwei Wochen, immer unter offiziellen Rollen.',450,'HIGHLIGHT'),
+ ('highlight-30d','Mitglied hervorheben · 30 Tage','Dezente Hervorhebung für einen Monat, immer unter offiziellen Rollen.',1100,'HIGHLIGHT'),
  ('frame-alpine','Alpen-Profilrahmen','Dekorativer Profilrahmen',25,'DECORATION'),
  ('frame-glow','Neon-Profilrahmen','Leuchtender Profilrahmen',75,'DECORATION'),
  ('banner-alpine','Alpen-Profilbanner','Regionales Profilbanner',40,'DECORATION'),
@@ -57,12 +60,15 @@ begin
  select price into price_value from public.kaufpunkte_catalog where sku=p_sku and active for share;
  if not found then raise exception 'Artikel nicht verfügbar'; end if;
  select purchase_points into bal from public.profiles where id=uid for update;
- if p_sku not in ('supporter-3m','highlight-7d','highlight-30d') and exists(select 1 from public.kaufpunkte_purchases where user_id=uid and sku=p_sku) then raise exception 'Bereits gekauft'; end if;
+ if p_sku not in ('supporter-3m','highlight-1d','highlight-3d','highlight-7d','highlight-14d','highlight-30d') and exists(select 1 from public.kaufpunkte_purchases where user_id=uid and sku=p_sku) then raise exception 'Bereits gekauft'; end if;
  if bal < price_value then raise exception 'Nicht genug Kaufpunkte'; end if;
  update public.profiles set purchase_points=purchase_points-price_value where id=uid;
- if p_sku in ('highlight-7d','highlight-30d') then
-   insert into public.kaufpunkte_highlights(user_id,active_until) values(uid,now()+case when p_sku='highlight-7d' then interval '7 days' else interval '30 days' end)
-   on conflict(user_id) do update set active_until=greatest(public.kaufpunkte_highlights.active_until,now())+case when p_sku='highlight-7d' then interval '7 days' else interval '30 days' end;
+ if p_sku in ('highlight-1d','highlight-3d','highlight-7d','highlight-14d','highlight-30d') then
+   insert into public.kaufpunkte_highlights(user_id,active_until)
+    values(uid,now() + (substring(p_sku from 'highlight-([0-9]+)d')::integer * interval '1 day'))
+   on conflict(user_id) do update set active_until =
+    greatest(public.kaufpunkte_highlights.active_until,now()) +
+    (substring(p_sku from 'highlight-([0-9]+)d')::integer * interval '1 day');
  elsif p_sku='supporter-3m' then
    update public.profiles set supporter_until=greatest(coalesce(supporter_until,now()),now())+interval '3 months' where id=uid;
  else
