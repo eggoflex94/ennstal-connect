@@ -131,10 +131,8 @@ function ensurePointsWallet(dock){
   if(!wallet){wallet=document.createElement('div');wallet.className='ec-top-points-wallet';head.insertAdjacentElement('afterend',wallet);}
   const normal=Number(state.profile.points||0).toLocaleString('de-AT');
   const buy=Number(state.profile.purchase_points||0).toLocaleString('de-AT');
-  wallet.innerHTML='<button type="button" class="ec-wallet-points" aria-label="Punkteliste öffnen"><strong>'+normal+'</strong><span class="ec-wallet-divider" aria-hidden="true">|</span><span>'+buy+' [k]</span><small>→ Punkteliste</small></button>';
-  wallet.querySelector('button').onclick=async()=>{
-    const existing=dock.querySelector('.ec-dock-reward-card .ec-dock-reward-head b');
-    if(existing?.classList.contains('ec-points-clickable')){existing.click();return;}
+  wallet.innerHTML='<div class="ec-wallet-points"><strong>'+normal+'</strong><span class="ec-wallet-divider" aria-hidden="true">|</span><span>'+buy+' [k]</span><button type="button" class="ec-points-list-link" aria-label="Meine Punkteliste öffnen">→ Punkteliste</button></div>';
+  wallet.querySelector('.ec-points-list-link').onclick=async(event)=>{event.preventDefault();event.stopPropagation();
     const overlay=document.createElement('div');overlay.className='ec-self-points-overlay';
     overlay.innerHTML='<section role="dialog" aria-modal="true" aria-label="Meine Punkteliste"><header><strong>Meine Punkteliste</strong><button type="button" aria-label="Schließen">×</button></header><div class="ec-self-points-rows">Lade deine Buchungen …</div></section>';
     document.body.appendChild(overlay);

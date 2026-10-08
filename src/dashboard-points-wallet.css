@@ -13,3 +13,9 @@
 .ec-top-points-wallet .ec-wallet-points strong{font-size:14px!important}
 .ec-top-points-wallet .ec-wallet-points>span:not(.ec-wallet-divider){font-size:12px!important}
 .ec-top-points-wallet .ec-wallet-points small{font-size:10px!important;margin-left:6px!important}
+
+.ec-top-points-wallet{padding:4px 6px!important;margin:4px 7px 6px!important;box-shadow:none!important}
+.ec-top-points-wallet .ec-wallet-points{gap:4px!important;justify-content:flex-start!important;padding:0!important;background:none!important;border:0!important;min-height:25px!important}
+.ec-top-points-wallet .ec-wallet-points strong{font-size:13px!important}
+.ec-top-points-wallet .ec-wallet-points>span:not(.ec-wallet-divider){font-size:12px!important}
+.ec-top-points-wallet .ec-points-list-link{margin-left:auto!important;border:0!important;background:transparent!important;padding:2px!important;color:#245b80!important;text-decoration:underline;font-size:11px!important;font-weight:700;cursor:pointer;white-space:nowrap}
