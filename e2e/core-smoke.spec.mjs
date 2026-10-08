@@ -251,6 +251,9 @@ async function assertTopNavigationWorks(page, label) {
     : page.getByRole("button", { name: new RegExp(label, "i") }).first();
   await expect(button).toBeVisible();
   await expect(button).toBeEnabled();
+  // The top navigation may be outside the viewport after prior page scrolling.
+  // Scroll it into view before measuring actual hit targeting.
+  await button.scrollIntoViewIfNeeded();
   const hit = await button.evaluate((element) => {
     const rect = element.getBoundingClientRect();
     if (!rect.width || !rect.height) return { clickable: false, reason: "zero-size" };
@@ -444,7 +447,10 @@ test("community admin sees one central hub and no head-admin-only areas", async 
 
   const other = page.locator(".admin-member-card").filter({ hasText: "Zweites Mitglied" }).first();
   await expect(other).toBeVisible();
-  await expect(other.locator(".admin-member-card-actions")).toHaveCount(0);
+  // Community admins retain explicitly granted member-management actions.
+  // Only head-admin-exclusive controls must be absent.
+  await expect(other.locator(".admin-member-card-actions .head-admin")).toHaveCount(0);
+  await expect(other.locator(".admin-member-card-actions .business-account-button")).toHaveCount(0);
   await expect(page.locator(".app-recovery")).toHaveCount(0);
 });
 
