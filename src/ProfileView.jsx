@@ -102,6 +102,8 @@ export default function ProfileView({
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarStatus, setAvatarStatus] = useState("");
   const [saving, setSaving] = useState(false);
+  const [viewerIsFriend, setViewerIsFriend] = useState(false);
+  useEffect(() => { let active=true;setViewerIsFriend(false);if(!member?.id||!currentUserId||mine)return;supabase.from("friendships").select("id").eq("status","ACCEPTED").or(`and(requester_id.eq.${currentUserId},receiver_id.eq.${member.id}),and(requester_id.eq.${member.id},receiver_id.eq.${currentUserId})`).limit(1).then(({data,error})=>{if(active&&!error)setViewerIsFriend(Boolean(data?.length));});return()=>{active=false};},[member?.id,currentUserId,mine]);
 
   useEffect(() => {
     setDraft({ ...(member || {}), interests: interestsToInput(member?.interests) });
@@ -390,7 +392,7 @@ export default function ProfileView({
     <div className="integrated-profile-details">
       <div className="profile-detail-card"><span>INTERESSEN</span><p>{Array.isArray(draft.interests) ? draft.interests.join(", ") : draft.interests || member.interests || "Keine Interessen angegeben."}</p></div>
       <div className="profile-detail-card"><span>WEBSITE</span><p>{draft.website || member.website || "Keine Website angegeben."}</p></div>
-      {(mine || draft.district_visibility !== "FRIENDS") && <div className="profile-detail-card ec-district-card"><span>STEIRISCHER BEZIRK</span><p>📍 {publicDistrict(draft) || (mine ? "Bitte Bezirk auswählen" : "Nicht angegeben")}</p></div>}{!mine && draft.district_visibility === "FRIENDS" && <div className="profile-detail-card ec-district-card"><span>STEIRISCHER BEZIRK</span><p>🔒 Nur für Freunde sichtbar</p></div>}
+      {(mine || (draft.district_visibility !== "FRIENDS" || viewerIsFriend)) && <div className="profile-detail-card ec-district-card"><span>STEIRISCHER BEZIRK</span><p>📍 {publicDistrict(draft) || (mine ? "Bitte Bezirk auswählen" : "Nicht angegeben")}</p></div>}{!mine && !viewerIsFriend && draft.district_visibility === "FRIENDS" && <div className="profile-detail-card ec-district-card"><span>STEIRISCHER BEZIRK</span><p>🔒 Nur für Freunde sichtbar</p></div>}
       <div className="profile-detail-card"><span>WOHNORT</span><p>{draft.location || member.location || "Kein Wohnort angegeben."}</p></div>
     </div>
 
