@@ -22,7 +22,7 @@ const DOCK_ICONS={
   'Hilfe':'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.7 9a2.5 2.5 0 1 1 4.5 1.5c-.8 1-2.2 1.4-2.2 3M12 17h.01"/></svg>',
   'Heimatregion ändern':'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s6-5.4 6-11a6 6 0 1 0-12 0c0 5.6 6 11 6 11Z"/><circle cx="12" cy="10" r="2"/></svg>'
 };
-const FALLBACK_REGIONS=[{slug:'ennstal',name:'Ennstal'},{slug:'leoben-bruck-muerzzuschlag',name:'Leoben – Bruck – Mürzzuschlag'},{slug:'ueberregional',name:'Überregional'}];
+const FALLBACK_REGIONS=[{slug:'ennstal',name:'Ennstal'},{slug:'leoben-bruck-muerzzuschlag',name:'Alpenraum'}];
 let regions=FALLBACK_REGIONS,activeRegion=null,regionalAssignments=[],currentProfile=null,profiles=[],showAllMembers=false;
 
 const pageNames={home:['Startseite'],members:['Mitglieder'],forum:['Forum'],groups:['Gruppen'],events:['Events','Veranstaltungen'],photos:['Fotos','Eventfotos'],news:['Neuigkeiten'],community:['Community'],ads:['Community'],profile:['Mein Profil','Profil gestalten'],messages:['Nachrichten'],friends:['Freunde'],requests:['Anfragen'],blocked:['Blockiert'],help:['Hilfe'],admin:['Admin-Zentrale','Admin Zentrale'],adminTools:['Admin Tools'],legal:['Rechtliche Beweissicherung']};
