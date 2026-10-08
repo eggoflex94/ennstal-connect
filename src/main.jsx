@@ -208,6 +208,34 @@ import "./personal-dock-final-authority.css";
 import "./neon-pink-theme.css";
 import "./header-scroll-authority.css";
 
+// Guard against stale DOM sibling references from legacy/runtime helpers.
+// React and several compatibility runtimes can update the same container within
+// one frame. A stale reference passed to insertBefore otherwise throws a
+// NotFoundError and interrupts the whole UI. Preserve the requested insertion
+// by appending to the still-valid parent instead.
+function installSafeInsertBeforeGuard() {
+  if (typeof Node === "undefined" || window.__ecSafeInsertBeforeInstalled) return;
+  window.__ecSafeInsertBeforeInstalled = true;
+
+  const nativeInsertBefore = Node.prototype.insertBefore;
+  Node.prototype.insertBefore = function safeInsertBefore(newNode, referenceNode) {
+    if (referenceNode != null && referenceNode.parentNode !== this) {
+      try {
+        if (newNode?.parentNode && newNode.parentNode !== this) {
+          newNode.parentNode.removeChild(newNode);
+        }
+        return this.appendChild(newNode);
+      } catch (fallbackError) {
+        console.warn("DOM-Einfügung konnte nicht automatisch stabilisiert werden.", fallbackError);
+        return nativeInsertBefore.call(this, newNode, null);
+      }
+    }
+    return nativeInsertBefore.call(this, newNode, referenceNode);
+  };
+}
+
+installSafeInsertBeforeGuard();
+
 class AppErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
