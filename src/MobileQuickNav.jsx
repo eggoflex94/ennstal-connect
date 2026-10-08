@@ -12,8 +12,8 @@ const shortcuts = [
 const extraPages = [
   ["friends", "Freunde"], ["friend-requests", "Anfragen"],
   ["blocked", "Blockiert"], ["notifications", "Aktuelles"],
-  ["news", "Neuigkeiten"], ["groups", "Gruppen"],
-  ["forum", "Forum"], ["profile", "Mein Profil"]
+  ["news", "Neuigkeiten"], ["events", "Events & Eventfotos"], ["marketplace", "Marktplatz"], ["groups", "Gruppen"],
+  ["forum", "Forum & Beiträge"], ["profile", "Mein Profil"], ["municipality", "Gemeinden"]
 ];
 
 export default function MobileQuickNav({ page, onNavigate, isAdmin, unread = 0, unreadNotifications = 0 }) {
