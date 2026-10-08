@@ -2003,7 +2003,7 @@ function MemberActivationPanel({ profile, user, poll, groups, events, eventRsvps
   const voted = poll?.my_vote !== null && poll?.my_vote !== undefined;
   const regionalPostIds = new Set(forumPosts.map((post) => post.id));
   const replied = forumReplies.some((reply) => reply.author_id === user.id && regionalPostIds.has(reply.post_id));
-  const visibleEventIds = new Set(events.filter((event) => event.status !== "CANCELLED" && new Date(event.event_at).getTime() >= Date.now() - 86400000).map((event) => event.id));
+  const visibleEventIds = new Set(events.filter((event) => event.status !== "CANCELLED" && new Date(event.event_at).getTime() >= Date.now()).map((event) => event.id));
   const eventJoined = eventRsvps.some((rsvp) => rsvp.user_id === user.id && visibleEventIds.has(rsvp.event_id) && ["GOING","INTERESTED"].includes(rsvp.status));
   const connected = friendships.some((friendship) => friendship.status === "ACCEPTED" && (friendship.requester_id === user.id || friendship.receiver_id === user.id));
   const tasks = [
@@ -3002,7 +3002,11 @@ function EventsPage({ members, showNotice, events, eventRsvps, user, profile, ac
   const [awardErrors, setAwardErrors] = useState({});
   const canAwardEventPoints = ["HEAD_ADMIN", "ADMIN"].includes(String(profile?.role || "").toUpperCase());
   const memberById = useMemo(() => new Map(members.map((member) => [member.id, member])), [members]);
-  const eventIds = useMemo(() => events.map((event) => event.id), [events]);
+  const visibleEvents = useMemo(() => events.filter((event) =>
+    String(event?.status || "ACTIVE").toUpperCase() !== "CANCELLED"
+    && new Date(event?.event_at).getTime() >= Date.now()
+  ), [events]);
+  const eventIds = useMemo(() => visibleEvents.map((event) => event.id), [visibleEvents]);
 
   const loadEventExtras = async () => {
     if (!eventIds.length) {
@@ -3071,7 +3075,7 @@ function EventsPage({ members, showNotice, events, eventRsvps, user, profile, ac
     await loadEventExtras();
   };
 
-  const orderedEvents = [...events].sort((a,b) => {
+  const orderedEvents = [...visibleEvents].sort((a,b) => {
     const aPhotos = photosFor(a.id);
     const bPhotos = photosFor(b.id);
     const aRecent = aPhotos.some((photo) => Date.now() - new Date(photo.created_at).getTime() < 72 * 3600000);
@@ -3170,7 +3174,7 @@ function EventsPage({ members, showNotice, events, eventRsvps, user, profile, ac
             </div>}
           </div>
         </article>;
-      }) : <div className="panel empty-card">Noch keine Termine veröffentlicht.</div>}
+      }) : <div className="panel empty-card">Derzeit sind keine kommenden Termine veröffentlicht.</div>}
     </div>
 
     {canCreateEvent && <section id="event-create" className="admin-community-tools panel"><div className="admin-community-tools-heading"><div><span className="eyebrow">NEUER TERMIN</span><h2>Veranstaltung erstellen</h2></div><p>Pflicht sind nur Titel sowie Datum & Uhrzeit.</p></div><form className="community-event-create-form" onSubmit={createEvent}><label>Titel<input name="title" placeholder="z. B. Herbstfest Admont" minLength="3" required/></label><div className="community-event-create-row"><label>Datum & Uhrzeit<input name="event_at" type="datetime-local" required/></label><label>Ort<input name="location" placeholder="z. B. Volkshaus"/></label></div><label>Beschreibung<textarea name="description" placeholder="Was erwartet die Besucher?"/></label><label className="content-image-upload">Bild (optional)<input name="image" type="file" accept="image/*"/></label><details className="community-event-create-advanced"><summary>Weitere Option</summary><label>Bild-URL<input name="image_url" placeholder="https://…"/></label></details><button className="primary-button community-event-publish-button">Veranstaltung veröffentlichen</button></form></section>}
