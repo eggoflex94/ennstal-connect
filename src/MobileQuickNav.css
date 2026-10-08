@@ -1,0 +1,20 @@
+/* Additive mobile navigation. React owns all navigation state and buttons. */
+.ec-mobile-quicknav { display: none; }
+@media (max-width: 760px) {
+  .app:has(.ec-mobile-quicknav) { padding-bottom: calc(78px + env(safe-area-inset-bottom, 0px)); }
+  .ec-mobile-quicknav { display: block; position: relative; z-index: 1005; }
+  .ec-mobile-quicknav-bar { position: fixed; z-index: 1006; bottom: 0; left: 0; right: 0; min-height: 64px; padding: 5px 6px calc(5px + env(safe-area-inset-bottom, 0px)); display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 3px; background: #132137; color: #f5f8ff; border-top: 1px solid #48617c; box-shadow: 0 -4px 20px #0004; }
+  .ec-mobile-quicknav-bar button { position: relative; min-width: 0; min-height: 52px; border: 0; border-radius: 10px; color: inherit; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 11px; font-weight: 600; cursor: pointer; }
+  .ec-mobile-quicknav-bar button[aria-current="page"], .ec-mobile-quicknav-bar button[aria-expanded="true"] { background: #304c72; color: #fff; }
+  .ec-mobile-nav-icon { font-size: 23px; line-height: 1; }
+  .ec-mobile-count { position: absolute; top: 1px; right: 6px; min-width: 17px; height: 17px; border-radius: 50px; background: #dd354f; color: white; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; padding: 0 3px; }
+  .ec-mobile-menu-backdrop { position: fixed; z-index: 1004; inset: 0; background: #0009; }
+  .ec-mobile-menu-sheet { position: fixed; z-index: 1005; left: 0; right: 0; bottom: calc(64px + env(safe-area-inset-bottom, 0px)); max-height: min(75dvh, 640px); overflow-y: auto; overscroll-behavior: contain; background: #172940; color: white; border-radius: 20px 20px 0 0; padding: 18px 16px 24px; box-shadow: 0 -6px 36px #0006; }
+  .ec-mobile-menu-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .ec-mobile-menu-title button { border: 0; background: #38506b; color: white; border-radius: 9px; min-height: 42px; min-width: 42px; }
+  .ec-mobile-menu-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
+  .ec-mobile-menu-grid button { background: #263c57; color: white; border: 1px solid #496078; border-radius: 12px; min-height: 54px; padding: 12px; font: inherit; text-align: left; }
+  .ec-mobile-menu-grid button[aria-current="page"] { border-color: #a3d1ff; background: #3a5982; }
+  .ec-mobile-quicknav button:focus-visible { outline: 3px solid #b9ddff; outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { .ec-mobile-quicknav * { scroll-behavior: auto; } }
+}
