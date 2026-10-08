@@ -1,0 +1,41 @@
+/* Final regional desktop layout: no empty sidebar column; dock remains on right. */
+@media (min-width:901px){
+  body .ec-regional-ui .dashboard-layout,
+  body .ec-regional-ui .app .dashboard-layout {
+    display:block!important;
+    grid-template-columns:minmax(0,1fr)!important;
+    padding-left:0!important;
+    padding-right:0!important;
+    margin-left:0!important;
+    width:100%!important;
+    max-width:100%!important;
+  }
+  body .ec-regional-ui .dashboard-layout>.modern-sidebar {display:none!important;}
+  body .ec-regional-ui .dashboard-layout>.modern-main {
+    display:block!important;
+    margin-left:0!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    box-sizing:border-box!important;
+    padding-left:clamp(16px,2vw,34px)!important;
+    padding-right:clamp(330px,22vw,380px)!important;
+  }
+  body .ec-regional-ui .modern-main>.content-root{
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    margin:0!important;
+    box-sizing:border-box!important;
+  }
+  body .ec-regional-ui .ec-right-dock.ec-compact-personal-dock{
+    right:clamp(10px,1.5vw,28px)!important;
+    width:clamp(285px,19vw,335px)!important;
+    max-width:calc(100vw - 24px)!important;
+  }
+}
+@media(max-width:900px){
+ body .ec-regional-ui .dashboard-layout{display:block!important;grid-template-columns:minmax(0,1fr)!important;min-width:0!important;}
+ body .ec-regional-ui .dashboard-layout>.modern-main{width:100%!important;max-width:100%!important;margin-left:0!important;padding-left:12px!important;padding-right:12px!important;}
+ body .ec-regional-ui .content-root{width:100%!important;max-width:100%!important;min-width:0!important;}
+}
