@@ -49,7 +49,9 @@ begin
  return jsonb_build_object('balance',(select purchase_points from public.profiles where id=uid),
  'normal_points',p.points,'catalog',(select coalesce(jsonb_agg(to_jsonb(c) order by c.price), '[]'::jsonb) from public.kaufpunkte_catalog c where active),
  'owned',(select coalesce(jsonb_agg(k.sku),'[]'::jsonb) from public.kaufpunkte_purchases k where k.user_id=uid),
- 'highlight_until',(select active_until from public.kaufpunkte_highlights where user_id=uid));
+ 'highlight_until',(select active_until from public.kaufpunkte_highlights where user_id=uid),
+ 'wishlist',(select coalesce(jsonb_agg(w.sku),'[]'::jsonb) from public.kaufpunkte_wishlist w where w.user_id=uid),
+ 'purchase_history',(select coalesce(jsonb_agg(jsonb_build_object('sku',k.sku,'price',k.price_paid,'date',k.purchased_at) order by k.purchased_at desc),'[]'::jsonb) from public.kaufpunkte_purchases k where k.user_id=uid));
 end $$;
 create or replace function public.kaufpunkte_buy(p_sku text)
 returns jsonb language plpgsql security definer set search_path=public as $$
@@ -79,6 +81,22 @@ end $$;
 revoke all on function public.kaufpunkte_buy(text) from public,anon;
 revoke all on function public.kaufpunkte_my_marketplace() from public,anon;
 grant execute on function public.kaufpunkte_buy(text),public.kaufpunkte_my_marketplace() to authenticated;
+
+
+-- A personal wishlist is independent of purchases; only the owner may change it.
+create table if not exists public.kaufpunkte_wishlist (
+ user_id uuid not null references public.profiles(id) on delete cascade,
+ sku text not null references public.kaufpunkte_catalog(sku) on delete cascade,
+ added_at timestamptz not null default now(),
+ primary key(user_id,sku)
+);
+alter table public.kaufpunkte_wishlist enable row level security;
+grant select,insert,delete on public.kaufpunkte_wishlist to authenticated;
+create policy "own wishlist read" on public.kaufpunkte_wishlist for select to authenticated using(user_id=(select auth.uid()));
+create policy "own wishlist add" on public.kaufpunkte_wishlist for insert to authenticated with check(user_id=(select auth.uid()));
+create policy "own wishlist remove" on public.kaufpunkte_wishlist for delete to authenticated using(user_id=(select auth.uid()));
+-- Only real entitlements may be sold. Cosmetic SKUs remain hidden until usable.
+update public.kaufpunkte_catalog set active=false where kind='DECORATION';
 
 -- Paid visibility is only a decoration; official staff roles always retain ranking priority.
 create table if not exists public.kaufpunkte_highlights (
