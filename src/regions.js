@@ -1,6 +1,24 @@
+export const STYRIAN_DISTRICTS = [
+  ["bruck-muerzzuschlag", "Bruck-Mürzzuschlag"],
+  ["deutschlandsberg", "Deutschlandsberg"],
+  ["graz-stadt", "Graz (Stadt)"],
+  ["graz-umgebung", "Graz-Umgebung"],
+  ["hartberg-fuerstenfeld", "Hartberg-Fürstenfeld"],
+  ["leibnitz", "Leibnitz"],
+  ["leoben", "Leoben"],
+  ["liezen", "Liezen"],
+  ["murau", "Murau"],
+  ["murtal", "Murtal"],
+  ["suedoststeiermark", "Südoststeiermark"],
+  ["voitsberg", "Voitsberg"],
+  ["weiz", "Weiz"],
+];
+export const districtName = (code) => STYRIAN_DISTRICTS.find(([id]) => id === code)?.[1] || "";
+export const publicDistrict = (member) => member?.show_district !== false ? districtName(member?.district_code) : "";
+
 export const COMMUNITY_REGIONS = [
   { slug: "ennstal", name: "Ennstal", shortName: "Ennstal" },
-  { slug: "leoben-bruck-muerzzuschlag", name: "Leoben – Bruck – Mürzzuschlag", shortName: "LBM" },
+  { slug: "leoben-bruck-muerzzuschlag", name: "Mur-Mürz-Zentralraum", shortName: "Mur-Mürz" },
   { slug: "salzkammergut", name: "Salzkammergut", shortName: "Salzkammergut" },
 ];
 
