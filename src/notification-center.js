@@ -3,8 +3,8 @@ import { supabase } from "./supabaseClient";
 let uid=null,mounted=false,channel=null,opening=false,badgeTimer=null;
 const el=(t,c,x)=>{const n=document.createElement(t);if(c)n.className=c;if(x!==undefined)n.textContent=x;return n;};
 const fmt=v=>{try{return new Date(v).toLocaleString("de-AT",{day:"2-digit",month:"2-digit",year:"2-digit",hour:"2-digit",minute:"2-digit"})}catch{return""}};
-const icon=t=>t==="MESSAGE"?"💬":t==="FRIEND_REQUEST"?"👥":t==="FORUM_REPLY"?"💭":t==="POKE"?"👋":t==="BUSINESS_ACCOUNT"?"★":t==="SYSTEM_ERROR"?"⚠":t==="PHOTO_LIKE"?"♥":t==="PHOTO_COMMENT"?"💬":t==="WELCOME_GREETING"?"👋":t==="RELATIONSHIP_CONFIRMATION"||t==="RELATIONSHIP_ACCEPTED"?"🤝":t==="ADMIN_FORUM_POST"?"▤":t==="ACTIVITY_REWARD"?"✦":"🔔";
-const typeLabel=t=>t==="MESSAGE"?"Nachrichten":t==="FRIEND_REQUEST"?"Freundschaftsanfragen":t==="FORUM_REPLY"?"Forum-Antworten":t==="POKE"?"Anstupser":t==="BUSINESS_ACCOUNT"?"Unternehmerkonto":t==="SYSTEM_ERROR"?"Systemfehler":t==="PHOTO_LIKE"?"Foto-Likes":t==="PHOTO_COMMENT"?"Fotokommentare":t==="WELCOME_GREETING"?"Willkommensgrüße":t==="RELATIONSHIP_CONFIRMATION"||t==="RELATIONSHIP_ACCEPTED"?"Beziehungen":t==="ADMIN_FORUM_POST"?"Admin-Forum":t==="ACTIVITY_REWARD"?"Aktivitätsbelohnungen":"Benachrichtigungen";
+const icon=t=>t==="MESSAGE"?"💬":t==="FRIEND_REQUEST"?"👥":t==="FORUM_REPLY"?"💭":t==="POKE"||t==="NUDGE"?"👋":t==="BUSINESS_ACCOUNT"?"★":t==="SYSTEM_ERROR"?"⚠":t==="PHOTO_LIKE"?"♥":t==="PHOTO_COMMENT"?"💬":t==="WELCOME_GREETING"?"👋":t==="RELATIONSHIP_CONFIRMATION"||t==="RELATIONSHIP_ACCEPTED"?"🤝":t==="ADMIN_FORUM_POST"?"▤":t==="ACTIVITY_REWARD"?"✦":"🔔";
+const typeLabel=t=>t==="MESSAGE"?"Nachrichten":t==="FRIEND_REQUEST"?"Freundschaftsanfragen":t==="FORUM_REPLY"?"Forum-Antworten":t==="POKE"||t==="NUDGE"?"Anstupser":t==="BUSINESS_ACCOUNT"?"Unternehmerkonto":t==="SYSTEM_ERROR"?"Systemfehler":t==="PHOTO_LIKE"?"Foto-Likes":t==="PHOTO_COMMENT"?"Fotokommentare":t==="WELCOME_GREETING"?"Willkommensgrüße":t==="RELATIONSHIP_CONFIRMATION"||t==="RELATIONSHIP_ACCEPTED"?"Beziehungen":t==="ADMIN_FORUM_POST"?"Admin-Forum":t==="ACTIVITY_REWARD"?"Aktivitätsbelohnungen":"Benachrichtigungen";
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const withTimeout=(promise,ms=9000,message="Zeitüberschreitung")=>new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error(message)),ms);Promise.resolve(promise).then(v=>{clearTimeout(timer);resolve(v)},e=>{clearTimeout(timer);reject(e)})});
 const isNetworkError=e=>/failed to fetch|networkerror|network request failed|load failed|timeout|zeitüberschreitung/i.test(String(e?.message||e||""));
@@ -29,7 +29,7 @@ function navigate(type){
     window.dispatchEvent(new CustomEvent("ec:open-system-errors"));
     return;
   }
-  const page=type==="MESSAGE"?"messages":type==="FRIEND_REQUEST"?"requests":type==="FORUM_REPLY"?"forum":type==="ADMIN_FORUM_POST"?"admin-forum":type==="POKE"||type==="RELATIONSHIP_CONFIRMATION"||type==="RELATIONSHIP_ACCEPTED"?"members":type==="PHOTO_LIKE"||type==="PHOTO_COMMENT"?"photos":"home";
+  const page=type==="MESSAGE"?"messages":type==="FRIEND_REQUEST"?"requests":type==="FORUM_REPLY"?"forum":type==="ADMIN_FORUM_POST"?"admin-forum":type==="POKE"||type==="NUDGE"||type==="RELATIONSHIP_CONFIRMATION"||type==="RELATIONSHIP_ACCEPTED"?"members":type==="PHOTO_LIKE"||type==="PHOTO_COMMENT"?"photos":"home";
   window.dispatchEvent(new CustomEvent("ec:navigate",{detail:{page}}));
 }
 
@@ -50,7 +50,7 @@ async function markRead(id){
 
 async function popup(n){
   const p=await prefs();
-  const socialTypes=new Set(["POKE","PHOTO_LIKE","PHOTO_COMMENT","WELCOME_GREETING","RELATIONSHIP_CONFIRMATION","RELATIONSHIP_ACCEPTED"]);
+  const socialTypes=new Set(["POKE","NUDGE","PHOTO_LIKE","PHOTO_COMMENT","WELCOME_GREETING","RELATIONSHIP_CONFIRMATION","RELATIONSHIP_ACCEPTED"]);
   const adminTypes=new Set(["SYSTEM_ERROR","ADMIN_FORUM_POST","BUSINESS_ACCOUNT"]);
   const allowed=n.type==="MESSAGE"?p.notify_message_popup:n.type==="FRIEND_REQUEST"?p.notify_friend_request_popup:n.type==="FORUM_REPLY"?p.notify_forum_reply_popup:socialTypes.has(n.type)?p.notify_social_popup:adminTypes.has(n.type)?p.notify_admin_popup:n.type==="ACTIVITY_REWARD"?p.notify_reward_popup:true;
   if(!allowed)return;
@@ -59,12 +59,43 @@ async function popup(n){
   const existing=host.querySelector(`[data-type="${CSS.escape(String(n.type||"GENERAL"))}"]`);
   if(existing){const c=Number(existing.dataset.count||1)+1;existing.dataset.count=String(c);existing.querySelector("strong").textContent=`${c} neue ${typeLabel(n.type)}`;existing.querySelector("small").textContent=n.body||n.title||"Neue Aktivität";return}
   const t=el("div","ec-live-toast");t.dataset.type=n.type||"GENERAL";t.dataset.count="1";t.setAttribute("role","status");
-  t.innerHTML=`<button type="button" class="ec-live-toast-main"><span class="ec-toast-icon">${icon(n.type)}</span><span><strong></strong><small></small></span></button><button type="button" class="ec-toast-x" aria-label="Schließen">×</button>`;
+  const isNudge=["POKE","NUDGE"].includes(String(n.type||"").toUpperCase());
+  t.innerHTML=`<button type="button" class="ec-live-toast-main"><span class="ec-toast-icon">${icon(n.type)}</span><span><strong></strong><small></small></span></button><div class="ec-live-toast-actions"></div><button type="button" class="ec-toast-x" aria-label="Schließen">×</button>`;
   t.querySelector("strong").textContent=n.title||typeLabel(n.type);
   t.querySelector("small").textContent=n.body||"Neue Aktivität";
   t.querySelector(".ec-live-toast-main").onclick=async()=>{await markRead(n.id);t.remove();navigate(n.type);scheduleBadge()};
   t.querySelector(".ec-toast-x").onclick=()=>t.remove();
-  if(host.isConnected)host.appendChild(t);setTimeout(()=>t.remove(),9000);
+
+  if(isNudge){
+    try{
+      const inbox=await withTimeout(supabase.rpc("member_nudge_inbox"),6000);
+      const sender=inbox.data?.[0];
+      if(sender?.sender_id){
+        const actions=t.querySelector(".ec-live-toast-actions");
+        const back=el("button","ec-toast-nudge-back","👋 Zurückstupsen");back.type="button";
+        back.onclick=async(event)=>{
+          event.preventDefault();event.stopPropagation();
+          back.disabled=true;back.textContent="Wird gestupst …";
+          try{
+            const result=await withTimeout(supabase.rpc("member_nudge",{p_recipient_id:sender.sender_id}),7000);
+            if(result.error)throw result.error;
+            await markRead(n.id);
+            back.textContent="✓ Zurückgestupst";
+            scheduleBadge();
+            setTimeout(()=>t.remove(),1200);
+          }catch(error){
+            back.disabled=false;
+            back.textContent="👋 Zurückstupsen";
+            const msg=String(error?.message||error||"Anstupsen nicht möglich");
+            t.querySelector("small").textContent=msg;
+          }
+        };
+        actions.appendChild(back);
+      }
+    }catch{}
+  }
+
+  if(host.isConnected)host.appendChild(t);setTimeout(()=>t.remove(),isNudge?14000:9000);
 }
 
 async function refreshBadge(){
