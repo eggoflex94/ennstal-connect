@@ -2,8 +2,9 @@ import React,{useEffect,useState} from "react";
 import {supabase} from "./supabaseClient";
 export default function KaufpunkteMarket({user,profile}) {
  const [market,setMarket]=useState(null),[error,setError]=useState(""),[busy,setBusy]=useState(false),[visible,setVisible]=useState(false);
- const isHead=Boolean(profile?.is_primary_head_admin);
+ const isHead=Boolean(profile?.is_primary_head_admin)||profile?.role==="HEAD_ADMIN";
  const [tab,setTab]=useState("shop");
+ const [adminMode,setAdminMode]=useState(false);
  const weekNumber=Math.floor(Date.now()/(7*24*60*60*1000));
  const weeklyItems=(market?.catalog||[]).filter(item=>item.kind==="LAYOUT").sort((a,b)=>a.sku.localeCompare(b.sku));
  const weeklyPick=weeklyItems.length?weeklyItems[weekNumber%weeklyItems.length]:null;
@@ -19,13 +20,14 @@ export default function KaufpunkteMarket({user,profile}) {
  <button type="button" onClick={()=>setVisible(v=>!v)}>{visible?"Marktplatz schließen":"Marktplatz ansehen"}</button>
  </div>
  <p><strong>{Number(market?.normal_points??profile?.points??0).toLocaleString("de-AT")} Punkte · {Number(market?.balance??profile?.purchase_points??0).toLocaleString("de-AT")} [k]</strong> Kaufpunkte</p>
+ {isHead&&<button type="button" onClick={()=>setAdminMode(v=>!v)}>{adminMode?"Zum Marktplatz":"⚙ Admin-Marktplatz · Preise verwalten"}</button>}
  {visible&&<>{weeklyPick&&<div style={{padding:14,marginBottom:16,borderRadius:12,background:"linear-gradient(130deg,#17374f,#265c6c)",color:"#fff"}}><strong>✨ Shop der Woche: {weeklyPick.title}</strong><p>{weeklyPick.description} · {weeklyPick.price} [k]</p><small>Jede Woche ein anderes Design im Fokus. Der reguläre Preis bleibt gleich.</small></div>}<div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>{[["shop","Shop"],["wishlist","Wunschliste"],["history","Meine Käufe"]].map(([id,title])=><button key={id} type="button" aria-pressed={tab===id} onClick={()=>setTab(id)}>{title}</button>)}</div>{tab==="history"&&<div>{(market?.purchase_history||[]).length?(market.purchase_history||[]).map((p,i)=><p key={i}>{p.sku} · {p.price} [k] · {new Date(p.date).toLocaleDateString("de-AT")}</p>):<p>Noch keine Käufe.</p>}</div>}{market?.highlight_until && new Date(market.highlight_until)>new Date() && <p role="status">✨ Dein Profil ist bis {new Date(market.highlight_until).toLocaleDateString("de-AT")} hervorgehoben. Offizielle Rollen haben immer Vorrang.</p>}<p>Kaufpunkte erhältst du zusätzlich zu deinen normalen Punkten. Jeder Kauf reduziert nur dein [k]-Guthaben.</p><div style={{display:tab==="history"?"none":"grid",gridTemplateColumns:"repeat(auto-fit,minmax(190px,1fr))",gap:12}}>
  {(market?.catalog||[]).filter(item=>tab!=="wishlist"||(market?.wishlist||[]).includes(item.sku)).map(item=>{const owned=!["SUPPORTER","HIGHLIGHT"].includes(item.kind) && (market.owned||[]).includes(item.sku);return <article key={item.sku} style={{border:"1px solid #5b8091",padding:14,borderRadius:12}}>
  {item.kind==="LAYOUT" && <div className={"ec-market-preview "+item.sku} style={{border:"2px solid #6cc7de",borderRadius:14,padding:12,marginBottom:12,background:"linear-gradient(135deg,#18384e,#356b89)",color:"#fff",minHeight:100}}><div style={{display:"flex",gap:10,alignItems:"center"}}><img src={profile?.avatar_url||"/default-avatar.svg"} alt="" style={{width:42,height:42,borderRadius:"50%"}}/><div><strong>{profile?.nickname||"Dein Profil"}</strong><small style={{display:"block"}}>Mitglied · Profilrahmen</small></div></div></div>}
  <strong>{item.kind==="LAYOUT"?"🎨":item.kind==="SUPPORTER"?"⭐":item.kind==="HIGHLIGHT"?"✨":item.kind==="DECORATION"?"🎨":"👀"} {item.title}</strong><p>{item.description}</p><p><strong>{item.price} [k]</strong></p>
  <button type="button" disabled={busy||owned||Number(market.balance)<item.price} onClick={()=>buy(item.sku,item.title,item.price)}>{owned?"Bereits erworben":Number(market.balance)<item.price?"Nicht genug [k]":"Jetzt kaufen"}</button>
  <p><button type="button" disabled={busy} onClick={()=>wish(item.sku)}>{(market?.wishlist||[]).includes(item.sku)?"♥ Von Wunschliste entfernen":"♡ Merken"}</button></p>
- {isHead&&<p><button type="button" disabled={busy} onClick={()=>changePrice(item.sku,item.price)}>Preis bearbeiten</button></p>}</article>})}</div></>}
+ {isHead&&adminMode&&<p><button type="button" disabled={busy} onClick={()=>changePrice(item.sku,item.price)}>Preis bearbeiten</button></p>}</article>})}</div></>}
  {error&&<p role="alert">{error}</p>}
  </section>;
 }

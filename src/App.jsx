@@ -1,3 +1,4 @@
+import { STYRIAN_DISTRICTS } from "./regions.js";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRefreshScheduler } from "./refreshScheduler.js";
 import { loadSections } from "./sectionLoader.js";
@@ -1155,6 +1156,14 @@ export default function App() {
     // The database enforces both earned online-time rewards and purchased layouts.
     // Do not apply obsolete client-only point thresholds here.
     if (isAdmin(profile?.role)) payload.hide_online_status = f.get("hide_online_status") === "on";
+    const districtCode=String(f.get("district_code")||"");
+    const districtVisibility=String(f.get("district_visibility")||"PUBLIC");
+    if(!STYRIAN_DISTRICTS.some(([code])=>code===districtCode))return showNotice("Bitte einen steirischen Bezirk auswählen.");
+    if(!["PUBLIC","FRIENDS"].includes(districtVisibility))return showNotice("Bitte die Bezirks-Sichtbarkeit auswählen.");
+    const {error:districtError}=await supabase.from("member_district_privacy").upsert({user_id:user.id,district_code:districtCode,visibility:districtVisibility},{onConflict:"user_id"});
+    if(districtError)return showNotice(districtError.message);
+    payload.district_code=districtVisibility==="PUBLIC"?districtCode:null;
+    payload.show_district=districtVisibility==="PUBLIC";
     let { error } = await supabase.from("profiles").update(payload).eq("id", user.id);
     // Older live databases may not yet include the optional presentation fields.
     // Save the rest of the profile instead of blocking the whole form.
@@ -2288,6 +2297,8 @@ function Profile({ profile, user, isHeadAdmin, saveProfile, uploadProfileImage, 
     <legend>Grunddaten und Farben</legend>
     <div className="profile-editor-grid profile-editor-grid-main">
       <label className="profile-editor-field profile-editor-field-wide"><span>Nickname *</span><input name="nickname" defaultValue={profile?.nickname || ""} required/></label>
+      <label className="profile-editor-field profile-editor-field-wide"><span>Steirischer Bezirk *</span><select name="district_code" defaultValue={profile?.district_code || ""} required><option value="">Bitte Bezirk auswählen</option>{STYRIAN_DISTRICTS.map(([code,name])=><option key={code} value={code}>{name}</option>)}</select></label>
+      <label className="profile-editor-field profile-editor-field-wide"><span>Bezirks-Sichtbarkeit *</span><select name="district_visibility" defaultValue={profile?.district_visibility || "PUBLIC"} required><option value="PUBLIC">Öffentlich</option><option value="FRIENDS">Nur Freunde</option></select></label>
       <label className="profile-editor-field profile-color-field"><span>Profil-Akzent</span><input type="color" name="profile_accent" defaultValue={profile?.profile_accent || "#ff6b25"}/></label>
       <label className="profile-editor-field profile-color-field"><span>Profil-Hintergrundfarbe</span><input type="color" name="profile_background_color" defaultValue={isImage ? "#1b1f26" : background}/></label>
     </div>
