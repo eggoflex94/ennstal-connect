@@ -211,6 +211,7 @@ import "./community-photographer.css";
 import "./personal-dock-final-authority.css";
 import "./neon-pink-theme.css";
 import "./header-scroll-authority.css";
+import "./community-shell-width-fix.css";
 
 // Guard against stale DOM sibling references from legacy/runtime helpers.
 // React and several compatibility runtimes can update the same container within
