@@ -212,30 +212,33 @@ function renderCommunity(region, events, rsvps) {
   panel.classList.add('ec-regional-events-panel');
   panel.querySelector('.ec-regional-events-authority')?.remove();
 
+  const currentEvents = events
+    .filter((event) =>
+      String(event.status || '').toUpperCase() !== 'CANCELLED'
+      && new Date(event.event_at).getTime() >= Date.now()
+    )
+    .sort((a, b) =>
+      Number(Boolean(b.is_featured)) - Number(Boolean(a.is_featured))
+      || new Date(a.event_at) - new Date(b.event_at)
+    );
+
   const wrapper = document.createElement('div');
   wrapper.className = 'ec-regional-events-authority';
   wrapper.dataset.regionId = region.id;
   const header = document.createElement('div');
   header.className = 'ec-regional-events-context';
-  header.innerHTML = `<span>REGION</span><strong>${esc(region.name)}</strong><small>${events.length} eingetragene Veranstaltung${events.length === 1 ? '' : 'en'}</small>`;
+  header.innerHTML = `<span>REGION</span><strong>${esc(region.name)}</strong><small>${currentEvents.length} kommende Veranstaltung${currentEvents.length === 1 ? '' : 'en'}</small>`;
   wrapper.appendChild(header);
 
-  if (!events.length) {
+  if (!currentEvents.length) {
     const empty = document.createElement('p');
     empty.className = 'ec-regional-events-empty';
-    empty.textContent = `In ${region.name} sind derzeit keine Veranstaltungen eingetragen.`;
+    empty.textContent = `In ${region.name} sind derzeit keine kommenden Veranstaltungen eingetragen.`;
     wrapper.appendChild(empty);
   } else {
     const list = document.createElement('div');
     list.className = 'ec-regional-events-list';
-    const sorted = [...events].sort((a, b) => {
-      const aPast = new Date(a.event_at).getTime() < Date.now();
-      const bPast = new Date(b.event_at).getTime() < Date.now();
-      if (aPast !== bPast) return aPast ? 1 : -1;
-      if (!aPast && Boolean(a.is_featured) !== Boolean(b.is_featured)) return a.is_featured ? -1 : 1;
-      return aPast ? new Date(b.event_at) - new Date(a.event_at) : new Date(a.event_at) - new Date(b.event_at);
-    });
-    sorted.forEach((event) => list.appendChild(buildEventRow(event, rsvps.get(event.id))));
+    currentEvents.forEach((event) => list.appendChild(buildEventRow(event, rsvps.get(event.id))));
     wrapper.appendChild(list);
   }
   panel.appendChild(wrapper);
