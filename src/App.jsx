@@ -2349,23 +2349,58 @@ function AdminLogPage({ adminLog, members }) {
 
   const actionKey=(entry)=>String(entry?.action||entry?.details?.action_name||"").toUpperCase();
   const denied=(entry)=>entry?.action==="ADMIN_DENIED" || entry?.details?.outcome==="DENIED";
+  const changesFor=(entry)=>Array.isArray(entry?.details?.changes)?entry.details.changes:[];
+  const areasFor=(entry)=>[...new Set(changesFor(entry).map((change)=>String(change?.area||"").toLowerCase()).filter(Boolean))];
+  const fieldsFor=(entry)=>[...new Set(changesFor(entry).flatMap((change)=>Array.isArray(change?.changed_fields)?change.changed_fields:[]).map((field)=>String(field||"").toLowerCase()).filter(Boolean))];
+
   const categoryFor=(entry)=>{
     const key=actionKey(entry);
-    const text=(key+" "+JSON.stringify(entry?.details||{})).toUpperCase();
-    if(/ROLE|PERMISSION|RIGHT|ADMIN_ASSIGNED|ADMIN_REMOVED|HEAD_ADMIN/.test(text)) return "ROLES";
-    if(/POINT|REWARD|SCORE/.test(text)) return "POINTS";
-    if(/SUSPEND|BLOCK|REPORT|MODERAT|MESSAGE|FORUM|MEDIA|DELETE|REMOVE|VERIFY|FAKE|ACCOUNT/.test(text)) return "MODERATION";
-    if(/SECURITY|SYSTEM_ERROR|DENIED|EVIDENCE|INTEGRITY|LOGIN|AUTH|LOCK/.test(text)) return "SECURITY";
+    const areas=areasFor(entry);
+    const fields=fieldsFor(entry);
+
+    if(/POINT|REWARD|SCORE/.test(key) || fields.some((field)=>/points|score|balance/.test(field))) return "POINTS";
+    if(
+      /ROLE|PERMISSION|HEAD_ADMIN|ADMIN_ASSIGNED|ADMIN_REMOVED/.test(key)
+      || areas.some((area)=>["user_permissions","admin_permissions","roles"].includes(area))
+      || fields.some((field)=>["role","account_badge","is_primary_head_admin","permissions"].includes(field))
+    ) return "ROLES";
+    if(
+      /SECURITY|SYSTEM_ERROR|DENIED|EVIDENCE|INTEGRITY|LOGIN|AUTH|LOCK|FAKE/.test(key)
+      || areas.some((area)=>["user_feature_locks","user_blocks","security_events"].includes(area))
+    ) return "SECURITY";
+    if(
+      /SUSPEND|BLOCK|REPORT|MODERAT|FORUM|MEDIA|DELETE|REMOVE|VERIFY|ACCOUNT/.test(key)
+      || areas.some((area)=>["messages","user_reports","forum_posts","forum_replies","member_photos","member_photo_comments","profiles"].includes(area))
+    ) return "MODERATION";
     return "OTHER";
   };
+
+  const isRoutineEntry=(entry)=>{
+    const key=actionKey(entry);
+    const areas=areasFor(entry);
+    const fields=fieldsFor(entry);
+    if(key==="SYSTEM_ERROR_STATUS") return true;
+    if(areas.length===1 && areas[0]==="messages" && fields.length===1 && fields[0]==="is_read") return true;
+    if(
+      areas.length===1
+      && areas[0]==="profiles"
+      && fields.length>0
+      && fields.every((field)=>["last_seen","last_seen_at","online_seconds"].includes(field))
+    ) return true;
+    return false;
+  };
+
   const important=(entry)=>{
     if(denied(entry)) return true;
+    if(isRoutineEntry(entry)) return false;
     const key=actionKey(entry);
-    if(key==="SYSTEM_ERROR_STATUS") return false;
     const cat=categoryFor(entry);
-    if(["ROLES","POINTS","MODERATION","SECURITY"].includes(cat)) return true;
-    return /BUSINESS|VERIFICATION|FEATURE|PRIVILEGED|ADMIN_|ACCOUNT_|DELETION/.test(key);
+    if(["ROLES","POINTS","SECURITY"].includes(cat)) return true;
+    if(cat==="MODERATION") return /SUSPEND|BLOCK|REPORT|DELETE|REMOVE|VERIFY|ACCOUNT|FAKE|FEATURE/.test(key)
+      || fieldsFor(entry).some((field)=>/verification|suspend|status|role|feature/.test(field));
+    return /BUSINESS|VERIFICATION|FEATURE|PRIVILEGED|ACCOUNT_|DELETION/.test(key);
   };
+
   const iconFor=(entry)=>{
     const cat=categoryFor(entry);
     if(denied(entry)) return "!";
@@ -2375,10 +2410,46 @@ function AdminLogPage({ adminLog, members }) {
     if(cat==="SECURITY") return "◆";
     return "•";
   };
+
   const labelFor=(entry)=>{
     const key=actionKey(entry);
-    if(key==="SYSTEM_ERROR_STATUS") return "Systemfehler-Status geändert";
+    const areas=areasFor(entry);
+    const fields=fieldsFor(entry);
+    const actionName=String(entry?.details?.action_name||"").toLowerCase();
+
+    if(key==="SYSTEM_ERROR_STATUS") return entry?.details?.status==="RESOLVED" ? "Systemfehler als gelöst markiert" : "Status eines Systemfehlers geändert";
+    if(key==="POINTS_AWARDED") return entry?.details?.category==="EVENT_REWARD" ? "Eventpunkte vergeben" : "Punkte vergeben";
+    if(key==="SYSTEM_POINTS_AWARDED") return "Automatische Aktivitätspunkte vergeben";
+    if(key==="COMMUNITY_PHOTOGRAPHER_ASSIGNED") return entry?.details?.enabled===false ? "Community-Fotograf entfernt" : "Community-Fotograf freigeschaltet";
+    if(areas.length===1 && areas[0]==="messages" && fields.includes("is_read")) return "Moderationsnachricht als gelesen markiert";
+    if(areas.includes("user_permissions")) return "Berechtigungen eines Admins geändert";
+    if(areas.includes("profiles") && fields.includes("role")) return "Mitgliedsrolle geändert";
+    if(areas.includes("profiles") && fields.some((field)=>field.includes("verification"))) return "Profil-Verifizierung angefordert oder geändert";
+    if(areas.includes("profiles") && fields.some((field)=>field.includes("suspend")||field==="account_status")) return "Mitgliedsstatus geändert";
+    if(areas.includes("community_events")){
+      if(changesFor(entry).some((change)=>change.area==="community_events" && change.operation==="INSERT")) return "Veranstaltung veröffentlicht";
+      if(changesFor(entry).some((change)=>change.area==="community_events" && change.operation==="DELETE")) return "Veranstaltung gelöscht";
+      return "Veranstaltung geändert";
+    }
+    if(areas.includes("forum_posts")) return "Forumsbeitrag administrativ geändert";
+    if(areas.includes("forum_replies")) return "Forumsantwort administrativ geändert";
+    if(areas.includes("member_photos")) return "Mitgliederfoto administrativ geändert";
+    if(actionName.includes("require profile verification")) return "Profil-Verifizierung angefordert";
     return ADMIN_LOG_LABELS[entry.action] || entry.details?.action_name || entry.action || "Admin-Aktion";
+  };
+
+  const descriptionFor=(entry)=>{
+    const areas=areasFor(entry);
+    const fields=fieldsFor(entry);
+    if(areas.length===1 && areas[0]==="messages" && fields.includes("is_read")) return "Eine Moderationsnachricht wurde geöffnet und als gelesen gespeichert.";
+    if(areas.includes("profiles") && fields.some((field)=>field.includes("verification"))) return "Für ein Mitglied wurde eine Profil-Verifizierung angefordert oder deren Frist geändert.";
+    if(areas.includes("user_permissions")) return "Die administrativen Berechtigungen eines Mitglieds wurden angepasst.";
+    if(entry?.action==="POINTS_AWARDED"){
+      const amount=Number(entry?.details?.delta||0);
+      return `${amount>0?"+":""}${amount} Punkte · ${entry?.details?.reason||"Punkte administrativ vergeben"}`;
+    }
+    if(entry?.action==="COMMUNITY_PHOTOGRAPHER_ASSIGNED") return entry?.details?.scope==="REGIONAL" ? "Die Community-Fotograf-Berechtigung wurde für eine Region geändert." : "Die Community-Fotograf-Berechtigung wurde geändert.";
+    return "";
   };
 
   const todayStart=new Date(); todayStart.setHours(0,0,0,0);
@@ -2450,8 +2521,9 @@ function AdminLogPage({ adminLog, members }) {
             <span><small>Ergebnis</small><strong>{isDenied?"Abgelehnt":"Ausgeführt"}</strong></span>
           </div>
           {isDenied && entry.details?.error && <p className="admin-log-reason"><b>Grund der Ablehnung:</b> {entry.details.error}</p>}
-          {!isDenied && detailText && <p className="admin-log-reason">{detailText}</p>}
-          {entry.details?.reason && !String(detailText||"").includes(entry.details.reason) && <p className="admin-log-reason"><b>Begründung:</b> {entry.details.reason}</p>}
+          {!isDenied && descriptionFor(entry) && <p className="admin-log-reason admin-log-human-description">{descriptionFor(entry)}</p>}
+          {!isDenied && !descriptionFor(entry) && detailText && <p className="admin-log-reason">{detailText}</p>}
+          {entry.details?.reason && !String(descriptionFor(entry)||detailText||"").includes(entry.details.reason) && <p className="admin-log-reason"><b>Begründung:</b> {entry.details.reason}</p>}
         </div>
       </details>;
     })}
