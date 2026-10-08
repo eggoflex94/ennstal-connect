@@ -30,7 +30,9 @@ async function load(){
       supabase.from('regional_admin_assignments').select('user_id,region_id,active').eq('active',true),
       supabase.from('friendships').select('requester_id,receiver_id,status').eq('status','ACCEPTED').or(`requester_id.eq.${user.id},receiver_id.eq.${user.id}`)
     ]);
-    state.profile=profile||null;state.regions=regions||[];state.regionalAdmins=assignments||[];
+    state.profile=profile||null;
+    if(state.profile){const [scores,wallet]=await Promise.all([loadMemberScores([user.id]),supabase.rpc('kaufpunkte_my_marketplace')]);state.profile.display_score=scores.get(String(user.id))??Number(profile.points||0);state.profile.display_buy=wallet.error?Number(profile.purchase_points||0):Number(wallet.data?.balance??profile.purchase_points??0)}
+    state.regions=regions||[];state.regionalAdmins=assignments||[];
     const friendIds=(friendships||[]).map(f=>f.requester_id===user.id?f.receiver_id:f.requester_id).filter(Boolean);
     if(friendIds.length){
       const {data:friends}=await supabase.from('profiles').select('id,nickname,role,account_badge,points,is_online,hide_online_status,last_active_at,last_seen_at,home_region_id,account_status,role_display_label,role_star_url,role_accent_color').in('id',friendIds).eq('account_status','ACTIVE');
@@ -126,26 +128,32 @@ function ensureMunicipalityPanel(dock){
 }
 
 function ensurePointsWallet(dock){
-  const head=dock.querySelector('.ec-dock-head');if(!head||!state.profile)return;
-  let wallet=dock.querySelector('.ec-top-points-wallet');
-  if(!wallet){wallet=document.createElement('div');wallet.className='ec-top-points-wallet';head.insertAdjacentElement('afterend',wallet);}
-  const normal=Number(state.profile.points||0).toLocaleString('de-AT');
-  const buy=Number(state.profile.purchase_points||0).toLocaleString('de-AT');
-  wallet.innerHTML='<div class="ec-wallet-points"><strong>'+normal+'</strong><span class="ec-wallet-divider" aria-hidden="true">|</span><span>'+buy+' [k]</span><button type="button" class="ec-points-list-link" aria-label="Meine Punkteliste öffnen">→ Punkteliste</button></div>';
-  wallet.querySelector('.ec-points-list-link').onclick=async(event)=>{event.preventDefault();event.stopPropagation();
-    const overlay=document.createElement('div');overlay.className='ec-self-points-overlay';
-    overlay.innerHTML='<section role="dialog" aria-modal="true" aria-label="Meine Punkteliste"><header><strong>Meine Punkteliste</strong><button type="button" aria-label="Schließen">×</button></header><div class="ec-self-points-rows">Lade deine Buchungen …</div></section>';
-    document.body.appendChild(overlay);
-    const close=()=>overlay.remove();overlay.querySelector('button').onclick=close;overlay.onclick=e=>{if(e.target===overlay)close()};
-    const {data,error}=await supabase.from('point_history').select('delta,amount,reason,created_at').eq('user_id',state.profile.id).order('created_at',{ascending:false}).limit(50);
-    if(!overlay.isConnected)return;
-    const rows=overlay.querySelector('.ec-self-points-rows');
-    if(error){rows.textContent='Die Punkteliste konnte nicht geladen werden.';return;}
-    rows.replaceChildren();
-    if(!data?.length){rows.textContent='Noch keine Punktbuchungen vorhanden.';return;}
-    data.forEach(p=>{const line=document.createElement('p');line.textContent=new Date(p.created_at).toLocaleDateString('de-AT')+' · '+String(p.reason||'Punkte')+' · '+String(p.delta??p.amount??0)+' Punkte';rows.appendChild(line)});
-  };
+ const head=dock.querySelector('.ec-dock-head');if(!head||!state.profile)return;
+ let wallet=dock.querySelector('.ec-top-points-wallet');
+ if(!wallet){
+  wallet=document.createElement('div');wallet.className='ec-top-points-wallet';
+  wallet.innerHTML='<div class="ec-wallet-points"><strong class="ec-wallet-normal"></strong><span class="ec-wallet-divider" aria-hidden="true">|</span><span class="ec-wallet-buy"></span><button type="button" class="ec-points-list-link">Punkteliste →</button></div>';
+  head.insertAdjacentElement('afterend',wallet);
+  wallet.querySelector('.ec-points-list-link').addEventListener('click',async event=>{
+   event.preventDefault();event.stopPropagation();
+   const prior=document.querySelector('.ec-self-points-overlay');prior?.remove();
+   const overlay=document.createElement('div');overlay.className='ec-self-points-overlay';
+   overlay.innerHTML='<section role="dialog" aria-modal="true" aria-label="Meine Punkteliste"><header><strong>Meine Punkteliste</strong><button type="button" aria-label="Schließen">×</button></header><div class="ec-self-points-rows" role="status">Punkteliste wird geladen …</div></section>';
+   document.body.appendChild(overlay);
+   const close=()=>overlay.remove();overlay.querySelector('header button').onclick=close;overlay.addEventListener('click',e=>{if(e.target===overlay)close()});
+   const {data,error}=await supabase.rpc('profile_point_feed',{p_user_id:state.profile.id});
+   if(!overlay.isConnected)return;
+   const rows=overlay.querySelector('.ec-self-points-rows');rows.replaceChildren();
+   if(error){rows.textContent='Punkteliste konnte nicht geladen werden: '+error.message;return}
+   const entries=Array.isArray(data)?data:Array.isArray(data?.entries)?data.entries:Array.isArray(data?.history)?data.history:[];
+   if(!entries.length){rows.textContent='Keine Punktbuchungen vorhanden.';return}
+   entries.slice(0,50).forEach(entry=>{const line=document.createElement('p');line.textContent=[entry.created_at?new Date(entry.created_at).toLocaleDateString('de-AT'):'',entry.reason||entry.description||'Punkte',String(entry.delta??entry.amount??entry.points??'')].filter(Boolean).join(' · ');rows.appendChild(line)});
+  });
+ }
+ wallet.querySelector('.ec-wallet-normal').textContent=Number(state.profile.display_score??state.profile.points??0).toLocaleString('de-AT');
+ wallet.querySelector('.ec-wallet-buy').textContent=Number(state.profile.display_buy??state.profile.purchase_points??0).toLocaleString('de-AT')+' [k]';
 }
+
 function render(){const dock=document.querySelector('.ec-right-dock');if(!dock)return;dock.classList.add('ec-dashboard-top-integrated');ensureRoleScope(dock);ensurePointsWallet(dock);ensureOnlineFriends(dock);ensureMunicipalityPanel(dock);ensureAdminLabel(dock);ensureAdminBadge(dock)}
-function boot(){render();void load();const observer=new MutationObserver(()=>{clearTimeout(window.__ecDashboardTopPolish);window.__ecDashboardTopPolish=setTimeout(render,70)});observer.observe(document.documentElement,{childList:true,subtree:true});window.addEventListener('ec:region-change',()=>setTimeout(()=>{render();void load()},80));window.addEventListener('focus',()=>void load());document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')void load()});setInterval(()=>void load(),30000)}
+function boot(){render();void load();const observer=new MutationObserver(()=>{clearTimeout(window.__ecDashboardTopPolish);window.__ecDashboardTopPolish=setTimeout(render,70)});observer.observe(document.documentElement,{childList:true,subtree:true});window.addEventListener('ec:region-change',()=>setTimeout(()=>{render();void load()},80));window.addEventListener('focus',()=>void load());window.addEventListener('ec:points-updated',()=>void load());document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')void load()});setInterval(()=>void load(),30000)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
