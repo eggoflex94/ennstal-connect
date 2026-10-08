@@ -4,6 +4,7 @@ create table if not exists public.member_district_privacy (
   visibility text not null check (visibility in ('PUBLIC','FRIENDS'))
 );
 alter table public.member_district_privacy enable row level security;
+grant select,insert,update on public.member_district_privacy to authenticated;
 create policy "district owner read" on public.member_district_privacy for select to authenticated using (user_id = auth.uid());
 create policy "district owner write" on public.member_district_privacy for insert to authenticated with check (user_id = auth.uid());
 create policy "district owner edit" on public.member_district_privacy for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
