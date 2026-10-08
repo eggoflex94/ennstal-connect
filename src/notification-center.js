@@ -64,7 +64,7 @@ async function popup(n){
   t.querySelector("small").textContent=n.body||"Neue Aktivität";
   t.querySelector(".ec-live-toast-main").onclick=async()=>{await markRead(n.id);t.remove();navigate(n.type);scheduleBadge()};
   t.querySelector(".ec-toast-x").onclick=()=>t.remove();
-  host.prepend(t);setTimeout(()=>t.remove(),9000);
+  if(host.isConnected)host.appendChild(t);setTimeout(()=>t.remove(),9000);
 }
 
 async function refreshBadge(){
