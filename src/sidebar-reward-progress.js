@@ -53,7 +53,7 @@ function render(state){
     <div class="ec-dock-reward-row ec-dock-reward-online-copy"><span>Aktive Onlinezeit</span><em>${formatHours(seconds)}</em></div>
     <div class="ec-dock-reward-bar ec-dock-reward-bar-online"><i style="width:${onlinePercent(seconds)}%"></i></div>
     <small>${onlinePoints}/250 Online-Punkte · +1 Punkt je 2 aktive Stunden · max. 500 Std.</small>
-    <div class="ec-online-self-claim-zone"><button type="button" class="ec-online-self-claim">Online-Punkte selbst abholen</button><small class="ec-online-claim-message" role="status">Die Verfügbarkeit wird beim Abholen sicher geprüft.</small></div><div class="ec-dock-prestige-detail"><span>Prestige-Fortschritt</span><em>${prestigeCopy(state)}</em></div>
+    <div class="ec-online-self-claim-zone"><button type="button" class="ec-online-self-claim">Online-Punkte selbst abholen</button><small class="ec-online-claim-message" role="status">Abholstatus wird geprüft …</small></div><div class="ec-dock-prestige-detail"><span>Prestige-Fortschritt</span><em>${prestigeCopy(state)}</em></div>
     <div class="ec-dock-reward-bar ec-dock-reward-bar-prestige"><i style="width:${prestigePercent(state)}%"></i></div>`;
 }
 async function claimOwnOnlinePoints(){
@@ -62,14 +62,15 @@ async function claimOwnOnlinePoints(){
  try{
   const {data,error}=await supabase.rpc('claim_online_reward');
   if(error)throw error;
-  if(message)message.textContent=typeof data?.message==='string'?data.message:'Deine Selbstabhebung wurde geprüft. Falls Punkte verfügbar waren, wurden sie deinem Konto gutgeschrieben.';
+  const claimText=typeof data?.message==='string'?data.message:'Die Abholung wurde serverseitig geprüft.';
   window.dispatchEvent(new Event('ec:points-updated'));
   window.dispatchEvent(new Event('ec:activity-progress-refresh'));
   await refresh(true);
+  const fresh=q('.ec-online-claim-message');if(fresh)fresh.textContent=claimText;
  }catch(error){if(message)message.textContent=error?.message||'Die Selbstabhebung konnte nicht durchgeführt werden.';}
  finally{if(button)button.disabled=false;}
 }
-async function refresh(force=false){ensureCard();render(await load(force));q(".ec-online-self-claim")?.addEventListener("click",()=>void claimOwnOnlinePoints())}
+async function refresh(force=false){ensureCard();render(await load(force));const btn=q('.ec-online-self-claim');btn?.addEventListener('click',()=>void claimOwnOnlinePoints());const msg=q('.ec-online-claim-message');try{const {data:{session}}=await supabase.auth.getSession();if(!session?.user)return;const {data,error}=await supabase.from('daily_online_rewards').select('reward_date,points_awarded').eq('user_id',session.user.id).order('reward_date',{ascending:false}).limit(1);if(!msg?.isConnected||error)return;const last=data?.[0];msg.textContent=last?'Zuletzt abgeholt: '+new Date(last.reward_date+'T12:00:00').toLocaleDateString('de-AT')+' ('+last.points_awarded+' Punkte). Nächste Berechtigung wird beim Abholen geprüft.':'Noch keine Selbstabhebung gespeichert. Berechtigung wird beim Abholen geprüft.';}catch{if(msg?.isConnected)msg.textContent='Berechtigung wird beim Abholen geprüft.';}}
 function boot(){
   void refresh(false);
   window.addEventListener('ec:online-reward',()=>void refresh(true));
