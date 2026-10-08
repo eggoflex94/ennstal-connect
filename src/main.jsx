@@ -138,6 +138,7 @@ import "./community-mobile-final.css";
 import "./mobile-forum-news-admin-final.css";
 import "./mobile-visibility-final.css";
 import "./mobile-nav-runtime.js";
+import "./mobile-presence-sync.js";
 
 import "./community-event-card-polish.css";
 import "./community-hub-final.css";
