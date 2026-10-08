@@ -69,7 +69,7 @@
   font-size: 25px;
 }
 
-.ec-brand-family-lockup[data-region="ueberregional"] .ec-brand-family-region {
+.ec-brand-family-lockup[data-region="leoben-bruck-muerzzuschlag"] .ec-brand-family-region {
   font-size: 28px;
 }
 
@@ -208,7 +208,7 @@
 
   .ec-brand-family-region,
   .ec-brand-family-connect,
-  .ec-brand-family-lockup[data-region="ueberregional"] .ec-brand-family-region {
+  .ec-brand-family-lockup[data-region="leoben-bruck-muerzzuschlag"] .ec-brand-family-region {
     font-size: 20px;
   }
 
@@ -248,7 +248,7 @@
 @media (max-width: 430px) {
   .ec-brand-family-region,
   .ec-brand-family-connect,
-  .ec-brand-family-lockup[data-region="ueberregional"] .ec-brand-family-region,
+  .ec-brand-family-lockup[data-region="leoben-bruck-muerzzuschlag"] .ec-brand-family-region,
   .ec-brand-family-lockup[data-region="leoben-bruck-muerzzuschlag"] .ec-brand-family-region-short,
   .ec-brand-family-lockup[data-region="leoben-bruck-muerzzuschlag"] .ec-brand-family-connect {
     font-size: 17px;
