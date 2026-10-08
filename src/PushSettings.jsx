@@ -3,9 +3,20 @@ import { supabase } from "./supabaseClient";
 
 const publicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
 const bytes = key => Uint8Array.from(atob((key + "=".repeat((4 - key.length % 4) % 4)).replace(/-/g, "+").replace(/_/g, "/")), ch => ch.charCodeAt(0));
-export default function PushSettings({ user }) {
+export default function PushSettings({ user, isPrimaryHeadAdmin = false }) {
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
+  async function sendReminder() {
+    if (!window.confirm("Freundliche Push-Erinnerung an alle Mitglieder mit aktivierter Push-Funktion senden?")) return;
+    setBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-community-push", {body:{action:"friendly-reminder"}});
+      if (error) throw error;
+      if (!data?.ok) throw Error(data?.error || "Push-Versand fehlgeschlagen.");
+      setStatus("Erfolgreich an " + data.sent + " registrierte Geräte gesendet. " + data.failed + " fehlgeschlagen.");
+    } catch (err) { setStatus(err.message || "Versand fehlgeschlagen."); }
+    finally { setBusy(false); }
+  }
   if (!user) return null;
   const supported = Boolean(publicKey && typeof window !== "undefined" && window.isSecureContext && "serviceWorker" in navigator && "PushManager" in window && "Notification" in window);
   async function enable() {
@@ -41,6 +52,7 @@ export default function PushSettings({ user }) {
     <strong>🔔 Handy-Benachrichtigungen</strong>
     <p>Community-Nachrichten freiwillig aufs Handy bekommen? Du kannst das jederzeit abschalten.</p>
     {supported ? <div style={{ display:"flex",gap:8,flexWrap:"wrap" }}><button type="button" onClick={enable} disabled={busy}>Aktivieren</button><button type="button" onClick={disable} disabled={busy}>Deaktivieren</button></div> : <p>Die Push-Funktion ist für dieses Gerät derzeit noch nicht verfügbar.</p>}
+    {isPrimaryHeadAdmin && <p><button type="button" onClick={sendReminder} disabled={busy}>Freundliche Erinnerung als Push senden</button></p>}
     {status && <p role="status">{status}</p>}
   </section>;
 }
