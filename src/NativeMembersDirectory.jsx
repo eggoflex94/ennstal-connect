@@ -252,7 +252,7 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
         <button type="button" className={regionId === "ALL" ? "active" : ""} onClick={() => setRegionId("ALL")}>Alle Regionen</button>
         {homeRegionId && <button type="button" className={regionId === homeRegionId && !onlineOnly ? "active" : ""} onClick={() => { setRegionId(homeRegionId); setOnlineOnly(false); }}>Heimatregion: {homeRegion?.short_name || homeRegion?.name || "Region"}</button>}
         {activeRegion?.id && activeRegion.id !== homeRegionId && <button type="button" className={regionId === activeRegion.id && !onlineOnly ? "active" : ""} onClick={() => { setRegionId(activeRegion.id); setOnlineOnly(false); }}>Aktuelle Region: {activeRegion.short_name || activeRegion.name}</button>}
-        {(query || regionId === "ALL" || onlineOnly || memberType !== "ALL" || newOnly) && <button type="button" className="native-member-reset-filter" onClick={() => { setQuery(""); setRegionId(homeRegionId || "ALL"); setOnlineOnly(false); setMemberType("ALL"); setDistrictFilter("ALL"); setNewOnly(false); }}>Filter zurücksetzen</button>}
+        {(query || regionId === "ALL" || districtFilter !== "ALL" || onlineOnly || memberType !== "ALL" || newOnly) && <button type="button" className="native-member-reset-filter" onClick={() => { setQuery(""); setRegionId(homeRegionId || "ALL"); setOnlineOnly(false); setMemberType("ALL"); setDistrictFilter("ALL"); setNewOnly(false); }}>Filter zurücksetzen</button>}
       </div>
     </div>
 
