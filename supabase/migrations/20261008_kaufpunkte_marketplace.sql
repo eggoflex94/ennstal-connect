@@ -150,6 +150,8 @@ declare v_required_hours integer;
 begin
  if new.profile_layout is not distinct from old.profile_layout then return new; end if;
  if new.profile_layout='standard' then return new; end if;
+ if new.profile_layout in ('theme-red','theme-blue','theme-neon','theme-alpine','theme-teal','theme-violet','theme-copper','theme-aurora') then return new; end if;
+ if new.profile_layout='theme-neon-pink' and coalesce(new.points,0)>=1000 then return new; end if;
  if new.role::text in ('HEAD_ADMIN','ADMIN','SUPPORTER') or new.account_badge='BUSINESS' then return new; end if;
  if exists(select 1 from public.kaufpunkte_purchases where user_id=new.id and sku=new.profile_layout) then return new; end if;
  v_required_hours := case new.profile_layout
