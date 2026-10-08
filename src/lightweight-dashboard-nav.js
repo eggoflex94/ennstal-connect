@@ -10,6 +10,7 @@ const DIRECT_PAGES = new Set([
   'forum',
   'groups',
   'community',
+  'marketplace',
   'news',
   'profile',
   'messages',

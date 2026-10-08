@@ -1,5 +1,5 @@
 const PAGE_KEY='ec-current-page';
-const TOP_PAGES=new Set(['home','members','forum','groups','events','news','community','support','help']);
+const TOP_PAGES=new Set(['home','members','forum','groups','events','news','community','marketplace','support','help']);
 
 function normalized(page){
   const value=String(page||'').trim();
