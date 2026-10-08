@@ -32,3 +32,17 @@
  input[type=file]{max-width:100%;font-size:16px}
  .event-actions,.event-rsvp-actions,.forum-reply-actions,.content-card-actions{min-width:0;flex-wrap:wrap}
 }
+
+/* Mobile parity: event creation, photo upload, chat and admin tools. */
+@media (max-width:760px){
+ .events-page,.event-photos-page,.forum-page,.admin-page,.community-hub,.news-page,.member-profile-page{max-width:100%!important;min-width:0!important}
+ .events-page form,.event-photos-page form,.forum-page form,.admin-page form,.profile-form{max-width:100%!important;min-width:0!important}
+ .events-page input,.events-page select,.events-page textarea,.event-photos-page input,.event-photos-page textarea,.forum-page input,.forum-page textarea,.admin-page input,.admin-page select,.admin-page textarea{max-width:100%!important;min-width:0!important;box-sizing:border-box}
+ .event-photo-upload-button{display:flex!important;align-items:center!important;justify-content:center!important;min-height:48px!important;max-width:100%!important;overflow-wrap:anywhere}
+ .event-photo-upload-button input[type="file"]{max-width:100%!important}
+ .events-page button,.event-photos-page button,.forum-page button,.admin-page button{touch-action:manipulation;min-height:44px}
+ .events-page .panel,.event-photos-page .panel,.admin-page .panel,.forum-page .panel{max-width:100%!important;min-width:0!important;overflow-wrap:anywhere}
+ .admin-page table,.events-page table{display:block;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+ .ec-mobile-menu-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:390px){.ec-mobile-menu-grid{grid-template-columns:minmax(0,1fr)}}
