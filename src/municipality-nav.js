@@ -20,9 +20,9 @@ function ensureHost() {
   host = document.createElement('div');
   host.className = 'ec-municipality-nav';
   host.setAttribute('aria-label', 'Gemeinden der aktiven Region');
-  const picker = nav.querySelector('.ec-region-picker');
-  if (picker) picker.before(host);
-  else nav.appendChild(host);
+  // The nav container is stable; sibling insertion relative to the region
+  // picker can race with React/navigation refreshes.
+  if (nav.isConnected) nav.appendChild(host);
   return host;
 }
 
