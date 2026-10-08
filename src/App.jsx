@@ -2431,7 +2431,7 @@ function AdminLogPage({ adminLog, members }) {
           <span className="admin-log-main">
             <span className="admin-log-title-line">
               <strong>{labelFor(entry)}</strong>
-              {isDenied && <em className="admin-log-status denied">ABGELEHNT</em>}
+              <em className={isDenied ? "admin-log-status denied" : "admin-log-status success"}>{isDenied ? "ABGELEHNT" : "AUSGEFÜHRT"}</em>
             </span>
             <span className="admin-log-meta-line">
               <b>{getName(actor)||"System"}</b>
