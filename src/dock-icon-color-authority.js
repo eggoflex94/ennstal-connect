@@ -64,7 +64,7 @@ function applyButton(button) {
   if (!icon) {
     icon = document.createElement('span');
     icon.className = 'ec-compact-menu-icon';
-    button.prepend(icon);
+    if(button.isConnected) button.appendChild(icon);
   }
   if (icon.dataset.ecModernIcon !== label) {
     icon.innerHTML = ICONS[label];
