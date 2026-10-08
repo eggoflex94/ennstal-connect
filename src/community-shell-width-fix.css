@@ -59,3 +59,48 @@
 /* Layout correction for all member roles */
 @media(min-width:901px){.app .dashboard-layout{display:block!important;grid-template-columns:none!important;padding-left:0!important}.app .dashboard-layout>.modern-sidebar{display:none!important}.app .dashboard-layout>.modern-main{display:block!important;width:100%!important;max-width:100%!important;box-sizing:border-box!important;margin-left:0!important;padding-left:24px!important;padding-right:365px!important}.app .dashboard-layout>.modern-main>.content-root{width:100%!important;max-width:100%!important;margin:0!important}}
 @media(max-width:900px){.app .dashboard-layout{display:block!important;grid-template-columns:none!important}.app .dashboard-layout>.modern-sidebar{display:none!important}.app .dashboard-layout>.modern-main{width:100%!important;max-width:100%!important;margin:0!important;padding-left:12px!important;padding-right:12px!important;box-sizing:border-box!important}}
+
+
+/* Smartphone home cards: avoid the squeezed first column seen beside "Gruppe der Woche".
+   Keep this after the older desktop-parity stylesheet so the mobile layout wins. */
+@media (max-width: 900px) {
+  body .ec-regional-ui .home-page,
+  body .ec-regional-ui .home-page.ec-home-modern-final {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+  body .ec-regional-ui .home-page .engagement-grid,
+  body .ec-regional-ui .home-page.ec-home-modern-final > .engagement-grid,
+  body .ec-regional-ui .home-page .ec-home-social-grid,
+  body .ec-regional-ui .home-page .homepage-sections {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    gap: 14px !important;
+  }
+  body .ec-regional-ui .home-page .engagement-grid > *,
+  body .ec-regional-ui .home-page .ec-home-social-grid > *,
+  body .ec-regional-ui .home-page .homepage-sections > * {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  body .ec-regional-ui .home-page .panel,
+  body .ec-regional-ui .home-page .homepage-frame {
+    min-width: 0 !important;
+    overflow-wrap: normal !important;
+    word-break: normal !important;
+  }
+  body .ec-regional-ui .home-page .panel h2,
+  body .ec-regional-ui .home-page .panel p,
+  body .ec-regional-ui .home-page .panel strong {
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+  }
+}
