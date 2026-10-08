@@ -1,3 +1,4 @@
+import { STYRIAN_DISTRICTS, publicDistrict } from "./regions.js";
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "./supabaseClient";
 import ProfileRelationshipSection from "./ProfileRelationshipSection.jsx";
@@ -246,6 +247,8 @@ export default function ProfileView({
         avatar_url: draft.avatar_url?.trim() || member.avatar_url || null,
         website: draft.website?.trim() || null,
         location: draft.location?.trim() || null,
+        district_code: draft.district_code || null,
+        show_district: draft.show_district !== false,
         interests: normalizeInterests(draft.interests),
         updated_at: new Date().toISOString(),
       };
@@ -370,6 +373,8 @@ export default function ProfileView({
         </>}
         <label>Benutzername<input value={draft.nickname || ""} onChange={(e) => updateDraft("nickname", e.target.value)} /></label>
         <label>Wohnort<input value={draft.location || ""} onChange={(e) => updateDraft("location", e.target.value)} /></label>
+        <label>Unterregion / Bezirk<select value={draft.district_code || ""} onChange={(e) => updateDraft("district_code", e.target.value)}><option value="">Bezirk auswählen</option>{STYRIAN_DISTRICTS.map(([code, name]) => <option key={code} value={code}>{name}</option>)}</select></label>
+        <label><input type="checkbox" checked={draft.show_district !== false} onChange={(e) => updateDraft("show_district", e.target.checked)} /> Bezirk öffentlich im Profil anzeigen (Standard: öffentlich)</label>
         <label>Website<input value={draft.website || ""} onChange={(e) => updateDraft("website", e.target.value)} /></label>
         <label>Interessen<input placeholder="z.B. Sport, Musik, Wandern" value={draft.interests || ""} onChange={(e) => updateDraft("interests", e.target.value)} /></label>
         <label className="profile-avatar-upload-field">Profilbild hochladen<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={chooseAvatar} disabled={avatarUploading} /><small>{avatarStatus || "JPG, PNG, WEBP oder GIF · maximal 8 MB"}</small></label>
@@ -383,6 +388,7 @@ export default function ProfileView({
     <div className="integrated-profile-details">
       <div className="profile-detail-card"><span>INTERESSEN</span><p>{Array.isArray(draft.interests) ? draft.interests.join(", ") : draft.interests || member.interests || "Keine Interessen angegeben."}</p></div>
       <div className="profile-detail-card"><span>WEBSITE</span><p>{draft.website || member.website || "Keine Website angegeben."}</p></div>
+      {(mine || publicDistrict(draft)) && <div className="profile-detail-card"><span>UNTERREGION / BEZIRK</span><p>{publicDistrict(draft) || (mine ? "Noch kein Bezirk ausgewählt" : "")}</p></div>}
       <div className="profile-detail-card"><span>WOHNORT</span><p>{draft.location || member.location || "Kein Wohnort angegeben."}</p></div>
     </div>
 
