@@ -44,7 +44,8 @@ function enhanceOwnProfileCustomization() {
       <button type="button" class="secondary-button" data-reset-design>Schrift zurücksetzen</button>
     </div>
   `;
-  form.querySelector(".primary-button")?.before(panel);
+  // Do not insert relative to a React-owned submit button.
+  if (form.isConnected) form.appendChild(panel);
 
   const applyPreview = () => {
     if (!card.isConnected) return;
