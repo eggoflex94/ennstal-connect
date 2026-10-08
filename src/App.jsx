@@ -2345,39 +2345,117 @@ function Reports({ reports, memberById, resolveReport }) { return <section><div 
 function AccountReview({ queue, members, canReview, onBack, onOpen, onReview }) { return <section className="account-review-page"><div className="page-heading"><div><span className="eyebrow">KONTOSCHUTZ</span><h1>Verifizierungen prüfen</h1><p>Hier erscheinen nur Profile, für die eine Verifizierung angefordert wurde.</p></div><button className="secondary-button" onClick={onBack}>← Zur Admin-Zentrale</button></div>{queue.length ? <div className="report-list">{queue.map((item) => { const member = members.find((entry) => entry.id === item.user_id); const due = item.due_at ? new Date(item.due_at) : null; return <article key={`${item.user_id}-${item.due_at || "request"}`} className="report-card"><strong>{item.nickname || "Mitglied"}</strong><p>{item.reason || "Keine Begründung hinterlegt."}</p><small>{due && !Number.isNaN(due.getTime()) ? `Frist: ${due.toLocaleString("de-AT")}` : "Keine Frist gesetzt"}</small><div className="content-manage-actions"><button className="secondary-button" onClick={() => { if (member) onOpen(member); }}>Profil öffnen</button>{canReview && <><button className="primary-button" onClick={() => onReview(item, true)}>✓ Verifizieren</button><button className="danger-button" onClick={() => onReview(item, false)}>Anfrage ablehnen</button></>}</div></article>; })}</div> : <div className="empty-card">Keine Verifizierungen stehen derzeit aus.</div>}</section>; }
 
 function AdminLogPage({ adminLog, members }) {
-  const [filter,setFilter]=useState("ALL");
-  const deniedEntries=adminLog.filter((entry)=>entry.action==="ADMIN_DENIED" || entry.details?.outcome==="DENIED");
-  const rows=adminLog.filter((entry)=>filter==="ALL" || (filter==="DENIED" ? entry.action==="ADMIN_DENIED" || entry.details?.outcome==="DENIED" : !(entry.action==="ADMIN_DENIED" || entry.details?.outcome==="DENIED")));
-  const deniedCount=deniedEntries.length;
-  const successCount=adminLog.length-deniedCount;
-  return <section className="admin-log-panel panel">
-    <span className="eyebrow">VERTRAULICH · NUR GLOBAL ADMIN</span>
-    <h2>Admin-Logbuch</h2>
-    <p>Erfolgreiche und abgelehnte Verwaltungsaktionen mit Akteur, Ziel, Grund und Ergebnis.</p>
-    <div className="admin-log-summary">
-      <button type="button" className={filter==="ALL"?"is-active":""} onClick={()=>setFilter("ALL")}><span>Alle</span><strong>{adminLog.length}</strong></button>
-      <button type="button" className={filter==="SUCCESS"?"is-active":""} onClick={()=>setFilter("SUCCESS")}><span>Ausgeführt</span><strong>{successCount}</strong></button>
-      <button type="button" className={filter==="DENIED"?"is-active":""} onClick={()=>setFilter("DENIED")}><span>Abgelehnt</span><strong>{deniedCount}</strong></button>
+  const [filter,setFilter]=useState("IMPORTANT");
+
+  const actionKey=(entry)=>String(entry?.action||entry?.details?.action_name||"").toUpperCase();
+  const denied=(entry)=>entry?.action==="ADMIN_DENIED" || entry?.details?.outcome==="DENIED";
+  const categoryFor=(entry)=>{
+    const key=actionKey(entry);
+    const text=(key+" "+JSON.stringify(entry?.details||{})).toUpperCase();
+    if(/ROLE|PERMISSION|RIGHT|ADMIN_ASSIGNED|ADMIN_REMOVED|HEAD_ADMIN/.test(text)) return "ROLES";
+    if(/POINT|REWARD|SCORE/.test(text)) return "POINTS";
+    if(/SUSPEND|BLOCK|REPORT|MODERAT|MESSAGE|FORUM|MEDIA|DELETE|REMOVE|VERIFY|FAKE|ACCOUNT/.test(text)) return "MODERATION";
+    if(/SECURITY|SYSTEM_ERROR|DENIED|EVIDENCE|INTEGRITY|LOGIN|AUTH|LOCK/.test(text)) return "SECURITY";
+    return "OTHER";
+  };
+  const important=(entry)=>{
+    if(denied(entry)) return true;
+    const key=actionKey(entry);
+    if(key==="SYSTEM_ERROR_STATUS") return false;
+    const cat=categoryFor(entry);
+    if(["ROLES","POINTS","MODERATION","SECURITY"].includes(cat)) return true;
+    return /BUSINESS|VERIFICATION|FEATURE|PRIVILEGED|ADMIN_|ACCOUNT_|DELETION/.test(key);
+  };
+  const iconFor=(entry)=>{
+    const cat=categoryFor(entry);
+    if(denied(entry)) return "!";
+    if(cat==="ROLES") return "♛";
+    if(cat==="POINTS") return "★";
+    if(cat==="MODERATION") return "✓";
+    if(cat==="SECURITY") return "◆";
+    return "•";
+  };
+  const labelFor=(entry)=>{
+    const key=actionKey(entry);
+    if(key==="SYSTEM_ERROR_STATUS") return "Systemfehler-Status geändert";
+    return ADMIN_LOG_LABELS[entry.action] || entry.details?.action_name || entry.action || "Admin-Aktion";
+  };
+
+  const todayStart=new Date(); todayStart.setHours(0,0,0,0);
+  const importantEntries=adminLog.filter(important);
+  const deniedEntries=adminLog.filter(denied);
+  const todayEntries=adminLog.filter((entry)=>new Date(entry.created_at)>=todayStart);
+
+  const rows=adminLog.filter((entry)=>{
+    if(filter==="ALL") return true;
+    if(filter==="IMPORTANT") return important(entry);
+    if(filter==="DENIED") return denied(entry);
+    if(filter==="TODAY") return new Date(entry.created_at)>=todayStart;
+    return categoryFor(entry)===filter;
+  });
+
+  return <section className="admin-log-panel panel admin-log-native">
+    <div className="admin-log-modern-head">
+      <div>
+        <span className="eyebrow">VERTRAULICH · NUR GLOBAL ADMIN</span>
+        <h2>Admin-Logbuch</h2>
+        <p>Wichtige Verwaltungsaktionen zuerst. Routine- und Systemeinträge bleiben unter „Alle Aktionen“ vollständig verfügbar.</p>
+      </div>
+      <div className="admin-log-focus-count"><strong>{importantEntries.length}</strong><span>wichtig</span></div>
     </div>
-    <div className="admin-log-list">{rows.map((entry) => {
-      const actor = members.find((m) => m.id === entry.actor_id);
-      const target = members.find((m) => m.id === entry.target_id);
-      const denied = entry.action==="ADMIN_DENIED" || entry.details?.outcome==="DENIED";
-      const detailText = entry.details?.old_role && entry.details?.new_role
+
+    <div className="admin-log-summary admin-log-summary-modern">
+      <button type="button" className={filter==="IMPORTANT"?"is-active":""} onClick={()=>setFilter("IMPORTANT")}><span>Wichtig</span><strong>{importantEntries.length}</strong></button>
+      <button type="button" className={filter==="DENIED"?"is-active is-danger":""} onClick={()=>setFilter("DENIED")}><span>Abgelehnt</span><strong>{deniedEntries.length}</strong></button>
+      <button type="button" className={filter==="TODAY"?"is-active":""} onClick={()=>setFilter("TODAY")}><span>Heute</span><strong>{todayEntries.length}</strong></button>
+      <button type="button" className={filter==="ALL"?"is-active":""} onClick={()=>setFilter("ALL")}><span>Alle Aktionen</span><strong>{adminLog.length}</strong></button>
+    </div>
+
+    <div className="admin-log-filter-chips" aria-label="Admin-Logbuch filtern">
+      {[["ROLES","Rollen & Rechte"],["POINTS","Punkte"],["MODERATION","Moderation"],["SECURITY","Sicherheit"]].map(([key,label])=>
+        <button type="button" key={key} className={filter===key?"is-active":""} onClick={()=>setFilter(key)}>{label}</button>
+      )}
+    </div>
+
+    <div className="admin-log-list admin-log-timeline">{rows.map((entry) => {
+      const actor=members.find((m)=>m.id===entry.actor_id);
+      const target=members.find((m)=>m.id===entry.target_id);
+      const isDenied=denied(entry);
+      const cat=categoryFor(entry);
+      const detailText=entry.details?.old_role && entry.details?.new_role
         ? `Rolle: ${entry.details.old_role} → ${entry.details.new_role}${entry.details.reason ? ` · Begründung: ${entry.details.reason}` : ""}`
         : formatAdminLogDetails(entry.details);
-      return <article className={denied ? "admin-log-row is-denied" : "admin-log-row is-success"} key={entry.id}>
-        <div className="admin-log-row-head"><span className={denied ? "admin-log-status denied" : "admin-log-status success"}>{denied ? "ABGELEHNT" : "AUSGEFÜHRT"}</span><time dateTime={entry.created_at}>{new Date(entry.created_at).toLocaleString("de-AT")}</time></div>
-        <div>
-          <strong>{ADMIN_LOG_LABELS[entry.action] || entry.details?.action_name || entry.action}</strong>
-          <span>Von: {getName(actor) || "System"}{entry.details?.actor_role ? ` (${roleLabel(entry.details.actor_role)})` : ""}</span>
-          {target && <span>Betroffen: {getName(target)}</span>}
-          {denied && entry.details?.error && <small><b>Grund der Ablehnung:</b> {entry.details.error}</small>}
-          {!denied && detailText && <small>{detailText}</small>}
+      return <details className={`admin-log-row admin-log-compact is-${cat.toLowerCase()} ${isDenied?"is-denied":"is-success"}`} key={entry.id}>
+        <summary>
+          <span className="admin-log-action-icon" aria-hidden="true">{iconFor(entry)}</span>
+          <span className="admin-log-main">
+            <span className="admin-log-title-line">
+              <strong>{labelFor(entry)}</strong>
+              {isDenied && <em className="admin-log-status denied">ABGELEHNT</em>}
+            </span>
+            <span className="admin-log-meta-line">
+              <b>{getName(actor)||"System"}</b>
+              {target && <><i>→</i><b>{getName(target)}</b></>}
+              <i>·</i>
+              <time dateTime={entry.created_at}>{new Date(entry.created_at).toLocaleString("de-AT")}</time>
+            </span>
+          </span>
+          <span className="admin-log-chevron">⌄</span>
+        </summary>
+        <div className="admin-log-detail-panel">
+          <div className="admin-log-detail-grid">
+            <span><small>Akteur</small><strong>{getName(actor)||"System"}{entry.details?.actor_role ? ` · ${roleLabel(entry.details.actor_role)}` : ""}</strong></span>
+            {target && <span><small>Betroffen</small><strong>{getName(target)}</strong></span>}
+            <span><small>Bereich</small><strong>{cat==="ROLES"?"Rollen & Rechte":cat==="POINTS"?"Punkte":cat==="MODERATION"?"Moderation":cat==="SECURITY"?"Sicherheit":"Sonstiges"}</strong></span>
+            <span><small>Ergebnis</small><strong>{isDenied?"Abgelehnt":"Ausgeführt"}</strong></span>
+          </div>
+          {isDenied && entry.details?.error && <p className="admin-log-reason"><b>Grund der Ablehnung:</b> {entry.details.error}</p>}
+          {!isDenied && detailText && <p className="admin-log-reason">{detailText}</p>}
+          {entry.details?.reason && !String(detailText||"").includes(entry.details.reason) && <p className="admin-log-reason"><b>Begründung:</b> {entry.details.reason}</p>}
         </div>
-      </article>;
+      </details>;
     })}
-    {!rows.length && <div className="empty-card">Für diesen Filter gibt es noch keine Einträge.</div>}</div>
+    {!rows.length && <div className="empty-card">Für diesen Filter gibt es derzeit keine Einträge.</div>}</div>
   </section>;
 }
 
