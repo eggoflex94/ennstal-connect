@@ -1,10 +1,10 @@
 const brands = {
   ennstal: { name: 'Ennstal', short: 'Ennstal', tag: 'REGIONAL. ECHT. GEMEINSAM.', slogan: 'Menschen. Region. Gemeinschaft.' },
-  'leoben-bruck-muerzzuschlag': { name: 'Leoben – Bruck – Mürzzuschlag', short: 'LBM', tag: 'OBERSTEIERMARK. VERNETZT. GEMEINSAM.', slogan: 'Vernetzen. Austauschen. Regional dabei sein.' },
+  'leoben-bruck-muerzzuschlag': { name: 'Alpenraum', short: 'Alpenraum', tag: 'ALPENRAUM. VERNETZT. GEMEINSAM.', slogan: 'Vernetzen. Austauschen. Regional dabei sein.' },
   ueberregional: { name: 'Überregional', short: 'Überregional', tag: 'MEHR REGIONEN. EINE COMMUNITY.', slogan: 'Mehr Regionen. Eine Community.' }
 };
 
-const normalize = (slug) => slug === 'salzkammergut' ? 'ueberregional' : (brands[slug] ? slug : 'ennstal');
+const normalize = (slug) => ['ueberregional','salzkammergut'].includes(slug) ? 'leoben-bruck-muerzzuschlag' : (brands[slug] ? slug : 'ennstal');
 let activeSlug = normalize(localStorage.getItem('ec-active-region') || 'ennstal');
 
 function make(tag, cls, text) {
