@@ -20,8 +20,8 @@ function ensureCard() {
   card = document.createElement('section');
   card.className = 'ec-friends-newsfeed';
   card.innerHTML = `<div class="ec-friends-newsfeed-head"><div><span>FREUNDE-NEWSFEED</span><strong>Aktuelles von deinen Freunden</strong></div><button type="button" class="ec-friends-newsfeed-refresh" aria-label="Newsfeed aktualisieren" title="Aktualisieren">↻</button></div><div class="ec-friends-newsfeed-list"><div class="ec-friends-newsfeed-empty">Newsfeed wird geladen …</div></div>`;
-  const adminSlot = dock.querySelector('.ec-dock-admin-slot');
-  if (adminSlot) adminSlot.insertAdjacentElement('beforebegin', card); else dock.appendChild(card);
+  // Avoid relative insertion around a dock slot that can be recreated.
+  if (dock.isConnected) dock.appendChild(card);
   card.querySelector('.ec-friends-newsfeed-refresh').onclick = () => queueRefresh(0);
   return card;
 }
@@ -64,7 +64,8 @@ async function mountProfileFeed() {
     if (!section) {
       section = document.createElement('section');
       section.className = 'ec-profile-friends-newsfeed';
-      cleanProfile.insertAdjacentElement('afterend', section);
+      const parent = cleanProfile.parentElement;
+      if (parent?.isConnected) parent.appendChild(section);
     }
 
     const ownRows = cachedFeed.filter((row) => row.author_id === profileId && (row.visibility === 'FRIENDS' || row.is_mine)).slice(0, 6);
