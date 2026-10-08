@@ -46,3 +46,12 @@
  body .ec-regional-ui .modern-main>.content-root{overflow:visible!important;}
  body .ec-regional-ui .ec-right-dock.ec-compact-personal-dock{box-sizing:border-box!important;right:16px!important;max-width:330px!important;}
 }
+
+/* Mobile and desktop market wallet: compact balanced columns, never overflow. */
+.ec-market-balances{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:18px 0 8px;max-width:100%}
+.ec-market-balance{min-width:0;display:grid;gap:3px;padding:13px 16px;border:1px solid #d5e2ee;border-radius:14px;background:#f5f9fd;color:#283f56}
+.ec-market-balance small{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
+.ec-market-balance strong{font-size:clamp(19px,2vw,26px);line-height:1.15;overflow-wrap:anywhere}
+.ec-market-balance span,.ec-market-balance-note{font-size:12px;color:#536d83}
+.ec-market-grid,.ec-market-member-card{min-width:0;max-width:100%;box-sizing:border-box}
+@media(max-width:600px){.ec-market-balances{grid-template-columns:1fr 1fr;gap:7px}.ec-market-balance{padding:10px}.ec-market-balance strong{font-size:19px}.ec-market-member-card{padding:12px!important}}
