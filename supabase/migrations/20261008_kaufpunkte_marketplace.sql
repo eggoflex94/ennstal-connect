@@ -57,3 +57,38 @@ end $$;
 revoke all on function public.kaufpunkte_buy(text) from public,anon;
 revoke all on function public.kaufpunkte_my_marketplace() from public,anon;
 grant execute on function public.kaufpunkte_buy(text),public.kaufpunkte_my_marketplace() to authenticated;
+
+-- Award two spendable Kaufpunkte for every newly earned normal point; spending never modifies normal points.
+create or replace function public.kaufpunkte_earned_trigger()
+returns trigger language plpgsql set search_path=public as $$
+begin
+ if exists(select 1 from public.kaufpunkte_initializations where user_id=new.id) then
+   new.purchase_points:=greatest(0,coalesce(new.purchase_points,0)+greatest(0,coalesce(new.points,0)-coalesce(old.points,0))*2);
+ end if;
+ return new;
+end $$;
+create trigger kaufpunkte_points_accrual before update of points on public.profiles
+for each row execute function public.kaufpunkte_earned_trigger();
+create or replace function public.kaufpunkte_set_price(p_sku text,p_price integer)
+returns void language plpgsql security definer set search_path=public as $$
+begin
+ if auth.uid() is null or not exists(select 1 from public.profiles where id=auth.uid() and is_primary_head_admin=true and account_status='ACTIVE') then
+  raise exception 'Nur der Betreiber darf Preise ändern';
+ end if;
+ if p_price is null or p_price<0 then raise exception 'Ungültiger Preis'; end if;
+ update public.kaufpunkte_catalog set price=p_price where sku=p_sku;
+ if not found then raise exception 'Artikel nicht gefunden'; end if;
+end $$;
+revoke all on function public.kaufpunkte_set_price(text,integer) from public,anon;
+grant execute on function public.kaufpunkte_set_price(text,integer) to authenticated;
+-- Existing layouts remain intact. Newly selected paid layouts require prior purchase.
+create or replace function public.enforce_profile_layout_unlock()
+returns trigger language plpgsql set search_path=public as $$
+begin
+ if new.profile_layout is not distinct from old.profile_layout then return new; end if;
+ if new.profile_layout='standard' then return new; end if;
+ if old.profile_layout=new.profile_layout then return new; end if;
+ if exists(select 1 from public.kaufpunkte_purchases where user_id=new.id and sku=new.profile_layout) then return new; end if;
+ raise exception 'Bitte dieses Layout zuerst im Kaufpunkte-Marktplatz erwerben.';
+end $$;
+revoke all on function public.enforce_profile_layout_unlock() from public,anon,authenticated;
