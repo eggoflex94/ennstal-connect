@@ -1,8 +1,8 @@
 import React,{useEffect,useState} from "react";
 import {supabase} from "./supabaseClient";
-export default function KaufpunkteMarket({user,profile}) {
+export default function KaufpunkteMarket({user,profile,canManage=false}) {
  const [market,setMarket]=useState(null),[error,setError]=useState(""),[busy,setBusy]=useState(false),[visible,setVisible]=useState(true);
- const isHead=Boolean(profile?.is_primary_head_admin && profile?.account_status==="ACTIVE");
+ const isHead=Boolean(canManage || (profile?.is_primary_head_admin && profile?.account_status==="ACTIVE"));
  const [tab,setTab]=useState("shop");
  const [uploadingSku,setUploadingSku]=useState("");
  const [loading,setLoading]=useState(true);
