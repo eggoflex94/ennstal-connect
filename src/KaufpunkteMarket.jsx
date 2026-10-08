@@ -15,8 +15,9 @@ export default function KaufpunkteMarket({user,profile}) {
  </div>
  <p><strong>{Number(market?.normal_points??profile?.points??0).toLocaleString("de-AT")} Punkte · {Number(market?.balance??profile?.purchase_points??0).toLocaleString("de-AT")} [k]</strong> Kaufpunkte</p>
  {visible&&<><p>Kaufpunkte erhältst du zusätzlich zu deinen normalen Punkten. Jeder Kauf reduziert nur dein [k]-Guthaben.</p><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(190px,1fr))",gap:12}}>
- {(market?.catalog||[]).map(item=>{const owned=(market.owned||[]).includes(item.sku);return <article key={item.sku} style={{border:"1px solid #5b8091",padding:14,borderRadius:12}}>
- <strong>{item.kind==="LAYOUT"?"🎨":"👀"} {item.title}</strong><p>{item.description}</p><p><strong>{item.price} [k]</strong></p>
+ {(market?.catalog||[]).map(item=>{const owned=item.kind!=="SUPPORTER" && (market.owned||[]).includes(item.sku);return <article key={item.sku} style={{border:"1px solid #5b8091",padding:14,borderRadius:12}}>
+ {item.kind==="LAYOUT" && <div className={"ec-market-preview "+item.sku} style={{border:"2px solid #6cc7de",borderRadius:14,padding:12,marginBottom:12,background:"linear-gradient(135deg,#18384e,#356b89)",color:"#fff",minHeight:100}}><div style={{display:"flex",gap:10,alignItems:"center"}}><img src={profile?.avatar_url||"/default-avatar.svg"} alt="" style={{width:42,height:42,borderRadius:"50%"}}/><div><strong>{profile?.nickname||"Dein Profil"}</strong><small style={{display:"block"}}>Mitglied · Profilrahmen</small></div></div></div>}
+ <strong>{item.kind==="LAYOUT"?"🎨":item.kind==="SUPPORTER"?"⭐":"👀"} {item.title}</strong><p>{item.description}</p><p><strong>{item.price} [k]</strong></p>
  <button type="button" disabled={busy||owned||Number(market.balance)<item.price} onClick={()=>buy(item.sku,item.title,item.price)}>{owned?"Bereits erworben":Number(market.balance)<item.price?"Nicht genug [k]":"Jetzt kaufen"}</button>
  {isHead&&<p><button type="button" disabled={busy} onClick={()=>changePrice(item.sku,item.price)}>Preis bearbeiten</button></p>}</article>})}</div></>}
  {error&&<p role="alert">{error}</p>}
