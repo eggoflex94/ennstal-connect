@@ -102,11 +102,6 @@ export default function MemberCardView({ member, profile, friendships, onOpen, i
             <img className="ec-card-badge-img ec-card-badge-role-img" src={presentation.star} alt="" aria-hidden="true" />
           </span>
         )}
-        {member?.account_badge === "BUSINESS" && (
-          <span className="ec-card-badge-icon ec-card-badge-business" title={`Unternehmeraccount: ${member.company_name || "Unternehmen"}`} aria-label={`Unternehmeraccount: ${member.company_name || "Unternehmen"}`}>
-            <img className="ec-card-badge-img" src={roleStarAsset("/role-star-blue.svg")} alt="" aria-hidden="true" />
-          </span>
-        )}
         {member?.is_community_photographer && (
           <span className="ec-card-badge-icon ec-card-badge-photographer" title={member?.community_photographer_global ? "Community-Fotograf · Alle Regionen" : "Community-Fotograf"} aria-label={member?.community_photographer_global ? "Community-Fotograf · Alle Regionen" : "Community-Fotograf"}>
             <img className="ec-card-badge-img ec-card-badge-photographer-img" src="/community-photographer-camera.svg" alt="" aria-hidden="true" />
