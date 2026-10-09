@@ -2924,7 +2924,7 @@ function MemberProfile({ member, friends, groups = [], photos = [], onOpenGroup,
       </div>
     </article>
 
-    {member.district_code && <section className="panel ec-profile-home-district-card" aria-label="Heimatbezirk" style={{marginTop:12,marginBottom:12,padding:"16px 20px",border:"1px solid #dce5eb",borderRadius:16,background:"#f7f9fb"}}><span style={{display:"block",fontSize:13,fontWeight:800,letterSpacing:"0.08em",textTransform:"uppercase",color:"#607487"}}>HEIMATBEZIRK</span><strong style={{display:"block",fontSize:21,marginTop:4,color:"#102232"}}>{HOME_DISTRICT_OPTIONS.find(([code]) => code === member.district_code)?.[1] || member.district_code}</strong></section>}
+    {<section className="panel ec-profile-home-district-card" aria-label="Heimatbezirk" style={{marginTop:12,marginBottom:12,padding:"16px 20px",border:"1px solid #dce5eb",borderRadius:16,background:"#f7f9fb"}}><span style={{display:"block",fontSize:13,fontWeight:800,letterSpacing:"0.08em",textTransform:"uppercase",color:"#607487"}}>HEIMATBEZIRK</span><strong style={{display:"block",fontSize:21,marginTop:4,color:"#102232"}}>{member.district_code ? (HOME_DISTRICT_OPTIONS.find(([code]) => code === member.district_code)?.[1] || member.district_code) : "Noch nicht ausgewählt"}</strong></section>}
     {visibleDetails.length > 0 && <section className="panel profile-visible-details"><span className="eyebrow">PROFILINFORMATIONEN</span>{visibleDetails.map(([, caption, value]) => <p key={caption}>{caption}: {String(value)}</p>)}</section>}
     <ProfileRelationshipSection member={member} currentUserId={user?.id}/>
 
