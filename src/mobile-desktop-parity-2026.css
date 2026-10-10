@@ -38,3 +38,19 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%;scroll-behavior:smooth}
 @media(max-width:560px){.member-grid,.profile-photo-grid,.public-photo-folder>div,.content-card-actions,.event-actions,.event-rsvp-actions,.member-profile-actions,.forum-reply-actions,.content-manage-actions,.quick-actions,.group-details-actions,.site-footer{grid-template-columns:1fr!important}.auth-page,.suspended-page,.loading-screen{padding:12px!important}.auth-box,.auth-card,.suspended-box{width:100%!important;max-width:100%!important}}
 @media(max-width:760px){.auth-intro>img[alt="Ennstal Connect"],.community-logo-hero>img,.community-logo-hero img[alt="Ennstal Connect Community-Logo"]{content:url('/ennstal-connect-logo-v2.png')!important;display:block!important;visibility:visible!important;opacity:1!important;width:100%!important;max-width:520px!important;height:auto!important;min-height:0!important;aspect-ratio:3/1!important;object-fit:contain!important;margin:0 auto 18px!important;padding:5px!important;border-radius:13px!important;background:#f7fbff!important}.topbar-brand .topbar-logo,.topbar-brand img[alt="Ennstal Connect"]{content:url('/ennstal-connect-logo-v2.png')!important;display:block!important;visibility:visible!important;opacity:1!important;object-fit:contain!important}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.ec-mobile-zoom-overlay img{transition:none}}
+
+/* Mobile/Desktop feature parity: events, uploads and galleries stay operable. */
+@media(max-width:900px){
+ .events-page,.events-modern-grid,.event-modern-card,.event-modern-main,.event-photo-gallery,.ec-event-editor-dialog{min-width:0!important;max-width:100%!important}
+ .events-modern-grid{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:14px!important}
+ .event-modern-card{overflow:visible!important}
+ .event-modern-title-row,.event-modern-main .event-actions{min-width:0!important;flex-wrap:wrap!important}
+ .event-photo-preview-strip{width:100%!important;max-width:100%!important;overflow-x:auto!important;-webkit-overflow-scrolling:touch}
+ .ec-event-editor-overlay{position:fixed!important;inset:0!important;z-index:20000!important;overflow-y:auto!important;overscroll-behavior:contain;padding:max(12px,env(safe-area-inset-top)) 12px max(24px,env(safe-area-inset-bottom))!important}
+ .ec-event-editor-dialog{box-sizing:border-box!important;width:100%!important;max-width:720px!important;margin:auto!important;max-height:none!important;overflow:visible!important}
+ .ec-event-editor-dialog .ec-event-editor-grid{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:12px!important}
+ .ec-event-editor-dialog input[type=file],.events-page input[type=file],.event-photo-gallery input[type=file]{display:block;max-width:100%!important;width:100%!important;min-height:44px;box-sizing:border-box}
+ .ec-event-editor-dialog input,.ec-event-editor-dialog textarea,.ec-event-editor-dialog select{box-sizing:border-box;width:100%!important;min-width:0!important;font-size:16px!important}
+ .ec-event-editor-dialog footer{position:sticky;bottom:0;display:flex!important;flex-wrap:wrap;gap:10px;padding:12px 0 max(12px,env(safe-area-inset-bottom));background:inherit;z-index:1}
+ .ec-event-editor-dialog footer button{flex:1 1 160px;min-height:48px}
+}
