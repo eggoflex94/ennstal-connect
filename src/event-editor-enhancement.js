@@ -87,8 +87,9 @@ async function openEventEditor(eventId) {
       location:String(data.get('location') || '').trim() || null,
       image_url:imageUrl
     };
-    const { error: updateError } = await supabase.from('community_events').update(payload).eq('id', event.id);
+    const { data: updatedEvent, error: updateError } = await supabase.from('community_events').update(payload).eq('id', event.id).select('id').maybeSingle();
     if (updateError) return alert('Event konnte nicht gespeichert werden: ' + updateError.message);
+    if (!updatedEvent) return alert('Das Event wurde nicht geändert. Bitte prüfe, ob du es bearbeiten darfst.');
     const { error: styleError } = await supabase.rpc('ec_admin_update_event_style', {
       p_event_id:event.id,
       p_font_family:String(data.get('font_family') || 'modern'),
@@ -96,7 +97,11 @@ async function openEventEditor(eventId) {
       p_font_color:String(data.get('font_color') || '#17324a'),
       p_emphasis:String(data.get('emphasis') || 'normal')
     });
-    if (styleError) return alert(styleError.message);
+    if (styleError) {
+      closeDialog();
+      window.dispatchEvent(new CustomEvent('ec:region-change', { detail:{ id:event.region_id } }));
+      return alert('Das Event wurde gespeichert, aber die Gestaltung konnte nicht aktualisiert werden: ' + styleError.message);
+    }
     closeDialog();
     window.dispatchEvent(new CustomEvent('ec:region-change', { detail:{ id:event.region_id } }));
     } catch (saveError) {
