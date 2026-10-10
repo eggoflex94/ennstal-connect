@@ -19,6 +19,7 @@ import "./featured-group-admin.js";
 import "./mobile-zoom.js";
 import "./ad-form-fix.js";
 import "./ad-management.js";
+import "./sidebar-ads-stack.js";
 import "./member-extras.js";
 import "./legal-evidence-admin.js";
 import "./privacy-center.js";
