@@ -95,7 +95,6 @@ export default function MemberCardView({ member, profile, friendships, onOpen, i
       aria-label={interactive ? `Profil von ${getName(member)} öffnen` : `Vorschau der Mitgliederkarte von ${getName(member)}`}
       style={presentation.theme === "municipality" ? { "--ec-municipality-role-accent": presentation.color } : undefined}
     >
-      {foundingFeatured && <span className="ec-founding-feature-label" title="Für 7 Tage hervorgehoben">✨ Gründungsmitglied · hervorgehoben</span>}
       <span className={`ec-role-surface ec-role-surface-${presentation.theme}`} aria-hidden="true" />
 
       <div className="ec-card-badge-rail" aria-label="Profilkennzeichnungen">
