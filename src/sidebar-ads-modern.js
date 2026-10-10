@@ -283,8 +283,23 @@ async function openManager() {
 
 function boot() {
   ensureHost(); void syncAds();
-  const observer = new MutationObserver(() => { removeLegacyActivityBlocks(); if (!dock()?.querySelector(".ec-sidebar-ads")) scheduleRender(); });
-  observer.observe(document.documentElement, { childList: true, subtree: true });
+  // Observe only the dock itself. Watching the entire app on every DOM update
+  // previously caused unnecessary work during navigation and on phones.
+  let observedDock = null;
+  let observer = null;
+  const attachDockObserver = () => {
+    const root = dock();
+    if (!root || root === observedDock) return;
+    observer?.disconnect();
+    observedDock = root;
+    observer = new MutationObserver(() => {
+      if (!root.querySelector(".ec-sidebar-ads")) scheduleRender();
+    });
+    observer.observe(root, { childList: true });
+    scheduleRender();
+  };
+  attachDockObserver();
+  window.addEventListener("ec:navigate", attachDockObserver);
   window.addEventListener("ec:region-change", () => { setTimeout(() => void syncAds(), 80); });
   window.addEventListener("ec:community-ads-refresh", () => setTimeout(() => void syncAds(), 80));
   window.addEventListener("ec:open-sidebar-ad-manager", () => void openManager());
