@@ -34,3 +34,12 @@
 .ec-shop-preview-nick{font-size:14px;font-weight:800;letter-spacing:-.015em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media(max-width:600px){.ec-shop-tabs{gap:8px}.ec-shop-tab{min-height:46px;padding:10px 13px}.ec-shop-preview-identity{padding:10px}.ec-shop-role-star{width:31px;height:31px}}
 @media(prefers-reduced-motion:reduce){.ec-shop-tab,.ec-shop-visibility{transition:none}}
+
+/* Fixed article attribution and uploaded product screenshots */
+.ec-shop-product-image{display:block;width:100%;height:auto;max-height:320px;object-fit:contain;border-radius:14px;border:1px solid #dce6f0;background:#f6f9fd;padding:5px;box-sizing:border-box}
+.ec-shop-preview-author{display:flex;flex-direction:column;gap:5px;min-width:0}
+.ec-shop-author-label{display:block;font-size:10px;font-weight:750;letter-spacing:.09em;text-transform:uppercase;color:#65768e;line-height:1.1}
+.ec-shop-author-line{display:flex;gap:8px;align-items:center;min-width:0}
+.ec-shop-author-line .ec-shop-role-star{width:26px;height:26px}
+.ec-shop-author-line .ec-shop-preview-nick{font-size:13px;font-weight:800;line-height:1.35}
+.ec-shop-visibility{display:inline-flex;align-items:center;justify-content:center;min-height:43px}
