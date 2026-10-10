@@ -3034,7 +3034,6 @@ function EventsPage({ members, showNotice, events, eventRsvps, user, profile, ac
   const memberById = useMemo(() => new Map(members.map((member) => [member.id, member])), [members]);
   const visibleEvents = useMemo(() => events.filter((event) =>
     String(event?.status || "ACTIVE").toUpperCase() !== "CANCELLED"
-    && new Date(event?.event_at).getTime() >= Date.now()
   ), [events]);
   const eventIds = useMemo(() => visibleEvents.map((event) => event.id), [visibleEvents]);
 
@@ -3142,9 +3141,13 @@ function EventsPage({ members, showNotice, events, eventRsvps, user, profile, ac
     const bPhotos = photosFor(b.id);
     const aRecent = aPhotos.some((photo) => Date.now() - new Date(photo.created_at).getTime() < 72 * 3600000);
     const bRecent = bPhotos.some((photo) => Date.now() - new Date(photo.created_at).getTime() < 72 * 3600000);
-    return Number(Boolean(b.is_featured)) - Number(Boolean(a.is_featured))
+    const now = Date.now();
+    const aPast = new Date(a.event_at).getTime() < now;
+    const bPast = new Date(b.event_at).getTime() < now;
+    return Number(aPast) - Number(bPast)
+      || Number(Boolean(b.is_featured)) - Number(Boolean(a.is_featured))
       || Number(bRecent) - Number(aRecent)
-      || new Date(a.event_at) - new Date(b.event_at);
+      || (aPast ? new Date(b.event_at) - new Date(a.event_at) : new Date(a.event_at) - new Date(b.event_at));
   });
 
   const selectedGalleryEvent = events.find((event) => event.id === photoGalleryEventId);
