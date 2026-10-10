@@ -9,8 +9,6 @@ let currentAds = [];
 let managerAds = [];
 let syncing = false;
 let renderQueued = false;
-let bannerIndex = 0;
-let rotationTimer = null;
 
 const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
   "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
@@ -69,41 +67,16 @@ function bannerMarkup(ad) {
     : `<div class="ec-sidebar-ad-banner">${inner}</div>`;
 }
 
-function restartRotation() {
-  clearInterval(rotationTimer);
-  rotationTimer = null;
-  if (currentAds.length < 2) return;
-  rotationTimer = setInterval(() => {
-    bannerIndex = (bannerIndex + 1) % currentAds.length;
-    render();
-  }, 7000);
-}
-
 function render() {
   const host = ensureHost();
   if (!host) return;
-  if (!currentAds.length) {
-    host.hidden = true;
-    host.innerHTML = "";
-    clearInterval(rotationTimer);
-    rotationTimer = null;
-    return;
-  }
-  if (bannerIndex >= currentAds.length) bannerIndex = 0;
-  const ad = currentAds[bannerIndex];
-  host.hidden = false;
+  host.hidden = !currentAds.length;
+  if (!currentAds.length) { host.replaceChildren(); return; }
+  // A single canonical vertical list, rendered by the original ad component.
+  // Keep global and regional ad targeting and the existing manager intact.
   host.innerHTML = `
-    <div class="ec-sidebar-ads-head"><span>WERBUNG</span><strong>${esc(ad.region_id ? activeRegionName : "Global")}</strong></div>
-    <div class="ec-sidebar-ad-list">${bannerMarkup(ad)}</div>
-    ${currentAds.length > 1 ? `<div class="ec-sidebar-ad-pager"><button type="button" data-ad-prev aria-label="Vorherige Werbung">‹</button><span>${bannerIndex + 1} / ${currentAds.length}</span><button type="button" data-ad-next aria-label="Nächste Werbung">›</button></div>` : ""}`;
-  host.querySelector('[data-ad-prev]')?.addEventListener('click', () => {
-    bannerIndex = (bannerIndex - 1 + currentAds.length) % currentAds.length;
-    render(); restartRotation();
-  });
-  host.querySelector('[data-ad-next]')?.addEventListener('click', () => {
-    bannerIndex = (bannerIndex + 1) % currentAds.length;
-    render(); restartRotation();
-  });
+    <div class="ec-sidebar-ads-head"><span>WERBUNG</span><strong>${esc(activeRegionName)}</strong></div>
+    <div class="ec-sidebar-ad-list">${currentAds.map(bannerMarkup).join("")}</div>`;
 }
 
 function scheduleRender() {
@@ -140,8 +113,6 @@ async function loadAds() {
   const { data, error } = await query;
   if (error) throw error;
   currentAds = data || [];
-  if (bannerIndex >= currentAds.length) bannerIndex = 0;
-  restartRotation();
 }
 
 async function loadManagerAds() {
@@ -237,7 +208,7 @@ function openEditor(ad) {
   syncRegionState();
 
   const hint = document.createElement("p"); hint.className = "ec-sidebar-ad-hint";
-  hint.textContent = "Globale Banner erscheinen in jeder Region. Regionale Banner nur in der ausgewählten Region. Mehrere Banner rotieren automatisch.";
+  hint.textContent = "Globale Banner erscheinen in jeder Region. Regionale Banner nur in der ausgewählten Region. Mehrere Banner werden untereinander vollständig angezeigt.";
   const actions = document.createElement("div"); actions.className = "ec-sidebar-ad-editor-actions";
   actions.innerHTML = '<button type="button" class="secondary ec-sidebar-ad-cancel">Abbrechen</button><button type="submit" class="primary">Speichern</button>';
   form.append(scope.label, region.label, title.label, link.label, imageUrl.label, upload.label, body.label, hint, actions);
