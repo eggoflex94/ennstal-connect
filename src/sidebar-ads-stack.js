@@ -27,22 +27,28 @@ function card(ad) {
   return article;
 }
 function mount() {
-  if (!ads.length) return;
-  const original = document.querySelector(".ec-right-dock .ec-sidebar-banners, .ec-right-dock .ec-sidebar-ads");
-  if (!original?.parentNode) return;
-  let list = original.parentNode.querySelector(":scope > .ec-stacked-ads");
+  const dock = document.querySelector(".ec-right-dock");
+  if (!dock) return;
+  const originals = dock.querySelectorAll(".ec-sidebar-banners, .ec-sidebar-ads");
+  let list = dock.querySelector(":scope > .ec-stacked-ads");
+  if (!ads.length) {
+    list?.remove();
+    originals.forEach(el => el.classList.add("ec-legacy-ads-hidden"));
+    return;
+  }
   if (!list) {
     list = document.createElement("section");
     list.className = "ec-stacked-ads";
     list.setAttribute("aria-label", "Werbungen untereinander");
-    original.insertAdjacentElement("afterend", list);
+    dock.appendChild(list);
   }
   const signature = JSON.stringify(ads);
   if (list.dataset.signature !== signature) {
     list.replaceChildren(...ads.map(card));
     list.dataset.signature = signature;
   }
-  original.classList.add("ec-legacy-ads-hidden");
+  if (dock.lastElementChild !== list) dock.appendChild(list);
+  originals.forEach(el => el.classList.add("ec-legacy-ads-hidden"));
 }
 function schedule() {
   if (queued) return;
