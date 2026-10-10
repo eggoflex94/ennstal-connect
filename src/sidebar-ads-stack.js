@@ -33,7 +33,7 @@ function mount() {
   let list = dock.querySelector(":scope > .ec-stacked-ads");
   if (!ads.length) {
     list?.remove();
-    originals.forEach(el => el.classList.add("ec-legacy-ads-hidden"));
+    originals.forEach(el => el.classList.remove("ec-legacy-ads-hidden"));
     return;
   }
   if (!list) {
@@ -47,7 +47,6 @@ function mount() {
     list.replaceChildren(...ads.map(card));
     list.dataset.signature = signature;
   }
-  if (dock.lastElementChild !== list) dock.appendChild(list);
   originals.forEach(el => el.classList.add("ec-legacy-ads-hidden"));
 }
 function schedule() {
@@ -70,6 +69,7 @@ async function refresh() {
     console.warn("Werbungen konnten nicht geladen werden:", error);
   } finally { busy = false; }
 }
+// Observe only newly mounted dashboard elements; do not move nodes repeatedly.
 new MutationObserver(schedule).observe(document.documentElement, {childList:true,subtree:true});
 void refresh();
 window.addEventListener("focus", refresh);
