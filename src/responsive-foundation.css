@@ -42,7 +42,12 @@ body{font-feature-settings:"kern";-webkit-font-smoothing:antialiased}
 /* Explicit desktop-on-phone mode: keep one full desktop layout rather than a mobile variant.
    Layout viewport is 1100px on phones; pinch zoom remains enabled. */
 @media screen and (max-device-width:760px){
-  html,body,#root,.app{min-width:1100px!important;max-width:none!important;overflow-x:visible!important}
-  .app .dashboard-layout{min-width:0}
+  /* Preserve the same CSS layout viewport as desktop; the browser scales it to fit. */
+  html,body,#root,.app{min-width:1100px!important;width:1100px!important;max-width:none!important;overflow-x:visible!important}
+  .app .dashboard-layout{min-width:1100px!important}
+  /* The separate quicknav must not cover desktop controls. */
   .ec-mobile-quicknav{display:none!important}
+  /* Desktop dialogs and tables stay usable with horizontal scrolling when required. */
+  .app :where(.modal,.dialog,[role="dialog"]){max-width:calc(100vw - 32px);max-height:calc(100vh - 32px);overflow:auto}
+  .app :where(.table-wrapper,.table-responsive,[class*="table-wrap"]){overflow-x:auto}
 }
