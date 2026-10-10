@@ -18,9 +18,10 @@ const extraPages = [
 
 export default function MobileQuickNav({ page, onNavigate, isAdmin, onLogout, unread = 0, unreadNotifications = 0 }) {
   const [expanded, setExpanded] = useState(false);
+  const [menuQuery, setMenuQuery] = useState("");
   const closeButtonRef = useRef(null);
   const menuTriggerRef = useRef(null);
-  useEffect(() => { setExpanded(false); }, [page]);
+  useEffect(() => { setExpanded(false); setMenuQuery(""); }, [page]);
   useEffect(() => {
     if (!expanded) return undefined;
     const close = (event) => { if (event.key === "Escape") setExpanded(false); };
@@ -37,16 +38,21 @@ export default function MobileQuickNav({ page, onNavigate, isAdmin, onLogout, un
       menuTriggerRef.current?.focus();
     };
   }, [expanded]);
-  const navigate = (target) => { setExpanded(false); onNavigate(target); };
+  const navigate = (target) => { setExpanded(false); setMenuQuery(""); onNavigate(target); };
+  const normalizedQuery = menuQuery.trim().toLocaleLowerCase("de");
+  const visiblePages = extraPages.filter(([, label]) => label.toLocaleLowerCase("de").includes(normalizedQuery));
   return (
     <div className="ec-mobile-quicknav">
       {expanded && <div className="ec-mobile-menu-backdrop" onClick={() => setExpanded(false)} aria-hidden="true" />}
       {expanded && <section id="ec-mobile-complete-menu" className="ec-mobile-menu-sheet" role="dialog" aria-modal="true" aria-label="Alle Community-Funktionen">
         <div className="ec-mobile-menu-title"><strong>Alle Funktionen</strong><button ref={closeButtonRef} type="button" onClick={() => setExpanded(false)} aria-label="Menü schließen">✕</button></div>
+        <label className="ec-mobile-menu-search-label" htmlFor="ec-mobile-menu-search">Funktion suchen</label>
+        <input id="ec-mobile-menu-search" className="ec-mobile-menu-search" type="search" autoComplete="off" value={menuQuery} onChange={(event) => setMenuQuery(event.target.value)} placeholder="Mitglieder, Gruppen, Events …" />
         <div className="ec-mobile-menu-grid">
-          {extraPages.map(([target, label]) => <button key={target} type="button" onClick={() => navigate(target)} aria-current={page === target ? "page" : undefined}>{label}{target === "notifications" && unreadNotifications > 0 ? <span className="ec-mobile-count">{unreadNotifications}</span> : null}</button>)}
-          {onLogout && <button type="button" onClick={() => { setExpanded(false); onLogout(); }}>⇥ Abmelden</button>}
-          {isAdmin && <button type="button" onClick={() => navigate("admin")} aria-current={page === "admin" ? "page" : undefined}>♛ Admin-Zentrale</button>}
+          {visiblePages.map(([target, label]) => <button key={target} type="button" onClick={() => navigate(target)} aria-current={page === target ? "page" : undefined}>{label}{target === "notifications" && unreadNotifications > 0 ? <span className="ec-mobile-count">{unreadNotifications}</span> : null}</button>)}
+          {visiblePages.length === 0 && <p className="ec-mobile-menu-empty" role="status">Keine passende Funktion gefunden.</p>}
+          {onLogout && !normalizedQuery && <button type="button" onClick={() => { setExpanded(false); onLogout(); }}>⇥ Abmelden</button>}
+          {isAdmin && (!normalizedQuery || "admin-zentrale".includes(normalizedQuery)) && <button type="button" onClick={() => navigate("admin")} aria-current={page === "admin" ? "page" : undefined}>♛ Admin-Zentrale</button>}
         </div>
       </section>}
       <nav className="ec-mobile-quicknav-bar" aria-label="Mobile Schnellnavigation">
