@@ -3022,6 +3022,9 @@ function CommunityHub({ members, ads, photos, profile, profileUpdates, activeReg
 function MemberBusinessTool({ member, setBusinessAccount }) { const business = member.account_badge === "BUSINESS"; return <section className="member-business-tool panel"><span className="eyebrow">ADMIN-WERKZEUG</span><h2>Unternehmenskonto</h2><p>Unternehmenskonten erhalten einen blauen Rahmen und Stern, aber keine zusätzlichen Rechte.</p><button className="secondary-button" onClick={() => setBusinessAccount(member.id, !business)}>{business ? "★ Unternehmenskonto entfernen" : "★ Zum Unternehmenskonto ernennen"}</button></section>; }
 function EventsPage({ members, showNotice, events, eventRsvps, user, profile, activeRegion, canCreateEvent, createEvent, onToggleEventFeatured, onRespondEvent, onShareEvent, onEditEvent, onCancelEvent, onDeleteEvent }) {
   const [eventPhotos, setEventPhotos] = useState([]);
+  const [photoGalleryEventId, setPhotoGalleryEventId] = useState(null);
+  const [photoUploadBusy, setPhotoUploadBusy] = useState(false);
+  const [photoUploadError, setPhotoUploadError] = useState("");
   const [eventAwards, setEventAwards] = useState([]);
   const [awardDrafts, setAwardDrafts] = useState({});
   const [awardingEventId, setAwardingEventId] = useState("");
@@ -3062,7 +3065,32 @@ function EventsPage({ members, showNotice, events, eventRsvps, user, profile, ac
   const roleStarFor = (member) => member?.role_star_url || (String(member?.role || "").toUpperCase() === "HEAD_ADMIN" ? "/role-star-red.svg" : String(member?.role || "").toUpperCase() === "ADMIN" ? "/role-star-blue.svg" : String(member?.role || "").toUpperCase() === "SUPPORTER" ? "/supporter-star.svg" : null);
 
   const openEventPhotos = (eventId) => {
-    window.dispatchEvent(new CustomEvent("ec:open-event-photos", { detail: { eventId } }));
+    setPhotoUploadError("");
+    setPhotoGalleryEventId(eventId);
+  };
+  const uploadGalleryPhoto = async (file) => {
+    if (!file || !photoGalleryEventId || !user?.id || photoUploadBusy) return;
+    const accepted = { "image/jpeg":"jpg", "image/png":"png", "image/webp":"webp", "image/avif":"avif" };
+    const ext = accepted[file.type];
+    if (!ext) return setPhotoUploadError("Bitte ein JPG-, PNG-, WebP- oder AVIF-Bild auswählen.");
+    if (!file.size || file.size > 10 * 1024 * 1024) return setPhotoUploadError("Das Foto muss zwischen 1 Byte und 10 MB groß sein.");
+    setPhotoUploadBusy(true);
+    setPhotoUploadError("");
+    const path = `${photoGalleryEventId}/${user.id}/${crypto.randomUUID()}.${ext}`;
+    try {
+      const { error: uploadError } = await supabase.storage.from("event-photos").upload(path, file, { contentType: file.type, upsert: false });
+      if (uploadError) throw uploadError;
+      const { error: saveError } = await supabase.from("event_photos").insert({ event_id: photoGalleryEventId, uploaded_by: user.id, storage_path: path });
+      if (saveError) {
+        await supabase.storage.from("event-photos").remove([path]);
+        throw saveError;
+      }
+      await loadEventExtras();
+    } catch (error) {
+      setPhotoUploadError(error?.message || "Das Foto konnte nicht hochgeladen werden.");
+    } finally {
+      setPhotoUploadBusy(false);
+    }
   };
 
   const awardEventPoints = async (event) => {
@@ -3111,7 +3139,25 @@ function EventsPage({ members, showNotice, events, eventRsvps, user, profile, ac
       || new Date(a.event_at) - new Date(b.event_at);
   });
 
+  const selectedGalleryEvent = events.find((event) => event.id === photoGalleryEventId);
+  const galleryPhotos = photoGalleryEventId ? photosFor(photoGalleryEventId) : [];
   return <section className="events-page">
+    {photoGalleryEventId && <div className="modal-overlay" role="presentation" onClick={() => !photoUploadBusy && setPhotoGalleryEventId(null)} style={{position:"fixed",inset:0,zIndex:12000,display:"grid",placeItems:"center",padding:12,background:"rgba(4,14,24,.8)"}}>
+      <section className="panel" role="dialog" aria-modal="true" aria-label="Eventfotogalerie" onClick={(e) => e.stopPropagation()} style={{width:"min(100%,900px)",maxHeight:"90dvh",overflowY:"auto",padding:20}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}}>
+          <div><span className="eyebrow">EVENTFOTOS</span><h2>{selectedGalleryEvent?.title || "Eventgalerie"}</h2></div>
+          <button type="button" disabled={photoUploadBusy} onClick={() => setPhotoGalleryEventId(null)} aria-label="Fotogalerie schließen">✕ Schließen</button>
+        </div>
+        <label style={{display:"block",margin:"12px 0"}}><strong>Eventfoto hinzufügen</strong><input type="file" accept="image/jpeg,image/png,image/webp,image/avif" disabled={photoUploadBusy} onChange={(e) => { const file=e.currentTarget.files?.[0]; e.currentTarget.value=""; void uploadGalleryPhoto(file); }} style={{display:"block",width:"100%",minHeight:44,marginTop:8}}/></label>
+        {photoUploadBusy && <p role="status">Foto wird hochgeladen und gespeichert …</p>}
+        {photoUploadError && <p role="alert" style={{color:"#b42318"}}>{photoUploadError}</p>}
+        <div className="event-photo-gallery" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,180px),1fr))",gap:12}}>
+          {galleryPhotos.map((photo) => <a key={photo.id} href={publicPhotoUrl(photo.storage_path)} target="_blank" rel="noreferrer" aria-label="Eventfoto in voller Größe öffnen"><img src={publicPhotoUrl(photo.storage_path)} loading="lazy" alt="Eventfoto" style={{width:"100%",aspectRatio:"1/1",objectFit:"cover",borderRadius:12}}/></a>)}
+        </div>
+        {!galleryPhotos.length && <p>Noch keine Eventfotos vorhanden. Du kannst das erste Foto hinzufügen.</p>}
+      </section>
+    </div>}
+
     <div className="page-heading">
       <div><span className="eyebrow">VERANSTALTUNGEN</span><h1>Events · {activeRegion?.name || "Region"}</h1><p>Veranstaltungen, Eventfotos und öffentliche Eventpunkte an einem Ort.</p></div>
       {canCreateEvent && <button type="button" className="primary-button community-create-event-cta" onClick={() => { document.getElementById("event-create")?.scrollIntoView({ behavior:"smooth", block:"start" }); window.setTimeout(() => document.querySelector("#event-create input[name=title]")?.focus(), 450); }}>＋ Veranstaltung erstellen</button>}
