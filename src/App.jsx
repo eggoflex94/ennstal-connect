@@ -3070,17 +3070,22 @@ function EventsPage({ members, showNotice, events, eventRsvps, user, profile, ac
   };
   const uploadGalleryPhoto = async (file) => {
     if (!file || !photoGalleryEventId || !user?.id || photoUploadBusy) return;
-    const accepted = { "image/jpeg":"jpg", "image/png":"png", "image/webp":"webp", "image/avif":"avif" };
-    const ext = accepted[file.type];
-    if (!ext) return setPhotoUploadError("Bitte ein JPG-, PNG-, WebP- oder AVIF-Bild auswählen.");
+    if (!["image/jpeg", "image/webp"].includes(file.type)) return setPhotoUploadError("Bitte ein JPG- oder WebP-Bild auswählen.");
     if (!file.size || file.size > 10 * 1024 * 1024) return setPhotoUploadError("Das Foto muss zwischen 1 Byte und 10 MB groß sein.");
     setPhotoUploadBusy(true);
     setPhotoUploadError("");
-    const path = `${photoGalleryEventId}/${user.id}/${crypto.randomUUID()}.${ext}`;
+    const { data: allowed, error: permissionError } = await supabase.rpc("can_upload_event_photo", { p_event_id: photoGalleryEventId });
+    if (permissionError || !allowed) {
+      setPhotoUploadError(permissionError?.message || "Für dieses Event hast du keine Foto-Berechtigung.");
+      setPhotoUploadBusy(false);
+      return;
+    }
+    const ext = file.type === "image/webp" ? "webp" : "jpg";
+    const path = `${user.id}/${photoGalleryEventId}/${crypto.randomUUID()}.${ext}`;
     try {
       const { error: uploadError } = await supabase.storage.from("event-photos").upload(path, file, { contentType: file.type, upsert: false });
       if (uploadError) throw uploadError;
-      const { error: saveError } = await supabase.from("event_photos").insert({ event_id: photoGalleryEventId, uploaded_by: user.id, storage_path: path });
+      const { error: saveError } = await supabase.rpc("create_event_photo", { p_event_id: photoGalleryEventId, p_storage_path: path, p_caption: null });
       if (saveError) {
         await supabase.storage.from("event-photos").remove([path]);
         throw saveError;
@@ -3092,7 +3097,6 @@ function EventsPage({ members, showNotice, events, eventRsvps, user, profile, ac
       setPhotoUploadBusy(false);
     }
   };
-
   const awardEventPoints = async (event) => {
     if (!canAwardEventPoints) return;
     const draft = awardDrafts[event.id] || {};
@@ -3148,7 +3152,7 @@ function EventsPage({ members, showNotice, events, eventRsvps, user, profile, ac
           <div><span className="eyebrow">EVENTFOTOS</span><h2>{selectedGalleryEvent?.title || "Eventgalerie"}</h2></div>
           <button type="button" disabled={photoUploadBusy} onClick={() => setPhotoGalleryEventId(null)} aria-label="Fotogalerie schließen">✕ Schließen</button>
         </div>
-        <label style={{display:"block",margin:"12px 0"}}><strong>Eventfoto hinzufügen</strong><input type="file" accept="image/jpeg,image/png,image/webp,image/avif" disabled={photoUploadBusy} onChange={(e) => { const file=e.currentTarget.files?.[0]; e.currentTarget.value=""; void uploadGalleryPhoto(file); }} style={{display:"block",width:"100%",minHeight:44,marginTop:8}}/></label>
+        <label style={{display:"block",margin:"12px 0"}}><strong>Eventfoto hinzufügen</strong><input type="file" accept="image/jpeg,image/webp" disabled={photoUploadBusy} onChange={(e) => { const file=e.currentTarget.files?.[0]; e.currentTarget.value=""; void uploadGalleryPhoto(file); }} style={{display:"block",width:"100%",minHeight:44,marginTop:8}}/></label>
         {photoUploadBusy && <p role="status">Foto wird hochgeladen und gespeichert …</p>}
         {photoUploadError && <p role="alert" style={{color:"#b42318"}}>{photoUploadError}</p>}
         <div className="event-photo-gallery" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,180px),1fr))",gap:12}}>
