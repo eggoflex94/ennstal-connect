@@ -4,26 +4,25 @@ import { readFileSync } from 'node:fs';
 
 const read = (path) => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 
-test('all sidebar ads are rendered rather than only a carousel index', () => {
-  const js = read('src/sidebar-ads-stack.js');
-  assert.match(js, /ads\.map\(card\)/);
-  assert.match(js, /replaceChildren\(/);
-  assert.match(js, /ec-legacy-ads-hidden/);
-  assert.doesNotMatch(js, /setInterval\(/);
+test('native sidebar ad component renders every active ad without carousel state', () => {
+  const js = read('src/sidebar-ads-modern.js');
+  assert.match(js, /currentAds\.map\(bannerMarkup\)\.join\(""(?:)\)/);
+  assert.match(js, /\.ec-sidebar-ad-list/);
+  assert.doesNotMatch(js, /bannerIndex|rotationTimer|restartRotation|setInterval\(/);
 });
 
-test('stacked ad replacement is loaded in production', () => {
+test('canonical ad rendering is wired without the duplicate stack', () => {
   const entry = read('src/main.jsx');
-  assert.match(entry, /import "\.\/sidebar-ads-stack\.js"/);
-  assert.match(entry, /import "\.\/advertising-stacked-parity\.css"/);
+  assert.match(entry, /sidebar-ads-modern\.js/);
+  assert.doesNotMatch(entry, /^import "\.\/sidebar-ads-stack\.js";/m);
 });
 
-test('ad images remain completely visible and cards do not overlay', () => {
-  const css = read('src/advertising-stacked-parity.css');
-  assert.match(css, /\.ec-stacked-ad-card img\s*\{/);
-  assert.match(css, /object-fit:contain!important/);
-  assert.match(css, /\.ec-legacy-ads-hidden\{display:none!important\}/);
-  assert.match(css, /order:9999!important/);
+test('advertising images have natural size and readable captions', () => {
+  const css = read('src/sidebar-ads-modern.css');
+  assert.match(css, /\.ec-sidebar-ad-banner img\{[^}]*height:auto/);
+  assert.match(css, /\.ec-sidebar-ad-banner img\{[^}]*object-fit:contain/);
+  assert.match(css, /\.ec-sidebar-ad-caption\{position:relative/);
+  assert.doesNotMatch(css, /\.ec-sidebar-ad-banner img\{[^}]*object-fit:cover/);
 });
 
 test('mobile navigation retains desktop destinations with readable labels', () => {
