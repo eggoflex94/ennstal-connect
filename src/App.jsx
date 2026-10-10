@@ -102,9 +102,10 @@ const openContentEditor = ({ title, description, fields }) => new Promise((resol
   fields.forEach((definition) => {
     const label = document.createElement("label"); label.className = "content-editor-field"; label.textContent = definition.label;
     const isTextarea = definition.type === "textarea";
-    const element = isTextarea ? document.createElement("textarea") : document.createElement("input");
+    const element = isTextarea ? document.createElement("textarea") : document.createElement(definition.type === "select" ? "select" : "input");
+    if (definition.type === "select") for (const option of definition.options || []) { const choice=document.createElement("option");choice.value=option.value;choice.textContent=option.label;element.appendChild(choice); }
     element.name = definition.name;
-    if (!isTextarea) element.type = definition.type === "file" ? "file" : definition.type || "text";
+    if (!isTextarea && definition.type !== "select") element.type = definition.type === "file" ? "file" : definition.type || "text";
     if (definition.type === "file") element.accept = "image/png,image/jpeg,image/webp,image/gif";
     else element.value = definition.value || "";
     if (definition.placeholder) element.placeholder = definition.placeholder;
@@ -1092,11 +1093,13 @@ export default function App() {
   async function joinGroup(group) { const { error } = await supabase.rpc("join_community_group", { p_group_id: group.id }); if (error) return showSaveError("Der Gruppenbeitritt", error); setGroups((current) => current.map((item) => item.id !== group.id || (item.member_ids || []).includes(user?.id) ? item : { ...item, member_ids: [...(item.member_ids || []), user.id], member_count: Number(item.member_count || 0) + 1 })); showNotice("Du bist der Gruppe beigetreten."); await loadAll(); }
   async function leaveGroup(group) { if (!confirm(`Gruppe „${group.name}" verlassen?`)) return; const { error } = await supabase.rpc("leave_community_group", { p_group_id: group.id }); if (error) return showSaveError("Der Gruppenaustritt", error); showNotice("Du hast die Gruppe verlassen."); await loadAll(); }
   async function editGroup(group) {
-    const values = await openContentEditor({ title: "Gruppe bearbeiten", description: "Der Ersteller sowie berechtigte Moderation dürfen diese Angaben ändern.", fields: [{ name: "name", label: "Gruppenname", value: group.name, required: true }, { name: "description", label: "Beschreibung", type: "textarea", value: group.description, required: true, rows: 8 }, { name: "image", label: "Neues Gruppenbild (optional)", type: "file" }] });
+    const values = await openContentEditor({ title: "Gruppe bearbeiten", description: "Der Ersteller sowie berechtigte Moderation dürfen diese Angaben ändern.", fields: [{ name: "name", label: "Gruppenname", value: group.name, required: true }, { name: "description", label: "Beschreibung", type: "textarea", value: group.description, required: true, rows: 8 }, { name: "image", label: "Neues Gruppenbild (optional)", type: "file" }, ...((profile?.is_primary_head_admin || isAdmin(profile?.role)) ? [{ name: "scope", label: "Sichtbarkeit der Gruppe", type: "select", value: group.region_id == null ? "global" : "regional", options: [{ value: "regional", label: "Regional – nur aktuelle Region" }, { value: "global", label: "Global – alle Regionen" }] }] : [])] });
     if (!values || values.name.trim().length < 3 || values.description.trim().length < 10) return;
     let imageUrl = group.image_url || null; try { const uploaded = await uploadContentImage(values.image, "groups"); if (uploaded) imageUrl = uploaded; } catch (error) { return showSaveError("Das Gruppenbild", error); }
     const { error } = await supabase.rpc("update_community_group", { p_group_id: group.id, p_name: values.name.trim(), p_description: values.description.trim(), p_image_url: imageUrl });
-    if (error) return showSaveError("Die Gruppe", error); showNotice("Gruppe gespeichert."); await loadAll();
+    if (error) return showSaveError("Die Gruppe", error);
+    if (values.scope && (values.scope === "global") !== (group.region_id == null)) { const scopeResult = await supabase.rpc("ec_set_community_group_scope", { p_group_id: group.id, p_region: values.scope === "global" ? null : activeRegionId }); if (scopeResult.error) return showSaveError("Die Gruppensichtbarkeit", scopeResult.error); }
+    showNotice("Gruppe gespeichert."); await loadAll();
   }
   async function requestGroupOwnerChange(group) {
     const nextOwner = prompt("Nickname des neuen Gruppeninhabers:", ""); if (nextOwner === null || !nextOwner.trim()) return;
