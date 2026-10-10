@@ -5,3 +5,12 @@
 .community-ad-card a,.community-ad-card>div,.ec-sidebar-banner a{display:block;max-width:100%;min-width:0;overflow-wrap:anywhere}
 .ec-right-dock .ec-sidebar-banners,.ec-right-dock .ec-sidebar-ads{box-sizing:border-box!important;margin-block:12px!important}
 @media(max-width:900px){.community-ads,.community-ad-list,.ec-sidebar-banners,.ec-sidebar-ads{min-width:0!important;max-width:100%!important}.community-ad-card,.ec-sidebar-banner{margin-inline:0!important}}
+
+/* Replacement for the rotating sidebar ad carousel. */
+.ec-right-dock .ec-legacy-ads-hidden{display:none!important}
+.ec-right-dock .ec-stacked-ads{display:flex!important;flex-direction:column!important;gap:14px!important;position:static!important;width:100%!important;min-width:0!important;max-width:100%!important;height:auto!important;overflow:visible!important}
+.ec-right-dock .ec-stacked-ad-card{position:static!important;display:block!important;box-sizing:border-box!important;width:100%!important;min-width:0!important;max-width:100%!important;padding:12px!important;border:1px solid #cbdcf2;border-radius:18px;background:#fff;overflow:visible!important}
+.ec-stacked-ad-heading{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:12px;color:#31485d}
+.ec-stacked-ad-card>a,.ec-stacked-ad-card>div:not(.ec-stacked-ad-heading){display:block!important;max-width:100%!important;overflow-wrap:anywhere;color:inherit;text-decoration:none}
+.ec-stacked-ad-card img{display:block!important;width:100%!important;max-width:100%!important;height:auto!important;max-height:none!important;aspect-ratio:auto!important;object-fit:contain!important;object-position:center!important;border-radius:12px}
+.ec-stacked-ad-card p{margin:8px 0 0;overflow-wrap:anywhere}
