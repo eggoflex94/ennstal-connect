@@ -5,10 +5,12 @@ let activeDialog = null;
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
 async function uploadEventImage(file, userId) {
-  if (!file?.name || !file.size) return null;
-  if (!file.type.startsWith('image/')) throw new Error('Bitte eine Bilddatei auswählen.');
-  if (file.size > 5 * 1024 * 1024) throw new Error('Das Bild darf höchstens 5 MB groß sein.');
-  const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+  if (!file || typeof file.size !== 'number') return null;
+  if (!file.size) throw new Error('Die ausgewählte Bilddatei ist leer. Bitte wähle sie erneut aus.');
+  const supported = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif', 'image/avif': 'avif' };
+  const ext = supported[file.type];
+  if (!ext) throw new Error('Bitte ein JPG-, PNG-, WebP-, GIF- oder AVIF-Bild auswählen.');
+  if (file.size > 5 * 1024 * 1024) throw new Error('Das Bild darf höchstens 5 MB groß sein. Bitte verkleinere es vor dem Hochladen.');
   const path = `${userId}/events/${crypto.randomUUID()}.${ext}`;
   let bucket = 'community-media';
   let { error } = await supabase.storage.from(bucket).upload(path, file, { upsert:false, contentType:file.type });
@@ -86,7 +88,7 @@ async function openEventEditor(eventId) {
       image_url:imageUrl
     };
     const { error: updateError } = await supabase.from('community_events').update(payload).eq('id', event.id);
-    if (updateError) return alert(updateError.message);
+    if (updateError) return alert('Event konnte nicht gespeichert werden: ' + updateError.message);
     const { error: styleError } = await supabase.rpc('ec_admin_update_event_style', {
       p_event_id:event.id,
       p_font_family:String(data.get('font_family') || 'modern'),
