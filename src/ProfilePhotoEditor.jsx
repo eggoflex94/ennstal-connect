@@ -44,26 +44,10 @@ function cropGeometry(source, rotation, size) {
   return { quarterTurn, coverScale, containScale, circleFillZoom };
 }
 
-function drawSoftBackdrop(ctx, source, rotation, size, coverScale) {
-  const radians = rotation * Math.PI / 180;
-  const backdropScale = coverScale * 1.12;
-  const bgW = source.naturalWidth * backdropScale;
-  const bgH = source.naturalHeight * backdropScale;
-
-  ctx.save();
-  ctx.filter = "blur(34px) brightness(.56) saturate(1.12)";
-  ctx.translate(size / 2, size / 2);
-  ctx.rotate(radians);
-  ctx.drawImage(source, -bgW / 2, -bgH / 2, bgW, bgH);
-  ctx.restore();
-  ctx.filter = "none";
-
-  // Darken the image-derived backdrop slightly so exposed space can never
-  // turn into a white/light letterbox, even with very bright source photos.
-  ctx.save();
-  ctx.fillStyle = "rgba(10, 24, 36, 0.22)";
+function drawSoftBackdrop(ctx, _source, _rotation, size) {
+  // A neutral canvas, never a second copy of the portrait.
+  ctx.fillStyle = "#eef2f5";
   ctx.fillRect(0, 0, size, size);
-  ctx.restore();
 }
 
 function drawEditedImage(canvas, source, { zoom, x, y, rotation, mode = "cover" }, size) {
@@ -77,8 +61,7 @@ function drawEditedImage(canvas, source, { zoom, x, y, rotation, mode = "cover" 
   const { quarterTurn, coverScale, containScale } = cropGeometry(source, rotation, size);
   const radians = rotation * Math.PI / 180;
 
-  // Always paint the empty area with a blurred version of the photo.
-  // This keeps zoomed-out avatars free of white/light letterboxing in every mode.
+  // Never duplicate or mirror the portrait in the surrounding canvas.
   drawSoftBackdrop(ctx, source, rotation, size, coverScale);
 
   if (mode === "contain") {
