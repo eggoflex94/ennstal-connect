@@ -20,8 +20,7 @@ import "./mobile-zoom.js";
 import "./ad-form-fix.js";
 import "./ad-management.js";
 // Canonical ad display and management, shared between desktop and mobile.
-import "./sidebar-ads-modern.css";
-import "./sidebar-ads-modern.js";
+// Temporarily disable canonical ad runtime to restore application startup.
 import "./member-extras.js";
 import "./legal-evidence-admin.js";
 import "./privacy-center.js";
