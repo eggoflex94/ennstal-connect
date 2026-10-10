@@ -26,6 +26,19 @@ function presenceOnline(member) {
 
 export default function NativeMembersDirectory({ members = [], regions = [], activeRegion, profile, friendships = [], onOpen }) {
   const [query, setQuery] = useState("");
+  const [foundingHighlights, setFoundingHighlights] = useState({});
+  useEffect(() => {
+    if (!supabase) return undefined;
+    let cancelled = false;
+    const load = async () => {
+      const { data, error } = await supabase.rpc("ec_active_founding_members");
+      if (!cancelled && !error) setFoundingHighlights(Object.fromEntries((data || []).map((x) => [x.member_id, x.expires_at])));
+    };
+    void load();
+    const timer = window.setInterval(load, 60000);
+    window.addEventListener("focus", load);
+    return () => { cancelled = true; window.clearInterval(timer); window.removeEventListener("focus", load); };
+  }, []);
   const [regionId, setRegionId] = useState(profile?.home_region_id || "ALL");
   const [onlineOnly, setOnlineOnly] = useState(false);
   const [memberType, setMemberType] = useState("ALL");
@@ -278,6 +291,7 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
         return <MemberCardView
           key={member.id}
           member={cardMember}
+          foundingHighlightUntil={foundingHighlights[member.id]}
           profile={profile}
           friendships={friendships}
           onOpen={openMember}
