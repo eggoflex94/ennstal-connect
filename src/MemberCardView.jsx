@@ -52,8 +52,9 @@ function rolePresentation(member) {
   return { key: "member", theme: "member", label: "Mitglied", star: null };
 }
 
-export default function MemberCardView({ member, profile, friendships, onOpen, interactive = true }) {
+export default function MemberCardView({ member, profile, friendships, onOpen, interactive = true, foundingHighlightUntil = null }) {
   const presentation = rolePresentation(member);
+  const foundingFeatured = Boolean(foundingHighlightUntil && new Date(foundingHighlightUntil).getTime() > Date.now() && member.avatar_url);
   const baseRole = String(member?.role || "MEMBER").toUpperCase();
   const friendship = (friendships || []).find((item) => (item.requester_id === profile?.id && item.receiver_id === member.id) || (item.receiver_id === profile?.id && item.requester_id === member.id));
   const friend = friendship?.status === "ACCEPTED";
@@ -74,7 +75,7 @@ export default function MemberCardView({ member, profile, friendships, onOpen, i
 
   return (
     <article
-      className={`member-card ${presentation.key} role-theme-${presentation.theme}`}
+      className={`member-card ${presentation.key} role-theme-${presentation.theme} ${foundingFeatured ? "ec-founding-featured" : ""}`}
       data-member-id={member.id}
       data-base-role={baseRole}
       data-home-region-id={member.home_region_id || ""}
@@ -94,6 +95,7 @@ export default function MemberCardView({ member, profile, friendships, onOpen, i
       aria-label={interactive ? `Profil von ${getName(member)} öffnen` : `Vorschau der Mitgliederkarte von ${getName(member)}`}
       style={presentation.theme === "municipality" ? { "--ec-municipality-role-accent": presentation.color } : undefined}
     >
+      {foundingFeatured && <span className="ec-founding-feature-label" title="Für 7 Tage hervorgehoben">✨ Gründungsmitglied · hervorgehoben</span>}
       <span className={`ec-role-surface ec-role-surface-${presentation.theme}`} aria-hidden="true" />
 
       <div className="ec-card-badge-rail" aria-label="Profilkennzeichnungen">
