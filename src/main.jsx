@@ -19,7 +19,7 @@ import "./featured-group-admin.js";
 import "./mobile-zoom.js";
 import "./ad-form-fix.js";
 import "./ad-management.js";
-import "./sidebar-ads-stack.js";
+// Ads are rendered directly by sidebar-ads-modern.js; no secondary stack overlay.
 import "./member-extras.js";
 import "./legal-evidence-admin.js";
 import "./privacy-center.js";
