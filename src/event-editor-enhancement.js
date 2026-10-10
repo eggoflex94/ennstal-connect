@@ -20,6 +20,13 @@ async function uploadEventImage(file, userId) {
   return supabase.storage.from(bucket).getPublicUrl(path).data?.publicUrl || null;
 }
 
+function localDateTimeInput(value) {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return '';
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 16);
+}
+
 function closeDialog() {
   activeDialog?.remove();
   activeDialog = null;
@@ -39,7 +46,7 @@ async function openEventEditor(eventId) {
     <header><div><span>EVENT BEARBEITEN</span><h2>${esc(event.title)}</h2><p>Inhalt, Bild und Darstellung an einem Ort ändern.</p></div><button type="button" data-close aria-label="Schließen">×</button></header>
     <label>Titel<input name="title" value="${esc(event.title)}" required></label>
     <label>Beschreibung<textarea name="description" rows="7">${esc(event.description || '')}</textarea></label>
-    <div class="ec-event-editor-grid"><label>Datum & Uhrzeit<input name="event_at" type="datetime-local" value="${new Date(event.event_at).toISOString().slice(0,16)}" required></label><label>Ort<input name="location" value="${esc(event.location || '')}"></label></div>
+    <div class="ec-event-editor-grid"><label>Datum & Uhrzeit<input name="event_at" type="datetime-local" value="${localDateTimeInput(event.event_at)}" required></label><label>Ort<input name="location" value="${esc(event.location || '')}"></label></div>
     ${event.image_url ? `<div class="ec-event-current-image"><img src="${esc(event.image_url)}" alt=""><small>Aktuelles Eventbild</small></div>` : ''}
     <label>Neues Bild hochladen<input name="image" type="file" accept="image/*"></label>
     <label>Bild-URL<input name="image_url" value="${esc(event.image_url || '')}" placeholder="optional"></label>
@@ -61,6 +68,11 @@ async function openEventEditor(eventId) {
   overlay.onclick = (click) => { if (click.target === overlay) closeDialog(); };
   form.onsubmit = async (submit) => {
     submit.preventDefault();
+    if (form.dataset.saving === 'true') return;
+    form.dataset.saving = 'true';
+    const saveButton = form.querySelector('button.primary-button');
+    if (saveButton) { saveButton.disabled = true; saveButton.textContent = 'Speichern …'; }
+    try {
     const data = new FormData(form);
     let imageUrl = String(data.get('image_url') || '').trim() || null;
     try { imageUrl = (await uploadEventImage(data.get('image'), user.id)) || imageUrl; } catch (uploadError) { return alert(uploadError.message); }
@@ -85,6 +97,10 @@ async function openEventEditor(eventId) {
     if (styleError) return alert(styleError.message);
     closeDialog();
     window.dispatchEvent(new CustomEvent('ec:region-change', { detail:{ id:event.region_id } }));
+    } finally {
+      form.dataset.saving = 'false';
+      if (saveButton) { saveButton.disabled = false; saveButton.textContent = 'Änderungen speichern'; }
+    }
   };
 }
 
