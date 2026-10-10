@@ -219,34 +219,6 @@ export default function App() {
     setWelcomeBadges([]); setSelectedGroup(null); setPage("home");
   };
 
-  useEffect(() => {
-    if (!user?.id || !profile?.is_primary_head_admin || watermarkBackfillStarted.current) return;
-    watermarkBackfillStarted.current = true;
-    let cancelled = false;
-
-    const runBackfill = async () => {
-      for (let batch = 0; batch < 30 && !cancelled; batch += 1) {
-        const { data, error } = await supabase.functions.invoke("backfill-photo-watermarks", {
-          body: { batchSize: 3 }
-        });
-        if (error) {
-          console.warn("Wasserzeichen-Nachbearbeitung pausiert:", error.message);
-          break;
-        }
-        const remaining = Number(data?.remaining || 0);
-        if (!remaining) break;
-        await new Promise((resolve) => window.setTimeout(resolve, 900));
-      }
-      if (!cancelled) {
-        window.dispatchEvent(new CustomEvent("ec:regional-events-refresh", {
-          detail: { reason: "watermark-backfill" }
-        }));
-      }
-    };
-
-    void runBackfill();
-    return () => { cancelled = true; };
-  }, [user?.id, profile?.is_primary_head_admin]);
 
   // A profile remains open while the Head Admin changes its rights.  Keep that
   // view in sync with the refreshed directory instead of leaving stale data
