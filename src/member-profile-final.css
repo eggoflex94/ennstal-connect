@@ -231,3 +231,33 @@ body .public-profile-preview.ec-member-profile-final .ec-mp-function .ec-mp-func
   align-items:center!important;
   max-width:100%!important;
 }
+
+/* Single-photo authority: never tile or mirror the avatar around the main photo. */
+.ec-member-profile-final .ec-mp-photo{
+  isolation:isolate!important;
+  background:#eef2f5!important;
+  background-image:none!important;
+  background-repeat:no-repeat!important;
+  box-shadow:0 10px 26px rgba(17,35,48,.12)!important;
+}
+.ec-member-profile-final .ec-mp-photo::before,
+.ec-member-profile-final .ec-mp-photo::after{content:none!important;display:none!important;background-image:none!important}
+.ec-member-profile-final .ec-mp-photo>img{
+  display:block!important;
+  position:relative!important;
+  width:100%!important;
+  height:auto!important;
+  min-width:0!important;
+  min-height:0!important;
+  max-width:100%!important;
+  max-height:320px!important;
+  aspect-ratio:1/1!important;
+  object-fit:cover!important;
+  object-position:center!important;
+  border-radius:17px!important;
+  margin:0!important;
+  background:transparent!important;
+  background-image:none!important;
+  box-shadow:none!important;
+}
+.ec-member-profile-final .ec-mp-photo>img~img{display:none!important}
