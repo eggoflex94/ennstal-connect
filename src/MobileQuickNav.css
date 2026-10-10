@@ -93,3 +93,12 @@
  .chat-composer textarea,.message-composer textarea{font-size:16px!important}
  .ec-mobile-menu-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
 }
+
+/* Desktop/mobile parity: use the shared responsive sidebar navigation instead of the legacy second mobile bar. */
+@media (max-width: 900px) {
+  .ec-mobile-quicknav,
+  .ec-mobile-quicknav-bar,
+  .ec-mobile-menu-sheet,
+  .ec-mobile-menu-backdrop { display: none !important; }
+  .app:has(.ec-mobile-quicknav) { padding-bottom: 0 !important; }
+}
