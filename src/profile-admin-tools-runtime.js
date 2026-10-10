@@ -90,7 +90,7 @@ function buildModal(ctx){
   if(canEditIdentity(ctx))blocks.push(section('✎','Mitgliedsdaten','Name, Geburtsdatum und Geschlecht ändern – automatische Nachricht an das Mitglied',`<div class="ec-profile-admin-grid">${toolButton('Name / Geburtsdatum ändern','identity-edit')}</div>`));
 
   const moderation=[];
-  if(canWarn(ctx))moderation.push(toolButton('Verwarnung senden','warn'));
+  if(canWarn(ctx)){moderation.push(toolButton('Verwarnung senden','warn'));moderation.push(toolButton('Vor- und Nachname überprüfen / verwarnen','warn-name'));}
   if(canSuspend(ctx))moderation.push(toolButton(isSuspended?'Konto freischalten':'Profil/Konto sperren','suspend',isSuspended?'success':'danger'));
   if(canReports(ctx))moderation.push(toolButton('Meldungen bearbeiten','reports'));
   if(canVerificationRequest(ctx)&&!t.is_verified)moderation.push(toolButton('Verifizierung mit Frist anfordern','verification-request'));
@@ -190,6 +190,13 @@ async function handleAction(ctx,action,modal){
     if(error)return notify(error.message);
     notify(enabled?'Der Global Admin darf jetzt Community-Fotografen verwalten.':'Das Zusatzrecht zur Fotografenverwaltung wurde entfernt.');
     return openTools(ctx.target.id);
+  }
+  if(action==='warn-name'&&canWarn(ctx)){
+    const warning='Offizielle Verwarnung – Vor- und Nachname: Uns liegen Hinweise vor, dass dein angegebener Vor- oder Nachname möglicherweise nicht korrekt ist. Bei Ennstal Connect MÜSSEN Vor- und Nachnamen vollständig und wahrheitsgemäß angegeben werden. Bitte korrigiere deine Angaben zeitnah in deinem Profil und übermittle deinen richtigen Vor- und Nachnamen. Sollten die Angaben trotz dieser Aufforderung weiterhin nicht korrekt sein, kann nach einer erneuten Prüfung eine Sperre deines Accounts erfolgen. Bei einem Missverständnis kontaktiere bitte die Administration.';
+    if(!window.confirm(`Namensverwarnung an ${targetName(ctx.target)} senden?`))return;
+    const moderator=bool(ctx.viewer.forum_moderator)&&!ctx.hasBasicAdmin&&!canGlobal(ctx,'manage_reports')&&!canGlobal(ctx,'manage_members')&&!canRegional(ctx,'MEMBERS');
+    const {error}=moderator?await supabase.rpc('forum_moderator_warn_user',{p_target_user:ctx.target.id,p_warning:warning}):await supabase.rpc('admin_warn_user',{target_user:ctx.target.id,warning_text:warning});
+    return notify(error?error.message:'Namensverwarnung wurde gesendet.');
   }
   if(action==='warn'&&canWarn(ctx)){const text=window.prompt(`Verwarnung für ${targetName(ctx.target)}:`,'Bitte beachte die Community-Regeln.');if(text===null||text.trim().length<10)return notify('Bitte einen Verwarnungstext mit mindestens 10 Zeichen eingeben.');if(bool(ctx.viewer.forum_moderator)&&!ctx.hasBasicAdmin&&!canGlobal(ctx,'manage_reports')&&!canGlobal(ctx,'manage_members')&&!canRegional(ctx,'MEMBERS')){const {error}=await supabase.rpc('forum_moderator_warn_user',{p_target_user:ctx.target.id,p_warning:text.trim()});return notify(error?error.message:'Verwarnung wurde gesendet.');}const {error}=await supabase.rpc('admin_warn_user',{target_user:ctx.target.id,warning_text:text.trim()});return notify(error?error.message:'Verwarnung wurde gesendet.');}
   if(action==='suspend'&&canSuspend(ctx)){const next=ctx.target.account_status==='SUSPENDED'?'ACTIVE':'SUSPENDED';const ok=await withPreparedAction(next==='SUSPENDED'?'Profil/Konto sperren':'Profil/Konto freischalten',ctx.target.id,reason=>supabase.rpc('admin_set_account_status',{target_user:ctx.target.id,new_status:next,p_reason:reason}));if(ok){notify(next==='SUSPENDED'?'Profil wurde gesperrt.':'Profil wurde freigeschaltet.');openTools(ctx.target.id);}return;}
