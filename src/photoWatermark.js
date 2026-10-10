@@ -68,37 +68,17 @@ export async function watermarkPhoto(file, { mode = "standard", maxEdge = 2400, 
   const logoWidth = Math.min(Math.max(Math.round(width * 0.20), 150), 340);
   const logoRatio = logo ? ((logo.naturalHeight || logo.height || 70) / (logo.naturalWidth || logo.width || 370)) : (70 / 370);
   const logoHeight = Math.max(28, Math.round(logoWidth * logoRatio));
-  const label = mode === "event" ? "Community Fotograf" : "Ennstal Connect";
-  const fontSize = Math.max(14, Math.round(width * 0.012));
   const x = width - logoWidth - pad;
-  const y = height - logoHeight - fontSize - pad - 6;
-
+  const y = height - logoHeight - pad;
   ctx.save();
-  ctx.globalAlpha = 0.68;
-  ctx.shadowColor = "rgba(0,0,0,0.42)";
-  ctx.shadowBlur = Math.max(2, Math.round(width * 0.002));
-  ctx.shadowOffsetY = Math.max(1, Math.round(width * 0.001));
-
-  if (logo) {
-    ctx.drawImage(logo, x, y, logoWidth, logoHeight);
-  } else {
+  ctx.globalAlpha = 0.70;
+  if (logo) ctx.drawImage(logo, x, y, logoWidth, logoHeight);
+  else {
     ctx.fillStyle = "#ffffff";
-    ctx.font = `800 ${Math.max(18, fontSize + 4)}px system-ui, sans-serif`;
+    ctx.font = `800 ${Math.max(18, Math.round(width * 0.013))}px system-ui, sans-serif`;
     ctx.textAlign = "right";
-    ctx.textBaseline = "bottom";
-    ctx.fillText("ennstal connect", width - pad, y + logoHeight);
+    ctx.fillText("Ennstal Connect", width - pad, height - pad);
   }
-
-  ctx.globalAlpha = 0.78;
-  ctx.font = `800 ${fontSize}px system-ui, sans-serif`;
-  ctx.textAlign = "right";
-  ctx.textBaseline = "top";
-  ctx.lineWidth = Math.max(2, Math.round(fontSize * 0.16));
-  ctx.strokeStyle = "rgba(0,0,0,0.46)";
-  ctx.fillStyle = "rgba(255,255,255,0.94)";
-  const labelY = y + logoHeight + 4;
-  ctx.strokeText(label, width - pad, labelY);
-  ctx.fillText(label, width - pad, labelY);
   ctx.restore();
 
   let type = "image/webp";
