@@ -97,6 +97,8 @@ async function openEventEditor(eventId) {
     if (styleError) return alert(styleError.message);
     closeDialog();
     window.dispatchEvent(new CustomEvent('ec:region-change', { detail:{ id:event.region_id } }));
+    } catch (saveError) {
+      alert(saveError?.message || 'Das Event konnte nicht gespeichert werden. Bitte versuche es erneut.');
     } finally {
       form.dataset.saving = 'false';
       if (saveButton) { saveButton.disabled = false; saveButton.textContent = 'Änderungen speichern'; }
