@@ -21,5 +21,5 @@
 .ec-right-dock .ec-stacked-ad-card>a,.ec-right-dock .ec-stacked-ad-card>div:not(.ec-stacked-ad-heading){width:100%!important;overflow:hidden!important}
 .ec-right-dock .ec-stacked-ad-card img{height:auto!important;width:100%!important;max-height:none!important;object-fit:contain!important}
 .ec-right-dock .ec-stacked-ad-card strong,.ec-right-dock .ec-stacked-ad-card p{display:block;white-space:normal!important;overflow-wrap:anywhere!important;word-break:normal!important;line-height:1.4!important}
-.ec-right-dock .ec-stacked-ad-card p{font-size:13px!important;max-height:5.6em;overflow:hidden!important;display:-webkit-box!important;-webkit-line-clamp:4;-webkit-box-orient:vertical}
+.ec-right-dock .ec-stacked-ad-card p{font-size:13px!important;max-height:none!important;overflow-wrap:anywhere!important;white-space:normal!important;display:block!important}
 @media(max-width:900px){.ec-right-dock .ec-stacked-ads{padding-bottom:calc(24px + env(safe-area-inset-bottom))!important}.ec-right-dock .ec-stacked-ad-heading{font-size:13px!important}}
