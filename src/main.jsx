@@ -211,6 +211,8 @@ import "./community-photographer.css";
 import "./personal-dock-final-authority.css";
 import "./neon-pink-theme.css";
 import "./header-scroll-authority.css";
+/* Ads remain stacked and images uncropped on every screen. */
+import "./advertising-stacked-parity.css";
 import "./community-shell-width-fix.css";
 
 // Guard against stale DOM sibling references from legacy/runtime helpers.
