@@ -32,6 +32,12 @@ jobs:
         run: npm ci
       - name: Test and build
         run: npm run test:ci
+      - name: Install Playwright browser runtime
+        run: |
+          npm install --no-save @playwright/test@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Run desktop and mobile browser smoke tests
+        run: npx playwright test --config=playwright.config.mjs
       - name: Deploy to Cloudflare
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
