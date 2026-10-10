@@ -7,7 +7,7 @@ const read = (path) => readFileSync(new URL('../' + path, import.meta.url), 'utf
 test('native sidebar ad component renders every active ad without carousel state', () => {
   const js = read('src/sidebar-ads-modern.js');
   assert.match(js, /currentAds\.map\(bannerMarkup\)\.join\(""(?:)\)/);
-  assert.match(js, /\.ec-sidebar-ad-list/);
+  assert.match(js, /class="ec-sidebar-ad-list"/);
   assert.doesNotMatch(js, /bannerIndex|rotationTimer|restartRotation|setInterval\(/);
 });
 
