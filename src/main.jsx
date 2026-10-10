@@ -19,7 +19,9 @@ import "./featured-group-admin.js";
 import "./mobile-zoom.js";
 import "./ad-form-fix.js";
 import "./ad-management.js";
-// Ads are rendered directly by sidebar-ads-modern.js; no secondary stack overlay.
+// Canonical ad display and management, shared between desktop and mobile.
+import "./sidebar-ads-modern.css";
+import "./sidebar-ads-modern.js";
 import "./member-extras.js";
 import "./legal-evidence-admin.js";
 import "./privacy-center.js";
