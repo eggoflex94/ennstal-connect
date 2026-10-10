@@ -974,6 +974,7 @@ export default function App() {
       // When confirmations are disabled, create the matching profile immediately.
       if (data.session?.user) { setUser(data.session.user); void supabase.rpc("ensure_current_profile").finally(loadAll); }
       showNotice("Registrierung erfolgreich. Bestätige gegebenenfalls noch deine E-Mail und melde dich anschließend an.");
+      window.setTimeout(() => window.alert("Willkommen bei Ennstal Connect! 🎉\n\nDie ersten 60 registrierten Mitglieder erhalten mit einem echten Profilbild eine besondere Hervorhebung ihrer Mitgliederkarte für 7 Tage. Lade dafür dein aktuelles Profilbild hoch. Nach 7 Tagen endet die Hervorhebung automatisch.\n\nWichtig: Vor- und Nachname MÜSSEN korrekt und vollständig angegeben werden."), 0);
     } catch (error) { showNotice(error?.message || supabaseUnavailableMessage); }
   }
   async function requestPasswordReset() {
@@ -1026,6 +1027,15 @@ export default function App() {
   async function blockUser(m) { if (!m?.id || isAdmin(m.role)) return showNotice("Admins können nicht blockiert werden."); if (blockedIds.has(m.id)) return showNotice("Dieses Mitglied ist bereits blockiert."); const { error } = await supabase.rpc("create_user_block", { target_user: m.id }); if (error) return showNotice(error.message); showNotice("Mitglied wurde blockiert."); setSelectedMember(null); await loadAll(); }
   async function unblockUser(id) { const { error } = await supabase.rpc("remove_user_block", { target_user: id }); if (error) return showNotice(error.message); await loadAll(); }
   async function reportUser(m) { if (!m?.id || m.id === user?.id) return; const reason = prompt(`Warum möchtest du ${getName(m)} melden?`, "Verstoß gegen die Community-Regeln"); if (reason === null || reason.trim().length < 3) return showNotice("Bitte einen Meldegrund angeben."); const { error } = await supabase.rpc("submit_user_report", { target_user: m.id, reason_text: reason.trim() }); if (error) return showNotice(error.message); setSelectedMember(null); showNotice("Meldung wurde gesendet."); await loadAll(); }
+  async function warnIncorrectName(m) {
+    if ((!isAdmin(profile?.role) && !profile?.forum_moderator) || !m?.id || m.id === user?.id || m.role === "HEAD_ADMIN") return showNotice("Keine Berechtigung.");
+    const warning = "Offizielle Verwarnung – Vor- und Nachname: Uns liegen Hinweise vor, dass dein angegebener Vor- oder Nachname möglicherweise nicht korrekt ist. Bei Ennstal Connect MÜSSEN Vor- und Nachnamen vollständig und wahrheitsgemäß angegeben werden. Bitte korrigiere deine Angaben zeitnah in deinem Profil und übermittle deinen richtigen Vor- und Nachnamen. Sollten die Angaben trotz dieser Aufforderung weiterhin nicht korrekt sein, kann nach einer erneuten Prüfung eine Sperre deines Accounts erfolgen. Bei einem Missverständnis kontaktiere bitte die Administration.";
+    if (!confirm(`Namensverwarnung an ${getName(m)} senden?`)) return;
+    const moderator = profile?.forum_moderator && !isAdmin(profile?.role);
+    const { error } = await supabase.rpc(moderator ? "forum_moderator_warn_user" : "admin_warn_user", moderator ? { p_target_user: m.id, p_warning: warning } : { target_user: m.id, warning_text: warning });
+    if (error) return showNotice(error.message);
+    showNotice("Namensverwarnung wurde an das Mitglied gesendet.");
+  }
   async function warnMember(m) { if ((!isAdmin(profile?.role) && !profile?.forum_moderator) || !m?.id || m.id === user?.id || m.role === "HEAD_ADMIN") return showNotice("Keine Berechtigung."); const warning = prompt(`Verwarnung für ${getName(m)}:`, "Bitte beachte die Community-Regeln."); if (warning === null || warning.trim().length < 3) return showNotice("Bitte einen Verwarnungstext angeben."); const { error } = await supabase.rpc(profile?.forum_moderator && !isAdmin(profile?.role) ? "forum_moderator_warn_user" : "admin_warn_user", profile?.forum_moderator && !isAdmin(profile?.role) ? { p_target_user: m.id, p_warning: warning.trim() } : { target_user: m.id, warning_text: warning.trim() }); if (error) return showNotice(error.message); showNotice("Die Verwarnung wurde als Nachricht gesendet."); }
   async function resolveReport(id, status) { const promptText = status === "CONFIRMED" ? "Was wurde aufgrund der Meldung unternommen?" : "Warum wurde die Meldung abgelehnt?"; const note = prompt(promptText, status === "CONFIRMED" ? "Die Meldung wurde geprüft und geeignete Maßnahmen wurden gesetzt." : "Nach Prüfung konnte kein Regelverstoß festgestellt werden."); if (note === null || note.trim().length < 3) return showNotice("Bitte einen nachvollziehbaren Grund angeben."); const { error } = await supabase.rpc("admin_resolve_report", { p_report_id: id, p_status: status, p_action_note: note.trim() }); if (error) return showNotice(error.message); showNotice("Meldung bearbeitet – der Melder wurde automatisch informiert."); await loadAll(); }
 
@@ -2943,6 +2953,7 @@ function MemberProfile({ member, friends, groups = [], photos = [], onOpenGroup,
       <span className="eyebrow">MODERATION</span><h2>Admin-Werkzeuge</h2>
       <div>
         <button className="danger-button" onClick={() => warnMember(member)}>⚠ Verwarnung senden</button>
+        <button className="secondary-button" onClick={() => warnIncorrectName(member)}>✍️ Vor- und Nachname überprüfen / verwarnen</button>
         <button className="secondary-button" onClick={() => toggleSuspension(member)}>{member.account_status === "SUSPENDED" ? "🔓 Freischalten" : "🔒 Sperren"}</button>
         {!member.avatar_url && <button className="secondary-button" onClick={requestProfilePhoto}>📷 Profilbild anfordern</button>}{!member.is_verified && member.role !== "HEAD_ADMIN" && <button className="secondary-button" onClick={requestVerification}>✓ Verifizierung mit Frist anfordern</button>}
         {viewerIsPrimaryHead && <>
