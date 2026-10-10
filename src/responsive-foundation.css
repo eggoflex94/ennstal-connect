@@ -32,3 +32,9 @@ body{font-feature-settings:"kern";-webkit-font-smoothing:antialiased}
 @media(prefers-reduced-motion:reduce){
  .app :where(*, *::before, *::after){scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
 }
+
+/* Mobile feature finder keeps the full desktop feature set reachable. */
+.ec-mobile-menu-search-label{display:block;margin:12px 2px 6px;color:var(--ec-ui-ink);font-weight:700;font-size:.85rem}
+.ec-mobile-menu-search{display:block;width:100%;min-height:44px;padding:10px 13px;border:1px solid #c9d3de;border-radius:12px;background:#fff;color:var(--ec-ui-ink);font-size:16px}
+.ec-mobile-menu-search:focus-visible{outline:3px solid var(--ec-ui-accent);outline-offset:2px}
+.ec-mobile-menu-empty{grid-column:1/-1;margin:0;padding:16px 6px;color:var(--ec-ui-muted);text-align:center}
