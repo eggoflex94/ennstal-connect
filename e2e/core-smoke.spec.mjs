@@ -179,7 +179,7 @@ async function installSupabaseMock(page, role) {
     }
 
     if (path === "/rest/v1/community_rule_acceptances") {
-      const accepted = { rules_version: "2026-09-05", accepted_at: nowIso() };
+      const accepted = { rules_version: "2026-10-10", accepted_at: nowIso() };
       return json(accept.includes("application/vnd.pgrst.object+json") ? accepted : [accepted]);
     }
 
