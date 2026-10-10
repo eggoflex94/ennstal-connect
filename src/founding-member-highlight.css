@@ -1,4 +1,11 @@
-/* Seven-day introductory spotlight for the first 60 registered real-photo members. */
-.member-card.ec-founding-featured { position:relative; border:2px solid #e8ae39 !important; box-shadow:0 0 0 3px rgba(242,189,71,.19),0 9px 28px rgba(167,111,18,.23) !important; }
-.member-card.ec-founding-featured .ec-founding-feature-label {display:block;max-width:calc(100% - 20px);margin:8px auto 3px;padding:5px 9px;border-radius:999px;background:linear-gradient(100deg,#ffe6a0,#f2ba4b);color:#553a11;font-weight:800;font-size:.7rem;text-align:center;position:relative;z-index:2;}
-@media (prefers-reduced-motion:no-preference) {.member-card.ec-founding-featured {animation:ec-founding-glow 3s ease-in-out infinite alternate;}@keyframes ec-founding-glow {from{box-shadow:0 0 0 2px rgba(242,189,71,.14),0 9px 24px rgba(167,111,18,.19)}to{box-shadow:0 0 0 5px rgba(242,189,71,.28),0 12px 30px rgba(167,111,18,.3)}}}
+/* Founding-member spotlight: outer gold frame only; keep all card content unchanged. */
+.member-card.ec-founding-featured {
+  position: relative;
+  border: 3px solid #e7ab28 !important;
+  border-radius: inherit;
+  box-shadow:
+    inset 0 0 0 1px #fff0b4,
+    0 0 0 2px #fff2b4,
+    0 0 0 4px #cb8b12,
+    0 0 13px rgba(240, 176, 34, .48) !important;
+}
