@@ -92,3 +92,22 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%;scroll-behavior:smooth}
  }
  .site-footer {padding-bottom:calc(24px + env(safe-area-inset-bottom))!important}
 }
+
+/* Mobile and desktop share the same functional controls. Prevent overlays and
+   fixed widths from making upload, event and marketplace forms unusable. */
+@media(max-width:900px){
+ .modern-main,.content-root,.content-root>section,.events-page,.marketplace-page,.messages-page,.groups-page,.profile-page-layout{box-sizing:border-box!important;min-width:0!important;max-width:100%!important}
+ .panel,form,fieldset,.modal,.profile-modal,[role="dialog"],.event-modern-card,.marketplace-card{box-sizing:border-box!important;min-width:0!important;max-width:100%!important}
+ .panel input:not([type=checkbox]):not([type=radio]),.panel select,.panel textarea,form input[type=file]{box-sizing:border-box!important;max-width:100%!important;min-width:0!important;font-size:16px!important}
+ input[type=file]{overflow:hidden!important;max-width:100%!important}
+ .modal-overlay,[role="dialog"]{overscroll-behavior:contain}
+ [role="dialog"]{max-height:calc(100dvh - 24px)!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch}
+ .events-modern-grid,.marketplace-grid,.groups-grid{min-width:0!important;max-width:100%!important}
+ .event-photo-gallery img,.event-photo-preview-strip img{max-width:100%!important;object-fit:contain!important}
+ .content-root table,.panel table{max-width:100%}
+ .table-wrap,.table-scroll,.admin-table-wrap{overscroll-behavior-x:contain}
+}
+@media(max-width:440px){
+ .modern-sidebar .modern-nav button{min-width:98px!important}
+ .modern-sidebar .modern-nav button span{font-size:12px!important}
+}
