@@ -4,9 +4,10 @@ import { readFile } from "node:fs/promises";
 
 const source = async (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
-test("phones use a responsive viewport", async () => {
+test("phones use the requested desktop viewport with pinch zoom", async () => {
   const html = await source("index.html");
-  assert.match(html, /width=device-width/);
+  assert.match(html, /width=1100/);
+  assert.match(html, /user-scalable=yes/);
   assert.doesNotMatch(html, /content="width=1180"/);
 });
 
