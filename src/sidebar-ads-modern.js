@@ -285,7 +285,7 @@ function boot() {
   ensureHost(); void syncAds();
   const observer = new MutationObserver(() => { removeLegacyActivityBlocks(); if (!dock()?.querySelector(".ec-sidebar-ads")) scheduleRender(); });
   observer.observe(document.documentElement, { childList: true, subtree: true });
-  window.addEventListener("ec:region-change", () => { bannerIndex = 0; setTimeout(() => void syncAds(), 80); });
+  window.addEventListener("ec:region-change", () => { setTimeout(() => void syncAds(), 80); });
   window.addEventListener("ec:community-ads-refresh", () => setTimeout(() => void syncAds(), 80));
   window.addEventListener("ec:open-sidebar-ad-manager", () => void openManager());
   document.addEventListener("visibilitychange", () => { if (!document.hidden) void syncAds(); });
