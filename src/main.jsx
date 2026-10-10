@@ -20,7 +20,8 @@ import "./mobile-zoom.js";
 import "./ad-form-fix.js";
 import "./ad-management.js";
 // Canonical ad display and management, shared between desktop and mobile.
-// Temporarily disable canonical ad runtime to restore application startup.
+// Advertising loads after React startup; its failure must never block the community.
+import "./sidebar-ads-modern.css";
 import "./member-extras.js";
 import "./legal-evidence-admin.js";
 import "./privacy-center.js";
@@ -334,6 +335,11 @@ async function bootstrap() {
       </AppErrorBoundary>
     </StrictMode>
   );
+  window.setTimeout(() => {
+    import("./sidebar-ads-modern.js").catch((error) => {
+      console.warn("Werbung konnte nicht geladen werden; Community bleibt nutzbar.", error);
+    });
+  }, 1200);
 }
 
 void bootstrap();
