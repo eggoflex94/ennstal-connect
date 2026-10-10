@@ -17,6 +17,8 @@ import "./sidebar-reward-progress.css";
 import "./sidebar-reward-progress.js";
 import "./featured-group-admin.js";
 import "./mobile-zoom.js";
+import "./phone-view-switch.css";
+import "./phone-view-switch.js";
 import "./ad-form-fix.js";
 import "./ad-management.js";
 // Canonical ad display and management, shared between desktop and mobile.
