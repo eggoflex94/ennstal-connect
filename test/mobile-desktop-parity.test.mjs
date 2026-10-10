@@ -11,10 +11,19 @@ test('native sidebar ad component renders every active ad without carousel state
   assert.doesNotMatch(js, /bannerIndex|rotationTimer|restartRotation|setInterval\(/);
 });
 
-test('canonical ad rendering is wired without the duplicate stack', () => {
+test('ad runtime stays disabled after startup recovery, without duplicate overlays', () => {
   const entry = read('src/main.jsx');
-  assert.match(entry, /sidebar-ads-modern\.js/);
+  assert.doesNotMatch(entry, /^import "\.\/sidebar-ads-modern\.js";/m);
   assert.doesNotMatch(entry, /^import "\.\/sidebar-ads-stack\.js";/m);
+});
+
+test('mobile navigation uses the same page handler as desktop and exposes core destinations', () => {
+  const app = read('src/App.jsx');
+  const nav = read('src/MobileQuickNav.jsx');
+  assert.match(app, /<MobileQuickNav page=\{page\} onNavigate=\{setPage\}/);
+  for (const page of ['home','members','messages','community','friends','friend-requests','notifications','events','marketplace','groups','forum','profile']) {
+    assert.match(nav, new RegExp('["\\x27]' + page + '["\\x27]'));
+  }
 });
 
 test('advertising images have natural size and readable captions', () => {
