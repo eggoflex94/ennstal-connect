@@ -54,3 +54,41 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%;scroll-behavior:smooth}
  .ec-event-editor-dialog footer{position:sticky;bottom:0;display:flex!important;flex-wrap:wrap;gap:10px;padding:12px 0 max(12px,env(safe-area-inset-bottom));background:inherit;z-index:1}
  .ec-event-editor-dialog footer button{flex:1 1 160px;min-height:48px}
 }
+
+/* Full-function mobile navigation: keep every desktop destination visible and labeled.
+   No logo, branding, region naming, or permissions are changed. */
+@media (max-width:900px) {
+ .modern-sidebar {
+   top:64px!important;bottom:auto!important;left:0!important;right:0!important;
+   height:auto!important;min-height:0!important;
+   max-height:112px!important;padding:7px 10px!important;
+   overflow:hidden!important;border-top:0!important;
+   border-bottom:1px solid rgba(135,155,175,.4)!important;
+ }
+ .modern-sidebar .modern-nav {
+   display:flex!important;width:100%!important;max-width:100%!important;
+   overflow-x:auto!important;overflow-y:hidden!important;
+   flex-wrap:nowrap!important;gap:7px!important;
+   scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;
+ }
+ .modern-sidebar .modern-nav button,
+ .modern-sidebar .modern-nav .admin-nav-entry {
+   position:relative!important;order:initial!important;left:auto!important;
+   flex:0 0 auto!important;width:auto!important;min-width:104px!important;
+   min-height:60px!important;max-width:190px!important;
+   padding:9px 12px!important;white-space:normal!important;
+   text-align:center!important;overflow:visible!important;
+   scroll-snap-align:start!important;
+ }
+ .modern-sidebar .modern-nav button span {
+   display:block!important;max-width:168px!important;
+   white-space:normal!important;overflow:visible!important;
+   text-overflow:clip!important;overflow-wrap:anywhere!important;
+   font-size:12px!important;line-height:1.2!important;
+ }
+ .modern-main {
+   padding-top:128px!important;
+   padding-bottom:calc(24px + env(safe-area-inset-bottom))!important;
+ }
+ .site-footer {padding-bottom:calc(24px + env(safe-area-inset-bottom))!important}
+}
