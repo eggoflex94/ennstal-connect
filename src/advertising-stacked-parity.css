@@ -23,3 +23,8 @@
 .ec-right-dock .ec-stacked-ad-card strong,.ec-right-dock .ec-stacked-ad-card p{display:block;white-space:normal!important;overflow-wrap:anywhere!important;word-break:normal!important;line-height:1.4!important}
 .ec-right-dock .ec-stacked-ad-card p{font-size:13px!important;max-height:none!important;overflow-wrap:anywhere!important;white-space:normal!important;display:block!important}
 @media(max-width:900px){.ec-right-dock .ec-stacked-ads{padding-bottom:calc(24px + env(safe-area-inset-bottom))!important}.ec-right-dock .ec-stacked-ad-heading{font-size:13px!important}}
+
+/* Advertising belongs at the very bottom of the dashboard dock. */
+.ec-right-dock.ec-compact-personal-dock{display:flex!important;flex-direction:column!important}
+.ec-right-dock.ec-compact-personal-dock>.ec-stacked-ads{order:9999!important;margin-top:auto!important;align-self:stretch!important;flex:0 0 auto!important}
+.ec-right-dock.ec-compact-personal-dock>.ec-logout{order:9000!important}
