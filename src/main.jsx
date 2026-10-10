@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App.jsx";
 
 import "./styles.css";
+import "./responsive-foundation.css";
 
 import "./profile-customization.js";
 import "./support-contacts-modern.css";
