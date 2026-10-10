@@ -3025,6 +3025,7 @@ function EventsPage({ members, showNotice, events, eventRsvps, user, profile, ac
   const [photoGalleryEventId, setPhotoGalleryEventId] = useState(null);
   const [photoUploadBusy, setPhotoUploadBusy] = useState(false);
   const [photoUploadError, setPhotoUploadError] = useState("");
+  const [canUploadGalleryPhoto, setCanUploadGalleryPhoto] = useState(false);
   const [eventAwards, setEventAwards] = useState([]);
   const [awardDrafts, setAwardDrafts] = useState({});
   const [awardingEventId, setAwardingEventId] = useState("");
@@ -3064,12 +3065,15 @@ function EventsPage({ members, showNotice, events, eventRsvps, user, profile, ac
   const publicPhotoUrl = (path) => supabase.storage.from("event-photos").getPublicUrl(path).data.publicUrl;
   const roleStarFor = (member) => member?.role_star_url || (String(member?.role || "").toUpperCase() === "HEAD_ADMIN" ? "/role-star-red.svg" : String(member?.role || "").toUpperCase() === "ADMIN" ? "/role-star-blue.svg" : String(member?.role || "").toUpperCase() === "SUPPORTER" ? "/supporter-star.svg" : null);
 
-  const openEventPhotos = (eventId) => {
+  const openEventPhotos = async (eventId) => {
     setPhotoUploadError("");
+    setCanUploadGalleryPhoto(false);
     setPhotoGalleryEventId(eventId);
+    const { data, error } = await supabase.rpc("can_upload_event_photo", { p_event_id: eventId });
+    if (!error) setCanUploadGalleryPhoto(Boolean(data));
   };
   const uploadGalleryPhoto = async (file) => {
-    if (!file || !photoGalleryEventId || !user?.id || photoUploadBusy) return;
+    if (!file || !photoGalleryEventId || !user?.id || photoUploadBusy || !canUploadGalleryPhoto) return;
     if (!["image/jpeg", "image/webp"].includes(file.type)) return setPhotoUploadError("Bitte ein JPG- oder WebP-Bild auswählen.");
     if (!file.size || file.size > 10 * 1024 * 1024) return setPhotoUploadError("Das Foto muss zwischen 1 Byte und 10 MB groß sein.");
     setPhotoUploadBusy(true);
@@ -3152,13 +3156,13 @@ function EventsPage({ members, showNotice, events, eventRsvps, user, profile, ac
           <div><span className="eyebrow">EVENTFOTOS</span><h2>{selectedGalleryEvent?.title || "Eventgalerie"}</h2></div>
           <button type="button" disabled={photoUploadBusy} onClick={() => setPhotoGalleryEventId(null)} aria-label="Fotogalerie schließen">✕ Schließen</button>
         </div>
-        <label style={{display:"block",margin:"12px 0"}}><strong>Eventfoto hinzufügen</strong><input type="file" accept="image/jpeg,image/webp" disabled={photoUploadBusy} onChange={(e) => { const file=e.currentTarget.files?.[0]; e.currentTarget.value=""; void uploadGalleryPhoto(file); }} style={{display:"block",width:"100%",minHeight:44,marginTop:8}}/></label>
+        {canUploadGalleryPhoto && <label style={{display:"block",margin:"12px 0"}}><strong>Eventfoto hinzufügen</strong><input type="file" accept="image/jpeg,image/webp" disabled={photoUploadBusy} onChange={(e) => { const file=e.currentTarget.files?.[0]; e.currentTarget.value=""; void uploadGalleryPhoto(file); }} style={{display:"block",width:"100%",minHeight:44,marginTop:8}}/></label>}
         {photoUploadBusy && <p role="status">Foto wird hochgeladen und gespeichert …</p>}
         {photoUploadError && <p role="alert" style={{color:"#b42318"}}>{photoUploadError}</p>}
         <div className="event-photo-gallery" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,180px),1fr))",gap:12}}>
           {galleryPhotos.map((photo) => <a key={photo.id} href={publicPhotoUrl(photo.storage_path)} target="_blank" rel="noreferrer" aria-label="Eventfoto in voller Größe öffnen"><img src={publicPhotoUrl(photo.storage_path)} loading="lazy" alt="Eventfoto" style={{width:"100%",aspectRatio:"1/1",objectFit:"cover",borderRadius:12}}/></a>)}
         </div>
-        {!galleryPhotos.length && <p>Noch keine Eventfotos vorhanden. Du kannst das erste Foto hinzufügen.</p>}
+        {!galleryPhotos.length && <p>Noch keine Eventfotos vorhanden.</p>}
       </section>
     </div>}
 
