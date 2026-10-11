@@ -1,6 +1,8 @@
 /* All magazine styles are scoped to the homepage or its editor. */
 .home-page[data-ec-magazine] { grid-template-columns:minmax(0,1fr)!important; gap:24px!important }
 .home-page[data-ec-magazine] > * { grid-column:1/-1!important }
+.home-page[data-ec-magazine] > .ec-home-magazine { order:-1000!important }
+.home-page[data-ec-magazine] > .page-heading { order:-999!important }
 .home-page[data-ec-magazine] > .page-heading { padding:12px 0!important; background:transparent!important; border:0!important; box-shadow:none!important; margin:0!important }
 .home-page[data-ec-magazine] > .page-heading h1 { font-size:1.35rem!important }
 .home-page[data-ec-magazine] > .page-heading p { margin-bottom:0!important }
@@ -38,7 +40,7 @@
 .ec-magazine-category b { position:absolute; right:0; bottom:0; font-size:20px; color:white }
 .ec-magazine-event-grid { display:grid!important; grid-template-columns:repeat(3,minmax(0,1fr))!important; gap:18px!important }
 .ec-home-magazine .ec-magazine-event { display:block!important; border:1px solid #dfe6ec!important; border-radius:18px!important; overflow:hidden!important; padding:0!important; background:#fff!important; text-align:left!important; box-shadow:0 5px 20px #102d4109 }
-.ec-magazine-event-image { position:relative; height:180px }
+.ec-magazine-event-image { position:relative; height:180px; background:#edf2f6 }
 .ec-magazine-event-image img { width:100%!important; height:100%!important; object-fit:cover!important }
 .ec-magazine-event-image time { position:absolute; top:14px; left:14px; display:grid; gap:1px; padding:9px 12px; min-width:44px; border-radius:10px; background:white; color:#20364b; font-size:12px; text-align:center; box-shadow:0 2px 12px #0002 }
 .ec-magazine-event-image time b { font-size:24px; line-height:1.05; color:#20364b }

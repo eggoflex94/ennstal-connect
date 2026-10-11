@@ -8,6 +8,7 @@ export const isMagazineSettings = row => row?.title === MAGAZINE_SETTINGS_TITLE;
 export function safeImageUrl(value, fallback = '') {
   if (typeof value !== 'string') return fallback;
   const url = value.trim();
+  if (['/community-hero.png', '/hero.jpg'].includes(url.split(/[?#]/)[0])) return fallback;
   if (/^\/(?!\/)/.test(url) || /^https:\/\//i.test(url) || /^blob:/.test(url)) return url;
   return fallback;
 }
@@ -19,11 +20,11 @@ export function normalizeMagazine(input = {}) {
     version: 1, layout: 'magazine',
     title: text(input.title, 'Gemeinsam mehr erleben.', 120),
     intro: text(input.intro, 'Menschen, Erlebnisse und Geschichten aus deiner Region.'),
-    heroImage: safeImageUrl(input.heroImage, '/community-hero.png'),
+    heroImage: safeImageUrl(input.heroImage),
     heroPosition: ['top', 'center', 'bottom'].includes(input.heroPosition) ? input.heroPosition : 'center',
     heroHeight: ['compact', 'large'].includes(input.heroHeight) ? input.heroHeight : 'large',
     accent: /^#[\da-f]{6}$/i.test(input.accent || '') ? input.accent : '#ed682f',
-    order: [...order, ...MAGAZINE_BLOCKS.filter(key => !order.includes(key))],
+    order: ['hero', ...order.filter(key => key !== 'hero'), ...MAGAZINE_BLOCKS.filter(key => key !== 'hero' && !order.includes(key))],
     visible: Object.fromEntries(MAGAZINE_BLOCKS.map(key => [key, input.visible?.[key] !== false])),
     contentTitle: text(input.contentTitle, 'Aus deiner Region', 120),
     categories: ['events', 'groups', 'forum', 'marketplace'].map((page, index) => {

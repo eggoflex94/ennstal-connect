@@ -65,7 +65,7 @@ function render(host, profileId, groups) {
     <div class="ec-profile-all-groups-grid">
       ${groups.length ? groups.map((group) => `
         <button type="button" class="ec-profile-group-card" data-group-id="${esc(group.id)}">
-          <img src="${esc(group.image_url || '/community-default-avatar.png')}" alt="">
+          ${group.image_url ? `<img src="${esc(group.image_url)}" alt="">` : `<span aria-hidden="true">◉</span>`}
           <span><strong>${esc(group.name)}</strong><small>${esc(group.region_name)}</small><em>${esc(group.description || 'Gruppe öffnen')}</em></span>
           <b aria-hidden="true">›</b>
         </button>`).join('') : '<div class="ec-profile-groups-empty">Noch in keiner Gruppe Mitglied.</div>'}

@@ -18,7 +18,7 @@ test('region settings do not leak and malformed saved content falls back safely'
   const ennstal = readMagazineSettings(rows, 'ennstal').config;
   assert.equal(ennstal.title, 'Ennstal');
   assert.equal(ennstal.visible.events, false);
-  assert.deepEqual(ennstal.order, ['content', 'hero', 'categories', 'events']);
+  assert.deepEqual(ennstal.order, ['hero', 'content', 'categories', 'events']);
   assert.equal(readMagazineSettings(rows, 'alpenraum').config.title, normalizeMagazine().title);
   assert.equal(readMagazineSettings(rows, 'other').row, undefined);
 });
@@ -43,4 +43,17 @@ test('only future, active events in the selected region appear, ordered and capp
     ...[16, 14, 12, 13].map(day => ({ id: String(day), region_id: 'ennstal', event_at: `2026-10-${day}T12:00:00Z` }))
   ];
   assert.deepEqual(upcomingMagazineEvents(events, 'ennstal', now).map(event => event.id), ['12', '13', '14']);
+});
+
+
+test('no unselected stock photos are used, including old saved defaults', () => {
+  assert.equal(normalizeMagazine().heroImage, '');
+  assert.equal(normalizeMagazine({ heroImage: '/community-hero.png' }).heroImage, '');
+  assert.equal(normalizeMagazine({ heroImage: '/hero.jpg?v=1' }).heroImage, '');
+  assert.ok(normalizeMagazine().categories.every(category => category.image === ''));
+  assert.equal(normalizeMagazine({ heroImage: 'https://example.com/my-upload.webp' }).heroImage, 'https://example.com/my-upload.webp');
+});
+
+test('hero stays first even when earlier saved layouts placed it lower', () => {
+  assert.deepEqual(normalizeMagazine({ order: ['events', 'content', 'hero', 'categories'] }).order, ['hero', 'events', 'content', 'categories']);
 });
