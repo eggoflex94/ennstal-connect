@@ -1,0 +1,31 @@
+/* One community brand; the selected region is a separate, accessible control. */
+html[data-ec-theme="neon-pink"] { --ec-topbar-accent:#ff149f; --ec-topbar-accent-strong:#d20a80; --ec-topbar-ink:#49102f; --ec-topbar-line:#ff63c8; --ec-topbar-bg-1:#fff0f9 }
+html .ec-brand-family-lockup .ec-brand-family-region,
+html .ec-brand-family-lockup .ec-brand-family-connect { color:var(--ec-topbar-accent-strong,#e94f0b)!important; font-size:31px!important; letter-spacing:-1.45px!important }
+html .ec-brand-family-lockup .ec-brand-family-connect { color:var(--ec-topbar-accent,#ff6b25)!important }
+html .ec-brand-family-lockup .ec-brand-family-mark { border-color:var(--ec-topbar-accent-strong,#e94f0b)!important; background:linear-gradient(145deg,var(--ec-topbar-accent,#ff6b25),var(--ec-topbar-accent-strong,#e94f0b))!important }
+html .ec-brand-family-lockup .ec-brand-family-mark::before { color:var(--ec-topbar-bg-1,#fff)!important }
+html .ec-brand-family-tagline { color:var(--ec-topbar-ink,#263746)!important }
+html[data-ec-theme] .ec-regional-shell .ec-brand-masthead .ec-header-region-picker { position:relative!important; display:flex!important; align-items:center!important; flex:0 0 auto!important; gap:11px!important; margin-left:auto!important; box-sizing:border-box!important; width:280px!important; max-width:38vw!important; min-width:0!important; height:54px!important; padding:8px 13px!important; border:1px solid var(--ec-topbar-line,#efbb9c)!important; border-radius:14px!important; background:var(--ec-topbar-bg-1,#fff)!important; color:var(--ec-topbar-ink,#263746)!important; box-shadow:0 3px 12px #102d4108!important; cursor:pointer!important }
+html[data-ec-theme] .ec-regional-shell .ec-header-region-picker::before { content:none!important }
+html[data-ec-theme] .ec-regional-shell .ec-header-region-picker > b { display:grid; place-items:center; flex:0 0 32px; width:32px; height:32px; border-radius:10px; color:var(--ec-topbar-accent-strong,#e94f0b)!important; background:color-mix(in srgb,var(--ec-topbar-accent,#ff6b25) 12%,transparent)!important; font-size:21px }
+html[data-ec-theme] .ec-regional-shell .ec-header-region-copy { display:grid; gap:3px; min-width:0 }
+html[data-ec-theme] .ec-regional-shell .ec-header-region-copy small { font-size:8px!important; font-weight:800; letter-spacing:.13em; color:var(--ec-topbar-ink,#263746)!important; opacity:.8 }
+html[data-ec-theme] .ec-regional-shell .ec-header-region-copy strong { font-size:15px!important; color:var(--ec-topbar-ink,#263746)!important; font-weight:800; line-height:1.15; white-space:nowrap }
+html[data-ec-theme] .ec-regional-shell .ec-header-region-change { margin-left:auto; white-space:nowrap; font-size:11px!important; font-weight:750; color:var(--ec-topbar-accent-strong,#e94f0b)!important }
+html[data-ec-theme] .ec-regional-shell .ec-brand-masthead .ec-header-region-picker > select { position:absolute!important; inset:0!important; opacity:0!important; width:100%!important; height:100%!important; min-width:0!important; padding:0!important; margin:0!important; cursor:pointer!important; z-index:1 }
+html[data-ec-theme] .ec-regional-shell .ec-header-region-picker:focus-within { outline:3px solid var(--ec-topbar-accent,#ff6b25)!important; outline-offset:3px }
+html[data-ec-theme] .ec-regional-shell .ec-header-region-picker > select option { color:#20364b; background:#fff }
+@media(max-width:900px) {
+  .ec-brand-masthead { gap:12px!important }
+  html[data-ec-theme] .ec-regional-shell .ec-brand-masthead .ec-header-region-picker { width:165px!important; max-width:45vw!important; height:48px!important; padding:6px 9px!important; gap:6px!important }
+  html[data-ec-theme] .ec-regional-shell .ec-header-region-picker > b { display:none!important }
+  html[data-ec-theme] .ec-regional-shell .ec-header-region-copy strong { font-size:13px!important }
+  html[data-ec-theme] .ec-regional-shell .ec-header-region-change { font-size:9px!important; max-width:58px; white-space:normal; line-height:1.2 }
+  html[data-ec-theme] .ec-regional-shell .ec-brand-masthead .ec-brand-family-wordmark { display:grid!important; gap:0!important; line-height:1.02!important }
+  html[data-ec-theme] .ec-regional-shell .ec-brand-masthead .ec-brand-family-region,html[data-ec-theme] .ec-regional-shell .ec-brand-masthead .ec-brand-family-connect { font-size:20px!important; letter-spacing:-.7px!important }
+  html[data-ec-theme] .ec-regional-shell .ec-brand-masthead .ec-brand-family-mark { width:32px!important; height:32px!important; border-radius:9px!important }
+  html[data-ec-theme] .ec-regional-shell .ec-brand-masthead .ec-brand-family-mark::before { font-size:21px!important }
+  .ec-brand-masthead .ec-brand-family-copy { margin-left:8px!important }
+  .ec-brand-masthead .ec-brand-family-tagline { display:none!important }
+}

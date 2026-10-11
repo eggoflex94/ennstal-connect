@@ -221,6 +221,7 @@ import "./header-scroll-authority.css";
 /* Ads remain stacked and images uncropped on every screen. */
 import "./advertising-stacked-parity.css";
 import "./community-shell-width-fix.css";
+import "./brand-region-header.css";
 
 // Guard against stale DOM sibling references from legacy/runtime helpers.
 // React and several compatibility runtimes can update the same container within

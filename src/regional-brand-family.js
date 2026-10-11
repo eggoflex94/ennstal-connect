@@ -15,7 +15,7 @@ function make(tag, cls, text) {
 
 function buildLockup(slug) {
   const key = normalize(slug);
-  const brand = brands[key];
+  const brand = brands.ennstal;
   const root = make('div', 'ec-brand-family-lockup');
   root.dataset.region = key;
   root.setAttribute('aria-label', `${brand.name} Connect – ${brand.slogan}`);
@@ -47,7 +47,7 @@ function syncHeader(slug = activeSlug) {
     claim.dataset.brandRegion = key;
     claim.replaceChildren(
       make('span', 'ec-brand-family-umbrella', 'ENNSTAL CONNECT COMMUNITY'),
-      make('span', 'ec-brand-family-slogan', brands[key].slogan)
+      make('span', 'ec-brand-family-slogan', brands.ennstal.slogan)
     );
   }
   return true;
@@ -71,7 +71,7 @@ function syncAuth() {
   const slug = selectedAuthSlug();
   if (shell.dataset.brandRegion !== slug) {
     shell.dataset.brandRegion = slug;
-    const brand = brands[slug];
+    const brand = brands.ennstal;
     const claim = make('div', 'ec-auth-brand-claim');
     claim.append(make('small', '', 'ENNSTAL CONNECT COMMUNITY'), make('strong', '', brand.slogan));
     shell.replaceChildren(buildLockup(slug), claim);
