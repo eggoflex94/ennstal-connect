@@ -57,3 +57,14 @@ test('no unselected stock photos are used, including old saved defaults', () => 
 test('hero stays first even when earlier saved layouts placed it lower', () => {
   assert.deepEqual(normalizeMagazine({ order: ['events', 'content', 'hero', 'categories'] }).order, ['hero', 'events', 'content', 'categories']);
 });
+
+// Parent refreshes produce new config objects while uploads are in flight.
+test('editor preserves pending uploads and unsaved drafts across parent refreshes', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const source = await readFile(new URL('../src/HomeMagazine.jsx', import.meta.url), 'utf8');
+  assert.match(source, /if \(dirty\.current\) return;/);
+  assert.match(source, /\}, \[configSnapshot\]\);/);
+  assert.doesNotMatch(source, /\}, \[config\]\);/);
+  assert.match(source, /dirty\.current = true; const token = generation\.current/);
+  assert.match(source, /await onSave\(normalizeMagazine\(draft\)\); dirty\.current = false/);
+});
