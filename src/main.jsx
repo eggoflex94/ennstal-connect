@@ -215,6 +215,7 @@ import "./community-photographer.css";
 
 /* Absolute final personal-dock authority. */
 import "./personal-dock-final-authority.css";
+import "./home-magazine.css";
 import "./neon-pink-theme.css";
 import "./header-scroll-authority.css";
 /* Ads remain stacked and images uncropped on every screen. */
@@ -325,6 +326,7 @@ async function removeLegacyAppShellOnce() {
   }
   return false;
 }
+
 async function bootstrap() {
   const reloading = await removeLegacyAppShellOnce();
   if (reloading) return;

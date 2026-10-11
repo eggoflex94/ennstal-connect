@@ -1,0 +1,102 @@
+/* All magazine styles are scoped to the homepage or its editor. */
+.home-page[data-ec-magazine] { grid-template-columns:minmax(0,1fr)!important; gap:24px!important }
+.home-page[data-ec-magazine] > * { grid-column:1/-1!important }
+.home-page[data-ec-magazine] > .page-heading { padding:12px 0!important; background:transparent!important; border:0!important; box-shadow:none!important; margin:0!important }
+.home-page[data-ec-magazine] > .page-heading h1 { font-size:1.35rem!important }
+.home-page[data-ec-magazine] > .page-heading p { margin-bottom:0!important }
+.home-page[data-ec-magazine] > #ec-multi-region-home-intro { display:none!important }
+.ec-home-magazine { display:grid!important; grid-template-columns:minmax(0,1fr)!important; gap:34px!important; width:100%!important; min-width:0!important; --ec-magazine-ink:#20364b; --ec-magazine-muted:#64788b }
+.ec-home-magazine h2,.ec-home-magazine h3 { color:var(--ec-magazine-ink)!important; margin:0!important; overflow-wrap:anywhere }
+.ec-home-magazine .eyebrow { color:var(--ec-magazine-accent)!important; font-size:10px!important; letter-spacing:.15em!important }
+.ec-home-magazine .primary-button { background:var(--ec-magazine-accent)!important; color:#fff!important; border:0!important }
+.ec-home-magazine button { cursor:pointer; font:inherit; min-width:0; touch-action:manipulation }
+.ec-home-magazine button:focus-visible,.ec-magazine-editor button:focus-visible { outline:3px solid var(--ec-magazine-accent,#ed682f)!important; outline-offset:4px!important }
+.ec-home-magazine .ec-magazine-hero { position:relative!important; display:flex!important; align-items:flex-end!important; min-height:440px!important; overflow:hidden!important; border-radius:24px!important; padding:42px!important; background:#20364b!important; isolation:isolate; box-sizing:border-box!important }
+.ec-home-magazine .ec-magazine-hero.is-compact { min-height:320px!important }
+.ec-magazine-hero > img { position:absolute!important; inset:0!important; width:100%!important; height:100%!important; object-fit:cover!important; z-index:-2 }
+.ec-magazine-hero::before { content:''; position:absolute; inset:0; background:linear-gradient(90deg,rgba(9,24,36,.84),rgba(9,24,36,.28)),linear-gradient(0deg,rgba(9,24,36,.3),transparent); z-index:-1 }
+.ec-magazine-hero-copy { max-width:680px; display:grid; gap:18px }
+.ec-magazine-kicker { color:#fff!important; font-size:11px!important; font-weight:700; letter-spacing:.15em }
+.ec-home-magazine .ec-magazine-hero h2 { color:white!important; font-size:clamp(2rem,4.5vw,3.8rem)!important; font-weight:800!important; line-height:1.07!important; letter-spacing:-.045em!important; text-wrap:balance }
+.ec-magazine-hero-copy p { color:#f2f5f7!important; font-size:1.05rem!important; line-height:1.65!important; max-width:500px; margin:0!important; white-space:pre-wrap }
+.ec-magazine-hero-actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:7px }
+.ec-magazine-hero-actions button { padding:12px 18px!important; min-height:46px!important; border-radius:10px!important; font-size:.85rem!important; font-weight:750!important }
+.ec-magazine-hero-actions .secondary-button { background:rgba(9,24,36,.45)!important; color:white!important; border:1px solid #ffffff70!important }
+.ec-magazine-region { position:absolute; top:24px; right:24px; background:#172838c9; color:white; border:1px solid #ffffff40; border-radius:99px; padding:9px 15px; font-size:12px }
+.ec-magazine-section-head { display:flex; align-items:end; justify-content:space-between; gap:15px; margin:0 0 18px!important }
+.ec-magazine-section-head > div { display:grid; gap:7px }
+.ec-home-magazine .ec-magazine-section-head h2 { font-size:clamp(1.35rem,2.3vw,1.85rem)!important; line-height:1.2!important; letter-spacing:-.025em }
+.ec-magazine-section-head > button { background:transparent!important; border:0!important; padding:8px 0!important; color:var(--ec-magazine-ink)!important; font-size:.8rem!important; font-weight:700!important; min-height:44px; text-align:left }
+.ec-magazine-category-grid { display:grid!important; grid-template-columns:repeat(4,minmax(0,1fr))!important; gap:14px!important }
+.ec-home-magazine .ec-magazine-category { display:block!important; position:relative!important; overflow:hidden!important; border:0!important; border-radius:17px!important; padding:0!important; height:225px!important; background:#20364b!important; text-align:left!important; box-shadow:0 5px 18px #102d4112 }
+.ec-magazine-category > img { width:100%!important; height:100%!important; object-fit:cover!important; transition:transform .2s }
+.ec-magazine-category:hover > img { transform:scale(1.04) }
+.ec-magazine-category::after { content:''; position:absolute; inset:0; background:linear-gradient(0deg,#091824e8,transparent 90%) }
+.ec-magazine-category > span { position:absolute; bottom:20px; left:18px; right:18px; display:grid; gap:5px; color:white; z-index:1 }
+.ec-magazine-category small { color:#fff!important; font-size:.7rem!important; line-height:1.4 }
+.ec-magazine-category strong { color:white!important; font-size:1.15rem!important; line-height:1.2; padding-right:20px }
+.ec-magazine-category b { position:absolute; right:0; bottom:0; font-size:20px; color:white }
+.ec-magazine-event-grid { display:grid!important; grid-template-columns:repeat(3,minmax(0,1fr))!important; gap:18px!important }
+.ec-home-magazine .ec-magazine-event { display:block!important; border:1px solid #dfe6ec!important; border-radius:18px!important; overflow:hidden!important; padding:0!important; background:#fff!important; text-align:left!important; box-shadow:0 5px 20px #102d4109 }
+.ec-magazine-event-image { position:relative; height:180px }
+.ec-magazine-event-image img { width:100%!important; height:100%!important; object-fit:cover!important }
+.ec-magazine-event-image time { position:absolute; top:14px; left:14px; display:grid; gap:1px; padding:9px 12px; min-width:44px; border-radius:10px; background:white; color:#20364b; font-size:12px; text-align:center; box-shadow:0 2px 12px #0002 }
+.ec-magazine-event-image time b { font-size:24px; line-height:1.05; color:#20364b }
+.ec-magazine-event > div:last-child { padding:20px }
+.ec-home-magazine .ec-magazine-event h3 { font-size:1.05rem!important; line-height:1.4!important }
+.ec-magazine-event p { color:var(--ec-magazine-muted)!important; font-size:.8rem!important; line-height:1.5!important; margin:9px 0 16px!important }
+.ec-magazine-event > div > span { color:var(--ec-magazine-accent)!important; font-size:.75rem; font-weight:750 }
+.ec-magazine-content-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px }
+.ec-magazine-content-card { border:1px solid #dfe6ec; border-radius:18px; overflow:hidden; background:#fff }
+.ec-magazine-content-card:first-child { grid-column:1/-1; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr) }
+.ec-magazine-content-card:first-child:not(:has(>img)) { display:block }
+.ec-magazine-content-card > img { width:100%!important; height:260px!important; object-fit:cover!important }
+.ec-magazine-content-card:first-child > img { height:100%!important; min-height:280px }
+.ec-magazine-content-card > div { padding:26px }
+.ec-magazine-content-card p { white-space:pre-wrap; color:var(--ec-magazine-muted); line-height:1.7; margin:12px 0 0 }
+.ec-magazine-content-card.is-accent { border-top:4px solid var(--ec-magazine-accent) }
+.ec-magazine-content-card.is-soft { background:#f4f7fa }
+.ec-magazine-content-card.is-dark { background:#20364b }
+.ec-home-magazine .ec-magazine-content-card.is-dark h3,.ec-magazine-content-card.is-dark p { color:#fff!important }
+.ec-magazine-empty { background:#f5f8fa; border:1px dashed #ccd9e2; border-radius:16px; padding:26px; color:#20364b }
+.ec-magazine-empty p { color:#64788b; line-height:1.6 }
+.ec-magazine-empty button { border:0; background:transparent; color:#20364b; padding:8px 0; font-weight:700 }
+.ec-magazine-editor { padding:22px; border-bottom:1px solid #dfe6ec; color:#20364b }
+.ec-magazine-editor fieldset { border:1px solid #dce5ec; border-radius:14px; margin:18px 0; padding:18px; min-width:0 }
+.ec-magazine-editor legend { font-weight:750; padding:0 8px }
+.ec-magazine-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px }
+.ec-magazine-fields label { display:grid; gap:7px; font-size:.8rem; font-weight:650; min-width:0 }
+.ec-magazine-fields input,.ec-magazine-fields select,.ec-magazine-fields textarea { box-sizing:border-box; width:100%; max-width:100%; padding:10px; border:1px solid #cbd7e1; border-radius:8px; background:white; color:#20364b; font:inherit }
+.ec-magazine-fields input[type=color] { height:44px; padding:4px }
+.ec-magazine-fields textarea { min-height:82px; resize:vertical }
+.ec-magazine-category-editor { display:grid; gap:12px; padding:16px; background:#f5f8fa; border-radius:12px }
+.ec-magazine-category-editor h3 { margin:0 }
+.ec-magazine-order { display:flex; gap:8px; align-items:center; margin-bottom:8px }
+.ec-magazine-order label { display:flex; align-items:center; gap:10px; flex:1; font-size:.85rem }
+.ec-magazine-order input { width:18px; height:18px; accent-color:#ed682f }
+.ec-magazine-order button { width:44px; height:44px; border:1px solid #dce5ec; border-radius:8px; background:white; color:#20364b }
+.ec-magazine-editor button:disabled { opacity:.5; cursor:default }
+.ec-magazine-editor-actions { display:flex; flex-wrap:wrap; gap:10px }
+.ec-magazine-preview { margin-top:20px }
+.ec-magazine-preview > summary { cursor:pointer; font-weight:700; padding:15px 0 }
+@media(max-width:1050px) { .ec-magazine-category-grid { grid-template-columns:repeat(2,minmax(0,1fr))!important } .ec-magazine-event-grid { gap:12px!important } }
+@media(max-width:680px) {
+  .ec-home-magazine { gap:26px!important }
+  .ec-home-magazine .ec-magazine-hero { min-height:410px!important; padding:80px 22px 26px!important; border-radius:18px!important }
+  .ec-home-magazine .ec-magazine-hero.is-compact { min-height:320px!important }
+  .ec-magazine-region { top:18px; right:18px }
+  .ec-magazine-hero-copy { gap:14px }
+  .ec-magazine-kicker { font-size:9px!important }
+  .ec-magazine-hero-copy p { font-size:.95rem!important }
+  .ec-magazine-category-grid { gap:10px!important }
+  .ec-home-magazine .ec-magazine-category { height:185px!important }
+  .ec-magazine-category > span { left:13px; right:13px; bottom:15px }
+  .ec-magazine-category strong { font-size:.95rem!important }
+  .ec-magazine-event-grid,.ec-magazine-content-grid { grid-template-columns:1fr!important }
+  .ec-magazine-content-card:first-child { display:block!important }
+  .ec-magazine-section-head { align-items:start; flex-direction:column; gap:3px }
+  .ec-magazine-fields { grid-template-columns:1fr }
+  .ec-magazine-editor { padding:14px }
+  .ec-magazine-editor fieldset { padding:13px }
+}
+@media(prefers-reduced-motion:reduce) { .ec-magazine-category > img { transition:none } }

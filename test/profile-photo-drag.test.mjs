@@ -57,21 +57,24 @@ test("profile photo editor keeps expanded vertical range", async () => {
 });
 
 
-test("profile photo zoom-out never exposes a flat white or light canvas background", async () => {
+test("profile photo zoom-out uses a neutral canvas without duplicating the portrait", async () => {
   const editor = await source("src/ProfilePhotoEditor.jsx");
   assert.match(editor, /function drawSoftBackdrop/);
-  assert.match(editor, /backdropScale = coverScale \* 1\.12/);
+  const backdrop = editor.slice(editor.indexOf("function drawSoftBackdrop"), editor.indexOf("function drawEditedImage"));
+  assert.match(backdrop, /fillStyle = "#eef2f5"/);
+  assert.match(backdrop, /fillRect\(0, 0, size, size\)/);
+  assert.doesNotMatch(backdrop, /drawImage/);
   assert.match(editor, /drawSoftBackdrop\(ctx, source, rotation, size, coverScale\)/);
   assert.doesNotMatch(editor, /fillStyle = "#f3f6f8"/);
 });
 
 
-test("whole photo mode always shows the complete image without white letterboxing", async () => {
+test("whole photo mode always shows the complete image against a neutral canvas", async () => {
   const editor = await source("src/ProfilePhotoEditor.jsx");
   assert.match(editor, /if \(mode === "contain"\)/);
   assert.match(editor, /const scale = containScale \* 0\.78/);
-  assert.match(editor, /brightness\(\.56\) saturate\(1\.12\)/);
-  assert.match(editor, /fillStyle = "rgba\(10, 24, 36, 0\.22\)"/);
+  assert.match(editor, /fillStyle = "#eef2f5"/);
+  assert.doesNotMatch(editor, /brightness\(|saturate\(/);
   assert.match(editor, /Das komplette Foto bleibt sichtbar/);
 });
 

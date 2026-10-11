@@ -42,7 +42,9 @@ test("event photo upload optimizes and watermarks before Storage upload", async 
   assert.match(photos, /watermarkPhoto\(file, \{ mode: "event"/);
   assert.match(watermark, /canvas\.toBlob/);
   assert.match(watermark, /ennstal-connect-wordmark\.svg/);
-  assert.match(watermark, /Community Fotograf/);
+  assert.match(watermark, /ctx\.globalAlpha = 0\.70/);
+  assert.match(watermark, /if \(logo\) ctx\.drawImage\(logo,/);
+  assert.doesNotMatch(watermark, /fillText\("Community Fotograf"/);
   assert.match(photos, /storage\.from\("event-photos"\)\.upload/);
   assert.match(photos, /cacheControl: "31536000"/);
   assert.match(photos, /loading="lazy"/);
