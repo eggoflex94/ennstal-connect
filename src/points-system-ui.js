@@ -16,6 +16,7 @@ const fmtDate = (value) => {
 };
 
 const categoryLabel = (value) => ({
+  ADMIN_WARNING: 'Offizielle Verwarnung',
   RULE_VIOLATION: 'Regelverstoß',
   ADMIN_BONUS: 'Bonus',
   FORUM_HELPFUL: 'Hilfreicher Forenbeitrag',
