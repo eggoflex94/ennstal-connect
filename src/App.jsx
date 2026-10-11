@@ -1593,6 +1593,10 @@ export default function App() {
     const { data, error } = await query.select("id");
     if (error) throw error;
     if (!data?.length) throw new Error("Die Gestaltung konnte nicht gespeichert werden. Bitte Berechtigungen prüfen.");
+    const { data: saved, error: readError } = await supabase.from("homepage_sections").select("*").eq("id", data[0].id).eq("region_id", regionId).single();
+    if (readError) throw readError;
+    if (JSON.stringify(normalizeMagazine(JSON.parse(saved.content))) !== payload.content) throw new Error("Die gespeicherte Gestaltung stimmt nicht mit deinem Entwurf überein. Bitte erneut speichern.");
+    setHomepageSections(current => [...current.filter(row => row.id !== saved.id), saved]);
     await loadAll();
   }
   async function editHomepageSection(x) {

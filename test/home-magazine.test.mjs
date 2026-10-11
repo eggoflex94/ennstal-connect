@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { MAGAZINE_SETTINGS_TITLE, normalizeMagazine, readMagazineSettings, upcomingMagazineEvents, safeImageUrl } from '../src/homeMagazine.js';
+import { MAGAZINE_SETTINGS_TITLE, normalizeMagazine, readMagazineSettings, upcomingMagazineEvents, safeImageUrl, magazineWithImage, coverCoordinate } from '../src/homeMagazine.js';
 
 test('magazine defaults include exactly the four agreed sections', () => {
   const config = normalizeMagazine();
@@ -67,4 +67,35 @@ test('editor preserves pending uploads and unsaved drafts across parent refreshe
   assert.doesNotMatch(source, /\}, \[config\]\);/);
   assert.match(source, /dirty\.current = true; const token = generation\.current/);
   assert.match(source, /await onSave\(normalizeMagazine\(draft\)\); dirty\.current = false/);
+});
+
+test('each category image survives saving and loading in its own region', () => {
+  let config = normalizeMagazine({ heroImage: 'https://example.com/cover.png', title: 'Mein Ennstal', heroTextX: 67, heroTextY: 24 });
+  for (let i = 0; i < 4; i++) config = magazineWithImage(config, 'category', `https://example.com/category-${i}.png`, i);
+  const rows = [{ title: MAGAZINE_SETTINGS_TITLE, region_id: 'ennstal', content: JSON.stringify(config) }];
+  const loaded = readMagazineSettings(rows, 'ennstal').config;
+  assert.deepEqual(loaded.categories.map(item => item.image), Array.from({ length: 4 }, (_, i) => `https://example.com/category-${i}.png`));
+  assert.equal(loaded.heroImage, 'https://example.com/cover.png');
+  assert.equal(loaded.title, 'Mein Ennstal');
+  assert.equal(loaded.heroTextX, 67);
+  assert.equal(loaded.heroTextY, 24);
+  assert.ok(readMagazineSettings(rows, 'other').config.categories.every(item => item.image === ''));
+});
+
+test('image saves reject temporary previews and preserve other category images', () => {
+  const config = magazineWithImage(normalizeMagazine(), 'category', 'https://example.com/groups.png', 1);
+  const next = magazineWithImage(config, 'category', 'https://example.com/events.png', 0);
+  assert.equal(next.categories[1].image, config.categories[1].image);
+  assert.equal(config.categories[0].image, '');
+  assert.throws(() => magazineWithImage(config, 'hero', 'blob:temporary'));
+  assert.throws(() => magazineWithImage(config, 'category', 'https://example.com/a.png', 9));
+});
+
+test('cover text positions remain inside the cover and older layouts retain their position', () => {
+  assert.equal(normalizeMagazine().heroTextX, 0);
+  assert.equal(normalizeMagazine().heroTextY, 100);
+  assert.equal(coverCoordinate(-25), 0);
+  assert.equal(coverCoordinate(130), 100);
+  assert.equal(coverCoordinate(NaN, 100), 100);
+  assert.equal(coverCoordinate(33.5), 33.5);
 });

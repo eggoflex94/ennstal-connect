@@ -102,3 +102,10 @@
   .ec-magazine-editor fieldset { padding:13px }
 }
 @media(prefers-reduced-motion:reduce) { .ec-magazine-category > img { transition:none } }
+
+.ec-magazine-hero-stage { display:grid; width:100%; min-width:0; min-height:356px; align-self:stretch; }
+.ec-magazine-hero.is-compact .ec-magazine-hero-stage { min-height:236px; }
+.ec-magazine-hero-stage > .ec-magazine-hero-copy { grid-column:2; grid-row:2; min-width:0; width:100%; align-self:start; }
+.ec-magazine-hero-copy.is-draggable { cursor:grab; touch-action:none; user-select:none; outline:1px dashed #ffffff80; outline-offset:8px; border-radius:6px; }
+.ec-magazine-hero-copy.is-draggable:active { cursor:grabbing; }
+@media(max-width:680px) { .ec-magazine-hero-stage { min-height:304px; } .ec-magazine-hero.is-compact .ec-magazine-hero-stage { min-height:214px; } }

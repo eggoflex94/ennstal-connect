@@ -21,6 +21,8 @@ export function normalizeMagazine(input = {}) {
     title: text(input.title, 'Gemeinsam mehr erleben.', 120),
     intro: text(input.intro, 'Menschen, Erlebnisse und Geschichten aus deiner Region.'),
     heroImage: safeImageUrl(input.heroImage),
+    heroTextX: coverCoordinate(input.heroTextX, 0),
+    heroTextY: coverCoordinate(input.heroTextY, 100),
     heroPosition: ['top', 'center', 'bottom'].includes(input.heroPosition) ? input.heroPosition : 'center',
     heroHeight: ['compact', 'large'].includes(input.heroHeight) ? input.heroHeight : 'large',
     accent: /^#[\da-f]{6}$/i.test(input.accent || '') ? input.accent : '#ed682f',
@@ -47,4 +49,16 @@ export function upcomingMagazineEvents(events, regionId, now = Date.now()) {
     String(event.status || 'ACTIVE').toUpperCase() !== 'CANCELLED' &&
     Number.isFinite(Date.parse(event.event_at)) && Date.parse(event.event_at) >= now)
     .sort((a, b) => Date.parse(a.event_at) - Date.parse(b.event_at)).slice(0, 3);
+}
+
+export function coverCoordinate(value, fallback = 0) {
+  return typeof value === 'number' && Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : fallback;
+}
+
+export function magazineWithImage(config, target, url, index) {
+  const image = safeImageUrl(url);
+  if (!image || image.startsWith('blob:')) throw new Error('Das Bild wurde nicht dauerhaft hochgeladen. Bitte erneut versuchen.');
+  if (target === 'hero') return normalizeMagazine({ ...config, heroImage: image });
+  if (target !== 'category' || !Number.isInteger(index) || index < 0 || index > 3) throw new Error('Ungültiger Bildbereich.');
+  return normalizeMagazine({ ...config, categories: config.categories.map((item, i) => i === index ? { ...item, image } : item) });
 }
