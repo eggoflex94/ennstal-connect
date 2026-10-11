@@ -47,3 +47,38 @@
 .featured-red .community-event-featured-badge,.featured-red .ec-growth-featured,.featured-red .ec-business-event-featured-badge{background:rgba(239,68,68,.14);color:#991b1b}
 .featured-purple .community-event-featured-badge,.featured-purple .ec-growth-featured,.featured-purple .ec-business-event-featured-badge{background:rgba(168,85,247,.14);color:#7e22ce}
 .featured-orange .community-event-featured-badge,.featured-orange .ec-growth-featured,.featured-orange .ec-business-event-featured-badge{background:rgba(249,115,22,.14);color:#9a3412}
+
+
+/* Keep discovery rows inside their cards, including long regional group names. */
+.home-page .ec-discover,
+.home-page .ec-discover-grid,
+.home-page .ec-discover-card,
+.home-page .ec-discover-list {
+  min-width:0;
+  max-width:100%;
+  box-sizing:border-box;
+}
+.home-page .ec-discover-item {
+  box-sizing:border-box;
+  width:100%;
+  max-width:100%;
+  min-width:0;
+}
+.home-page .ec-discover-copy {
+  flex:1 1 0;
+  min-width:0;
+  max-width:100%;
+}
+.home-page .ec-discover-copy strong,
+.home-page .ec-discover-copy span {
+  white-space:normal;
+  overflow-wrap:anywhere;
+  word-break:normal;
+  text-overflow:clip;
+}
+.home-page .ec-discover-stat-grid {
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  min-width:0;
+  max-width:100%;
+}
+.home-page .ec-discover-stat { min-width:0; overflow-wrap:anywhere }
