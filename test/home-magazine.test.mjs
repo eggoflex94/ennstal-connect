@@ -99,3 +99,19 @@ test('cover text positions remain inside the cover and older layouts retain thei
   assert.equal(coverCoordinate(NaN, 100), 100);
   assert.equal(coverCoordinate(33.5), 33.5);
 });
+
+test('cover typography persists with the regional layout and rejects invalid styles', () => {
+  const config = normalizeMagazine({ heroFontSize: 48, heroTextColor: '#f08b35', heroTextAlign: 'right', heroFontWeight: 600 });
+  const saved = readMagazineSettings([{ title: MAGAZINE_SETTINGS_TITLE, region_id: 'ennstal', content: JSON.stringify(config) }], 'ennstal').config;
+  assert.equal(saved.heroFontSize, 48);
+  assert.equal(saved.heroTextColor, '#f08b35');
+  assert.equal(saved.heroTextAlign, 'right');
+  assert.equal(saved.heroFontWeight, 600);
+  const invalid = normalizeMagazine({ heroFontSize: Infinity, heroTextColor: 'url(evil)', heroTextAlign: 'arbitrary', heroFontWeight: 999 });
+  assert.equal(invalid.heroFontSize, 61);
+  assert.equal(invalid.heroTextColor, '#ffffff');
+  assert.equal(invalid.heroTextAlign, 'left');
+  assert.equal(invalid.heroFontWeight, 800);
+  assert.equal(normalizeMagazine({ heroFontSize: 4 }).heroFontSize, 24);
+  assert.equal(normalizeMagazine({ heroFontSize: 900 }).heroFontSize, 88);
+});

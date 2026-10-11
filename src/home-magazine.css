@@ -109,3 +109,21 @@
 .ec-magazine-hero-copy.is-draggable { cursor:grab; touch-action:none; user-select:none; outline:1px dashed #ffffff80; outline-offset:8px; border-radius:6px; }
 .ec-magazine-hero-copy.is-draggable:active { cursor:grabbing; }
 @media(max-width:680px) { .ec-magazine-hero-stage { min-height:304px; } .ec-magazine-hero.is-compact .ec-magazine-hero-stage { min-height:214px; } }
+
+.ec-home-magazine .ec-magazine-hero h2 { font-size:clamp(24px,calc(var(--ec-cover-font-size,61px) * var(--ec-cover-font-scale,1)),var(--ec-cover-font-size,61px))!important; color:var(--ec-cover-text-color,#fff)!important; font-weight:var(--ec-cover-font-weight,800)!important; }
+.ec-home-magazine .ec-magazine-hero-copy { text-align:var(--ec-cover-text-align,left); }
+.ec-home-magazine .ec-magazine-hero-copy p,.ec-home-magazine .ec-magazine-kicker { color:var(--ec-cover-text-color,#fff)!important; }
+.ec-magazine-hero-copy:has(h2) .ec-magazine-hero-actions { justify-content:var(--ec-cover-text-align,left); }
+.ec-magazine-hero-copy p { justify-self:var(--ec-cover-text-align,left); }
+.ec-cover-edit-layout { display:grid; grid-template-columns:minmax(260px,.9fr) minmax(0,1.3fr); gap:24px; align-items:start; }
+.ec-cover-controls { grid-template-columns:minmax(0,1fr); }
+.ec-cover-live-preview { position:sticky; top:18px; min-width:0; padding:16px; background:#f4f7fa; border:1px solid #dce5ec; border-radius:14px; }
+.ec-cover-live-preview > strong { display:block; font-size:1rem; color:#20364b; }
+.ec-cover-live-preview > p,.ec-cover-live-preview > small { display:block; color:#526a7d; font-size:.8rem; line-height:1.5; }
+.ec-cover-preview-viewport { position:relative; overflow:hidden; width:100%; margin:14px 0; }
+.ec-cover-preview-canvas { position:absolute; top:0; left:0; transform-origin:top left; }
+@media(max-width:680px) { .ec-cover-edit-layout { grid-template-columns:minmax(0,1fr); gap:16px; } .ec-cover-live-preview { grid-row:1; top:8px; z-index:3; padding:10px; } .ec-cover-live-preview > p { display:none; } .ec-cover-controls { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+
+@media(max-width:680px) { .ec-home-magazine { --ec-cover-font-scale:.65; } }
+
+.ec-cover-live-preview > button { width:100%; margin-top:14px; min-height:44px; }
