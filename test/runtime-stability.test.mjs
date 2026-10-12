@@ -95,3 +95,29 @@ test('successful HTTP responses and server errors pass through without retry', a
     assert.equal(calls, 1);
   }
 });
+
+test('score and announcement reads recover from transient failures and deduplicate concurrent callers', async () => {
+  for (const rpc of ['ec_member_scores', 'community_activity_progress', 'ec_get_community_announcements']) {
+    let calls = 0;
+    const fetch = createNetworkFetch(async () => {
+      calls++;
+      if (calls === 1) throw new TypeError('Load failed');
+      return new Response('[{"score":12}]', { status: 200 });
+    });
+    const url = `https://example.test/rest/v1/rpc/${rpc}`;
+    const init = { method: 'POST', body: '{}', headers: { authorization: 'Bearer test' } };
+    const [first, second] = await Promise.all([fetch(url, init), fetch(url, init)]);
+    assert.equal(calls, 2);
+    assert.equal(await first.text(), '[{"score":12}]');
+    assert.equal(await second.text(), '[{"score":12}]');
+  }
+});
+
+test('reward and home-region writes are not replayed after a network failure', async () => {
+  for (const rpc of ['record_online_time', 'ec_change_home_region']) {
+    let calls = 0;
+    const fetch = createNetworkFetch(async () => { calls++; throw new TypeError('Failed to fetch'); });
+    await assert.rejects(fetch(`https://example.test/rest/v1/rpc/${rpc}`, { method: 'POST', body: '{}' }));
+    assert.equal(calls, 1);
+  }
+});

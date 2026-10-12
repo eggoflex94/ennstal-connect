@@ -51,6 +51,10 @@ const READ_ONLY_RPCS = new Set([
   'head_admin_error_feed',
   'admin_attention_summary',
   'ec_activity_feed',
+  // Verified read-only: score calculation and regional announcement retrieval.
+  'ec_member_scores',
+  'community_activity_progress',
+  'ec_get_community_announcements',
   'ec_list_manageable_community_announcements',
 ]);
 
