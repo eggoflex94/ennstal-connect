@@ -2,6 +2,7 @@ import { STYRIAN_DISTRICTS, publicDistrict } from "./regions.js";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "./supabaseClient";
 import MemberCardView from "./MemberCardView.jsx";
+import { directoryRegionalRole } from "./directoryRegionalRole.js";
 
 const PAGE_SIZE = 30;
 const normalized = (value) => String(value || "").trim().toUpperCase();
@@ -129,14 +130,11 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
     return map;
   }, [liveMembers, regionalAssignments]);
 
-  const isRegionalAdmin = (member) => {
-    const assigned = regionalAdminByUser.get(member?.id);
-    if (!assigned?.size) return false;
-    if (!activeRegion?.id) return true;
-    return assigned.has(activeRegion.id);
-  };
+  const regionalRole = member => directoryRegionalRole(regionalAdminByUser.get(member?.id), activeRegion?.id);
+  const isRegionalAdmin = member => regionalRole(member).assigned;
+  const isRegionalAdminHere = member => regionalRole(member).here;
 
-  const roleStarSrc = (member) => isHeadAdmin(member) || isGlobalAdmin(member) || isRegionalAdmin(member) ? "/role-star-red.svg" : normalized(member?.role) === "MUNICIPALITY" ? "/role-star-green.svg" : isBusiness(member) ? "/role-star-blue.svg" : normalized(member?.role) === "SUPPORTER" ? "/supporter-star.svg" : null;
+  const roleStarSrc = (member) => isHeadAdmin(member) || isGlobalAdmin(member) ? "/role-star-red.svg" : isRegionalAdmin(member) ? regionalRole(member).star : normalized(member?.role) === "MUNICIPALITY" ? "/role-star-green.svg" : isBusiness(member) ? "/role-star-blue.svg" : normalized(member?.role) === "SUPPORTER" ? "/supporter-star.svg" : null;
 
   const openMember = (member) => {
     if (!member?.id) return;
@@ -163,7 +161,7 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
         if (memberType === "MUNICIPALITY") return normalized(member?.role) === "MUNICIPALITY";
         if (memberType === "BUSINESS") return isBusiness(member);
         if (memberType === "SUPPORTER") return normalized(member?.role) === "SUPPORTER";
-        return normalized(member?.role) === "MEMBER" && !isBusiness(member);
+        return normalized(member?.role) === "MEMBER" && !isRegionalAdmin(member) && !isBusiness(member);
       })
       .filter((member) => {
         if (!newOnly) return true;
@@ -286,7 +284,7 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
             : normalized(member?.role) === "ADMIN"
               ? { ...member, directory_admin: true, directory_role_star: roleStarSrc(member), directory_responsibility_label: `Global Admin · Region ${homeRegionLabel}` }
               : isRegionalAdmin(member)
-                ? { ...member, directory_admin: true, directory_role_star: roleStarSrc(member), directory_responsibility_label: `Regional Admin · Region ${regionalLabel}` }
+                ? { ...member, directory_admin: isRegionalAdminHere(member), directory_supporter: !isRegionalAdminHere(member), directory_role_star: roleStarSrc(member), directory_responsibility_label: `Regional Admin · Region ${regionalLabel}` }
                 : { ...member, directory_role_star: roleStarSrc(member) };
         return <MemberCardView
           key={member.id}
