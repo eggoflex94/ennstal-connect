@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createAnimationFrameTask } from './animationFrameTask.js';
 import { MAGAZINE_LABELS, MAGAZINE_PAGES, normalizeMagazine, magazineWithImage, coverCoordinate, safeImageUrl, upcomingMagazineEvents } from './homeMagazine.js';
 
 const navigate = page => window.dispatchEvent(new CustomEvent('ec:navigate', { detail: { page, source: 'homepage-magazine' } }));
@@ -56,14 +57,15 @@ function LiveCoverPreview({ config, region, onTextPositionChange, busy }) {
       const available = viewport.current.clientWidth;
       if (!width || !available) return;
       const scale = Math.min(1, available / width, window.innerWidth <= 680 ? 0.68 : 1);
-      const height = canvas.current.offsetHeight * scale;
+      const height = Math.round(canvas.current.offsetHeight * scale * 2) / 2;
       setSize(current => current.width === width && current.scale === scale && current.height === height ? current : { width, scale, height });
     };
-    const observer = new ResizeObserver(measure);
+    const measurement = createAnimationFrameTask(measure);
+    const observer = new ResizeObserver(() => measurement.schedule());
     observer.observe(viewport.current); observer.observe(canvas.current);
     if (source) observer.observe(source);
-    measure();
-    return () => observer.disconnect();
+    measurement.schedule();
+    return () => { observer.disconnect(); measurement.dispose(); };
   }, []);
   return <aside className="ec-cover-live-preview"><strong>Live-Vorschau</strong><p>Änderungen siehst du sofort. Du kannst den Text auch direkt im Bild ziehen.</p><div className="ec-cover-preview-viewport" ref={viewport} style={{ height: size.height }}><div ref={canvas} className="ec-cover-preview-canvas" style={{ width: size.width, transform: `scale(${size.scale})`, marginLeft: `max(0px, calc((100% - ${size.width * size.scale}px) / 2))` }}><HomeMagazine config={{ ...config, order: ['hero'], visible: { hero: true } }} region={region} events={[]} groups={[]} sections={[]} preview onTextPositionChange={onTextPositionChange}/></div></div><small>Zum Veröffentlichen „Magazin speichern & veröffentlichen“ wählen. Schrift im Bild selbst bleibt fest.</small><button type="submit" className="primary-button" disabled={busy}>Cover speichern & veröffentlichen</button></aside>;
 }
