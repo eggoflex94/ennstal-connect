@@ -27,6 +27,9 @@ function profileFor(role) {
     hide_online_status: false,
     is_test_account: false,
     rules_accepted_at: nowIso(),
+    district_code: "liezen",
+    show_district: true,
+    is_verified: true,
     privacy_settings: {}
   };
 }
@@ -47,6 +50,8 @@ function otherMember() {
     last_active_at: nowIso(),
     hide_online_status: false,
     is_test_account: false,
+    district_code: "liezen",
+    show_district: true,
     privacy_settings: {}
   };
 }
@@ -171,7 +176,7 @@ async function installSupabaseMock(page, role) {
     if (path === "/rest/v1/profiles") {
       const idFilter = url.searchParams.get("id") || "";
       const selected = idFilter.includes(OTHER_ID) ? secondaryMember : profile;
-      return json(accept.includes("application/vnd.pgrst.object+json") ? selected : [selected]);
+      return json(accept.includes("application/vnd.pgrst.object+json") ? selected : idFilter ? [selected] : members);
     }
 
     if (path === "/rest/v1/user_permissions") {
@@ -507,4 +512,50 @@ test("head admin can open the automated error center from admin tools", async ({
   await expect(page.getByRole("heading", { name: "Fehlerzentrale" })).toBeVisible();
   await expect(page.getByRole("dialog", { name: "Head Admin Fehlerzentrale" })).toBeVisible();
   await expect(page.locator(".app-recovery")).toHaveCount(0);
+});
+
+
+test("directory filters stay compact and legal links remain outside the desktop dock", async ({ page }) => {
+  await login(page, "MEMBER");
+  await assertTopNavigationWorks(page, "Mitglieder");
+  const filters = page.locator('.native-member-search');
+  await expect(filters).toBeVisible();
+  for (const label of ['Nur online', 'Neu seit 30 Tagen']) {
+    const checkbox = filters.getByRole('checkbox', { name: label });
+    const box = await checkbox.boundingBox();
+    expect(box?.width).toBeLessThanOrEqual(24);
+    expect(box?.height).toBeLessThanOrEqual(24);
+    await checkbox.check();
+    await expect(checkbox).toBeChecked();
+    await checkbox.uncheck();
+  }
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
+  expect(overflow).toBe(false);
+  const footer = page.locator('.site-footer');
+  await footer.scrollIntoViewIfNeeded();
+  if (page.viewportSize().width > 900) {
+    const footerBox = await footer.boundingBox();
+    const dockBox = await page.locator('.ec-right-dock').boundingBox();
+    if (dockBox) expect(footerBox.x + footerBox.width).toBeLessThanOrEqual(dockBox.x);
+  }
+  await expect(footer.getByRole('button', { name: 'Impressum', exact: true })).toBeVisible();
+});
+
+test("cover typography changes are reflected immediately in the live preview", async ({ page }) => {
+  await login(page, "HEAD_ADMIN");
+  await page.locator('.homepage-editor-toggle > summary').click();
+  const editor = page.locator('.ec-magazine-editor');
+  await expect(editor).toBeVisible();
+  await editor.getByLabel('Überschrift', { exact: true }).fill('Live Cover Test');
+  const preview = editor.locator('.ec-cover-live-preview');
+  await expect(preview.getByRole('heading', { name: 'Live Cover Test' })).toBeVisible();
+  const fontSize = editor.locator('.ec-cover-controls label').filter({ hasText: /^Schriftgröße/ }).locator('input');
+  await fontSize.press('Home');
+  await expect(fontSize).toHaveValue('24');
+  const vertical = editor.locator('.ec-cover-controls label').filter({ hasText: /^Schrift oben \/ unten/ }).locator('input');
+  await vertical.press('Home');
+  await expect(vertical).toHaveValue('0');
+  const headingSize = await preview.locator('h2').evaluate(node => parseFloat(getComputedStyle(node).fontSize));
+  expect(headingSize).toBe(24);
+  await expect(page.locator('.app-recovery')).toHaveCount(0);
 });

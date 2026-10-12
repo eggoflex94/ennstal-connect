@@ -128,3 +128,35 @@ body .app > .site-footer > div {
   body .app > .site-footer { margin:18px 12px!important; }
   body .app > .site-footer > div { justify-content:flex-start!important; }
 }
+
+/* Compact native directory controls; general form styles must not enlarge checkboxes. */
+body .app .native-members-directory .native-member-search input[type="checkbox"] {
+  appearance:auto!important;
+  width:18px!important;
+  height:18px!important;
+  min-width:18px!important;
+  max-width:18px!important;
+  min-height:18px!important;
+  max-height:18px!important;
+  flex:0 0 18px!important;
+  padding:0!important;
+  margin:0!important;
+  accent-color:var(--ec-accent,#ed682f);
+}
+body .app .native-members-directory .native-member-search > label {
+  justify-content:flex-start!important;
+  min-width:0!important;
+  gap:10px!important;
+}
+body .app .native-members-directory .native-member-search > button {
+  min-height:46px;
+  padding:8px 13px;
+  border:1px solid #cfd9e2;
+  border-radius:13px;
+  background:var(--ec-panel,#f8fafc);
+  color:inherit;
+  font:inherit;
+  font-weight:700;
+  cursor:pointer;
+}
+body .app .native-members-directory .native-members-count {display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;}
