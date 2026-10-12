@@ -104,3 +104,27 @@
     overflow-wrap: break-word !important;
   }
 }
+
+/* Footer uses the same content column as the main area, before the right dock. */
+body .app > .site-footer {
+  box-sizing:border-box!important;
+  display:flex!important;
+  flex-wrap:wrap!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:12px!important;
+  width:auto!important;
+  max-width:none!important;
+  min-width:0!important;
+  margin:22px 365px 18px 24px!important;
+}
+body .app > .site-footer > div {
+  display:flex!important;
+  flex-wrap:wrap!important;
+  min-width:0!important;
+  max-width:100%!important;
+}
+@media(max-width:900px) {
+  body .app > .site-footer { margin:18px 12px!important; }
+  body .app > .site-footer > div { justify-content:flex-start!important; }
+}
