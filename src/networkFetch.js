@@ -139,11 +139,15 @@ export function createNetworkFetch(fetchImpl, timeoutMs = 12_000, readCacheMs = 
             });
           }
           return response;
-        } catch (error) {
+        } catch (caughtError) {
+          // Browsers may reject fetch with AbortError even for our timeout.
+          // Keep the timeout reason, and do not report intentional caller cancellation.
+          const error = !callerSignal?.aborted && controller.signal.reason?.name === "TimeoutError"
+            ? controller.signal.reason : caughtError;
           lastError = error;
           const finalAttempt = !safeRead || callerSignal?.aborted || !isTransientNetworkError(error) || attempt === attempts - 1;
           if (finalAttempt) {
-            emitNetworkError(url, method, {
+            if (!callerSignal?.aborted) emitNetworkError(url, method, {
               kind: error?.name === "TimeoutError" || /timeout|antwortet nicht/i.test(String(error?.message || error || "")) ? "timeout" : "network",
               message: String(error?.message || error || "Netzwerkanfrage fehlgeschlagen.").slice(0, 1000)
             });

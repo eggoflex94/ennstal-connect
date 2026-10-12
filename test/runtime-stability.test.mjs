@@ -121,3 +121,28 @@ test('reward and home-region writes are not replayed after a network failure', a
     assert.equal(calls, 1);
   }
 });
+
+test('caller cancellation is not reported as a network fault and browser aborts retain timeout reasons', async () => {
+  const originalWindow = globalThis.window;
+  const originalEvent = globalThis.CustomEvent;
+  const reports = [];
+  globalThis.window = { dispatchEvent: event => reports.push(event.detail) };
+  globalThis.CustomEvent = class { constructor(_name, options) { this.detail = options.detail; } };
+  try {
+    const fetch = createNetworkFetch((_url, { signal }) => new Promise((_resolve, reject) => {
+      if (signal.aborted) return reject(new DOMException('Fetch is aborted', 'AbortError'));
+      signal.addEventListener('abort', () => reject(new DOMException('Fetch is aborted', 'AbortError')));
+    }), 5);
+    const caller = new AbortController();
+    const cancelled = fetch('https://example.test/rest/v1/rpc/ec_change_home_region', { method: 'POST', signal: caller.signal });
+    caller.abort();
+    await assert.rejects(cancelled, { name: 'AbortError' });
+    assert.equal(reports.length, 0);
+    await assert.rejects(fetch('https://example.test/rest/v1/rpc/ec_change_home_region', { method: 'POST' }), { name: 'TimeoutError' });
+    assert.equal(reports.length, 1);
+    assert.equal(reports[0].kind, 'timeout');
+  } finally {
+    if (originalWindow === undefined) delete globalThis.window; else globalThis.window = originalWindow;
+    if (originalEvent === undefined) delete globalThis.CustomEvent; else globalThis.CustomEvent = originalEvent;
+  }
+});
