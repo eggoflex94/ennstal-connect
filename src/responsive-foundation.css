@@ -1,0 +1,53 @@
+/* Ennstal Connect: additive responsive design foundation. No feature hiding. */
+:root{--ec-ui-surface:#fff;--ec-ui-ink:#173047;--ec-ui-muted:#65788b;--ec-ui-accent:#f56a28;--ec-ui-radius:18px;--ec-ui-focus:0 0 0 3px rgba(245,106,40,.32);color-scheme:light}
+html{scroll-padding-top:130px}
+body{font-feature-settings:"kern";-webkit-font-smoothing:antialiased}
+.app :where(button,a,input,select,textarea,[role="button"]):focus-visible{outline:3px solid var(--ec-ui-accent);outline-offset:3px}
+.app :where(button,input,select,textarea){font:inherit}
+.app :where(button,[role="button"]){touch-action:manipulation}
+.app :where(img,video,canvas,svg){max-width:100%}
+.app :where(.modern-main,.dashboard-layout,.admin-page,.member-profile-page,.events-page,.forum-page,.messages-page,.chat-page,.profile-editor,.community-page){min-width:0}
+.app :where(.modern-main,.admin-page,.member-profile-page,.events-page,.forum-page,.messages-page,.chat-page) :where(h1,h2,h3,p){overflow-wrap:break-word}
+.app :where(.modern-main,.admin-page,.member-profile-page,.events-page,.forum-page) :where(input:not([type="checkbox"]):not([type="radio"]),textarea,select){max-width:100%;box-sizing:border-box}
+.app :where(.modern-main,.admin-page,.member-profile-page,.events-page,.forum-page) :where(table){max-width:100%}
+.app :where(.modern-main,.admin-page,.member-profile-page,.events-page,.forum-page) :where(.table-wrapper,.table-responsive,[class*="table-wrap"]){max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+@media(min-width:761px){
+ .app :where(.modern-main,.member-profile-page,.events-page,.forum-page){max-width:100%}
+ .app :where(.card,.panel,.community-card){border-radius:var(--ec-ui-radius)}
+}
+@media(max-width:760px){
+ html{scroll-padding-top:125px}
+ .app :where(.modern-main,.admin-page,.member-profile-page,.events-page,.forum-page,.messages-page,.chat-page){max-width:100%;min-width:0}
+ .app :where(.modern-main,.admin-page,.member-profile-page,.events-page,.forum-page) :where(.grid,.card-grid,.form-row){min-width:0}
+ .app :where(.modern-main,.admin-page,.member-profile-page,.events-page,.forum-page) :where(input:not([type="checkbox"]):not([type="radio"]),textarea,select){font-size:16px}
+ .app :where(.modal,.dialog,[role="dialog"]){max-width:calc(100vw - 20px);max-height:calc(100dvh - 24px);overflow-y:auto;overscroll-behavior:contain}
+ .app :where(.chat-composer,.message-composer){min-width:0}
+ .app :where(.chat-composer,.message-composer) :where(textarea,input){min-width:0}
+ .app :where(.modern-main,.admin-page,.member-profile-page) :where(.scroll-container,.table-responsive){overflow-x:auto}
+}
+@media(max-width:420px){
+ .app :where(.admin-page,.member-profile-page,.events-page,.forum-page) :where(button){max-width:100%;white-space:normal}
+ .app :where(.modal,.dialog,[role="dialog"]){max-width:calc(100vw - 12px)}
+}
+@media(prefers-reduced-motion:reduce){
+ .app :where(*, *::before, *::after){scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
+
+/* Mobile feature finder keeps the full desktop feature set reachable. */
+.ec-mobile-menu-search-label{display:block;margin:12px 2px 6px;color:var(--ec-ui-ink);font-weight:700;font-size:.85rem}
+.ec-mobile-menu-search{display:block;width:100%;min-height:44px;padding:10px 13px;border:1px solid #c9d3de;border-radius:12px;background:#fff;color:var(--ec-ui-ink);font-size:16px}
+.ec-mobile-menu-search:focus-visible{outline:3px solid var(--ec-ui-accent);outline-offset:2px}
+.ec-mobile-menu-empty{grid-column:1/-1;margin:0;padding:16px 6px;color:var(--ec-ui-muted);text-align:center}
+
+/* Explicit desktop-on-phone mode: keep one full desktop layout rather than a mobile variant.
+   Layout viewport is 1100px on phones; pinch zoom remains enabled. */
+@media screen and (max-device-width:760px){
+  /* Preserve the same CSS layout viewport as desktop; the browser scales it to fit. */
+  html,body,#root,.app{min-width:1100px!important;width:1100px!important;max-width:none!important;overflow-x:visible!important}
+  .app .dashboard-layout{min-width:1100px!important}
+  /* The separate quicknav must not cover desktop controls. */
+  .ec-mobile-quicknav{display:none!important}
+  /* Desktop dialogs and tables stay usable with horizontal scrolling when required. */
+  .app :where(.modal,.dialog,[role="dialog"]){max-width:calc(100vw - 32px);max-height:calc(100vh - 32px);overflow:auto}
+  .app :where(.table-wrapper,.table-responsive,[class*="table-wrap"]){overflow-x:auto}
+}
