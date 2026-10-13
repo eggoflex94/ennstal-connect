@@ -42,7 +42,7 @@ function ApprovalCard({ item, onDecision, busy }) {
 }
 
 function AccountMailSetup({ configured, onSaved }) {
-  const [key, setKey] = useState(''), [sender, setSender] = useState(''), [busy, setBusy] = useState(false), [message, setMessage] = useState('');
+  const [key, setKey] = useState(''), [sender, setSender] = useState('noreply@ennstal-connect.com'), [busy, setBusy] = useState(false), [message, setMessage] = useState('');
   const save = async event => {
     event.preventDefault(); if (busy) return; setBusy(true); setMessage('');
     try {
@@ -50,11 +50,11 @@ function AccountMailSetup({ configured, onSaved }) {
       if (prepared.error) throw prepared.error;
       const { error } = await supabase.rpc('ec_configure_account_email', { p_api_key: key.trim(), p_sender: sender.trim() });
       if (error) throw error;
-      setKey(''); setSender(''); setMessage('✓ Versandzugang gespeichert. Vorgemerkte E-Mails werden automatisch verarbeitet.'); onSaved();
+      setKey(''); setSender('noreply@ennstal-connect.com'); setMessage('✓ Versandzugang gespeichert. Vorgemerkte E-Mails werden automatisch verarbeitet.'); onSaved();
     } catch (error) { setMessage(error.message || 'Der Versandzugang konnte nicht gespeichert werden.'); }
     finally { setBusy(false); }
   };
-  return <details className="ec-approval-mail-setup"><summary>{configured ? 'Resend-Zugang ändern' : 'E-Mail-Versand mit Resend einrichten'}</summary><p>Bestätige zuerst deine Absenderdomain bei <a href="https://resend.com/domains" target="_blank" rel="noopener noreferrer">Resend</a> und erstelle einen <a href="https://resend.com/api-keys" target="_blank" rel="noopener noreferrer">API-Key für den Versand</a>.</p><form onSubmit={save}><fieldset disabled={busy}><legend>Versandzugang · nur Hauptadmin</legend><div className="ec-approval-fields"><label>Bestätigte Absenderadresse<input type="email" value={sender} required maxLength={254} placeholder="name@deine-domain.at" onChange={event => setSender(event.target.value)}/></label><label>Resend API-Key<input type="password" value={key} required autoComplete="new-password" maxLength={203} placeholder="re_…" onChange={event => setKey(event.target.value)}/></label></div><p>Der Schlüssel wird verschlüsselt gespeichert und nicht erneut angezeigt. Freigaben und Auflagen werden zusätzlich zur Community-Benachrichtigung automatisch per E-Mail versendet.</p><button type="submit" className="primary-button">{busy ? 'Wird gespeichert …' : 'Versandzugang speichern'}</button></fieldset></form>{message && <p role="status">{message}</p>}</details>;
+  return <details className="ec-approval-mail-setup"><summary>{configured ? 'Brevo-Zugang ändern' : 'E-Mail-Versand mit Brevo einrichten'}</summary><p>Deine Registrierungs-Mails laufen bereits über Brevo. Erstelle im selben <a href="https://app.brevo.com/settings/keys/api" target="_blank" rel="noopener noreferrer">Brevo-Konto einen API-Key</a> für diese zusätzlichen Nachrichten. Die SMTP-Einstellungen für die Anmeldung bleiben bestehen. Bitte einen API-Key verwenden, keinen SMTP-Schlüssel.</p><form onSubmit={save}><fieldset disabled={busy}><legend>Versandzugang · nur Hauptadmin</legend><div className="ec-approval-fields"><label>Bestätigte Absenderadresse<input type="email" value={sender} required maxLength={254} placeholder="name@deine-domain.at" onChange={event => setSender(event.target.value)}/></label><label>Brevo API-Key<input type="password" value={key} required autoComplete="new-password" maxLength={507} placeholder="xkeysib-…" onChange={event => setKey(event.target.value)}/></label></div><p>Der Schlüssel wird verschlüsselt gespeichert und nicht erneut angezeigt. Freigaben und Auflagen werden zusätzlich zur Community-Benachrichtigung automatisch per E-Mail versendet.</p><button type="submit" className="primary-button">{busy ? 'Wird gespeichert …' : 'Versandzugang speichern'}</button></fieldset></form>{message && <p role="status">{message}</p>}</details>;
 }
 
 export default function AccountApprovals({ onBack }) {
