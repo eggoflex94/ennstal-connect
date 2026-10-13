@@ -80,9 +80,11 @@ function requestBodyKey(init) {
   return '[body]';
 }
 
-export function createNetworkFetch(fetchImpl, timeoutMs = 12_000, readCacheMs = 900) {
+export function createNetworkFetch(fetchImpl, timeoutMs = 12_000, readCacheMs = 3_000) {
   const inFlightReads = new Map();
   const recentReads = new Map();
+  // Bound retained response bodies; a large read must not accumulate indefinitely.
+  const MAX_CACHED_READS = 60;
 
   return async (input, init = {}) => {
     const method = String(init.method || input?.method || 'GET').toUpperCase();
@@ -169,6 +171,9 @@ export function createNetworkFetch(fetchImpl, timeoutMs = 12_000, readCacheMs = 
         if (response.ok && readCacheMs > 0) {
           const ttl = isAuthUserRead ? Math.max(readCacheMs, 10_000) : readCacheMs;
           recentReads.set(readKey, { response: response.clone(), expiresAt: Date.now() + ttl });
+          while (recentReads.size > MAX_CACHED_READS) {
+            recentReads.delete(recentReads.keys().next().value);
+          }
         }
         return response;
       })
