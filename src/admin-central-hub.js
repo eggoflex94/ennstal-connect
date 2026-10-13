@@ -176,6 +176,7 @@ const hubIcons = {
   news: '<svg viewBox="0 0 24 24"><path d="M5 4h14v16H5z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>',
   community: '<svg viewBox="0 0 24 24"><path d="M12 3 14.7 8.5 21 9.4l-4.5 4.4 1.1 6.2L12 17l-5.6 3 1.1-6.2L3 9.4l6.3-.9L12 3Z"/></svg>',
   manage: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.4-2.5 1a7 7 0 0 0-1.8-1L14.2 3h-4.4l-.4 3.1a7 7 0 0 0-1.8 1l-2.5-1-2 3.4L5.1 11a7 7 0 0 0 0 2l-2 1.5 2 3.4 2.5-1a7 7 0 0 0 1.8 1l.4 3.1h4.4l.4-3.1a7 7 0 0 0 1.8-1l2.5 1 2-3.4-2-1.5c.1-.3.1-.7.1-1Z"/></svg>',
+  approvals: '<svg viewBox="0 0 24 24"><path d="M12 3 5 6v6c0 4 3 6.5 7 9 4-2.5 7-5 7-9V6z"/><path d="m8.5 12 2.3 2.3 4.7-5"/></svg>',
   activity: '<svg viewBox="0 0 24 24"><path d="M5 4h14v16H5z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>',
 };
 
@@ -191,6 +192,7 @@ async function openHub() {
     r.news && tile('Neuigkeiten', 'Regionale Beiträge verwalten', 'news', hubIcons.news, 'orange'),
     r.community && tile('Community', 'Termine und Community-Bereiche', 'community', hubIcons.community, 'green'),
     r.fullAdmin && tile('Verwaltung', 'Erweiterte globale Admin-Verwaltung', 'admin', hubIcons.manage, 'red'),
+    r.head && tile('Accounts freigeben', 'Accounts prüfen, Auflagen senden und Brevo-Mailversand einrichten', 'account-approvals', hubIcons.approvals, 'green'),
     r.head && tile('Team-Aktivitäten', 'Alle privilegierten Aktionen kontrollieren', 'admin-log', hubIcons.activity, 'gold'),
   ].filter(Boolean).join('');
 
