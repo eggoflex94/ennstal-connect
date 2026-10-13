@@ -55,6 +55,8 @@ const READ_ONLY_RPCS = new Set([
   'ec_member_scores',
   'community_activity_progress',
   'ec_get_community_announcements',
+  'ec_my_account_approval',
+  'ec_account_approval_queue',
   'ec_list_manageable_community_announcements',
 ]);
 

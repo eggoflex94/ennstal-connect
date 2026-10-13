@@ -1,0 +1,21 @@
+.ec-account-approvals,.ec-account-approval-notice {min-width:0;max-width:100%;box-sizing:border-box;}
+.ec-account-approval-notice {margin:0 0 20px;padding:18px 22px;border:1px solid #e1c899;border-radius:16px;background:#fff8eb;color:#4d3e28;}
+.ec-account-approval-notice p {line-height:1.5;}
+.ec-approval-card {margin-bottom:18px;}
+.ec-approval-card header {display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:start;}
+.ec-approval-card header h2 {margin:0 0 7px;}
+.ec-approval-card dl {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:18px 0;}
+.ec-approval-card dl>div {min-width:0;padding:12px;background:#f3f6f8;border-radius:10px;color:#20364b;}
+.ec-approval-card dt {font-size:12px;opacity:.75;}
+.ec-approval-card dd {margin:5px 0 0;font-weight:700;overflow-wrap:anywhere;}
+.ec-approval-card fieldset,.ec-account-approval-notice fieldset {border:1px solid #d9e2e9;border-radius:12px;padding:16px;min-width:0;}
+.ec-approval-card label,.ec-account-approval-notice label,.ec-approval-filters label {display:grid;gap:8px;min-width:0;}
+.ec-approval-filters {display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:14px;align-items:end;}
+.ec-approval-fields {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;}
+.ec-approval-card textarea,.ec-account-approval-notice textarea,.ec-account-approval-notice input,.ec-approval-filters input,.ec-approval-filters select {width:100%;box-sizing:border-box;max-width:100%;border:1px solid #cbd7e1;border-radius:9px;padding:10px;background:#fff;color:#20364b;font:inherit;}
+.ec-approval-card textarea,.ec-account-approval-notice textarea {min-height:90px;margin-bottom:14px;resize:vertical;}
+.ec-approval-checkboxes {display:flex;flex-wrap:wrap;gap:14px;margin:0 0 16px;}
+.ec-approval-checkboxes label {display:flex;align-items:center;gap:8px;}
+body .app .ec-approval-checkboxes input[type=checkbox] {width:18px!important;height:18px!important;min-height:18px!important;min-width:18px!important;padding:0!important;margin:0!important;flex:0 0 18px!important;}
+.ec-approval-pagination {display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:12px;margin:20px 0;}
+@media(max-width:700px) {.ec-approval-filters,.ec-approval-fields,.ec-approval-card dl {grid-template-columns:minmax(0,1fr);}.ec-account-approval-notice {padding:14px;}}

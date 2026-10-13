@@ -1,0 +1,51 @@
+-- Production-safe workflow smoke test: every write and notification rolls back.
+begin;
+do $test$
+declare h uuid; m uuid; first_value text; state jsonb; initial_stamp timestamptz; failed boolean; visible_rows integer;
+begin
+  select id into h from public.profiles where role::text='HEAD_ADMIN' and is_primary_head_admin and account_status='ACTIVE' limit 1;
+  select id,first_name into m,first_value from public.profiles where role::text='MEMBER' and account_status='ACTIVE'
+    and private.ec_account_names_valid(first_name,last_name,birth_date) and birth_date<=current_date limit 1;
+  if h is null or m is null then raise exception 'Test requires an active head admin and member.'; end if;
+  select updated_at into initial_stamp from public.account_approvals where user_id=m;
+  perform set_config('request.jwt.claim.sub',h::text,true);
+  perform set_config('request.jwt.claims',jsonb_build_object('sub',h,'role','authenticated')::text,true);
+  execute 'set local role authenticated';
+  state:=public.ec_review_account_approval(m,'CHANGES_REQUIRED',array['first_name'],'Test: Bitte den vollständigen Vornamen prüfen.',initial_stamp);
+  if state->>'status'<>'CHANGES_REQUIRED' then raise exception 'Changes request failed'; end if;
+  perform set_config('request.jwt.claim.sub',m::text,true);
+  perform set_config('request.jwt.claims',jsonb_build_object('sub',m,'role','authenticated')::text,true);
+  select count(*) into visible_rows from public.account_approvals;
+  if visible_rows<>1 then raise exception 'RLS exposed other members'; end if;
+  if public.ec_my_account_approval()->>'status'<>'CHANGES_REQUIRED' then raise exception 'Member cannot see requirements'; end if;
+  failed:=false;
+  begin perform public.ec_account_approval_queue(); exception when others then failed:=true; end;
+  if not failed then raise exception 'Member could read the admin queue'; end if;
+  failed:=false;
+  begin perform public.ec_review_account_approval(m,'APPROVED'); exception when others then failed:=true; end;
+  if not failed then raise exception 'Member could self-approve'; end if;
+  failed:=false;
+  begin perform public.ec_submit_account_corrections(jsonb_build_object('role','HEAD_ADMIN'),''); exception when others then failed:=true; end;
+  if not failed then raise exception 'Privilege-changing payload was accepted'; end if;
+  state:=public.ec_submit_account_corrections(jsonb_build_object('first_name',first_value||' Test'),'Test: Angaben geprüft.',(state->>'updated_at')::timestamptz);
+  if state->>'status'<>'PENDING' then raise exception 'Correction was not queued again'; end if;
+  perform set_config('request.jwt.claim.sub',h::text,true);
+  perform set_config('request.jwt.claims',jsonb_build_object('sub',h,'role','authenticated')::text,true);
+  state:=public.ec_review_account_approval(m,'APPROVED','{}','Test: Account geprüft.',(state->>'updated_at')::timestamptz);
+  if state->>'status'<>'APPROVED' then raise exception 'Approval failed'; end if;
+  failed:=false;
+  begin perform public.ec_review_account_approval(m,'APPROVED','{}','',initial_stamp); exception when others then failed:=true; end;
+  if not failed then raise exception 'Stale admin decision was accepted'; end if;
+  execute 'set local role postgres';
+  perform set_config('request.jwt.claim.sub',m::text,true);
+  perform set_config('request.jwt.claims',jsonb_build_object('sub',m,'role','authenticated')::text,true);
+  if (select first_name from public.profiles where id=m) is distinct from first_value||' Test' then raise exception 'Requested identity correction was not saved'; end if;
+  if exists(select 1 from private.ec_identity_correction_context) then raise exception 'Correction permission leaked beyond RPC'; end if;
+  failed:=false;
+  begin update public.profiles set last_name=last_name||' Test' where id=m; exception when others then failed:=true; end;
+  if not failed then raise exception 'Unrequested identity edit was allowed'; end if;
+  if (select account_status::text from public.profiles where id=m)<>'ACTIVE' then raise exception 'Account access was changed'; end if;
+end;
+$test$;
+rollback;
+select 'Account approval workflow and authorization checks passed; writes rolled back.' as result;
