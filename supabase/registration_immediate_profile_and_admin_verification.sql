@@ -87,7 +87,7 @@ begin
       insert into public.messages(sender_id, receiver_id, content, is_read, created_at)
       select new.id,
              admin_profile.id,
-             'Neue Registrierung: ' || v_nickname || ' hat sofort ein Profil erhalten. Bitte das Profil auf Echtheit prüfen.',
+             'Neue Registrierung: ' || v_nickname || ' wartet auf die Account-Freigabe. Der Hauptadmin kann unter Admin-Zentrale → Accounts freigeben die Angaben prüfen, den Account freigeben oder Auflagen senden.',
              false,
              now()
       from public.profiles admin_profile
@@ -206,7 +206,7 @@ begin
       insert into public.messages(sender_id, receiver_id, content, is_read, created_at)
       select auth.uid(),
              admin_profile.id,
-             'Neue Registrierung: ' || v_nickname || ' hat sofort ein Profil erhalten. Bitte das Profil auf Echtheit prüfen.',
+             'Neue Registrierung: ' || v_nickname || ' wartet auf die Account-Freigabe. Der Hauptadmin kann unter Admin-Zentrale → Accounts freigeben die Angaben prüfen, den Account freigeben oder Auflagen senden.',
              false,
              now()
       from public.profiles admin_profile
