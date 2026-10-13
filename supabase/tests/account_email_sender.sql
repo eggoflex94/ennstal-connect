@@ -22,11 +22,11 @@ begin
   perform set_config('request.jwt.claims',jsonb_build_object('sub',m,'role','authenticated')::text,true);
   execute 'set local role authenticated';
   blocked:=false;
-  begin perform public.ec_configure_account_email('xkeysib-01234567890123456789TEST','test@example.invalid'); exception when others then blocked:=true; end;
+  begin perform public.ec_configure_account_email('new-format-01234567890123456789TEST','test@example.invalid'); exception when others then blocked:=true; end;
   if not blocked then raise exception 'Member could configure mail'; end if;
   perform set_config('request.jwt.claim.sub',h::text,true);
   perform set_config('request.jwt.claims',jsonb_build_object('sub',h,'role','authenticated')::text,true);
-  perform public.ec_configure_account_email('xkeysib-01234567890123456789TEST','test@example.invalid');
+  perform public.ec_configure_account_email('new-format-01234567890123456789TEST','test@example.invalid');
   if not (public.ec_account_email_status()->>'configured')::boolean then raise exception 'Head admin configuration not recognized'; end if;
   execute 'set local role postgres';
   stamp:=clock_timestamp();

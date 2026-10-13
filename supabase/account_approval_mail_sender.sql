@@ -7,7 +7,12 @@ returns void language plpgsql security definer set search_path=public,pg_temp as
 declare secret_id uuid;
 begin
   if auth.uid() is null or not public.ec_is_head_admin() then raise exception 'Nur der Hauptadmin darf den Mailversand einrichten.'; end if;
-  if coalesce(p_api_key,'') !~ '^xkeysib-[A-Za-z0-9_-]+$' or length(coalesce(p_api_key,'')) not between 28 and 507 then raise exception 'Bitte einen gültigen Brevo API-Key eingeben.'; end if;
+  p_api_key:=trim(coalesce(p_api_key,''));
+  -- Brevo may change key formats. Do not reject valid keys by a guessed prefix.
+  if length(p_api_key) not between 20 and 1024 or p_api_key ~ '[[:space:][:cntrl:]]' then
+    raise exception 'Bitte den vollständigen Brevo API-Key ohne Leerzeichen eingeben.';
+  end if;
+  if p_api_key like 'xsmtpsib-%' then raise exception 'Das ist ein SMTP-Schlüssel. Bitte unter Brevo → API-Schlüssel & MCP einen API-Key erstellen.'; end if;
   p_sender:=trim(coalesce(p_sender,''));
   if length(p_sender)>254 or p_sender !~ '^[A-Za-z0-9.!#$%&''*+/=?^_`{|}~-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$' then raise exception 'Bitte eine bestätigte Absender-E-Mail-Adresse angeben.'; end if;
   select id into secret_id from vault.secrets where name='ec_brevo_api_key' limit 1;
