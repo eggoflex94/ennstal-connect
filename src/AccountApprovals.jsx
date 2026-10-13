@@ -43,7 +43,7 @@ function ApprovalCard({ item, onDecision, busy }) {
 
 export default function AccountApprovals({ onBack }) {
   const [filter, setFilter] = useState('OPEN'), [query, setQuery] = useState(''), [page, setPage] = useState(0);
-  const [result, setResult] = useState({ items: [], total: 0 }), [loading, setLoading] = useState(true), [busy, setBusy] = useState(false), [message, setMessage] = useState(''), [revision, setRevision] = useState(0);
+  const [result, setResult] = useState({ items: [], total: 0 }), [loading, setLoading] = useState(true), [busy, setBusy] = useState(false), [message, setMessage] = useState(''), [revision, setRevision] = useState(0), [mailStatus, setMailStatus] = useState(null);
   useEffect(() => {
     let cancelled = false; setLoading(true);
     const timer = setTimeout(async () => {
@@ -54,6 +54,11 @@ export default function AccountApprovals({ onBack }) {
     }, 200);
     return () => { cancelled = true; clearTimeout(timer); };
   }, [filter, query, page, revision]);
+  useEffect(() => {
+    let cancelled = false;
+    supabase.rpc('ec_account_email_status').then(({ data, error }) => { if (!cancelled && !error) setMailStatus(data); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [revision]);
   const decide = async (item, decision, fields, note) => {
     if (busy) return;
     if (decision === 'APPROVED' && !window.confirm(`Account von ${item.nickname || 'diesem Mitglied'} nach Prüfung freigeben?`)) return;
@@ -63,11 +68,12 @@ export default function AccountApprovals({ onBack }) {
       if (prepared.error) throw prepared.error;
       const { error } = await supabase.rpc('ec_review_account_approval', { p_user_id: item.user_id, p_decision: decision, p_fields: fields, p_note: note, p_expected_updated_at: item.updated_at });
       if (error) throw error;
-      setMessage(decision === 'APPROVED' ? '✓ Account freigegeben.' : '✓ Auflagen gespeichert. Das Mitglied wurde benachrichtigt.'); setRevision(current => current + 1);
+      setMessage(decision === 'APPROVED' ? '✓ Account freigegeben. Community-Benachrichtigung versendet; E-Mail vorgemerkt.' : '✓ Auflagen gespeichert. Community-Benachrichtigung versendet; E-Mail vorgemerkt.'); setRevision(current => current + 1);
     } catch (error) { setMessage(error.message || 'Die Entscheidung konnte nicht gespeichert werden.'); }
     finally { setBusy(false); }
   };
   return <section className="ec-account-approvals"><div className="page-heading"><div><span className="eyebrow">HAUPTADMIN · ACCOUNT-FREIGABE</span><h1>Accounts freigeben</h1><p>Neue Accounts prüfen, freigeben oder konkrete Korrekturen verlangen. Bestandskonten bleiben nutzbar.</p></div><button type="button" className="secondary-button" onClick={onBack}>← Zurück</button></div>
+    {mailStatus && <aside className="panel ec-approval-mail-status" role="status"><strong>{mailStatus.configured ? 'E-Mail-Benachrichtigungen aktiv' : 'E-Mail-Versand noch nicht eingerichtet'}</strong><p>{mailStatus.configured ? 'Freigaben und Auflagen werden zusätzlich per E-Mail zugestellt.' : 'Mitglieder erhalten die Benachrichtigung in der Community. Die E-Mail wird vorgemerkt; ein Versanddienst muss noch verbunden werden.'}</p><small>{mailStatus.pending} vorgemerkt · {mailStatus.accepted} vom Maildienst angenommen · {mailStatus.failed} fehlgeschlagen</small></aside>}
     <div className="panel ec-approval-filters"><label>Prüfstatus<select value={filter} onChange={event => { setFilter(event.target.value); setPage(0); }}>{[['OPEN','Offene Prüfungen'],['PENDING','Warten auf Prüfung'],['CHANGES_REQUIRED','Auflagen offen'],['APPROVED','Freigegeben'],['LEGACY_ACTIVE','Bestandskonten'],['ALL','Alle Accounts']].map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>Mitglied suchen<input value={query} maxLength={100} onChange={event => { setQuery(event.target.value); setPage(0); }} placeholder="Nickname, Vor- oder Nachname"/></label><button type="button" className="secondary-button" disabled={loading || busy} onClick={() => setRevision(current => current + 1)}>Neu laden</button></div>
     {message && <p role="status">{message}</p>}{loading ? <p role="status">Accounts werden geladen …</p> : <><p>{result.total} Accounts</p>{result.items.map(item => <ApprovalCard key={`${item.user_id}-${item.updated_at}`} item={item} onDecision={decide} busy={busy}/>)}{!result.items.length && <div className="empty-card">Keine Accounts für diesen Filter gefunden.</div>}<nav className="ec-approval-pagination" aria-label="Account-Freigaben Seiten"><button type="button" disabled={!page || busy} onClick={() => setPage(current => current - 1)}>← Zurück</button><span>Seite {page + 1}</span><button type="button" disabled={(page + 1) * 25 >= result.total || busy} onClick={() => setPage(current => current + 1)}>Weiter →</button></nav></>}
   </section>;

@@ -13,6 +13,9 @@ begin
   execute 'set local role authenticated';
   state:=public.ec_review_account_approval(m,'CHANGES_REQUIRED',array['first_name'],'Test: Bitte den vollständigen Vornamen prüfen.',initial_stamp);
   if state->>'status'<>'CHANGES_REQUIRED' then raise exception 'Changes request failed'; end if;
+  execute 'set local role postgres';
+  if not exists(select 1 from private.ec_account_email_outbox o where user_id=m and decision='CHANGES_REQUIRED' and payload->>'text' like '%Vorname%' and o.state='PENDING') then raise exception 'Requirements email missing'; end if;
+  execute 'set local role authenticated';
   perform set_config('request.jwt.claim.sub',m::text,true);
   perform set_config('request.jwt.claims',jsonb_build_object('sub',m,'role','authenticated')::text,true);
   select count(*) into visible_rows from public.account_approvals;
@@ -39,6 +42,8 @@ begin
   execute 'set local role postgres';
   perform set_config('request.jwt.claim.sub',m::text,true);
   perform set_config('request.jwt.claims',jsonb_build_object('sub',m,'role','authenticated')::text,true);
+  if not exists(select 1 from private.ec_account_email_outbox o where user_id=m and decision='APPROVED' and payload->>'text' like '%Inaktivität von 30 Tagen führt zur Sperre%' and o.state='PENDING') then raise exception 'Approval email or inactivity notice missing'; end if;
+  if private.ec_escape_email_html('<script>')<>'&lt;script&gt;' then raise exception 'Email HTML is not escaped'; end if;
   if (select first_name from public.profiles where id=m) is distinct from first_value||' Test' then raise exception 'Requested identity correction was not saved'; end if;
   if exists(select 1 from private.ec_identity_correction_context) then raise exception 'Correction permission leaked beyond RPC'; end if;
   failed:=false;

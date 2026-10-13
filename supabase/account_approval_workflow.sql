@@ -92,8 +92,10 @@ begin
   if p_decision='APPROVED' and (not private.ec_account_names_valid(p.first_name,p.last_name,p.birth_date) or p.birth_date>current_date or p.birth_date<current_date-interval '130 years') then
     raise exception 'Vorname, Nachname und Geburtsdatum müssen korrekt ausgefüllt sein. Bitte Auflagen setzen.';
   end if;
+  if a.status=p_decision and a.review_note=trim(coalesce(p_note,''))
+    and a.required_fields=(case when p_decision='APPROVED' then '{}'::text[] else p_fields end) then return to_jsonb(a); end if;
   update public.account_approvals set status=p_decision,required_fields=case when p_decision='APPROVED' then '{}'::text[] else p_fields end,
-    review_note=trim(coalesce(p_note,'')),reviewed_by=auth.uid(),reviewed_at=now(),approved_at=case when p_decision='APPROVED' then now() else null end,updated_at=clock_timestamp()
+    review_note=trim(coalesce(p_note,'')),reviewed_by=auth.uid(),reviewed_at=clock_timestamp(),approved_at=case when p_decision='APPROVED' then now() else null end,updated_at=clock_timestamp()
     where user_id=p_user_id returning * into a;
   insert into public.admin_log(actor_id,action,target_id,details) values(auth.uid(),'ACCOUNT_APPROVAL_DECISION',p_user_id,jsonb_build_object('decision',p_decision,'fields',a.required_fields,'note',a.review_note));
   insert into public.notifications(user_id,title,body,type) values(p_user_id,
