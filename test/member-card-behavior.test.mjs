@@ -5,6 +5,7 @@ import vm from 'node:vm';
 import React from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {transform} from 'esbuild';
+import { publicImageVariant } from '../src/imageDelivery.js';
 const source=await fs.readFile(new URL('../src/MemberCardView.jsx',import.meta.url),'utf8');
 const {code}=await transform(source,{loader:'jsx',format:'cjs',jsxFactory:'React.createElement'});
 const context={
@@ -13,6 +14,7 @@ const context={
   React,
   require(name){
     if(name==='react') return React;
+    if(name.includes('imageDelivery')) return { publicImageVariant };
     if(name.includes('memberProfileLoader')) return {loadMemberProfile:async(member)=>member};
     throw new Error(`Unexpected require: ${name}`);
   }

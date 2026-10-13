@@ -1,3 +1,4 @@
+import { prepareImageUpload } from './prepareImageUpload.js';
 import { supabase } from "./supabaseClient";
 
 let viewerId = "";
@@ -141,9 +142,10 @@ async function uploadImage(file) {
   if (!file) return null;
   if (!file.type?.startsWith("image/")) throw new Error("Bitte eine Bilddatei auswählen.");
   if (file.size > 5 * 1024 * 1024) throw new Error("Das Werbebild darf höchstens 5 MB groß sein.");
+  file = await prepareImageUpload(file, { maxEdge: 1280 });
   const extension = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
   const path = `${viewerId}/ads/${crypto.randomUUID()}.${extension}`;
-  const { error } = await supabase.storage.from("profile-avatars").upload(path, file, { upsert: false, contentType: file.type });
+  const { error } = await supabase.storage.from("profile-avatars").upload(path, file, { upsert: false, contentType: file.type, cacheControl: "31536000" });
   if (error) throw error;
   const { data } = supabase.storage.from("profile-avatars").getPublicUrl(path);
   return data?.publicUrl || null;

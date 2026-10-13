@@ -1,3 +1,4 @@
+import { publicImageVariant } from './imageDelivery.js';
 const DEFAULT_AVATAR = "/community-default-avatar-fast.svg";
 const ROLE_STAR_VERSION = "20260922a";
 const roleStarAsset = (path) => `${path}?v=${ROLE_STAR_VERSION}`;
@@ -123,7 +124,7 @@ export default function MemberCardView({ member, profile, friendships, onOpen, i
       <div className="ec-member-avatar-wrap">
         <img
           className={`member-avatar ec-native-avatar ${presentation.theme}`}
-          src={member.avatar_url || DEFAULT_AVATAR}
+          src={publicImageVariant(member.avatar_url || DEFAULT_AVATAR, 256)}
           alt={`Profilbild von ${getName(member)}`}
           loading="lazy"
           decoding="async"

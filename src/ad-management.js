@@ -1,3 +1,4 @@
+import { prepareImageUpload } from './prepareImageUpload.js';
 import { supabase } from "./supabaseClient";
 
 const MIN_VISIBLE_SLOTS = 4;
@@ -41,9 +42,10 @@ async function uploadAdImage(file) {
   if (file.size > 5 * 1024 * 1024) throw new Error("Das Werbebild darf höchstens 5 MB groß sein.");
   const { data: { user } } = await supabase.auth.getUser();
   if (!user?.id) throw new Error("Bitte erneut anmelden.");
+  file = await prepareImageUpload(file, { maxEdge: 1280 });
   const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
   const path = `${user.id}/ads/${crypto.randomUUID()}.${ext}`;
-  const { error } = await supabase.storage.from("profile-avatars").upload(path, file, { upsert: false, contentType: file.type });
+  const { error } = await supabase.storage.from("profile-avatars").upload(path, file, { upsert: false, contentType: file.type, cacheControl: "31536000" });
   if (error) throw error;
   const { data } = supabase.storage.from("profile-avatars").getPublicUrl(path);
   return data?.publicUrl || null;

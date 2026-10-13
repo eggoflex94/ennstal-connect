@@ -1,3 +1,4 @@
+import { prepareImageUpload } from './prepareImageUpload.js';
 import { supabase } from './supabaseClient';
 
 const STYLE_ID='ec-mobile-media-upload-center-style';
@@ -29,8 +30,9 @@ async function uploadProfileImage(file){
   const user=await me();if(!user||!file)throw new Error('Bitte ein Foto auswählen.');
   if(!/^image\/(jpeg|png|webp|gif)$/i.test(file.type))throw new Error('Bitte JPG, PNG, WEBP oder GIF auswählen.');
   if(file.size>8*1024*1024)throw new Error('Bild zu groß. Maximal 8 MB.');
+  file = await prepareImageUpload(file, { maxEdge: 1024 });
   const path=`${user.id}/${Date.now()}-${crypto.randomUUID()}.${extOf(file,'jpg')}`;
-  const {error:up}=await supabase.storage.from('profile-avatars').upload(path,file,{upsert:false,contentType:file.type,cacheControl:'3600'});if(up)throw up;
+  const {error:up}=await supabase.storage.from('profile-avatars').upload(path,file,{upsert:false,contentType:file.type,cacheControl:'31536000'});if(up)throw up;
   const avatarUrl=publicUrl('profile-avatars',path);
   const {error}=await supabase.from('profiles').update({avatar_url:avatarUrl,updated_at:new Date().toISOString()}).eq('id',user.id);if(error){await supabase.storage.from('profile-avatars').remove([path]);throw error;}
   document.querySelectorAll('.integrated-avatar-wrap img,.my-profile-card img,.profile-avatar img').forEach(img=>{img.src=`${avatarUrl}?v=${Date.now()}`;});

@@ -1,3 +1,4 @@
+import { publicImageVariant } from './imageDelivery.js';
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "./supabaseClient";
 import { watermarkPhoto } from "./photoWatermark.js";
@@ -384,7 +385,7 @@ export default function EventPhotosPage({ user, profile, members = [], regions =
         const own = photo.uploaded_by === user?.id;
         return <article className="event-photo-card" key={photo.id}>
           <button className="event-photo-image-button" type="button" onClick={() => void openPhoto(photo)}>
-            <img src={publicUrl(photo.storage_path)} alt={photo.caption || `Eventfoto von ${memberName(photographer)}`} loading="lazy" decoding="async"/>
+            <img src={publicImageVariant(publicUrl(photo.storage_path),640)} alt={photo.caption || `Eventfoto von ${memberName(photographer)}`} loading="lazy" decoding="async"/>
           </button>
           <div className="event-photo-card-body">
             <div className="event-photo-author"><span className="event-photo-camera" aria-hidden="true">📷</span><strong>{memberName(photographer)}</strong><small>Community-Fotograf</small></div>

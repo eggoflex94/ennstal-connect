@@ -1,3 +1,4 @@
+import { IMAGE_CACHE_NAME, startPublicImageCache } from './imageDelivery.js';
 import React, { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.jsx";
@@ -297,14 +298,16 @@ async function removeLegacyAppShellOnce() {
 
     if (buildChanged && "serviceWorker" in navigator) {
       const registrations = await navigator.serviceWorker.getRegistrations();
-      removedRegistration = registrations.length > 0;
-      await Promise.all(registrations.map((registration) => registration.unregister()));
+      const legacy = registrations.filter(registration => !registration.active?.scriptURL.endsWith('/ec-public-image-cache.js'));
+      removedRegistration = legacy.length > 0;
+      await Promise.all(legacy.map((registration) => registration.unregister()));
     }
 
     if (buildChanged && "caches" in window) {
       const keys = await caches.keys();
-      removedCache = keys.length > 0;
-      await Promise.all(keys.map((key) => caches.delete(key)));
+      const legacyKeys = keys.filter(key => key !== IMAGE_CACHE_NAME);
+      removedCache = legacyKeys.length > 0;
+      await Promise.all(legacyKeys.map((key) => caches.delete(key)));
     }
 
     if (buildChanged) localStorage.setItem(cleanupKey, buildId);
@@ -331,6 +334,7 @@ async function removeLegacyAppShellOnce() {
 async function bootstrap() {
   const reloading = await removeLegacyAppShellOnce();
   if (reloading) return;
+  void startPublicImageCache();
   const root = document.getElementById("root");
   if (!root) return;
   createRoot(root).render(

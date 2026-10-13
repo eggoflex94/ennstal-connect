@@ -1,3 +1,4 @@
+import { prepareImageUpload } from './prepareImageUpload.js';
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRefreshScheduler } from "./refreshScheduler.js";
 import { loadSections } from "./sectionLoader.js";
@@ -1549,12 +1550,13 @@ export default function App() {
   async function deleteMemberPhoto(photo) { if (photo.owner_id !== user?.id || !confirm("Dieses Profilfoto wirklich löschen?")) return; const { error } = await supabase.from("member_photos").delete().eq("id", photo.id).eq("owner_id", user.id); if (error) return showNotice(error.message); setMemberPhotos((current) => current.filter((entry) => entry.id !== photo.id)); showNotice("Profilfoto gelöscht."); }
   async function uploadHomepageImage(file) {
     if (!file) return null; if (!user) throw new Error("Bitte zuerst anmelden."); if (!isProfileImageFile(file)) throw new Error("Bitte ein Bild auswählen."); if (file.size > 12 * 1024 * 1024) throw new Error("Das Bild darf höchstens 12 MB groß sein.");
+    file = await prepareImageUpload(file);
     const ext = file.name.split(".").pop()?.toLowerCase() || "jpg"; const path = `${user.id}/homepage/${crypto.randomUUID()}.${ext}`;
     let bucket = "community-media";
-    let { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: false, contentType: imageContentType(file) });
+    let { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: false, contentType: imageContentType(file), cacheControl: "31536000" });
     // Existing projects may not have the optional community-media bucket yet.
     // Profile avatars already use this bucket, so it is a safe immediate fallback.
-    if (error && /bucket not found/i.test(error.message || "")) { bucket = "profile-avatars"; ({ error } = await supabase.storage.from(bucket).upload(path, file, { upsert: false, contentType: imageContentType(file) })); }
+    if (error && /bucket not found/i.test(error.message || "")) { bucket = "profile-avatars"; ({ error } = await supabase.storage.from(bucket).upload(path, file, { upsert: false, contentType: imageContentType(file), cacheControl: "31536000" })); }
     if (error) throw error;
     const { data } = supabase.storage.from(bucket).getPublicUrl(path); if (!data?.publicUrl) throw new Error("Für das Bild konnte keine öffentliche URL erstellt werden."); return data.publicUrl;
   }
@@ -1565,9 +1567,10 @@ export default function App() {
     if (!file || !user || !file.name || file.size === 0) return null;
     if (!isProfileImageFile(file)) throw new Error("Bitte eine Bilddatei auswählen.");
     if (file.size > 12 * 1024 * 1024) throw new Error("Das Bild darf höchstens 12 MB groß sein.");
+    file = await prepareImageUpload(file);
     const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
     const path = `${user.id}/${category}/${crypto.randomUUID()}.${ext}`;
-    const { error } = await supabase.storage.from("profile-avatars").upload(path, file, { upsert: false, contentType: imageContentType(file) });
+    const { error } = await supabase.storage.from("profile-avatars").upload(path, file, { upsert: false, contentType: imageContentType(file), cacheControl: "31536000" });
     if (error) throw error;
     const { data } = supabase.storage.from("profile-avatars").getPublicUrl(path);
     if (!data?.publicUrl) throw new Error("Für das Bild konnte keine öffentliche URL erstellt werden.");

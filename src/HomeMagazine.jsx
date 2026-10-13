@@ -1,12 +1,13 @@
+import { publicImageVariant } from './imageDelivery.js';
 import React, { useEffect, useRef, useState } from 'react';
 import { createAnimationFrameTask } from './animationFrameTask.js';
 import { MAGAZINE_LABELS, MAGAZINE_PAGES, normalizeMagazine, magazineWithImage, coverCoordinate, safeImageUrl, upcomingMagazineEvents } from './homeMagazine.js';
 
 const navigate = page => window.dispatchEvent(new CustomEvent('ec:navigate', { detail: { page, source: 'homepage-magazine' } }));
-function MagazineImage({ src, ...props }) {
+function MagazineImage({ src, deliveryWidth = 1280, ...props }) {
   const [failed, setFailed] = useState(false);
   useEffect(() => setFailed(false), [src]);
-  const url = safeImageUrl(src);
+  const url = publicImageVariant(safeImageUrl(src), deliveryWidth);
   if (!url || failed) return null;
   return <img {...props} src={url} onError={() => setFailed(true)}/>;
 }
@@ -27,16 +28,16 @@ export function HomeMagazine({ config, region, events, groups, sections, canEdit
   const upcoming = upcomingMagazineEvents(events, region?.id);
   const blocks = {
     hero: <section className={`ec-magazine-hero is-${config.heroHeight}`} aria-label="Willkommen in deiner Region">
-      <MagazineImage src={config.heroImage} alt="" style={{ objectPosition: config.heroPosition }} fetchpriority="high"/>
+      <MagazineImage src={config.heroImage} deliveryWidth={1920} alt="" style={{ objectPosition: config.heroPosition }} fetchpriority="high"/>
       <div className="ec-magazine-hero-stage" style={{ gridTemplateColumns: `minmax(0, ${config.heroTextX}fr) minmax(0, 680px) minmax(0, ${100 - config.heroTextX}fr)`, gridTemplateRows: `minmax(0, ${config.heroTextY}fr) auto minmax(0, ${100 - config.heroTextY}fr)` }}><div className={`ec-magazine-hero-copy${onTextPositionChange ? ' is-draggable' : ''}`} onPointerDown={startDrag} onPointerMove={moveDrag} onPointerUp={() => { drag.current = null; }} onPointerCancel={() => { drag.current = null; }}><span className="ec-magazine-kicker">DEINE REGIONALE COMMUNITY · {region?.name || 'Ennstal Connect'}</span><h2>{config.title}</h2><p>{config.intro}</p>
         <div className="ec-magazine-hero-actions"><button type="button" className="primary-button" disabled={preview} onClick={() => navigate('community')}>Community entdecken →</button><button type="button" className="secondary-button" disabled={preview} onClick={() => { const picker = document.querySelector('.ec-region-picker select'); picker?.scrollIntoView({ behavior: 'smooth', block: 'center' }); picker?.focus(); }}>Region wechseln</button></div>
       </div></div><span className="ec-magazine-region">{region?.name || 'Deine Region'}</span>
     </section>,
     categories: <section className="ec-magazine-categories" aria-label="Bilder-Kategorien"><header className="ec-magazine-section-head"><div><span className="eyebrow">REGIONAL VERBUNDEN</span><h2>Entdecke deine Community</h2></div></header><div className="ec-magazine-category-grid">{config.categories.map((category, index) => <button key={index} type="button" className="ec-magazine-category" disabled={preview} onClick={() => navigate(category.page)}>
-      <MagazineImage src={category.image} alt="" loading="lazy" style={{ objectPosition: ['center', 'left', 'right', 'bottom'][index] }}/><span><small>{category.subtitle}</small><strong>{category.title}</strong><b aria-hidden="true">↗</b></span>
+      <MagazineImage src={category.image} deliveryWidth={640} alt="" loading="lazy" style={{ objectPosition: ['center', 'left', 'right', 'bottom'][index] }}/><span><small>{category.subtitle}</small><strong>{category.title}</strong><b aria-hidden="true">↗</b></span>
     </button>)}</div></section>,
     events: <section className="ec-magazine-events" aria-label="Veranstaltungen"><header className="ec-magazine-section-head"><div><span className="eyebrow">GEMEINSAM ERLEBEN</span><h2>Demnächst in {region?.name || 'deiner Region'}</h2></div><button type="button" disabled={preview} onClick={() => navigate('events')}>Alle Veranstaltungen →</button></header>
-      {upcoming.length ? <div className="ec-magazine-event-grid">{upcoming.map(event => <button type="button" key={event.id} disabled={preview} className="ec-magazine-event" onClick={() => navigate('events')}><div className="ec-magazine-event-image"><MagazineImage src={event.image_url} alt="" loading="lazy"/><time dateTime={event.event_at}><b>{new Date(event.event_at).toLocaleDateString('de-AT', { day: '2-digit', timeZone: 'Europe/Vienna' })}</b>{new Date(event.event_at).toLocaleDateString('de-AT', { month: 'short', timeZone: 'Europe/Vienna' })}</time></div><div><h3>{event.title}</h3><p>{new Date(event.event_at).toLocaleString('de-AT', { weekday: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Vienna' })}{event.location && ` · ${event.location}`}</p><span>Veranstaltungen öffnen →</span></div></button>)}</div> : <div className="ec-magazine-empty"><strong>Neue Erlebnisse kommen bald.</strong><p>Aktuell gibt es keine bevorstehenden Veranstaltungen in {region?.name || 'deiner Region'}.</p><button type="button" disabled={preview} onClick={() => navigate('events')}>Veranstaltungen ansehen →</button></div>}
+      {upcoming.length ? <div className="ec-magazine-event-grid">{upcoming.map(event => <button type="button" key={event.id} disabled={preview} className="ec-magazine-event" onClick={() => navigate('events')}><div className="ec-magazine-event-image"><MagazineImage src={event.image_url} deliveryWidth={640} alt="" loading="lazy"/><time dateTime={event.event_at}><b>{new Date(event.event_at).toLocaleDateString('de-AT', { day: '2-digit', timeZone: 'Europe/Vienna' })}</b>{new Date(event.event_at).toLocaleDateString('de-AT', { month: 'short', timeZone: 'Europe/Vienna' })}</time></div><div><h3>{event.title}</h3><p>{new Date(event.event_at).toLocaleString('de-AT', { weekday: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Vienna' })}{event.location && ` · ${event.location}`}</p><span>Veranstaltungen öffnen →</span></div></button>)}</div> : <div className="ec-magazine-empty"><strong>Neue Erlebnisse kommen bald.</strong><p>Aktuell gibt es keine bevorstehenden Veranstaltungen in {region?.name || 'deiner Region'}.</p><button type="button" disabled={preview} onClick={() => navigate('events')}>Veranstaltungen ansehen →</button></div>}
     </section>,
     content: sections.length > 0 ? <section className="ec-magazine-content" aria-label="Freier Inhaltsbereich"><header className="ec-magazine-section-head"><div><span className="eyebrow">REGIONALE HIGHLIGHTS</span><h2>{config.contentTitle}</h2></div></header><div className="ec-magazine-content-grid">{sections.map(row => <article key={row.id} className={`ec-magazine-content-card is-${row.frame_style || 'standard'}`}>
       {row.image_url && <MagazineImage src={row.image_url} alt="" loading="lazy"/>}<div><h3>{row.title}</h3><p>{row.content}</p>{canEdit && !preview && <div className="content-manage-actions"><button type="button" onClick={() => onEdit(row)}>Bearbeiten</button><button type="button" className="danger-button" onClick={() => onDelete(row)}>Löschen</button></div>}</div>
