@@ -16,7 +16,7 @@ const extraPages = [
   ["forum", "Forum & Beiträge"], ["profile", "Mein Profil"], ["municipality", "Gemeinden"]
 ];
 
-export default function MobileQuickNav({ page, onNavigate, isAdmin, onLogout, unread = 0, unreadNotifications = 0 }) {
+export default function MobileQuickNav({ page, onNavigate, isAdmin, canReviewAccounts = false, onLogout, unread = 0, unreadNotifications = 0 }) {
   const [expanded, setExpanded] = useState(false);
   useEffect(() => { setExpanded(false); }, [page]);
   useEffect(() => {
@@ -34,6 +34,7 @@ export default function MobileQuickNav({ page, onNavigate, isAdmin, onLogout, un
         <div className="ec-mobile-menu-grid">
           {extraPages.map(([target, label]) => <button key={target} type="button" onClick={() => navigate(target)} aria-current={page === target ? "page" : undefined}>{label}{target === "notifications" && unreadNotifications > 0 ? <span className="ec-mobile-count">{unreadNotifications}</span> : null}</button>)}
           {onLogout && <button type="button" onClick={() => { setExpanded(false); onLogout(); }}>⇥ Abmelden</button>}
+          {canReviewAccounts && <button type="button" onClick={() => navigate("account-approvals")} aria-current={page === "account-approvals" ? "page" : undefined}>✓ Accounts freigeben</button>}
           {isAdmin && <button type="button" onClick={() => navigate("admin")} aria-current={page === "admin" ? "page" : undefined}>♛ Admin-Zentrale</button>}
         </div>
       </section>}

@@ -1,4 +1,5 @@
 const ICONS = {
+  'Accounts freigeben': '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v6c0 4 3 6.5 7 9 4-2.5 7-5 7-9V6Z"/><path d="m8.5 12 2.3 2.3 4.7-5"/></svg>',
   'Benachrichtigungen': '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 6.5-3 7-3 9h18c0-2-3-2.5-3-9Z"/><path d="M10 20h4"/></svg>',
   'Mein Profil': '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c.8-4.2 3.4-6 8-6s7.2 1.8 8 6"/></svg>',
   'Nachrichten': '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4.5 7 7.5 6 7.5-6"/></svg>',
@@ -16,6 +17,7 @@ const ICONS = {
 };
 
 const TONES = {
+  'Accounts freigeben': 'green',
   'Benachrichtigungen': 'amber', 'Mein Profil': 'blue', 'Nachrichten': 'cyan', 'Freunde': 'green',
   'Anfragen': 'lime', 'Blockiert': 'red', 'Einstellungen': 'slate', 'Hilfe': 'violet',
   'Heimatregion ändern': 'orange', 'Admin-Zentrale': 'admin', 'Team-Aktivitäten': 'gold',
@@ -23,6 +25,7 @@ const TONES = {
 };
 
 const ADMIN_TOOL_LABELS = new Set([
+  'Accounts freigeben',
   'Admin-Zentrale',
   'Team-Aktivitäten',
   'Fake-Erkennung',

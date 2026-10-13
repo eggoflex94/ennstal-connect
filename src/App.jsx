@@ -1846,6 +1846,7 @@ export default function App() {
           <button onClick={() => setPage("groups")}>◉ <span>Gruppen</span></button>
           <button onClick={() => setPage("forum")}>▤ <span>Forum</span></button>
           <button onClick={() => setPage("profile")}>⚙ <span>Mein Profil</span></button>
+          {profile?.role === "HEAD_ADMIN" && profile?.is_primary_head_admin === true && profile?.account_status === "ACTIVE" && <button className="admin-nav-entry" onClick={() => setPage("account-approvals")}>✓ <span>Accounts freigeben</span></button>}
           {isAdmin(profile?.role) && <button className="admin-nav-entry" onClick={() => setPage("admin")}>♛ <span>Admin-Zentrale</span></button>}
         </nav>
         <button className="sidebar-logout" onClick={logout}>⇥ <span>Abmelden</span></button>
@@ -1900,7 +1901,7 @@ export default function App() {
         {page === "rules" && <CommunityRules/>}
       </div></main>
     </div>
-    <MobileQuickNav page={page} onNavigate={setPage} onLogout={logout} isAdmin={isAdmin(profile?.role) || !!profile?.is_primary_head_admin} unread={unread} unreadNotifications={unreadNotifications} />
+    <MobileQuickNav page={page} onNavigate={setPage} onLogout={logout} isAdmin={isAdmin(profile?.role) || !!profile?.is_primary_head_admin} canReviewAccounts={profile?.role === "HEAD_ADMIN" && profile?.is_primary_head_admin === true && profile?.account_status === "ACTIVE"} unread={unread} unreadNotifications={unreadNotifications} />
     <footer className="site-footer"><strong>Ennstal Connect</strong><div><button onClick={() => setPage("impressum")}>Impressum</button><button onClick={() => setPage("privacy")}>Datenschutz</button><button onClick={() => setPage("rules")}>Community-Regeln</button></div></footer>
     {rulesAccepted === false && <RulesAcceptanceModal accepting={acceptingRules} onAccept={acceptCommunityRules}/>}{user?.id && profile?.id === user.id && !profile?.district_code && rulesAccepted !== false && <RequiredHomeDistrict userId={user.id} onSaved={(changes) => { setProfile((current) => ({ ...current, ...changes })); setMembers((current) => current.map((member) => member.id === user.id ? { ...member, ...changes } : member)); }}/>} 
   </div>;
