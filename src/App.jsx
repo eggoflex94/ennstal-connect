@@ -496,7 +496,7 @@ export default function App() {
       setUser(currentUser);
       if (!currentUser) {
         setSuspendedAccount(null);
-      bootstrapRetry.current.count = 0;
+        bootstrapRetry.current.count = 0;
         window.clearTimeout(bootstrapRetry.current.timer);
         bootstrapRetry.current.timer = null;
         resetSession(); return;
@@ -533,6 +533,13 @@ export default function App() {
         throw new Error("Dein Profil konnte nicht geladen werden. Bitte versuche es erneut.");
       }
       initializedProfileUser.current = currentUser.id;
+      if (p.account_status === "SUSPENDED") {
+        setSuspendedAccount({ reason: p.suspension_reason || "Kein Grund wurde hinterlegt." });
+        setProfile(null);
+        setReactivationFeedback("");
+        return;
+      }
+      setSuspendedAccount(null);
       const [bs, locks, ruleAcceptance, personalDataAllowed, loadedAdminPermissions] = await Promise.all([
         readOptional(supabase.from("user_blocks").select("*").eq("blocker_id", currentUser.id), [], "Blockierungen"),
         readOptional(supabase.from("user_feature_locks").select("*").eq("user_id", currentUser.id), [], "Funktionssperren"),
@@ -541,12 +548,6 @@ export default function App() {
         readOptional(supabase.rpc("my_admin_permissions"), {}, "Admin-Berechtigungen")
       ]);
       if (!isCurrent()) return;
-      if (p.account_status === "SUSPENDED") {
-        setSuspendedAccount({ reason: p.suspension_reason || "Kein Grund wurde hinterlegt." });
-        setProfile(null);
-        setReactivationFeedback("");
-        return;
-      }
       bootstrapRetry.current.count = 0;
       window.clearTimeout(bootstrapRetry.current.timer);
       bootstrapRetry.current.timer = null;
