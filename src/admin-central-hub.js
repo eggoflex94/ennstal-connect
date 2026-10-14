@@ -34,7 +34,7 @@ function selectedRegionId(regions, profile) {
     || null;
 }
 
-function rightsFor({ profile, permissions, regionalAdmin, regionalPermissions }) {
+function rightsFor({ profile, permissions, regionalAdmin, regionalPermissions, accountReviewAllowed }) {
   const role = String(profile?.role || '').toUpperCase();
   const head = role === 'HEAD_ADMIN' && profile?.is_primary_head_admin === true;
   const global = role === 'ADMIN';
@@ -44,6 +44,7 @@ function rightsFor({ profile, permissions, regionalAdmin, regionalPermissions })
   const has = (...keys) => keys.some((key) => rp.has(key));
   return {
     head,
+    accountApprovals: accountReviewAllowed === true,
     global,
     regional,
     forum: true,
@@ -87,12 +88,15 @@ async function loadAccess() {
       regionalPermissions,
       activeRegionId,
     };
+    const { data: accountReviewAllowed } = await supabase.rpc('ec_can_review_accounts');
+    access.accountReviewAllowed = accountReviewAllowed === true;
     access.rights = rightsFor(access);
 
     const permissionValues = Object.entries(access.permissions || {})
       .filter(([key]) => key.startsWith('manage_') || key === 'view_profile_visits')
       .some(([, value]) => value === true);
-    const locallyAuthorized = access.rights.head
+    const locallyAuthorized = access.rights.accountApprovals
+      || access.rights.head
       || access.rights.global
       || access.rights.regional
       || Boolean(profile.forum_moderator)
@@ -192,7 +196,7 @@ async function openHub() {
     r.news && tile('Neuigkeiten', 'Regionale Beiträge verwalten', 'news', hubIcons.news, 'orange'),
     r.community && tile('Community', 'Termine und Community-Bereiche', 'community', hubIcons.community, 'green'),
     r.fullAdmin && tile('Verwaltung', 'Erweiterte globale Admin-Verwaltung', 'admin', hubIcons.manage, 'red'),
-    r.head && tile('Accounts freigeben', 'Accounts prüfen, Auflagen senden und Brevo-Mailversand einrichten', 'account-approvals', hubIcons.approvals, 'green'),
+    r.accountApprovals && tile('Accounts freigeben', 'Accounts prüfen, Auflagen senden und Brevo-Mailversand einrichten', 'account-approvals', hubIcons.approvals, 'green'),
     r.head && tile('Team-Aktivitäten', 'Alle privilegierten Aktionen kontrollieren', 'admin-log', hubIcons.activity, 'gold'),
   ].filter(Boolean).join('');
 

@@ -73,14 +73,15 @@ $fn$;
 revoke all on function private.ec_process_account_emails() from public,anon,authenticated;
 select cron.schedule('ec-account-approval-emails','* * * * *','select private.ec_process_account_emails();');
 
+
 create or replace function public.ec_account_email_status()
 returns jsonb language plpgsql security definer set search_path=public,pg_temp as $fn$
 begin
-  if auth.uid() is null or not public.ec_is_head_admin() then raise exception 'Nur der Hauptadmin darf den Mailstatus sehen.'; end if;
+  if not public.ec_can_review_accounts() then raise exception 'Keine Berechtigung für den Freigabe-Mailstatus.'; end if;
   return jsonb_build_object('configured',exists(select 1 from vault.decrypted_secrets where name='ec_brevo_api_key' and nullif(trim(decrypted_secret),'') is not null) and exists(select 1 from vault.decrypted_secrets where name='ec_mail_from' and nullif(trim(decrypted_secret),'') is not null),
-    'pending',(select count(*) from private.ec_account_email_outbox where state in ('PENDING','SENDING')),
-    'failed',(select count(*) from private.ec_account_email_outbox where state='FAILED'),
-    'accepted',(select count(*) from private.ec_account_email_outbox where state='ACCEPTED'));
+    'pending',(select count(*) from private.ec_account_email_outbox where public.ec_can_review_account(user_id) and state in ('PENDING','SENDING')),
+    'failed',(select count(*) from private.ec_account_email_outbox where public.ec_can_review_account(user_id) and state='FAILED'),
+    'accepted',(select count(*) from private.ec_account_email_outbox where public.ec_can_review_account(user_id) and state='ACCEPTED'));
 end;
 $fn$;
 revoke all on function public.ec_account_email_status() from public,anon;

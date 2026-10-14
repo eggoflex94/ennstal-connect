@@ -1,3 +1,60 @@
+-- Explicit review permissions, independent of all other admin privileges.
+create table if not exists private.ec_global_account_review_grants (
+  user_id uuid primary key references public.profiles(id) on delete cascade,
+  granted_by uuid references public.profiles(id) on delete set null,
+  granted_at timestamptz not null default now()
+);
+alter table private.ec_global_account_review_grants enable row level security;
+revoke all on private.ec_global_account_review_grants from public,anon,authenticated;
+
+create or replace function public.ec_can_review_accounts()
+returns boolean language sql stable security definer set search_path=public,pg_temp as $fn$
+  select exists(select 1 from public.profiles p where p.id=auth.uid() and p.account_status='ACTIVE' and
+    case when p.role::text='HEAD_ADMIN' then true
+      when p.role::text='ADMIN' then exists(select 1 from private.ec_global_account_review_grants g where g.user_id=p.id)
+      else exists(select 1 from public.regional_admin_assignments r where r.user_id=p.id and r.active) end)
+$fn$;
+revoke all on function public.ec_can_review_accounts() from public,anon;
+grant execute on function public.ec_can_review_accounts() to authenticated;
+
+create or replace function public.ec_can_review_account(p_user_id uuid)
+returns boolean language sql stable security definer set search_path=public,pg_temp as $fn$
+  select exists(select 1 from public.profiles actor join public.profiles target on target.id=p_user_id
+    where actor.id=auth.uid() and actor.account_status='ACTIVE' and target.account_status='ACTIVE' and target.role::text<>'HEAD_ADMIN' and
+    case when actor.role::text='HEAD_ADMIN' then true
+      when actor.role::text='ADMIN' then exists(select 1 from private.ec_global_account_review_grants g where g.user_id=actor.id)
+      else exists(select 1 from public.regional_admin_assignments r where r.user_id=actor.id and r.region_id=target.home_region_id and r.active) end)
+$fn$;
+revoke all on function public.ec_can_review_account(uuid) from public,anon;
+grant execute on function public.ec_can_review_account(uuid) to authenticated;
+
+create or replace function public.ec_account_review_permissions()
+returns jsonb language plpgsql security definer set search_path=public,pg_temp as $fn$
+begin
+  if not exists(select 1 from public.profiles where id=auth.uid() and role::text='HEAD_ADMIN' and account_status='ACTIVE') then raise exception 'Nur Hauptadmins dürfen Freigabe-Rechte verwalten.'; end if;
+  return coalesce((select jsonb_agg(jsonb_build_object('user_id',p.id,'nickname',p.nickname,'allowed',g.user_id is not null) order by p.nickname)
+    from public.profiles p left join private.ec_global_account_review_grants g on g.user_id=p.id where p.role::text='ADMIN' and p.account_status='ACTIVE'),'[]'::jsonb);
+end;
+$fn$;
+revoke all on function public.ec_account_review_permissions() from public,anon;
+grant execute on function public.ec_account_review_permissions() to authenticated;
+
+create or replace function public.ec_set_account_review_permission(p_user_id uuid,p_allowed boolean)
+returns void language plpgsql security definer set search_path=public,pg_temp as $fn$
+begin
+  if not exists(select 1 from public.profiles where id=auth.uid() and role::text='HEAD_ADMIN' and account_status='ACTIVE') then raise exception 'Nur Hauptadmins dürfen Freigabe-Rechte vergeben.'; end if;
+  perform 1 from public.profiles where id=p_user_id and role::text='ADMIN' and account_status='ACTIVE' for update;
+  if not found or p_allowed is null then raise exception 'Bitte einen aktiven Global Admin auswählen.'; end if;
+  if p_allowed then
+    insert into private.ec_global_account_review_grants(user_id,granted_by) values(p_user_id,auth.uid()) on conflict(user_id) do nothing;
+  else delete from private.ec_global_account_review_grants where user_id=p_user_id; end if;
+  insert into public.admin_log(actor_id,action,target_id,details) values(auth.uid(),'ACCOUNT_REVIEW_PERMISSION',p_user_id,jsonb_build_object('allowed',p_allowed));
+end;
+$fn$;
+revoke all on function public.ec_set_account_review_permission(uuid,boolean) from public,anon;
+grant execute on function public.ec_set_account_review_permission(uuid,boolean) to authenticated;
+
+
 -- Account approval is separate from Auth, suspension and document verification.
 -- Existing accounts remain usable. Only new profiles enter the pending queue.
 create table if not exists public.account_approvals (
@@ -18,7 +75,7 @@ revoke all on public.account_approvals from public, anon, authenticated;
 grant select on public.account_approvals to authenticated;
 drop policy if exists account_approvals_read on public.account_approvals;
 create policy account_approvals_read on public.account_approvals for select to authenticated
-  using (user_id=(select auth.uid()) or (select public.ec_is_head_admin()));
+  using (user_id=(select auth.uid()) or public.ec_can_review_account(user_id));
 
 insert into public.account_approvals(user_id,status)
 select id,'LEGACY_ACTIVE' from public.profiles on conflict(user_id) do nothing;
@@ -50,12 +107,12 @@ create or replace function public.ec_account_approval_queue(p_status text defaul
 returns jsonb language plpgsql security definer set search_path=public,pg_temp as $fn$
 declare result jsonb;
 begin
-  if auth.uid() is null or not public.ec_is_head_admin() then raise exception 'Nur der Hauptadmin darf Accounts prüfen.'; end if;
+  if auth.uid() is null or not public.ec_can_review_accounts() then raise exception 'Keine Berechtigung zur Account-Prüfung.'; end if;
   if p_status not in ('OPEN','PENDING','CHANGES_REQUIRED','APPROVED','LEGACY_ACTIVE','ALL') then raise exception 'Ungültiger Filter.'; end if;
   with selected as (
     select a.*,p.nickname,p.first_name,p.last_name,p.birth_date,p.home_region_id,p.created_at as registered_at
     from public.account_approvals a join public.profiles p on p.id=a.user_id
-    where p.account_status='ACTIVE' and p.role::text<>'HEAD_ADMIN'
+    where p.account_status='ACTIVE' and p.role::text<>'HEAD_ADMIN' and public.ec_can_review_account(p.id)
     and (p_status='ALL' or (p_status='OPEN' and a.status in ('PENDING','CHANGES_REQUIRED')) or a.status=p_status)
     and (coalesce(trim(p_query),'')='' or concat_ws(' ',p.nickname,p.first_name,p.last_name) ilike '%'||left(trim(p_query),100)||'%')
   ) select jsonb_build_object('total',(select count(*) from selected),'items',coalesce((select jsonb_agg(to_jsonb(r)) from (
@@ -77,7 +134,8 @@ create or replace function public.ec_review_account_approval(p_user_id uuid,p_de
 returns jsonb language plpgsql security definer set search_path=public,pg_temp as $fn$
 declare a public.account_approvals%rowtype; p public.profiles%rowtype;
 begin
-  if auth.uid() is null or not public.ec_is_head_admin() then raise exception 'Nur der Hauptadmin darf Accounts freigeben.'; end if;
+  if auth.uid() is null or not public.ec_can_review_accounts() then raise exception 'Keine Berechtigung zur Account-Freigabe.'; end if;
+  if not public.ec_can_review_account(p_user_id) then raise exception 'Keine Freigabe-Berechtigung für diese Region oder diesen Account.'; end if;
   if p_user_id=auth.uid() then raise exception 'Das eigene Konto kann hier nicht geprüft werden.'; end if;
   if p_decision not in ('APPROVED','CHANGES_REQUIRED') then raise exception 'Ungültige Entscheidung.'; end if;
   select * into a from public.account_approvals where user_id=p_user_id for update;
@@ -100,7 +158,7 @@ begin
   insert into public.admin_log(actor_id,action,target_id,details) values(auth.uid(),'ACCOUNT_APPROVAL_DECISION',p_user_id,jsonb_build_object('decision',p_decision,'fields',a.required_fields,'note',a.review_note));
   insert into public.notifications(user_id,title,body,type) values(p_user_id,
     case when p_decision='APPROVED' then 'Account freigegeben' else 'Bitte Account-Angaben korrigieren' end,
-    case when p_decision='APPROVED' then 'Der Hauptadmin hat deinen Account geprüft und freigegeben.' else a.review_note||' Du kannst die Korrekturen direkt nach der Anmeldung einreichen.' end,'ACCOUNT_APPROVAL');
+    case when p_decision='APPROVED' then 'Der zuständige Admin hat deinen Account geprüft und freigegeben.' else a.review_note||' Du kannst die Korrekturen direkt nach der Anmeldung einreichen.' end,'ACCOUNT_APPROVAL');
   return to_jsonb(a);
 end;
 $fn$;

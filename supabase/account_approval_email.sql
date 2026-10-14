@@ -36,12 +36,12 @@ begin
   if nullif(trim(address),'') is null then return new; end if;
   if new.status='APPROVED' then
     subject:='Dein Account bei Ennstal Connect ist freigegeben';
-    message:='Hallo '||name||E',\n\ndein Account wurde vom Hauptadmin geprüft und freigegeben. Willkommen bei Ennstal Connect!\n\nEine aktive Teilnahme ist ausdrücklich erwünscht: Tausche dich mit anderen aus, entdecke regionale Angebote oder bring dich mit eigenen Beiträgen ein. Eine sinnvolle Aktivität hält unsere Community lebendig.\n\nWichtig: Eine Inaktivität von 30 Tagen führt zur Sperre deines Kontos. Bitte nutze deinen Account regelmäßig.\n\n';
+    message:='Hallo '||name||E',\n\ndein Account wurde vom zuständigen Admin geprüft und freigegeben. Willkommen bei Ennstal Connect!\n\nEine aktive Teilnahme ist ausdrücklich erwünscht: Tausche dich mit anderen aus, entdecke regionale Angebote oder bring dich mit eigenen Beiträgen ein. Eine sinnvolle Aktivität hält unsere Community lebendig.\n\nWichtig: Eine Inaktivität von 30 Tagen führt zur Sperre deines Kontos. Bitte nutze deinen Account regelmäßig.\n\n';
   else
     subject:='Bitte Angaben für deine Account-Freigabe korrigieren';
     select string_agg(case field when 'first_name' then 'Vorname' when 'last_name' then 'Nachname' when 'birth_date' then 'Geburtsdatum' end,', ' order by position)
       into field_labels from unnest(new.required_fields) with ordinality as fields(field,position);
-    message:='Hallo '||name||E',\n\nfür die Freigabe deines Accounts sind noch Korrekturen nötig.\n\nBitte korrigiere: '||coalesce(field_labels,'deine Angaben')||E'.\n\nAuflagen des Hauptadmins:\n'||new.review_note||E'\n\nMelde dich an und reiche die angeforderten Korrekturen im Hinweis zur Account-Freigabe ein. Danach prüft der Hauptadmin deinen Account erneut. Du bleibst angemeldet und kannst die Community weiter nutzen.\n\n';
+    message:='Hallo '||name||E',\n\nfür die Freigabe deines Accounts sind noch Korrekturen nötig.\n\nBitte korrigiere: '||coalesce(field_labels,'deine Angaben')||E'.\n\nAuflagen des zuständigen Admins:\n'||new.review_note||E'\n\nMelde dich an und reiche die angeforderten Korrekturen im Hinweis zur Account-Freigabe ein. Danach prüft der zuständige Admin deinen Account erneut. Du bleibst angemeldet und kannst die Community weiter nutzen.\n\n';
   end if;
   message:=message||E'Zur Community: https://ennstal-connect.com\n\nDein Ennstal Connect Team';
   html:='<div style="font-family:Arial,sans-serif;background:#f4f7fa;padding:24px"><div style="max-width:600px;margin:auto;background:#fff;padding:28px;border-radius:16px;color:#20364b"><h2 style="color:#db7b32">Ennstal Connect</h2><h3>'||private.ec_escape_email_html(subject)||'</h3><div style="white-space:pre-line;line-height:1.65">'||private.ec_escape_email_html(message)||'</div><p><a href="https://ennstal-connect.com" style="display:inline-block;background:#20364b;color:#fff;padding:12px 20px;border-radius:9px;text-decoration:none">Community öffnen</a></p></div></div>';
@@ -58,11 +58,11 @@ create trigger ec_queue_account_email after update on public.account_approvals f
 create or replace function public.ec_account_email_status()
 returns jsonb language plpgsql security definer set search_path=public,pg_temp as $fn$
 begin
-  if auth.uid() is null or not public.ec_is_head_admin() then raise exception 'Nur der Hauptadmin darf den Mailstatus sehen.'; end if;
-  return jsonb_build_object('configured',false,
-    'pending',(select count(*) from private.ec_account_email_outbox where state in ('PENDING','SENDING')),
-    'failed',(select count(*) from private.ec_account_email_outbox where state='FAILED'),
-    'accepted',(select count(*) from private.ec_account_email_outbox where state='ACCEPTED'));
+  if not public.ec_can_review_accounts() then raise exception 'Keine Berechtigung für den Freigabe-Mailstatus.'; end if;
+  return jsonb_build_object('configured',exists(select 1 from vault.decrypted_secrets where name='ec_brevo_api_key' and nullif(trim(decrypted_secret),'') is not null) and exists(select 1 from vault.decrypted_secrets where name='ec_mail_from' and nullif(trim(decrypted_secret),'') is not null),
+    'pending',(select count(*) from private.ec_account_email_outbox where public.ec_can_review_account(user_id) and state in ('PENDING','SENDING')),
+    'failed',(select count(*) from private.ec_account_email_outbox where public.ec_can_review_account(user_id) and state='FAILED'),
+    'accepted',(select count(*) from private.ec_account_email_outbox where public.ec_can_review_account(user_id) and state='ACCEPTED'));
 end;
 $fn$;
 revoke all on function public.ec_account_email_status() from public,anon;

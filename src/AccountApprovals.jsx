@@ -22,12 +22,12 @@ export function AccountApprovalNotice({ userId, onUpdated }) {
     try {
       const { error } = await supabase.rpc('ec_submit_account_corrections', { p_changes: correctionPayload(record, values), p_note: values.member_note || '', p_expected_updated_at: record.updated_at });
       if (error) throw error;
-      if (alive.current) { dirty.current = false; setRecord(current => ({ ...current, status: 'PENDING' })); setMessage('✓ Korrekturen eingereicht. Der Hauptadmin prüft deinen Account erneut.'); onUpdated?.(); }
+      if (alive.current) { dirty.current = false; setRecord(current => ({ ...current, status: 'PENDING' })); setMessage('✓ Korrekturen eingereicht. Der zuständige Admin prüft deinen Account erneut.'); onUpdated?.(); }
     } catch (error) { if (alive.current) setMessage(error.message || 'Die Korrekturen konnten nicht gespeichert werden.'); }
     finally { if (alive.current) setBusy(false); }
   };
   return <section className="ec-account-approval-notice" aria-label="Account-Freigabe"><strong>{APPROVAL_LABELS[record.status]}</strong>
-    {record.status === 'PENDING' ? <p>Dein Account wartet auf die Prüfung durch den Hauptadmin. Du bleibst angemeldet und kannst die Community weiter nutzen.</p> : <><p>{record.review_note}</p><form onSubmit={submit}><fieldset disabled={busy}><legend>Diese Angaben bitte korrigieren</legend><div className="ec-approval-fields">{(record.required_fields || []).map(field => <label key={field}>{APPROVAL_FIELDS[field]}<input type={field === 'birth_date' ? 'date' : 'text'} value={values[field] || ''} required minLength={field === 'birth_date' ? undefined : 2} maxLength={field === 'birth_date' ? undefined : 80} onChange={event => { dirty.current = true; setValues(current => ({ ...current, [field]: event.target.value })); }}/></label>)}</div><label>Optionale Nachricht zur Korrektur<textarea value={values.member_note || ''} maxLength={1000} onChange={event => { dirty.current = true; setValues(current => ({ ...current, member_note: event.target.value })); }}/></label><button type="submit" className="primary-button">{busy ? 'Wird gespeichert …' : 'Korrekturen zur Prüfung einreichen'}</button></fieldset></form></>}
+    {record.status === 'PENDING' ? <p>Dein Account wartet auf die Prüfung durch den zuständigen Admin. Du bleibst angemeldet und kannst die Community weiter nutzen.</p> : <><p>{record.review_note}</p><form onSubmit={submit}><fieldset disabled={busy}><legend>Diese Angaben bitte korrigieren</legend><div className="ec-approval-fields">{(record.required_fields || []).map(field => <label key={field}>{APPROVAL_FIELDS[field]}<input type={field === 'birth_date' ? 'date' : 'text'} value={values[field] || ''} required minLength={field === 'birth_date' ? undefined : 2} maxLength={field === 'birth_date' ? undefined : 80} onChange={event => { dirty.current = true; setValues(current => ({ ...current, [field]: event.target.value })); }}/></label>)}</div><label>Optionale Nachricht zur Korrektur<textarea value={values.member_note || ''} maxLength={1000} onChange={event => { dirty.current = true; setValues(current => ({ ...current, member_note: event.target.value })); }}/></label><button type="submit" className="primary-button">{busy ? 'Wird gespeichert …' : 'Korrekturen zur Prüfung einreichen'}</button></fieldset></form></>}
     {message && <p role="status">{message}</p>}
   </section>;
 }
@@ -54,10 +54,34 @@ function AccountMailSetup({ configured, onSaved }) {
     } catch (error) { setMessage(error.message || 'Der Versandzugang konnte nicht gespeichert werden.'); }
     finally { setBusy(false); }
   };
-  return <details className="ec-approval-mail-setup"><summary>{configured ? 'Brevo-Zugang ändern' : 'E-Mail-Versand mit Brevo einrichten'}</summary><p>Deine Registrierungs-Mails laufen bereits über Brevo. Erstelle im selben <a href="https://app.brevo.com/settings/keys/api" target="_blank" rel="noopener noreferrer">Brevo-Konto einen API-Key</a> für diese zusätzlichen Nachrichten. Die SMTP-Einstellungen für die Anmeldung bleiben bestehen. Bitte einen API-Key verwenden, keinen SMTP-Schlüssel.</p><form onSubmit={save}><fieldset disabled={busy}><legend>Versandzugang · nur Hauptadmin</legend><div className="ec-approval-fields"><label>Bestätigte Absenderadresse<input type="email" value={sender} required maxLength={254} placeholder="name@deine-domain.at" onChange={event => setSender(event.target.value)}/></label><label>Brevo API-Key<input type="password" value={key} required autoComplete="new-password" minLength={20} maxLength={1024} placeholder="Vollständigen Brevo API-Key einfügen" onChange={event => setKey(event.target.value)}/></label></div><p>Der Schlüssel wird verschlüsselt gespeichert und nicht erneut angezeigt. Freigaben und Auflagen werden zusätzlich zur Community-Benachrichtigung automatisch per E-Mail versendet.</p><button type="submit" className="primary-button">{busy ? 'Wird gespeichert …' : 'Versandzugang speichern'}</button></fieldset></form>{message && <p role="status">{message}</p>}</details>;
+  return <details className="ec-approval-mail-setup"><summary>{configured ? 'Brevo-Zugang ändern' : 'E-Mail-Versand mit Brevo einrichten'}</summary><p>Deine Registrierungs-Mails laufen bereits über Brevo. Erstelle im selben <a href="https://app.brevo.com/settings/keys/api" target="_blank" rel="noopener noreferrer">Brevo-Konto einen API-Key</a> für diese zusätzlichen Nachrichten. Die SMTP-Einstellungen für die Anmeldung bleiben bestehen. Bitte einen API-Key verwenden, keinen SMTP-Schlüssel.</p><form onSubmit={save}><fieldset disabled={busy}><legend>Versandzugang · primärer Hauptadmin</legend><div className="ec-approval-fields"><label>Bestätigte Absenderadresse<input type="email" value={sender} required maxLength={254} placeholder="name@deine-domain.at" onChange={event => setSender(event.target.value)}/></label><label>Brevo API-Key<input type="password" value={key} required autoComplete="new-password" minLength={20} maxLength={1024} placeholder="Vollständigen Brevo API-Key einfügen" onChange={event => setKey(event.target.value)}/></label></div><p>Der Schlüssel wird verschlüsselt gespeichert und nicht erneut angezeigt. Freigaben und Auflagen werden zusätzlich zur Community-Benachrichtigung automatisch per E-Mail versendet.</p><button type="submit" className="primary-button">{busy ? 'Wird gespeichert …' : 'Versandzugang speichern'}</button></fieldset></form>{message && <p role="status">{message}</p>}</details>;
 }
 
-export default function AccountApprovals({ onBack }) {
+function AccountReviewPermissions() {
+  const [admins, setAdmins] = useState([]), [busy, setBusy] = useState(false), [message, setMessage] = useState('');
+  const refresh = async () => {
+    const { data, error } = await supabase.rpc('ec_account_review_permissions');
+    if (error) setMessage(error.message); else setAdmins(data || []);
+  };
+  useEffect(() => { void refresh(); }, []);
+  const toggle = async admin => {
+    if (busy) return;
+    if (!admin.allowed && !window.confirm(`Darf ${admin.nickname} Accounts in allen Regionen prüfen und freigeben?`)) return;
+    setBusy(true); setMessage('');
+    try {
+      const prepared = await preparePrivilegedAction('Account-Freigabe-Rechte ändern', admin.user_id);
+      if (prepared.error) throw prepared.error;
+      const { error } = await supabase.rpc('ec_set_account_review_permission', { p_user_id: admin.user_id, p_allowed: !admin.allowed });
+      if (error) throw error;
+      await refresh(); setMessage(admin.allowed ? '✓ Freigabe-Recht entzogen.' : '✓ Freigabe-Recht erteilt.');
+      window.dispatchEvent(new CustomEvent('ec:account-review-rights-changed'));
+    } catch (error) { setMessage(error.message || 'Die Berechtigung konnte nicht gespeichert werden.'); }
+    finally { setBusy(false); }
+  };
+  return <details className="panel ec-approval-permissions"><summary>Freigabe-Rechte für Global Admins</summary><p>Hauptadmins prüfen alle Regionen. Regionale Admins prüfen nur Mitglieder mit Heimatregion in ihrer Zuständigkeit. Global Admins benötigen diese ausdrückliche Erlaubnis.</p>{admins.map(admin => <div key={admin.user_id} className="ec-approval-permission-row"><strong>{admin.nickname}</strong><span>{admin.allowed ? 'Freigabe in allen Regionen erlaubt' : 'Keine Freigabe-Erlaubnis'}</span><button type="button" className="secondary-button" disabled={busy} onClick={() => void toggle(admin)}>{admin.allowed ? 'Erlaubnis entziehen' : 'Erlaubnis erteilen'}</button></div>)}{!admins.length && <p>Keine aktiven Global Admins vorhanden.</p>}{message && <p role="status">{message}</p>}</details>;
+}
+
+export default function AccountApprovals({ onBack, canConfigureMail = false, isHeadAdmin = false }) {
   const [filter, setFilter] = useState('OPEN'), [query, setQuery] = useState(''), [page, setPage] = useState(0);
   const [result, setResult] = useState({ items: [], total: 0 }), [loading, setLoading] = useState(true), [busy, setBusy] = useState(false), [message, setMessage] = useState(''), [revision, setRevision] = useState(0), [mailStatus, setMailStatus] = useState(null);
   useEffect(() => {
@@ -80,16 +104,15 @@ export default function AccountApprovals({ onBack }) {
     if (decision === 'APPROVED' && !window.confirm(`Account von ${item.nickname || 'diesem Mitglied'} nach Prüfung freigeben?`)) return;
     setBusy(true); setMessage('');
     try {
-      const prepared = await preparePrivilegedAction('Account-Freigabe prüfen', item.user_id);
-      if (prepared.error) throw prepared.error;
       const { error } = await supabase.rpc('ec_review_account_approval', { p_user_id: item.user_id, p_decision: decision, p_fields: fields, p_note: note, p_expected_updated_at: item.updated_at });
       if (error) throw error;
       setMessage(decision === 'APPROVED' ? '✓ Account freigegeben. Community-Benachrichtigung versendet; E-Mail vorgemerkt.' : '✓ Auflagen gespeichert. Community-Benachrichtigung versendet; E-Mail vorgemerkt.'); setRevision(current => current + 1);
     } catch (error) { setMessage(error.message || 'Die Entscheidung konnte nicht gespeichert werden.'); }
     finally { setBusy(false); }
   };
-  return <section className="ec-account-approvals"><div className="page-heading"><div><span className="eyebrow">HAUPTADMIN · ACCOUNT-FREIGABE</span><h1>Accounts freigeben</h1><p>Neue Accounts prüfen, freigeben oder konkrete Korrekturen verlangen. Bestandskonten bleiben nutzbar.</p></div><button type="button" className="secondary-button" onClick={onBack}>← Zurück</button></div>
-    {mailStatus && <aside className="panel ec-approval-mail-status" role="status"><strong>{mailStatus.configured ? 'E-Mail-Versand eingerichtet' : 'E-Mail-Versand noch nicht eingerichtet'}</strong><p>{mailStatus.configured ? 'Freigaben und Auflagen werden zusätzlich per E-Mail zugestellt.' : 'Mitglieder erhalten die Benachrichtigung in der Community. Die E-Mail wird vorgemerkt; ein Versanddienst muss noch verbunden werden.'}</p><small>{mailStatus.pending} vorgemerkt · {mailStatus.accepted} vom Maildienst angenommen · {mailStatus.failed} fehlgeschlagen</small><AccountMailSetup configured={mailStatus.configured} onSaved={() => setRevision(current => current + 1)}/></aside>}
+  return <section className="ec-account-approvals"><div className="page-heading"><div><span className="eyebrow">ADMIN · ACCOUNT-FREIGABE</span><h1>Accounts freigeben</h1><p>Accounts deiner Zuständigkeit prüfen, freigeben oder konkrete Korrekturen verlangen. Bestandskonten bleiben nutzbar.</p></div><button type="button" className="secondary-button" onClick={onBack}>← Zurück</button></div>
+    {isHeadAdmin && <AccountReviewPermissions/>}
+    {mailStatus && <aside className="panel ec-approval-mail-status" role="status"><strong>{mailStatus.configured ? 'E-Mail-Versand eingerichtet' : 'E-Mail-Versand noch nicht eingerichtet'}</strong><p>{mailStatus.configured ? 'Freigaben und Auflagen werden zusätzlich per E-Mail zugestellt.' : 'Mitglieder erhalten die Benachrichtigung in der Community. Die E-Mail wird vorgemerkt; ein Versanddienst muss noch verbunden werden.'}</p><small>{mailStatus.pending} vorgemerkt · {mailStatus.accepted} vom Maildienst angenommen · {mailStatus.failed} fehlgeschlagen</small>{canConfigureMail && <AccountMailSetup configured={mailStatus.configured} onSaved={() => setRevision(current => current + 1)}/>}</aside>}
     <div className="panel ec-approval-filters"><label>Prüfstatus<select value={filter} onChange={event => { setFilter(event.target.value); setPage(0); }}>{[['OPEN','Offene Prüfungen'],['PENDING','Warten auf Prüfung'],['CHANGES_REQUIRED','Auflagen offen'],['APPROVED','Freigegeben'],['LEGACY_ACTIVE','Bestandskonten'],['ALL','Alle Accounts']].map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>Mitglied suchen<input value={query} maxLength={100} onChange={event => { setQuery(event.target.value); setPage(0); }} placeholder="Nickname, Vor- oder Nachname"/></label><button type="button" className="secondary-button" disabled={loading || busy} onClick={() => setRevision(current => current + 1)}>Neu laden</button></div>
     {message && <p role="status">{message}</p>}{loading ? <p role="status">Accounts werden geladen …</p> : <><p>{result.total} Accounts</p>{result.items.map(item => <ApprovalCard key={`${item.user_id}-${item.updated_at}`} item={item} onDecision={decide} busy={busy}/>)}{!result.items.length && <div className="empty-card">Keine Accounts für diesen Filter gefunden.</div>}<nav className="ec-approval-pagination" aria-label="Account-Freigaben Seiten"><button type="button" disabled={!page || busy} onClick={() => setPage(current => current - 1)}>← Zurück</button><span>Seite {page + 1}</span><button type="button" disabled={(page + 1) * 25 >= result.total || busy} onClick={() => setPage(current => current + 1)}>Weiter →</button></nav></>}
   </section>;

@@ -34,7 +34,7 @@ test("notification center remains private and realtime",async()=>{const code=awa
 
 test("friend requests use the canonical friendships table",async()=>{const code=await source("src/Friends.jsx");assert.match(code,/from\("friendships"\)/);assert.match(code,/\.eq\("receiver_id", user\.id\)/);});
 
-test("admin workspace checks signed-in active admin role",async()=>{const code=await source("src/admin-workspace.js");assert.match(code,/auth\.getUser\(\)/);assert.match(code,/allowed=p\?\.account_status==="ACTIVE"&&\(isHead\|\|isGlobalAdmin\|\|isRegionalAdmin\)/);assert.match(code,/a\.active&&a\.region_id===activeId/);assert.match(code,/head_admin_system_diagnostics/);});
+test("admin workspace checks signed-in active admin role",async()=>{const code=await source("src/admin-workspace.js");assert.match(code,/auth\.getUser\(\)/);assert.match(code,/allowed=p\?\.account_status==="ACTIVE"&&\(isHead\|\|isGlobalAdmin\|\|isRegionalAdmin\|\|canReviewAccounts\)/);assert.match(code,/a\.active&&a\.region_id===activeId/);assert.match(code,/head_admin_system_diagnostics/);});
 
 test("legal evidence and deletion flows keep explicit confirmations",async()=>{const legal=await source("src/legal-evidence-admin.js"),deletion=await source("src/account-deletion-admin.js");assert.match(legal,/RECHTLICHE ANFRAGE BESTAETIGT/);assert.match(deletion,/LOESCHUNG ENDGUELTIG DURCHFUEHREN/);});
 

@@ -18,7 +18,7 @@ test('new approvals cannot change login, suspension, roles or profile-verificati
   const sql=await readFile(new URL('../supabase/account_approval_workflow.sql',import.meta.url),'utf8');
   assert.match(sql,/enable row level security/i);
   assert.match(sql,/revoke all on public\.account_approvals from public, anon, authenticated/i);
-  assert.match(sql,/auth\.uid\(\) is null or not public\.ec_is_head_admin\(\)/);
+  assert.match(sql,/auth\.uid\(\) is null or not public\.ec_can_review_accounts\(\)/);
   assert.doesNotMatch(sql,/update\s+auth\.users/i);
   assert.doesNotMatch(sql,/update\s+public\.profiles\s+set\s+(?:account_status|role|is_verified)/i);
   assert.match(sql,/after insert on public\.profiles/);

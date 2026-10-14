@@ -1,5 +1,5 @@
 import { supabase } from "./supabaseClient";
-let mounted=false,isHead=false,isGlobalAdmin=false,isRegionalAdmin=false,allowed=false;
+let mounted=false,isHead=false,isGlobalAdmin=false,isRegionalAdmin=false,allowed=false,canReviewAccounts=false;
 let timer=null;
 const managed=[[".ec-deletion-admin","🗑️","Kontolöschungen","Offene Löschanträge sicher prüfen und abschließen"]];
 const el=(t,c,x)=>{const n=document.createElement(t);if(c)n.className=c;if(x!==undefined)n.textContent=x;return n;};
@@ -22,7 +22,9 @@ async function resolveAccess(){
   isRegionalAdmin=Boolean(activeId&&(assignments||[]).some(a=>a.active&&a.region_id===activeId));
   isHead=role==="HEAD_ADMIN"&&p?.account_status==="ACTIVE"&&p?.is_primary_head_admin===true;
   isGlobalAdmin=role==="ADMIN"&&p?.account_status==="ACTIVE";
-  allowed=p?.account_status==="ACTIVE"&&(isHead||isGlobalAdmin||isRegionalAdmin);
+  const {data:reviewAllowed}=await supabase.rpc("ec_can_review_accounts");
+  canReviewAccounts=reviewAllowed===true;
+  allowed=p?.account_status==="ACTIVE"&&(isHead||isGlobalAdmin||isRegionalAdmin||canReviewAccounts);
   return allowed;
 }
 async function open(){
@@ -36,8 +38,10 @@ async function open(){
   const grid=el("div","ec-admin-workspace-grid");
   actionCard(grid,"⚙️","Admin-Bereich",regionalOnly?"Mitglieder, Meldungen und Verwaltung deiner Region öffnen.":"Mitglieder, Rollen, Meldungen und Verwaltung öffnen.",openAdminArea);
   if(isHead||isGlobalAdmin){managed.forEach(([selector,ico,title,desc])=>{if(!document.querySelector(selector))return;actionCard(grid,ico,title,desc,()=>{close();void openManaged(selector)})});}
-  if(isHead){
+  if(canReviewAccounts){
     actionCard(grid,"✓","Accounts freigeben","Neue Accounts prüfen und mit Auflagen für Namen oder Geburtsdatum freigeben.",()=>{close();window.dispatchEvent(new CustomEvent("ec:navigate",{detail:{page:"account-approvals"}}))});
+  }
+  if(isHead){
     actionCard(grid,"⚠️","Fehlerzentrale","Automatisch erkannte Browser-, Server-, Netzwerk- und Layoutfehler öffnen.",()=>{close();window.dispatchEvent(new CustomEvent("ec:open-system-errors"))});
     actionCard(grid,"🩺","Systemdiagnose","Prüft zentrale Datenbankbereiche ohne Inhalte offenzulegen.",async c=>{c.disabled=true;const {data,error}=await supabase.rpc("head_admin_system_diagnostics");c.disabled=false;if(error)return resultBox(grid,`Diagnose fehlgeschlagen: ${error.message}`,false);resultBox(grid,`Diagnose erfolgreich · ${new Date(data.checked_at).toLocaleString("de-AT")} · ${data.open_reports} offene Meldungen · ${data.open_deletion_requests} Löschanträge.`)});
     actionCard(grid,"🧹","Benachrichtigungen bereinigen","Entfernt ausschließlich gelesene Benachrichtigungen, die älter als 90 Tage sind.",async c=>{if(!confirm("Gelesene Benachrichtigungen älter als 90 Tage sicher entfernen?"))return;c.disabled=true;const {data,error}=await supabase.rpc("head_admin_cleanup_old_notifications");c.disabled=false;if(error)return resultBox(grid,error.message,false);resultBox(grid,`${data} alte gelesene Benachrichtigungen wurden entfernt.`)});

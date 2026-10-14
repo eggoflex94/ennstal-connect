@@ -8,7 +8,7 @@ const HEAD_TOOLS = [
 ];
 
 let isHead = false;
-let isPrimaryHead = false;
+let canReviewAccounts = false;
 let resolved = false;
 let loading = false;
 let retryTimers = [];
@@ -32,7 +32,7 @@ function activateTool(page) {
 
 function syncMenu() {
   if (!resolved) return false;
-  if (!isHead) {
+  if (!isHead && !canReviewAccounts) {
     removeHeadTools();
     return true;
   }
@@ -40,8 +40,8 @@ function syncMenu() {
   if (!grid) return false;
 
   for (const [page, label, icon] of HEAD_TOOLS) {
-    if (page === 'account-approvals' && !isPrimaryHead) {
-      grid.querySelector('[data-head-admin-extra="1"][data-head-admin-tool="account-approvals"]')?.remove();
+    if (!(page === 'account-approvals' ? canReviewAccounts : isHead)) {
+      grid.querySelector(`[data-head-admin-extra="1"][data-head-admin-tool="${page}"]`)?.remove();
       continue;
     }
     let button = grid.querySelector(`[data-head-admin-extra="1"][data-head-admin-tool="${page}"]`);
@@ -81,7 +81,7 @@ async function refreshRights() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user?.id) {
       isHead = false;
-    isPrimaryHead = false;
+    canReviewAccounts = false;
       resolved = true;
       removeHeadTools();
       return;
@@ -89,7 +89,8 @@ async function refreshRights() {
     const { data: profile, error } = await supabase.from('profiles').select('role,account_status,is_primary_head_admin').eq('id', user.id).maybeSingle();
     if (error) throw error;
     isHead = profile?.account_status === 'ACTIVE' && String(profile?.role || '').toUpperCase() === 'HEAD_ADMIN';
-    isPrimaryHead = isHead && profile?.is_primary_head_admin === true;
+    const { data: reviewAllowed } = await supabase.rpc('ec_can_review_accounts');
+    canReviewAccounts = reviewAllowed === true;
     resolved = true;
     scheduleMounts();
   } catch (error) {
@@ -102,7 +103,7 @@ async function refreshRights() {
 supabase?.auth?.onAuthStateChange?.((event) => {
   if (event === 'SIGNED_OUT') {
     isHead = false;
-    isPrimaryHead = false;
+    canReviewAccounts = false;
     resolved = true;
     clearRetries();
     removeHeadTools();

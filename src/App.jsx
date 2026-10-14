@@ -131,6 +131,16 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [passwordRecovery, setPasswordRecovery] = useState(false);
   const [profile, setProfile] = useState(null);
+  const [canReviewAccounts, setCanReviewAccounts] = useState(false);
+  useEffect(() => {
+    let active = true;
+    setCanReviewAccounts(false);
+    if (!user?.id || profile?.account_status !== "ACTIVE") return () => { active = false; };
+    const refresh = () => supabase.rpc("ec_can_review_accounts").then(({ data, error }) => { if (active) setCanReviewAccounts(!error && data === true); }).catch(() => { if (active) setCanReviewAccounts(false); });
+    void refresh(); window.addEventListener("focus", refresh); window.addEventListener("ec:account-review-rights-changed", refresh);
+    return () => { active = false; window.removeEventListener("focus", refresh); window.removeEventListener("ec:account-review-rights-changed", refresh); };
+  }, [user?.id, profile?.role, profile?.account_status]);
+
   const [profilePhotoEditFile, setProfilePhotoEditFile] = useState(null);
   const [profilePhotoEditingExisting, setProfilePhotoEditingExisting] = useState(false);
   const [profileCoverEditFile, setProfileCoverEditFile] = useState(null);
@@ -338,8 +348,12 @@ export default function App() {
   useEffect(() => {
     const handleNavigation = (event) => {
       const requested = String(event.detail?.page || "");
-      if (requested === "fake-accounts" || requested === "admin-log" || requested === "account-approvals") {
+      if (requested === "fake-accounts" || requested === "admin-log") {
         if (profile?.is_primary_head_admin && profile?.account_status === "ACTIVE") setPage(requested);
+        return;
+      }
+      if (requested === "account-approvals") {
+        if (canReviewAccounts) setPage(requested);
         return;
       }
       const pageMap = {
@@ -352,7 +366,7 @@ export default function App() {
     };
     window.addEventListener("ec:navigate", handleNavigation);
     return () => window.removeEventListener("ec:navigate", handleNavigation);
-  }, [profile?.role, profile?.account_status]);
+  }, [profile?.role, profile?.account_status, canReviewAccounts]);
 
   useEffect(() => {
     const markOffline = () => setNetworkIssue(true);
@@ -1846,7 +1860,7 @@ export default function App() {
           <button onClick={() => setPage("groups")}>◉ <span>Gruppen</span></button>
           <button onClick={() => setPage("forum")}>▤ <span>Forum</span></button>
           <button onClick={() => setPage("profile")}>⚙ <span>Mein Profil</span></button>
-          {profile?.role === "HEAD_ADMIN" && profile?.is_primary_head_admin === true && profile?.account_status === "ACTIVE" && <button className="admin-nav-entry" onClick={() => setPage("account-approvals")}>✓ <span>Accounts freigeben</span></button>}
+          {canReviewAccounts && <button className="admin-nav-entry" onClick={() => setPage("account-approvals")}>✓ <span>Accounts freigeben</span></button>}
           {isAdmin(profile?.role) && <button className="admin-nav-entry" onClick={() => setPage("admin")}>♛ <span>Admin-Zentrale</span></button>}
         </nav>
         <button className="sidebar-logout" onClick={logout}>⇥ <span>Abmelden</span></button>
@@ -1894,14 +1908,14 @@ export default function App() {
         {page === "fake-accounts" && profile?.is_primary_head_admin && profile?.account_status === "ACTIVE" && <section className="fake-account-page head-admin-tools-page"><div className="page-heading"><div><span className="eyebrow">NUR HEAD ADMIN</span><h1>Fake-Erkennung</h1></div></div></section>}
         {page === "admin-log" && profile?.is_primary_head_admin && profile?.account_status === "ACTIVE" && <section className="admin-log-page head-admin-tools-page"><div className="page-heading"><div><span className="eyebrow">NUR HEAD ADMIN</span><h1>Admin-Logbuch</h1></div><button className="secondary-button" onClick={loadAll}>Aktualisieren</button></div><AdminLogPage adminLog={adminLog} members={adminMembers.length ? adminMembers : members}/></section>}
         {page === "admin" && (profile?.role === "ADMIN" || profile?.is_primary_head_admin || (profile?.role === "HEAD_ADMIN" && hasAnyAdminPermission)) && <AdminPanel members={adminMembers.length ? adminMembers : members} memberEmails={memberEmails} adminLog={adminLog} activationDashboard={activationDashboard} onRefreshActivation={loadActivationDashboard} forumPosts={forumPosts} forumReplies={forumReplies} communityEvents={communityEvents} eventRsvps={eventRsvps} memberPhotos={memberPhotos} photoComments={photoComments} profile={profile} user={user} permissions={myAdminPermissions} canViewPersonalData={canViewPersonalData} onOpen={openMember} updateMemberRole={updateMemberRole} toggleSuspension={toggleSuspension} setBusinessAccount={setBusinessAccount} editingMember={editingMember} setEditingMember={setEditingMember} saveMemberData={saveMemberData} adminTarget={adminTarget} loadPermissions={loadPermissions} permissionDraft={permissionDraft} setPermissionDraft={setPermissionDraft} savePermissions={savePermissions} savingPermissions={savingPermissions} openAccountReview={openAccountReview}/>}
-        {page === "account-approvals" && profile?.is_primary_head_admin && profile?.account_status === "ACTIVE" && <AccountApprovals onBack={() => setPage("admin")}/>}
+        {page === "account-approvals" && canReviewAccounts && <AccountApprovals isHeadAdmin={profile?.role === "HEAD_ADMIN"} canConfigureMail={profile?.is_primary_head_admin === true} onBack={() => window.dispatchEvent(new CustomEvent("ec:open-admin-central"))}/>}
         {page === "admin-account-review" && (profile?.is_primary_head_admin || hasAdminPermission("manage_members")) && <AccountReview queue={accountReviewQueue} members={members} canReview={Boolean(profile?.is_primary_head_admin || hasAdminPermission("manage_members"))} onBack={() => setPage("admin")} onOpen={openMember} onReview={reviewProfileVerification}/>}
         {page === "impressum" && <LegalPage type="impressum"/>}
         {page === "privacy" && <LegalPage type="privacy"/>}
         {page === "rules" && <CommunityRules/>}
       </div></main>
     </div>
-    <MobileQuickNav page={page} onNavigate={setPage} onLogout={logout} isAdmin={isAdmin(profile?.role) || !!profile?.is_primary_head_admin} canReviewAccounts={profile?.role === "HEAD_ADMIN" && profile?.is_primary_head_admin === true && profile?.account_status === "ACTIVE"} unread={unread} unreadNotifications={unreadNotifications} />
+    <MobileQuickNav page={page} onNavigate={setPage} onLogout={logout} isAdmin={isAdmin(profile?.role) || !!profile?.is_primary_head_admin} canReviewAccounts={canReviewAccounts} unread={unread} unreadNotifications={unreadNotifications} />
     <footer className="site-footer"><strong>Ennstal Connect</strong><div><button onClick={() => setPage("impressum")}>Impressum</button><button onClick={() => setPage("privacy")}>Datenschutz</button><button onClick={() => setPage("rules")}>Community-Regeln</button></div></footer>
     {rulesAccepted === false && <RulesAcceptanceModal accepting={acceptingRules} onAccept={acceptCommunityRules}/>}{user?.id && profile?.id === user.id && !profile?.district_code && rulesAccepted !== false && <RequiredHomeDistrict userId={user.id} onSaved={(changes) => { setProfile((current) => ({ ...current, ...changes })); setMembers((current) => current.map((member) => member.id === user.id ? { ...member, ...changes } : member)); }}/>} 
   </div>;
