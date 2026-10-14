@@ -59,7 +59,7 @@ let headAdminPromptBypass = false;
 
 window.prompt = function (message, defaultValue) {
   const text = String(message || "");
-  if (headAdminPromptBypass && /^Begründung für „/.test(text)) return HEAD_ADMIN_AUDIT_REASON;
+  if (headAdminPromptBypass && /^Begründung für „/.test(text) && !/\(optional\)/i.test(text)) return HEAD_ADMIN_AUDIT_REASON;
   return nativePrompt(message, defaultValue);
 };
 
