@@ -7,6 +7,7 @@ const POINT_REASON_PRESETS = {
   COMMUNITY_HELPFUL: ['Anderen Mitgliedern geholfen', 'Aktive Unterstützung der Community'],
   EVENT_HELP: ['Unterstützung bei einem Event', 'Mitorganisation einer Veranstaltung', 'Freiwilliger Einsatz beim Event'],
   ADMIN_ADJUSTMENT: ['Punktestand korrigiert', 'Fehlerhafte Punktebuchung ausgeglichen'],
+  INACTIVITY: ['Längere Inaktivität', 'Wiederholte Inaktivität trotz Erinnerung'],
   OTHER: ['Sonstiger nachvollziehbarer Grund']
 };
 function reasonOptions(category) {
@@ -89,6 +90,7 @@ function openSelfAward(userId) {
         <option value="COMMUNITY_HELPFUL">Community-Hilfe</option>
         <option value="EVENT_HELP">Event-Hilfe</option>
         <option value="ADMIN_ADJUSTMENT">Admin-Anpassung</option>
+        <option value="INACTIVITY">Inaktivität</option>
         <option value="OTHER">Sonstiges</option>
       </select></label>
       <label class="is-wide">Vorgefertigter Grund<select name="reason_preset"><option value="">Grund auswählen …</option></select></label>
