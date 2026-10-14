@@ -1,5 +1,45 @@
 import { supabase } from './supabaseClient';
 
+const POINT_REASON_PRESETS = {
+  ADMIN_BONUS: ['Besonderes Engagement in der Community', 'Dank für freiwillige Unterstützung', 'Außergewöhnlich hilfreicher Beitrag'],
+  RULE_VIOLATION: ['Verstoß gegen Community-Regeln', 'Respektloser Umgang mit Mitgliedern', 'Wiederholtes Fehlverhalten'],
+  FORUM_HELPFUL: ['Hilfreiche Antwort im Forum', 'Wertvoller Forenbeitrag'],
+  COMMUNITY_HELPFUL: ['Anderen Mitgliedern geholfen', 'Aktive Unterstützung der Community'],
+  EVENT_HELP: ['Unterstützung bei einem Event', 'Mitorganisation einer Veranstaltung', 'Freiwilliger Einsatz beim Event'],
+  ADMIN_ADJUSTMENT: ['Punktestand korrigiert', 'Fehlerhafte Punktebuchung ausgeglichen'],
+  OTHER: ['Sonstiger nachvollziehbarer Grund']
+};
+function reasonOptions(category) {
+  return (POINT_REASON_PRESETS[category] || POINT_REASON_PRESETS.OTHER)
+    .map(reason => `<option value="${reason}">${reason}</option>`).join('');
+}
+function wireReasonPicker(form) {
+  const category = form.querySelector('[name="category"]');
+  const preset = form.querySelector('[name="reason_preset"]');
+  const reason = form.querySelector('[name="reason"]');
+  if (!category || !preset || !reason) return;
+  const updateOptions = () => {
+    preset.innerHTML = '<option value="">Grund auswählen …</option>' + reasonOptions(category.value) + '<option value="custom">Eigenen Grund eingeben …</option>';
+    preset.value = '';
+    reason.value = '';
+    reason.readOnly = false;
+    reason.placeholder = 'Oder eigenen Grund eingeben';
+  };
+  category.addEventListener('change', updateOptions);
+  preset.addEventListener('change', () => {
+    if (preset.value && preset.value !== 'custom') {
+      reason.value = preset.value;
+      reason.readOnly = true;
+    } else {
+      reason.value = '';
+      reason.readOnly = false;
+      reason.placeholder = 'Eigenen Grund eingeben';
+      if (preset.value === 'custom') reason.focus();
+    }
+  });
+  updateOptions();
+}
+
 let queued = false;
 let viewer = null;
 
@@ -51,6 +91,7 @@ function openSelfAward(userId) {
         <option value="ADMIN_ADJUSTMENT">Admin-Anpassung</option>
         <option value="OTHER">Sonstiges</option>
       </select></label>
+      <label class="is-wide">Vorgefertigter Grund<select name="reason_preset"><option value="">Grund auswählen …</option></select></label>
       <label class="is-wide">Begründung<textarea name="reason" rows="3" minlength="3" maxlength="500" required placeholder="Begründung für die Punkteänderung"></textarea></label>
       <button type="submit">Punkte buchen</button>
       <div class="ec-points-form-status" aria-live="polite"></div>
@@ -62,6 +103,7 @@ function openSelfAward(userId) {
   overlay.addEventListener('click', (event) => { if (event.target === overlay) closeModal(); });
 
   const form = overlay.querySelector('form');
+  if (form) wireReasonPicker(form);
   form?.addEventListener('submit', async (event) => {
     event.preventDefault();
     const status = form.querySelector('.ec-points-form-status');
