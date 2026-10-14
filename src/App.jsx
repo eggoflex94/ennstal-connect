@@ -131,6 +131,9 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [passwordRecovery, setPasswordRecovery] = useState(false);
   const [profile, setProfile] = useState(null);
+  const [suspendedAccount, setSuspendedAccount] = useState(null);
+  const [reactivationPending, setReactivationPending] = useState(false);
+  const [reactivationFeedback, setReactivationFeedback] = useState("");
   const [canReviewAccounts, setCanReviewAccounts] = useState(false);
   useEffect(() => {
     let active = true;
@@ -492,6 +495,7 @@ export default function App() {
       if (!isCurrent()) return;
       setUser(currentUser);
       if (!currentUser) {
+        setSuspendedAccount(null);
         bootstrapRetry.current.count = 0;
         window.clearTimeout(bootstrapRetry.current.timer);
         bootstrapRetry.current.timer = null;
@@ -529,6 +533,13 @@ export default function App() {
         throw new Error("Dein Profil konnte nicht geladen werden. Bitte versuche es erneut.");
       }
       initializedProfileUser.current = currentUser.id;
+      if (p.account_status === "SUSPENDED") {
+        setSuspendedAccount({ reason: p.suspension_reason || "Kein Grund wurde hinterlegt." });
+        setProfile(null);
+        setReactivationFeedback("");
+        return;
+      }
+      setSuspendedAccount(null);
       const [bs, locks, ruleAcceptance, personalDataAllowed, loadedAdminPermissions] = await Promise.all([
         readOptional(supabase.from("user_blocks").select("*").eq("blocker_id", currentUser.id), [], "Blockierungen"),
         readOptional(supabase.from("user_feature_locks").select("*").eq("user_id", currentUser.id), [], "Funktionssperren"),
@@ -537,13 +548,6 @@ export default function App() {
         readOptional(supabase.rpc("my_admin_permissions"), {}, "Admin-Berechtigungen")
       ]);
       if (!isCurrent()) return;
-      if (p.account_status === "SUSPENDED") {
-        await supabase.auth.signOut();
-        if (!isCurrent()) return;
-        resetSession();
-        showNotice("Dein Konto ist gesperrt. Grund: " + (p.suspension_reason || "Kein Grund wurde hinterlegt."));
-        return;
-      }
       bootstrapRetry.current.count = 0;
       window.clearTimeout(bootstrapRetry.current.timer);
       bootstrapRetry.current.timer = null;
@@ -943,6 +947,28 @@ export default function App() {
     } finally {
       setLoginPending(false);
     }
+  }
+  async function requestReactivation() {
+    if (reactivationPending || !supabase) return;
+    setReactivationPending(true);
+    try {
+      const { data, error } = await supabase.rpc("ec_request_reactivation");
+      if (error) throw error;
+      setReactivationFeedback(data === "already_requested"
+        ? "Deine Anfrage ist bereits beim Head Admin eingegangen."
+        : "Deine Anfrage wurde an den Head Admin gesendet.");
+    } catch (error) {
+      setReactivationFeedback("Anfrage konnte nicht gesendet werden: " + String(error?.message || error));
+    } finally {
+      setReactivationPending(false);
+    }
+  }
+  async function leaveSuspendedAccount() {
+    await supabase?.auth.signOut();
+    setSuspendedAccount(null);
+    setReactivationFeedback("");
+    resetSession();
+    setUser(null);
   }
   async function register(e) {
     e.preventDefault(); if (!supabase) return showNotice(supabaseUnavailableMessage); const f = new FormData(e.currentTarget);
@@ -1835,6 +1861,14 @@ export default function App() {
   async function openChat(m) { setChatMember(m); setPage("messages"); const { data, error } = await supabase.from("messages").select("*").or(`and(sender_id.eq.${user.id},receiver_id.eq.${m.id}),and(sender_id.eq.${m.id},receiver_id.eq.${user.id})`).order("created_at", { ascending: true }); if (error) return showNotice(error.message); setMessages(data || []); await supabase.rpc("mark_messages_read", { from_user: m.id }); }
   async function openMember(m) { if (!m) return; if (m.id === user.id) return setPage("profile"); setViewingMember(m); setViewingFriends([]); setPage("member-profile"); void loadMemberProfile(m).then((fresh) => { if (fresh?.id === m.id) setViewingMember((current) => current?.id === m.id ? fresh : current); }).catch((error) => console.warn("Profil konnte nicht im Hintergrund aktualisiert werden:", error?.message || error)); const { data: connections } = await supabase.from("friendships").select("requester_id,receiver_id").eq("status", "ACCEPTED").or(`requester_id.eq.${m.id},receiver_id.eq.${m.id}`); if (connections) { const ids = connections.map((connection) => connection.requester_id === m.id ? connection.receiver_id : connection.requester_id); setViewingFriends(members.filter((member) => ids.includes(member.id))); } }
 
+  if (suspendedAccount && user) return <div className="auth-page"><section className="panel" style={{maxWidth:460,margin:"10vh auto",padding:24,textAlign:"center"}}>
+    <h1>Dein Konto ist gesperrt</h1>
+    <p>Grund: {suspendedAccount.reason}</p>
+    <p>Du kannst eine Überprüfung und Reaktivierung beim Head Admin anfordern.</p>
+    <button type="button" className="primary-button" disabled={reactivationPending} onClick={requestReactivation}>{reactivationPending ? "Anfrage wird gesendet …" : "Reaktivierung anfordern"}</button>
+    {reactivationFeedback && <p role="status">{reactivationFeedback}</p>}
+    <p><button type="button" className="secondary-button" onClick={leaveSuspendedAccount}>Zurück zur Anmeldung</button></p>
+  </section></div>;
   if (passwordRecovery) return <PasswordReset finishPasswordReset={finishPasswordReset} notice={notice}/>;
   if (!user) return <div className="auth-page"><NewAuth login={login} register={register} loginPending={loginPending} loginFeedback={loginFeedback}/><button className="forgot-password-button" onClick={requestPasswordReset}>Passwort vergessen?</button>{notice && <div className="toast">{notice}</div>}</div>;
 
