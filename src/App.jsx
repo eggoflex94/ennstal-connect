@@ -2503,6 +2503,8 @@ function AdminLogPage({ adminLog, members }) {
   const [sort,setSort]=useState("NEWEST");
 
   const actionKey=(entry)=>String(entry?.action||entry?.details?.action_name||"").toUpperCase();
+  const isSuspension=(entry)=>/KONTO_GESPERRT|ACCOUNT_SUSPENDED|AUTO_SUSPEND|SUSPEND_USER|USER_SUSPENDED/.test(actionKey(entry)) || (fieldsFor(entry).some((f)=>/suspend|account_status/.test(f)) && String(entry?.details?.status||"").toUpperCase()==="SUSPENDED");
+  const suspensionReason=(entry)=>String(entry?.details?.reason||entry?.details?.suspension_reason||entry?.details?.last_point_reason||"").trim();
   const denied=(entry)=>entry?.action==="ADMIN_DENIED" || entry?.details?.outcome==="DENIED";
   const changesFor=(entry)=>Array.isArray(entry?.details?.changes)?entry.details.changes:[];
   const areasFor=(entry)=>[...new Set(changesFor(entry).map((change)=>String(change?.area||"").toLowerCase()).filter(Boolean))];
@@ -2534,6 +2536,8 @@ function AdminLogPage({ adminLog, members }) {
     const key=actionKey(entry);
     const areas=areasFor(entry);
     const fields=fieldsFor(entry);
+    if(isSuspension(entry)) return "Mitglied gesperrt";
+    if(key==="KONTO_FREIGEGEBEN") return "Mitglied freigegeben";
     if(key==="SYSTEM_ERROR_STATUS") return true;
     if(areas.length===1 && areas[0]==="messages" && fields.length===1 && fields[0]==="is_read") return true;
     if(
@@ -2546,7 +2550,7 @@ function AdminLogPage({ adminLog, members }) {
   };
 
   const important=(entry)=>{
-    if(denied(entry)) return true;
+    if(denied(entry) || isSuspension(entry)) return true;
     if(isRoutineEntry(entry)) return false;
     const key=actionKey(entry);
     const cat=categoryFor(entry);
@@ -2614,7 +2618,6 @@ function AdminLogPage({ adminLog, members }) {
   const todayEntries=adminLog.filter((entry)=>new Date(entry.created_at)>=todayStart);
 
   const rows=adminLog.filter((entry)=>{
-    if(filter==="ALL") return true;
     if(filter==="IMPORTANT") return important(entry);
     if(filter==="DENIED") return denied(entry);
     if(filter==="TODAY") return new Date(entry.created_at)>=todayStart;
@@ -2668,7 +2671,7 @@ function AdminLogPage({ adminLog, members }) {
           <span className="admin-log-main">
             <span className="admin-log-title-line">
               <strong>{labelFor(entry)}</strong>
-              <em className={isDenied ? "admin-log-status denied" : "admin-log-status success"}>{isDenied ? "ABGELEHNT" : "AUSGEFÜHRT"}</em>
+              <em className={isDenied ? "admin-log-status denied" : "admin-log-status success"}>{isDenied ? "ABGELEHNT" : isSuspension(entry) ? "GESPERRT" : "AUSGEFÜHRT"}</em>
             </span>
             <span className="admin-log-meta-line">
               <span><small>Durch</small> <b>{getName(actor)||"System"}</b></span>
@@ -2683,14 +2686,15 @@ function AdminLogPage({ adminLog, members }) {
             <span><small>Akteur</small><strong>{getName(actor)||"System"}{entry.details?.actor_role ? ` · ${roleLabel(entry.details.actor_role)}` : ""}</strong></span>
             {target && <span><small>Betroffen</small><strong>{getName(target)}</strong></span>}
             <span><small>Bereich</small><strong>{cat==="ROLES"?"Rollen & Rechte":cat==="POINTS"?"Punkte":cat==="MODERATION"?"Moderation":cat==="SECURITY"?"Sicherheit":"Sonstiges"}</strong></span>
-            <span><small>Ergebnis</small><strong>{isDenied?"Abgelehnt":"Ausgeführt"}</strong></span>
+            <span><small>Ergebnis</small><strong>{isDenied?"Abgelehnt":isSuspension(entry)?"Gesperrt":"Ausgeführt"}</strong></span>
             <span><small>Zeitpunkt</small><strong>{new Date(entry.created_at).toLocaleString("de-AT",{dateStyle:"medium",timeStyle:"medium"})}</strong></span>
             <span><small>Aktionstyp</small><strong>{actionKey(entry)}</strong></span>
           </div>
+          {isSuspension(entry) && <p className="admin-log-reason"><b>Sperrgrund:</b> {suspensionReason(entry) || "Im Protokolleintrag ist kein Sperrgrund hinterlegt."}</p>}
           {isDenied && entry.details?.error && <p className="admin-log-reason"><b>Grund der Ablehnung:</b> {entry.details.error}</p>}
           {!isDenied && descriptionFor(entry) && <p className="admin-log-reason admin-log-human-description">{descriptionFor(entry)}</p>}
-          {!isDenied && !descriptionFor(entry) && detailText && <p className="admin-log-reason">{detailText}</p>}
-          {entry.details?.reason && !String(descriptionFor(entry)||detailText||"").includes(entry.details.reason) && <p className="admin-log-reason"><b>Begründung:</b> {entry.details.reason}</p>}
+          {!isDenied && !isSuspension(entry) && !descriptionFor(entry) && detailText && <p className="admin-log-reason">{detailText}</p>}
+          {!isSuspension(entry) && entry.details?.reason && !String(descriptionFor(entry)||detailText||"").includes(entry.details.reason) && <p className="admin-log-reason"><b>Begründung:</b> {entry.details.reason}</p>}
         </div>
       </details>;
     })}
