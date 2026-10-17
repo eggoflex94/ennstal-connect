@@ -2297,7 +2297,38 @@ function Messages({ user, profile, members, messages, chatMember, setChatMember,
       setBirthdayNoticeBusy(false);
     }
   }
-  return <section>{profile?.is_primary_head_admin && profile?.nickname?.toLowerCase() === "egga" && !chatMember && <div className="panel" style={{padding: "1rem", marginBottom: "1rem"}}><strong>Geburtsdatum prüfen</strong><p>Mitglieder mit angezeigtem Alter 0 Jahre: {zeroAgeMembers.length}. Schicke ihnen eine private Nachricht von egga mit der Bitte um das korrekte Geburtsdatum.</p><button type="button" className="primary-button" disabled={birthdayNoticeBusy || !zeroAgeMembers.length} onClick={sendBirthdayNotices}>{birthdayNoticeBusy ? "Nachrichten werden gesendet …" : "Geburtsdatum-Hinweis senden"}</button></div>}<div className="page-heading"><h1>Nachrichten</h1></div>{!chatMember ? <div className="message-overview">{messages.filter((m) => m.receiver_id === user.id || m.sender_id === user.id).map((m) => { const other = memberById(m.sender_id === user.id ? m.receiver_id : m.sender_id); return other && <button className="message-preview" key={m.id} onClick={() => openChat(other)}><img src={other.avatar_url || DEFAULT_AVATAR} alt=""/><span><strong>{getName(other)}</strong><small>{m.content}</small></span></button>; })}{!messages.length && <div className="empty-card">Noch keine Nachrichten.</div>}</div> : <div className="chat-box"><div className="chat-header"><button className="back-button" onClick={() => setChatMember(null)}>← Zurück</button><MemberMini member={chatMember}/></div><div className="chat-messages">{messages.filter((m) => (m.sender_id === user.id && m.receiver_id === chatMember.id) || (m.sender_id === chatMember.id && m.receiver_id === user.id)).map((m) => <div className={`chat-message ${m.sender_id === user.id ? "mine" : ""}`} key={m.id}><p>{m.content}</p><small>{new Date(m.created_at).toLocaleString("de-AT")}</small><button className="message-delete-button" onClick={() => deleteMessage(m)} aria-label="Nachricht löschen">×</button></div>)}</div><form className="message-form" onSubmit={sendMessage}><textarea value={messageText} onChange={(e) => setMessageText(e.target.value)} placeholder="Nachricht schreiben …"/><button className="primary-button">Senden</button></form></div>}</section>; }
+  const [bulkAudience, setBulkAudience] = useState("ALL");
+  const [bulkText, setBulkText] = useState("");
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const bulkRoles = [...new Set((members || []).map((m) => m.role).filter(Boolean))].sort();
+  const bulkRecipients = (members || []).filter((m) => m.id !== user.id && (bulkAudience === "ALL" || m.role === bulkAudience));
+  const canSendBulk = profile?.is_primary_head_admin === true && profile?.nickname?.toLowerCase() === "egga";
+  async function sendBulkMessages(event) {
+    event.preventDefault();
+    if (!canSendBulk || bulkBusy || !bulkText.trim() || !bulkRecipients.length) return;
+    const content = bulkText.trim();
+    if (!window.confirm(`Sammelnachricht an ${bulkRecipients.length} Mitglieder (${bulkAudience === "ALL" ? "Alle" : bulkAudience}) von egga senden? Dieser Vorgang lässt sich nicht rückgängig machen.`)) return;
+    setBulkBusy(true);
+    let sent = 0;
+    let skipped = 0;
+    try {
+      for (const member of bulkRecipients) {
+        const { data: existing, error: lookupError } = await supabase.from("messages").select("id").eq("sender_id", user.id).eq("receiver_id", member.id).eq("content", content).limit(1);
+        if (lookupError) throw lookupError;
+        if (existing?.length) { skipped++; continue; }
+        const { error } = await supabase.rpc("send_private_message", { target_user: member.id, message_text: content });
+        if (error) throw error;
+        sent++;
+      }
+      window.alert(`${sent} Nachricht(en) verschickt; ${skipped} bereits vorhandene identische Nachricht(en) übersprungen.`);
+      setBulkText("");
+    } catch (error) {
+      window.alert(`Versand unterbrochen: ${sent} gesendet, ${skipped} übersprungen. Fehler: ${error.message}`);
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+  return <section>{profile?.is_primary_head_admin && profile?.nickname?.toLowerCase() === "egga" && !chatMember && <div className="panel" style={{padding: "1rem", marginBottom: "1rem"}}><strong>Geburtsdatum prüfen</strong><p>Mitglieder mit angezeigtem Alter 0 Jahre: {zeroAgeMembers.length}. Schicke ihnen eine private Nachricht von egga mit der Bitte um das korrekte Geburtsdatum.</p><button type="button" className="primary-button" disabled={birthdayNoticeBusy || !zeroAgeMembers.length} onClick={sendBirthdayNotices}>{birthdayNoticeBusy ? "Nachrichten werden gesendet …" : "Geburtsdatum-Hinweis senden"}</button></div>}{canSendBulk && !chatMember && <form className="panel" style={{padding: "1rem", marginBottom: "1rem", display: "grid", gap: "0.75rem"}} onSubmit={sendBulkMessages}><h2>Sammelnachricht (Betreiber)</h2><label>Empfängergruppe<select value={bulkAudience} disabled={bulkBusy} onChange={(e) => setBulkAudience(e.target.value)}><option value="ALL">Alle Mitglieder</option>{bulkRoles.map((role) => <option key={role} value={role}>Rolle: {role}</option>)}</select></label><p>Empfänger: {bulkRecipients.length} (dein eigenes Konto wird ausgeschlossen)</p><label>Nachricht<textarea required maxLength={3000} value={bulkText} disabled={bulkBusy} onChange={(e) => setBulkText(e.target.value)} placeholder="Deine Nachricht an die ausgewählten Mitglieder …" rows={5}/></label><p>Versand als private Nachricht von egga. Vor dem Versand musst du die Empfängerzahl bestätigen.</p><button className="primary-button" type="submit" disabled={bulkBusy || !bulkText.trim() || !bulkRecipients.length}>{bulkBusy ? "Sammelnachricht wird verschickt …" : "Sammelnachricht senden"}</button></form>}<div className="page-heading"><h1>Nachrichten</h1></div>{!chatMember ? <div className="message-overview">{messages.filter((m) => m.receiver_id === user.id || m.sender_id === user.id).map((m) => { const other = memberById(m.sender_id === user.id ? m.receiver_id : m.sender_id); return other && <button className="message-preview" key={m.id} onClick={() => openChat(other)}><img src={other.avatar_url || DEFAULT_AVATAR} alt=""/><span><strong>{getName(other)}</strong><small>{m.content}</small></span></button>; })}{!messages.length && <div className="empty-card">Noch keine Nachrichten.</div>}</div> : <div className="chat-box"><div className="chat-header"><button className="back-button" onClick={() => setChatMember(null)}>← Zurück</button><MemberMini member={chatMember}/></div><div className="chat-messages">{messages.filter((m) => (m.sender_id === user.id && m.receiver_id === chatMember.id) || (m.sender_id === chatMember.id && m.receiver_id === user.id)).map((m) => <div className={`chat-message ${m.sender_id === user.id ? "mine" : ""}`} key={m.id}><p>{m.content}</p><small>{new Date(m.created_at).toLocaleString("de-AT")}</small><button className="message-delete-button" onClick={() => deleteMessage(m)} aria-label="Nachricht löschen">×</button></div>)}</div><form className="message-form" onSubmit={sendMessage}><textarea value={messageText} onChange={(e) => setMessageText(e.target.value)} placeholder="Nachricht schreiben …"/><button className="primary-button">Senden</button></form></div>}</section>; }
 function NotificationCenter({ notifications, onOpen, onMarkAll, members, onOpenMember, showNotice }) {
   const unread = notifications.filter((item) => !item.read_at).length;
   const [nudges, setNudges] = useState([]);
