@@ -17,22 +17,22 @@ returns integer language plpgsql security definer set search_path=public,pg_temp
 declare v_count integer;
 begin
   -- Only administrators can initiate a manual refresh; cron runs with elevated role.
-  if auth.uid() is not null and not exists (
+  if current_user <> 'postgres' and auth.role() <> 'service_role' and not exists (
     select 1 from public.profiles p where p.id=auth.uid()
       and p.account_status='ACTIVE' and p.role::text in ('HEAD_ADMIN','ADMIN')
   ) then raise exception 'Keine Admin-Berechtigung'; end if;
   with candidate as (
-    select p.id,coalesce(p.last_active_at,p.last_seen_at,p.last_seen,p.created_at) activity
+    select p.id,greatest(coalesce(p.last_active_at,p.created_at),coalesce(p.last_seen_at,p.created_at),coalesce(p.last_seen,p.created_at)) activity
     from public.profiles p
     where p.account_status='ACTIVE'
       and p.role::text not in ('HEAD_ADMIN','ADMIN')
       and not coalesce(p.is_test_account,false)
-      and coalesce(p.last_active_at,p.last_seen_at,p.last_seen,p.created_at)<=now()-interval '30 days'
+      and greatest(coalesce(p.last_active_at,p.created_at),coalesce(p.last_seen_at,p.created_at),coalesce(p.last_seen,p.created_at))<=now()-interval '30 days'
   ), added as (
     insert into public.inactive_account_reviews(user_id,inactive_since)
     select c.id,c.activity from candidate c
     where not exists(select 1 from public.inactive_account_reviews r
-      where r.user_id=c.id and r.inactive_since>=c.activity)
+      where r.user_id=c.id and r.inactive_since=c.activity)
     on conflict do nothing returning id,user_id
   ), alerted as (
     insert into public.notifications(user_id,title,body,type)
@@ -74,7 +74,7 @@ begin
  then raise exception 'Keine Berechtigung, dieses Konto zu sperren'; end if;
  select * into v_profile from public.profiles where id=v_review.user_id for update;
  if v_profile.account_status<>'ACTIVE' then raise exception 'Konto ist nicht mehr aktiv'; end if;
- v_last:=coalesce(v_profile.last_active_at,v_profile.last_seen_at,v_profile.last_seen,v_profile.created_at);
+ v_last:=greatest(coalesce(v_profile.last_active_at,v_profile.created_at),coalesce(v_profile.last_seen_at,v_profile.created_at),coalesce(v_profile.last_seen,v_profile.created_at));
  if v_last>now()-interval '30 days' then
    update public.inactive_account_reviews set resolved_at=now(),resolved_by=auth.uid(),decision='IGNORE' where id=p_review_id;
    return 'Mitglied ist wieder aktiv – Hinweis erledigt';
