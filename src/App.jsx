@@ -2692,8 +2692,8 @@ function AdminLogPage({ adminLog, members }) {
               <em className={isDenied ? "admin-log-status denied" : "admin-log-status success"}>{isDenied ? "ABGELEHNT" : isSuspension(entry) ? "GESPERRT" : "AUSGEFÜHRT"}</em>
             </span>
             <span className="admin-log-meta-line">
-              <span><small>Durch</small> <b>{personLabel(actor,entry,"actor_role")}</span>
-              {target && <span><small>Betroffen</small> <b>{personLabel(target,entry,"target_role")}</span>}
+              <span><small>Durch</small> {personLabel(actor,entry,"actor_role")}</span>
+              {target && <span><small>Betroffen</small> {personLabel(target,entry,"target_role")}</span>}
               <time dateTime={entry.created_at}>{new Date(entry.created_at).toLocaleString("de-AT",{dateStyle:"medium",timeStyle:"medium"})}</time>
             </span>
           </span>
@@ -2716,7 +2716,6 @@ function AdminLogPage({ adminLog, members }) {
           {isDenied && entry.details?.error && <p className="admin-log-reason"><b>Grund der Ablehnung:</b> {entry.details.error}</p>}
           {!isDenied && descriptionFor(entry) && <p className="admin-log-reason admin-log-human-description">{descriptionFor(entry)}</p>}
           {!isDenied && !isSuspension(entry) && !descriptionFor(entry) && detailText && <p className="admin-log-reason">{detailText}</p>}
-          {false && !isSuspension(entry) && entry.details?.reason && !String(descriptionFor(entry)||detailText||"").includes(entry.details.reason) && <p className="admin-log-reason"><b>Begründung:</b> {entry.details.reason}</p>}
         </div>
       </details>;
     })}
