@@ -1063,7 +1063,7 @@ export default function App() {
     if (!m?.id || m.id === user.id || m.is_primary_head_admin) return showNotice("Der primäre Head Admin ist geschützt.");
     const normalizedRole = String(newRole || "").trim().toUpperCase();
     if (!["MEMBER", "SUPPORTER", "ADMIN", "MUNICIPALITY", "HEAD_ADMIN"].includes(normalizedRole)) return showNotice("Bitte eine gültige Rolle auswählen.");
-    if (normalizedRole === "HEAD_ADMIN" && !profile?.is_primary_head_admin) return showNotice("Nur der primäre Head Admin darf weitere Head Admins ernennen.");
+    if (normalizedRole === "HEAD_ADMIN" && !(profile?.is_primary_head_admin || (profile?.role === "HEAD_ADMIN" && hasAdminPermission("manage_roles") && hasAdminPermission("manage_admins")))) return showNotice("Keine Berechtigung zur Ernennung von Head Admins.");
     const regionalDowngrade = profile?.is_primary_head_admin && m.role === "ADMIN" && normalizedRole === "MEMBER" && regionalAssignments.some((assignment) => assignment.user_id === m.id && assignment.active);
     let reason = "";
     if (regionalDowngrade) {
