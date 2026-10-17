@@ -32,13 +32,13 @@ begin
     insert into public.inactive_account_reviews(user_id,inactive_since)
     select c.id,c.activity from candidate c
     where not exists(select 1 from public.inactive_account_reviews r
-      where r.user_id=c.id and r.inactive_since=c.activity)
+      where r.user_id=c.id and (r.resolved_at is null or (r.decision='IGNORE' and r.inactive_since=c.activity)))
     on conflict do nothing returning id,user_id
   ), alerted as (
     insert into public.notifications(user_id,title,body,type)
     select admin.id,'30 Tage inaktiv: Admin-Entscheidung',
-      'Ein Mitglied ist seit mindestens 30 Tagen inaktiv. Bitte unter Admin Tools prüfen.','INACTIVE_ACCOUNT_REVIEW'
-    from added a cross join public.profiles admin
+      'Mitglied '||coalesce(nullif(member.nickname,''),concat_ws(' ',member.first_name,member.last_name),'ohne Namen')||' ist seit 30 Tagen inaktiv. Letzte Aktivität: '||to_char(review.inactive_since at time zone 'Europe/Vienna','DD.MM.YYYY HH24:MI')||'. Unter Admin Tools: Nichts tun oder Account sperren. Keine automatische Sperre.','INACTIVE_ACCOUNT_REVIEW'
+    from added a join public.inactive_account_reviews review on review.id=a.id join public.profiles member on member.id=a.user_id cross join public.profiles admin
     where admin.role::text = 'HEAD_ADMIN' and admin.account_status='ACTIVE'
     returning id
   ) select (select count(*) from added) into v_count from (select count(*) from alerted) notifications_written;
