@@ -39,7 +39,7 @@ async function open(){
   const grid=el("div","ec-admin-workspace-grid");
   actionCard(grid,"⚙️","Admin-Bereich",regionalOnly?"Mitglieder, Meldungen und Verwaltung deiner Region öffnen.":"Mitglieder, Rollen, Meldungen und Verwaltung öffnen.",openAdminArea);
   if(isHead||isGlobalAdmin){managed.forEach(([selector,ico,title,desc])=>{if(!document.querySelector(selector))return;actionCard(grid,ico,title,desc,()=>{close();void openManaged(selector)})});}
-  if(isHead||isGlobalAdmin){
+  if(isHead){
     actionCard(grid,"⏳","30 Tage inaktive Accounts","Neue Inaktivitätsmeldungen prüfen, ignorieren oder über die bestehende Punkte- und Sperrlogik bearbeiten.",()=>{close();void openInactiveAccountReviews()});
   }
   if(canReviewAccounts){
