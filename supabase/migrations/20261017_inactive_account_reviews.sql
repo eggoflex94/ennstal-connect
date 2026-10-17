@@ -19,7 +19,7 @@ begin
   -- Only administrators can initiate a manual refresh; cron runs with elevated role.
   if current_user <> 'postgres' and auth.role() <> 'service_role' and not exists (
     select 1 from public.profiles p where p.id=auth.uid()
-      and p.account_status='ACTIVE' and p.role::text in ('HEAD_ADMIN','ADMIN')
+      and p.account_status='ACTIVE' and p.role::text = 'HEAD_ADMIN'
   ) then raise exception 'Keine Admin-Berechtigung'; end if;
   with candidate as (
     select p.id,greatest(coalesce(p.last_active_at,p.created_at),coalesce(p.last_seen_at,p.created_at),coalesce(p.last_seen,p.created_at)) activity
@@ -39,7 +39,7 @@ begin
     select admin.id,'30 Tage inaktiv: Admin-Entscheidung',
       'Ein Mitglied ist seit mindestens 30 Tagen inaktiv. Bitte unter Admin Tools prüfen.','INACTIVE_ACCOUNT_REVIEW'
     from added a cross join public.profiles admin
-    where admin.role::text in ('HEAD_ADMIN','ADMIN') and admin.account_status='ACTIVE'
+    where admin.role::text = 'HEAD_ADMIN' and admin.account_status='ACTIVE'
     returning id
   ) select (select count(*) from added) into v_count from (select count(*) from alerted) notifications_written;
   return v_count;
@@ -52,7 +52,7 @@ returns table(id uuid,user_id uuid,display_name text,inactive_since timestamptz,
 language plpgsql security definer set search_path=public,pg_temp as $$
 begin
  if not exists(select 1 from public.profiles p where p.id=auth.uid()
-   and p.account_status='ACTIVE' and p.role::text in ('HEAD_ADMIN','ADMIN'))
+   and p.account_status='ACTIVE' and p.role::text = 'HEAD_ADMIN')
  then raise exception 'Keine Admin-Berechtigung'; end if;
  return query select r.id,r.user_id,coalesce(nullif(p.nickname,''),concat_ws(' ',p.first_name,p.last_name),'Mitglied'),
  r.inactive_since,floor(extract(epoch from now()-r.inactive_since)/86400)::integer,p.points,r.created_at
@@ -67,10 +67,11 @@ create or replace function public.ec_decide_inactive_account_review(p_review_id 
 returns text language plpgsql security definer set search_path=public,private,pg_temp as $$
 declare v_review public.inactive_account_reviews%rowtype; v_profile public.profiles%rowtype; v_last timestamptz; v_delta integer;
 begin
+ if not exists (select 1 from public.profiles p where p.id=auth.uid() and p.role::text='HEAD_ADMIN' and p.account_status='ACTIVE') then raise exception 'Nur Hauptadmins dürfen entscheiden'; end if;
  if p_decision not in ('IGNORE','SUSPEND') then raise exception 'Ungültige Entscheidung'; end if;
  select * into v_review from public.inactive_account_reviews where id=p_review_id for update;
  if not found or v_review.resolved_at is not null then raise exception 'Hinweis bereits erledigt'; end if;
- if not public.ec_can_profile_admin_action(v_review.user_id,'manage_members','MEMBERS',false)
+ if p_decision='SUSPEND' and not public.ec_can_profile_admin_action(v_review.user_id,'manage_members','MEMBERS',false)
  then raise exception 'Keine Berechtigung, dieses Konto zu sperren'; end if;
  select * into v_profile from public.profiles where id=v_review.user_id for update;
  if v_profile.account_status<>'ACTIVE' then raise exception 'Konto ist nicht mehr aktiv'; end if;
