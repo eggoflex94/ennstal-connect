@@ -7,8 +7,8 @@ export async function openInactiveAccountReviews(){
   Object.assign(overlay.style,{position:'fixed',inset:'0',zIndex:'2147483000',background:'rgba(0,0,0,.68)',display:'grid',placeItems:'center',padding:'16px'});
   const panel=element('section','ec-inactive-review-panel');
   Object.assign(panel.style,{width:'min(760px,100%)',maxHeight:'85vh',overflowY:'auto',background:'#18212d',color:'#fff',padding:'24px',borderRadius:'16px',boxShadow:'0 18px 80px #0008'});
-  const heading=element('h2',null,'30 Tage inaktive Accounts');
-  const info=element('p',null,'Nur Admins entscheiden. Nichts tun verändert keine Punkte. Sperren nutzt die bestehende Punkte- und Sperrlogik (Schwelle −10).');
+  const heading=element('h2',null,'Inaktivitätsmeldungen für Hauptadmins');
+  const info=element('p',null,'Nur Hauptadmins entscheiden. Eine Sperre passiert niemals automatisch. Nichts tun verändert keine Punkte. Sperren nutzt die bestehende Punkte- und Sperrlogik (Schwelle −10).');
   const close=element('button',null,'Schließen');close.type='button';close.onclick=()=>overlay.remove();
   const status=element('p',null,'Lade Hinweise …');status.setAttribute('role','status');
   const list=element('div');
