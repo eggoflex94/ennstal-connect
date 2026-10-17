@@ -1829,6 +1829,7 @@ export default function App() {
   async function openNotification(notification) {
     await markNotificationRead(notification);
     const type = String(notification?.type || "").toUpperCase();
+    if (type === "INACTIVE_ACCOUNT_REVIEW") { const { openInactiveAccountReviews } = await import("./inactive-account-reviews.js"); return openInactiveAccountReviews(); }
     if (type === "MESSAGE") return setPage("messages");
     if (type === "FRIEND_REQUEST") return setPage("friend-requests");
     if (type === "PHOTO_LIKE") return setPage("profile");
