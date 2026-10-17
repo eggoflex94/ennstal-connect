@@ -36,7 +36,25 @@ async function load(){
    if(error){window.alert('Entfernen fehlgeschlagen: '+error.message);button.disabled=false;button.textContent='Regionalrechte entfernen';return}
    await load();
   };
-  item.append(desc,button);list.append(item);
+  if(['MEMBER','SUPPORTER'].includes(member.role)){
+    const reset=document.createElement('button');
+    reset.type='button';
+    reset.textContent='Zum Supporter zurücksetzen';
+    reset.style.cssText='border:1px solid #64748b;border-radius:8px;background:#334155;color:#fff;padding:9px 12px;cursor:pointer';
+    reset.onclick=async()=>{
+      const entered=window.prompt('Grund für die Rückstufung von '+(member.nickname||'Mitglied')+' zum Supporter:','');
+      if(entered===null)return;
+      const reason=entered.trim();
+      if(reason.length<10){window.alert('Bitte mindestens 10 Zeichen als Grund eingeben.');return}
+      if(!window.confirm('Alle Regional-Admin-Rechte entfernen und Supporter-Rolle setzen?\\n\\nGrund: '+reason))return;
+      reset.disabled=true;
+      const {error}=await supabase.rpc('head_admin_regional_to_supporter',{p_target:assignment.user_id,p_reason:reason});
+      if(error){window.alert('Zurücksetzen fehlgeschlagen: '+error.message);reset.disabled=false;return}
+      await load();
+    };
+    item.append(desc,button,reset);
+  }else item.append(desc,button);
+  list.append(item);
  }
 }
 async function open(){
