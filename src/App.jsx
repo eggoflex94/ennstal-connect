@@ -2499,6 +2499,8 @@ function AccountReview({ queue, members, canReview, onBack, onOpen, onReview }) 
 
 function AdminLogPage({ adminLog, members }) {
   const [filter,setFilter]=useState("IMPORTANT");
+  const [search,setSearch]=useState("");
+  const [sort,setSort]=useState("NEWEST");
 
   const actionKey=(entry)=>String(entry?.action||entry?.details?.action_name||"").toUpperCase();
   const denied=(entry)=>entry?.action==="ADMIN_DENIED" || entry?.details?.outcome==="DENIED";
@@ -2588,7 +2590,8 @@ function AdminLogPage({ adminLog, members }) {
     if(areas.includes("forum_replies")) return "Forumsantwort administrativ geändert";
     if(areas.includes("member_photos")) return "Mitgliederfoto administrativ geändert";
     if(actionName.includes("require profile verification")) return "Profil-Verifizierung angefordert";
-    return ADMIN_LOG_LABELS[entry.action] || entry.details?.action_name || entry.action || "Admin-Aktion";
+    const labels = { ACCOUNT_APPROVAL_DECISION:"Konto-Freigabe entschieden", KONTO_GESPERRT:"Mitglied gesperrt", KONTO_FREIGEGEBEN:"Mitglied freigegeben", ADMIN_DENIED:"Admin-Aktion abgelehnt", ACCOUNT_SUSPENDED:"Mitglied gesperrt" };
+    return labels[key] || ADMIN_LOG_LABELS[entry.action] || entry.details?.action_name || entry.action || "Admin-Aktion";
   };
 
   const descriptionFor=(entry)=>{
@@ -2615,8 +2618,13 @@ function AdminLogPage({ adminLog, members }) {
     if(filter==="IMPORTANT") return important(entry);
     if(filter==="DENIED") return denied(entry);
     if(filter==="TODAY") return new Date(entry.created_at)>=todayStart;
-    return categoryFor(entry)===filter;
-  });
+    if (filter!=="ALL" && filter!=="IMPORTANT" && filter!=="DENIED" && filter!=="TODAY" && categoryFor(entry)!==filter) return false;
+    return true;
+  }).filter((entry)=>{
+    const actor=members.find((m)=>m.id===entry.actor_id);
+    const target=members.find((m)=>m.id===entry.target_id);
+    return [labelFor(entry),entry.action,getName(actor),getName(target),entry.details?.reason,entry.details?.action_name].some((value)=>String(value||"").toLocaleLowerCase("de-AT").includes(search.trim().toLocaleLowerCase("de-AT")));
+  }).sort((a,b)=>sort==="OLDEST" ? new Date(a.created_at)-new Date(b.created_at) : new Date(b.created_at)-new Date(a.created_at));
 
   return <section className="admin-log-panel panel admin-log-native">
     <div className="admin-log-modern-head">
@@ -2641,6 +2649,11 @@ function AdminLogPage({ adminLog, members }) {
       )}
     </div>
 
+    <div className="admin-log-toolbar">
+      <label className="admin-log-search-label"><span>Aktionen durchsuchen</span><input type="search" value={search} onChange={(e)=>setSearch(e.target.value)} placeholder="Aktion, Mitglied, Admin oder Grund suchen…" /></label>
+      <label className="admin-log-sort-label"><span>Sortieren</span><select value={sort} onChange={(e)=>setSort(e.target.value)}><option value="NEWEST">Neueste zuerst</option><option value="OLDEST">Älteste zuerst</option></select></label>
+      <span className="admin-log-result-count">{rows.length} Einträge</span>
+    </div>
     <div className="admin-log-list admin-log-timeline">{rows.map((entry) => {
       const actor=members.find((m)=>m.id===entry.actor_id);
       const target=members.find((m)=>m.id===entry.target_id);
@@ -2658,10 +2671,9 @@ function AdminLogPage({ adminLog, members }) {
               <em className={isDenied ? "admin-log-status denied" : "admin-log-status success"}>{isDenied ? "ABGELEHNT" : "AUSGEFÜHRT"}</em>
             </span>
             <span className="admin-log-meta-line">
-              <b>{getName(actor)||"System"}</b>
-              {target && <><i>→</i><b>{getName(target)}</b></>}
-              <i>·</i>
-              <time dateTime={entry.created_at}>{new Date(entry.created_at).toLocaleString("de-AT")}</time>
+              <span><small>Durch</small> <b>{getName(actor)||"System"}</b></span>
+              {target && <span><small>Betroffen</small> <b>{getName(target)}</b></span>}
+              <time dateTime={entry.created_at}>{new Date(entry.created_at).toLocaleString("de-AT",{dateStyle:"medium",timeStyle:"medium"})}</time>
             </span>
           </span>
           <span className="admin-log-chevron">⌄</span>
@@ -2672,6 +2684,8 @@ function AdminLogPage({ adminLog, members }) {
             {target && <span><small>Betroffen</small><strong>{getName(target)}</strong></span>}
             <span><small>Bereich</small><strong>{cat==="ROLES"?"Rollen & Rechte":cat==="POINTS"?"Punkte":cat==="MODERATION"?"Moderation":cat==="SECURITY"?"Sicherheit":"Sonstiges"}</strong></span>
             <span><small>Ergebnis</small><strong>{isDenied?"Abgelehnt":"Ausgeführt"}</strong></span>
+            <span><small>Zeitpunkt</small><strong>{new Date(entry.created_at).toLocaleString("de-AT",{dateStyle:"medium",timeStyle:"medium"})}</strong></span>
+            <span><small>Aktionstyp</small><strong>{actionKey(entry)}</strong></span>
           </div>
           {isDenied && entry.details?.error && <p className="admin-log-reason"><b>Grund der Ablehnung:</b> {entry.details.error}</p>}
           {!isDenied && descriptionFor(entry) && <p className="admin-log-reason admin-log-human-description">{descriptionFor(entry)}</p>}
