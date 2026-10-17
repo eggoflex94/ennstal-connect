@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient';
 
 const HEAD_TOOLS = [
+  ['inactive-members', 'Inaktive Mitglieder', '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'],
   ['account-approvals', 'Accounts freigeben', '<path d="M12 3 5 6v6c0 4 3 6.5 7 9 4-2.5 7-5 7-9V6Z"/><path d="m8.5 12 2.3 2.3 4.7-5"/>'],
   ['fake-accounts', 'Fake-Erkennung', '<path d="M12 3 4 6v6c0 4 4 7 8 9 4-2 8-5 8-9V6Z"/><circle cx="11" cy="11" r="3"/><path d="m13.5 13.5 3 3"/>'],
   ['admin-log', 'Team-Aktivitäten', '<path d="M5 3h12a2 2 0 0 1 2 2v16H7a2 2 0 0 1-2-2V3Z"/><path d="M5 17h14M9 7h6M9 11h6"/>'],
@@ -23,6 +24,10 @@ function removeHeadTools() {
 
 function activateTool(page) {
   document.body.classList.remove('ec-dock-open');
+  if (page === 'inactive-members') {
+    window.dispatchEvent(new CustomEvent('ec:open-inactive-members'));
+    return;
+  }
   if (page === 'ads-manager') {
     window.dispatchEvent(new CustomEvent('ec:open-sidebar-ad-manager'));
     return;
