@@ -161,6 +161,7 @@ import "./automated-message-modern.css";
 import "./automated-message-modern.js";
 import "./profile-visits-layout.css";
 import "./head-admin-menu.js";
+import "./head-admin-inactive-members.js";
 import "./head-admin-activity-folders.css";
 import "./profile-admin-tools-unified.css";
 import "./profile-admin-tools-unified.js";
