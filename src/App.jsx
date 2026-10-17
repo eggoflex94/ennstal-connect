@@ -2512,6 +2512,12 @@ function AdminLogPage({ adminLog, members }) {
   const [search,setSearch]=useState("");
   const [sort,setSort]=useState("NEWEST");
 
+  const roleText=(role)=>({HEAD_ADMIN:"Head Admin",ADMIN:"Global Admin",SUPPORTER:"Supporter",MEMBER:"Mitglied",MUNICIPALITY:"Gemeinde",REGIONAL_ADMIN:"Regional Admin"})[String(role||"").toUpperCase()]||role||"Unbekannt";
+  const personRole=(person,entry,key)=>person?.role||entry?.details?.[key]||"";
+  const roleStar=(role)=>["HEAD_ADMIN","ADMIN"].includes(String(role).toUpperCase())?"/role-star-red.svg":String(role).toUpperCase()==="SUPPORTER"?"/supporter-star.svg":String(role).toUpperCase()==="MUNICIPALITY"?"/role-star-green.svg":"/role-star-member.svg";
+  const personLabel=(person,entry,key)=><span className="admin-log-person"><img src={roleStar(personRole(person,entry,key))} alt="" aria-hidden="true"/><strong>{person?getName(person):key==="actor_role"?"System":"Unbekannt"}</strong><small>{roleText(personRole(person,entry,key))}</small></span>;
+  const fieldChanges=(entry)=>fieldsFor(entry);
+  const roleChange=(entry)=>{const d=entry?.details||{};return [d.old_role||d.alte_rolle,d.new_role||d.neue_rolle];};
   const actionKey=(entry)=>String(entry?.action||entry?.details?.action_name||"").toUpperCase();
   const isSuspension=(entry)=>/KONTO_GESPERRT|ACCOUNT_SUSPENDED|AUTO_SUSPEND|SUSPEND_USER|USER_SUSPENDED/.test(actionKey(entry)) || (fieldsFor(entry).some((f)=>/suspend|account_status/.test(f)) && String(entry?.details?.status||"").toUpperCase()==="SUSPENDED");
   const suspensionReason=(entry)=>String(entry?.details?.reason||entry?.details?.suspension_reason||entry?.details?.last_point_reason||"").trim();
@@ -2546,8 +2552,6 @@ function AdminLogPage({ adminLog, members }) {
     const key=actionKey(entry);
     const areas=areasFor(entry);
     const fields=fieldsFor(entry);
-    if(isSuspension(entry)) return "Mitglied gesperrt";
-    if(key==="KONTO_FREIGEGEBEN") return "Mitglied freigegeben";
     if(key==="SYSTEM_ERROR_STATUS") return true;
     if(areas.length===1 && areas[0]==="messages" && fields.length===1 && fields[0]==="is_read") return true;
     if(
@@ -2560,7 +2564,7 @@ function AdminLogPage({ adminLog, members }) {
   };
 
   const important=(entry)=>{
-    if(denied(entry) || isSuspension(entry) || actionKey(entry)==="GLOBAL_ADMIN_ZU_REGIONAL_ADMIN") return true;
+    if(denied(entry) || isSuspension(entry) || /GLOBAL_ADMIN_ZU_REGIONAL_ADMIN|REGIONAL_ADMIN_ENTFERNT|REGIONAL_ADMIN_ZU_SUPPORTER/.test(actionKey(entry))) return true;
     if(isRoutineEntry(entry)) return false;
     const key=actionKey(entry);
     const cat=categoryFor(entry);
@@ -2586,6 +2590,9 @@ function AdminLogPage({ adminLog, members }) {
     const fields=fieldsFor(entry);
     const actionName=String(entry?.details?.action_name||"").toLowerCase();
 
+    if(isSuspension(entry)) return "Mitglied gesperrt";
+    if(key==="REGIONAL_ADMIN_ENTFERNT") return "Regional-Admin-Rechte entfernt";
+    if(key==="REGIONAL_ADMIN_ZU_SUPPORTER") return "Regional Admin zu Supporter zurückgestuft";
     if(key==="GLOBAL_ADMIN_ZU_REGIONAL_ADMIN") return "Global Admin zum Regional Admin zurückgestuft";
     if(key==="SYSTEM_ERROR_STATUS") return entry?.details?.status==="RESOLVED" ? "Systemfehler als gelöst markiert" : "Status eines Systemfehlers geändert";
     if(key==="POINTS_AWARDED") return entry?.details?.category==="EVENT_REWARD" ? "Eventpunkte vergeben" : "Punkte vergeben";
@@ -2685,8 +2692,8 @@ function AdminLogPage({ adminLog, members }) {
               <em className={isDenied ? "admin-log-status denied" : "admin-log-status success"}>{isDenied ? "ABGELEHNT" : isSuspension(entry) ? "GESPERRT" : "AUSGEFÜHRT"}</em>
             </span>
             <span className="admin-log-meta-line">
-              <span><small>Durch</small> <b>{getName(actor)||"System"}</b></span>
-              {target && <span><small>Betroffen</small> <b>{getName(target)}</b></span>}
+              <span><small>Durch</small> <b>{personLabel(actor,entry,"actor_role")}</span>
+              {target && <span><small>Betroffen</small> <b>{personLabel(target,entry,"target_role")}</span>}
               <time dateTime={entry.created_at}>{new Date(entry.created_at).toLocaleString("de-AT",{dateStyle:"medium",timeStyle:"medium"})}</time>
             </span>
           </span>
@@ -2694,18 +2701,22 @@ function AdminLogPage({ adminLog, members }) {
         </summary>
         <div className="admin-log-detail-panel">
           <div className="admin-log-detail-grid">
-            <span><small>Akteur</small><strong>{getName(actor)||"System"}{entry.details?.actor_role ? ` · ${roleLabel(entry.details.actor_role)}` : ""}</strong></span>
-            {target && <span><small>Betroffen</small><strong>{getName(target)}</strong></span>}
+            <span><small>Akteur</small>{personLabel(actor,entry,"actor_role")}</span>
+            {target && <span><small>Betroffen</small>{personLabel(target,entry,"target_role")}</span>}
             <span><small>Bereich</small><strong>{cat==="ROLES"?"Rollen & Rechte":cat==="POINTS"?"Punkte":cat==="MODERATION"?"Moderation":cat==="SECURITY"?"Sicherheit":"Sonstiges"}</strong></span>
             <span><small>Ergebnis</small><strong>{isDenied?"Abgelehnt":isSuspension(entry)?"Gesperrt":"Ausgeführt"}</strong></span>
             <span><small>Zeitpunkt</small><strong>{new Date(entry.created_at).toLocaleString("de-AT",{dateStyle:"medium",timeStyle:"medium"})}</strong></span>
             <span><small>Aktionstyp</small><strong>{actionKey(entry)}</strong></span>
           </div>
+          {roleChange(entry).some(Boolean) && <p className="admin-log-reason"><b>Rollenänderung:</b> {roleText(roleChange(entry)[0]||"Unbekannt")} → {roleText(roleChange(entry)[1]||"Unbekannt")}</p>}
+          {entry.details?.old_status && entry.details?.new_status && <p className="admin-log-reason"><b>Statusänderung:</b> {entry.details.old_status} → {entry.details.new_status}</p>}
+          {fieldChanges(entry).length>0 && <p className="admin-log-technical"><b>Geänderte Felder:</b> {fieldChanges(entry).join(", ")}</p>}
           {isSuspension(entry) && <p className="admin-log-reason"><b>Sperrgrund:</b> {suspensionReason(entry) || "Im Protokolleintrag ist kein Sperrgrund hinterlegt."}</p>}
+          {!isSuspension(entry) && (entry.details?.reason||entry.details?.suspension_reason) && <p className="admin-log-reason"><b>Begründung:</b> {entry.details.reason||entry.details.suspension_reason}</p>}
           {isDenied && entry.details?.error && <p className="admin-log-reason"><b>Grund der Ablehnung:</b> {entry.details.error}</p>}
           {!isDenied && descriptionFor(entry) && <p className="admin-log-reason admin-log-human-description">{descriptionFor(entry)}</p>}
           {!isDenied && !isSuspension(entry) && !descriptionFor(entry) && detailText && <p className="admin-log-reason">{detailText}</p>}
-          {!isSuspension(entry) && entry.details?.reason && !String(descriptionFor(entry)||detailText||"").includes(entry.details.reason) && <p className="admin-log-reason"><b>Begründung:</b> {entry.details.reason}</p>}
+          {false && !isSuspension(entry) && entry.details?.reason && !String(descriptionFor(entry)||detailText||"").includes(entry.details.reason) && <p className="admin-log-reason"><b>Begründung:</b> {entry.details.reason}</p>}
         </div>
       </details>;
     })}
