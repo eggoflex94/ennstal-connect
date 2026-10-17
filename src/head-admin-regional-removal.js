@@ -33,7 +33,8 @@ async function load(){
    if(!window.confirm('Regionalrechte für '+region+' wirklich entfernen?\n\nGrund: '+reason))return;
    button.disabled=true;button.textContent='Wird entfernt…';
    const {error}=await supabase.rpc('head_admin_remove_regional_admin',{p_target:assignment.user_id,p_region:assignment.region_id,p_reason:reason});
-   if(error){window.alert('Entfernen fehlgeschlagen: '+error.message);button.disabled=false;button.textContent='Regionalrechte entfernen';return}
+   if(error){console.error('Regionalrechte entfernen:',error);window.alert('Entfernen fehlgeschlagen: '+error.message);button.disabled=false;button.textContent='Regionalrechte entfernen';return}
+   window.dispatchEvent(new CustomEvent('ec:regional-role-changed'));
    await load();
   };
   if(['MEMBER','SUPPORTER'].includes(member.role)){
@@ -49,7 +50,8 @@ async function load(){
       if(!window.confirm('Alle Regional-Admin-Rechte entfernen und Supporter-Rolle setzen?\\n\\nGrund: '+reason))return;
       reset.disabled=true;
       const {error}=await supabase.rpc('head_admin_regional_to_supporter',{p_target:assignment.user_id,p_reason:reason});
-      if(error){window.alert('Zurücksetzen fehlgeschlagen: '+error.message);reset.disabled=false;return}
+      if(error){console.error('Regionaladmin zu Supporter:',error);window.alert('Zurücksetzen fehlgeschlagen: '+error.message);reset.disabled=false;return}
+      window.dispatchEvent(new CustomEvent('ec:regional-role-changed'));
       await load();
     };
     item.append(desc,button,reset);
