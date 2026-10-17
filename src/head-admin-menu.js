@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient';
 
 const HEAD_TOOLS = [
+  ['regional-admin-removal', 'Regionaladmins entfernen', '<path d="M4 7h16M7 7v12h10V7M9 7V5h6v2M10 11v5M14 11v5"/>'],
   ['inactive-members', 'Inaktive Mitglieder', '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'],
   ['account-approvals', 'Accounts freigeben', '<path d="M12 3 5 6v6c0 4 3 6.5 7 9 4-2.5 7-5 7-9V6Z"/><path d="m8.5 12 2.3 2.3 4.7-5"/>'],
   ['fake-accounts', 'Fake-Erkennung', '<path d="M12 3 4 6v6c0 4 4 7 8 9 4-2 8-5 8-9V6Z"/><circle cx="11" cy="11" r="3"/><path d="m13.5 13.5 3 3"/>'],
@@ -24,6 +25,10 @@ function removeHeadTools() {
 
 function activateTool(page) {
   document.body.classList.remove('ec-dock-open');
+  if (page === 'regional-admin-removal') {
+    window.dispatchEvent(new CustomEvent('ec:open-regional-admin-removal'));
+    return;
+  }
   if (page === 'inactive-members') {
     window.dispatchEvent(new CustomEvent('ec:open-inactive-members'));
     return;
