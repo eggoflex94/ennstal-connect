@@ -1064,8 +1064,18 @@ export default function App() {
     const normalizedRole = String(newRole || "").trim().toUpperCase();
     if (!["MEMBER", "SUPPORTER", "ADMIN", "MUNICIPALITY", "HEAD_ADMIN"].includes(normalizedRole)) return showNotice("Bitte eine gültige Rolle auswählen.");
     if (normalizedRole === "HEAD_ADMIN" && !profile?.is_primary_head_admin) return showNotice("Nur der primäre Head Admin darf weitere Head Admins ernennen.");
-    const rpcName = normalizedRole === "HEAD_ADMIN" ? "head_admin_set_role" : "admin_set_role";
-    const { error } = await supabase.rpc(rpcName, { target_user: m.id, new_role: normalizedRole });
+    const regionalDowngrade = profile?.is_primary_head_admin && m.role === "ADMIN" && normalizedRole === "MEMBER" && regionalAssignments.some((assignment) => assignment.user_id === m.id && assignment.active);
+    let reason = "";
+    if (regionalDowngrade) {
+      const entered = window.prompt("Begründung für die Rückstufung zum Regional Admin (wird protokolliert):", "");
+      if (entered === null) return;
+      reason = entered.trim();
+      if (reason.length < 15) return showNotice("Bitte eine Begründung mit mindestens 15 Zeichen eingeben.");
+      if (!window.confirm(`${getName(m)} vom Global Admin zum Regional Admin zurückstufen?\n\nGrund: ${reason}`)) return;
+    }
+    const rpcName = regionalDowngrade ? "head_admin_downgrade_global_admin" : normalizedRole === "HEAD_ADMIN" ? "head_admin_set_role" : "admin_set_role";
+    const args = regionalDowngrade ? { p_target: m.id, p_reason: reason } : { target_user: m.id, new_role: normalizedRole };
+    const { error } = await supabase.rpc(rpcName, args);
     if (error) return showNotice(error.message);
     const { data: changed, error: verifyError } = await supabase.from("profiles").select("id,role").eq("id", m.id).maybeSingle();
     if (verifyError || !changed || changed.role !== normalizedRole) return showNotice("Die Rollenänderung konnte nicht bestätigt werden.");
@@ -2550,7 +2560,7 @@ function AdminLogPage({ adminLog, members }) {
   };
 
   const important=(entry)=>{
-    if(denied(entry) || isSuspension(entry)) return true;
+    if(denied(entry) || isSuspension(entry) || actionKey(entry)==="GLOBAL_ADMIN_ZU_REGIONAL_ADMIN") return true;
     if(isRoutineEntry(entry)) return false;
     const key=actionKey(entry);
     const cat=categoryFor(entry);
@@ -2576,6 +2586,7 @@ function AdminLogPage({ adminLog, members }) {
     const fields=fieldsFor(entry);
     const actionName=String(entry?.details?.action_name||"").toLowerCase();
 
+    if(key==="GLOBAL_ADMIN_ZU_REGIONAL_ADMIN") return "Global Admin zum Regional Admin zurückgestuft";
     if(key==="SYSTEM_ERROR_STATUS") return entry?.details?.status==="RESOLVED" ? "Systemfehler als gelöst markiert" : "Status eines Systemfehlers geändert";
     if(key==="POINTS_AWARDED") return entry?.details?.category==="EVENT_REWARD" ? "Eventpunkte vergeben" : "Punkte vergeben";
     if(key==="SYSTEM_POINTS_AWARDED") return "Automatische Aktivitätspunkte vergeben";
