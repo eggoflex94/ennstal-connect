@@ -41,7 +41,7 @@ begin
     from added a cross join public.profiles admin
     where admin.role::text in ('HEAD_ADMIN','ADMIN') and admin.account_status='ACTIVE'
     returning id
-  ) select count(*) into v_count from added;
+  ) select (select count(*) from added) into v_count from (select count(*) from alerted) notifications_written;
   return v_count;
 end $$;
 revoke all on function public.ec_refresh_inactive_account_reviews() from public,anon;
