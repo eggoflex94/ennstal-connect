@@ -405,3 +405,23 @@
   .admin-log-page .admin-log-detail-panel{padding:0 8px 8px 8px!important}
   .admin-log-page .admin-log-detail-grid{grid-template-columns:1fr!important}
 }
+
+/* Structured, scannable head-admin audit timeline */
+.admin-log-page .admin-log-toolbar{display:flex;align-items:end;flex-wrap:wrap;gap:12px;margin:16px 0 18px}
+.admin-log-page .admin-log-toolbar label{display:flex;flex-direction:column;gap:5px;color:#42566d;font-size:.78rem;font-weight:700}
+.admin-log-page .admin-log-search-label{flex:1 1 280px}
+.admin-log-page .admin-log-toolbar input,.admin-log-page .admin-log-toolbar select{width:100%;min-height:42px;border:1px solid #cbd5e1;border-radius:11px;background:#fff;color:#233c55;padding:9px 12px;font:inherit;font-size:.9rem}
+.admin-log-page .admin-log-toolbar input:focus-visible,.admin-log-page .admin-log-toolbar select:focus-visible{outline:2px solid #2563eb;outline-offset:2px}
+.admin-log-page .admin-log-sort-label{flex:0 1 190px}
+.admin-log-page .admin-log-result-count{font-size:.81rem;font-weight:700;color:#596a7d;padding:10px 0}
+.admin-log-page .admin-log-meta-line{display:flex!important;align-items:center;flex-wrap:wrap;gap:8px 18px!important}
+.admin-log-page .admin-log-meta-line>span{display:inline-flex;align-items:center;gap:5px}
+.admin-log-page .admin-log-meta-line small{font-size:.74rem;color:#65758a;font-weight:500}
+.admin-log-page .admin-log-meta-line time{margin-left:auto;white-space:nowrap;font-variant-numeric:tabular-nums}
+.admin-log-page .admin-log-row{margin-bottom:10px!important;border-radius:13px!important;overflow:hidden}
+.admin-log-page .admin-log-row summary{padding:16px!important;gap:16px!important}
+.admin-log-page .admin-log-detail-panel{padding:16px 20px!important;border-top:1px solid #e3e8ef}
+.admin-log-page .admin-log-detail-grid{gap:12px!important}
+.admin-log-page .admin-log-detail-grid>span{min-width:0}
+.admin-log-page .admin-log-detail-grid strong{overflow-wrap:anywhere}
+@media(max-width:650px){.admin-log-page .admin-log-meta-line time{margin-left:0}.admin-log-page .admin-log-sort-label{flex:1 1 160px}.admin-log-page .admin-log-row summary{padding:12px!important}}
