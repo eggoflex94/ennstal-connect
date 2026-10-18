@@ -1062,6 +1062,7 @@ export default function App() {
     if (!profile?.is_primary_head_admin && !hasAdminPermission("manage_roles")) return showNotice("Keine Berechtigung zur Rollenverwaltung.");
     if (!m?.id || m.id === user.id || m.is_primary_head_admin) return showNotice("Der primäre Head Admin ist geschützt.");
     const normalizedRole = String(newRole || "").trim().toUpperCase();
+    if (["ADMIN", "HEAD_ADMIN"].includes(normalizedRole) && !["egga", "Jasi"].includes(String(m.nickname || ""))) return showNotice("Es dürfen ausschließlich das Betreiberkonto und Jasi Adminrechte besitzen. Für andere Mitglieder sind nur Mitglied-, Supporter- oder Gemeinderollen erlaubt.");
     if (!["MEMBER", "SUPPORTER", "ADMIN", "MUNICIPALITY", "HEAD_ADMIN"].includes(normalizedRole)) return showNotice("Bitte eine gültige Rolle auswählen.");
     if (normalizedRole === "HEAD_ADMIN" && !(profile?.is_primary_head_admin || (profile?.role === "HEAD_ADMIN" && hasAdminPermission("manage_roles") && hasAdminPermission("manage_admins")))) return showNotice("Keine Berechtigung zur Ernennung von Head Admins.");
     const regionalDowngrade = profile?.is_primary_head_admin && m.role === "ADMIN" && normalizedRole === "MEMBER" && regionalAssignments.some((assignment) => assignment.user_id === m.id && assignment.active);
