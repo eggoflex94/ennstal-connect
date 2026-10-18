@@ -169,3 +169,69 @@
   font-weight:700;
   line-height:1.45;
 }
+
+
+/* Visual viewport fallback for phones rendering the site's desktop-width layout.
+   The class is set from visualViewport.width, not CSS layout viewport width. */
+.ec-photo-editor-backdrop.ec-photo-editor-visual-mobile {
+  display:flex!important;
+  align-items:stretch!important;
+  justify-content:center!important;
+  box-sizing:border-box!important;
+  padding:0!important;
+  overflow:hidden!important;
+}
+.ec-photo-editor-visual-mobile .ec-photo-editor {
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  max-height:100%!important;
+  height:100%!important;
+  box-sizing:border-box!important;
+  display:flex!important;
+  flex-direction:column!important;
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
+  overscroll-behavior:contain;
+  border-radius:0!important;
+  padding:12px!important;
+}
+.ec-photo-editor-visual-mobile .ec-photo-editor-workspace {
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr)!important;
+  gap:12px!important;
+  margin:12px 0!important;
+}
+.ec-photo-editor-visual-mobile .ec-photo-editor-preview {
+  width:min(100%,300px)!important;
+  max-width:100%!important;
+}
+.ec-photo-editor-visual-mobile .ec-photo-editor-controls,
+.ec-photo-editor-visual-mobile .ec-photo-editor-controls label {
+  min-width:0!important;
+}
+.ec-photo-editor-visual-mobile .ec-photo-editor-controls label {
+  grid-template-columns:78px minmax(0,1fr) 38px!important;
+}
+.ec-photo-editor-visual-mobile .ec-photo-editor-rotate {
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+}
+.ec-photo-editor-visual-mobile .ec-photo-editor>footer {
+  position:sticky!important;
+  bottom:-12px!important;
+  display:flex!important;
+  flex-wrap:wrap!important;
+  width:auto!important;
+  flex-shrink:0;
+  margin:auto -12px -12px!important;
+  padding:12px!important;
+  padding-bottom:max(12px,env(safe-area-inset-bottom))!important;
+  background:#fff!important;
+  box-shadow:0 -5px 18px rgba(0,0,0,.08);
+  z-index:1;
+}
+.ec-photo-editor-visual-mobile .ec-photo-editor>footer button {
+  flex:1 1 125px!important;
+  min-width:0!important;
+  white-space:normal!important;
+}
