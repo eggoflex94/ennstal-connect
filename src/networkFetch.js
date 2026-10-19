@@ -88,6 +88,7 @@ function requestBodyKey(init) {
 export function createNetworkFetch(fetchImpl, timeoutMs = 12_000, readCacheMs = 900) {
   const inFlightReads = new Map();
   const recentReads = new Map();
+  const transientFailures = new Map();
 
   return async (input, init = {}) => {
     const method = String(init.method || input?.method || 'GET').toUpperCase();
@@ -103,9 +104,12 @@ export function createNetworkFetch(fetchImpl, timeoutMs = 12_000, readCacheMs = 
       ? `${method}|${url}|${requestBodyKey(init)}|${requestHeader(input, init, 'authorization')}|${requestHeader(input, init, 'accept-profile')}`
       : '';
 
-    if (!safeRead) recentReads.clear();
+    if (!safeRead) { recentReads.clear(); transientFailures.clear(); }
 
     if (readKey) {
+      const temporaryFailure = transientFailures.get(readKey);
+      if (temporaryFailure && temporaryFailure.expiresAt > Date.now()) return temporaryFailure.response.clone();
+      if (temporaryFailure) transientFailures.delete(readKey);
       const cached = recentReads.get(readKey);
       if (cached && cached.expiresAt > Date.now()) return cached.response.clone();
       if (cached) recentReads.delete(readKey);
@@ -136,6 +140,12 @@ export function createNetworkFetch(fetchImpl, timeoutMs = 12_000, readCacheMs = 
 
         try {
           const response = await fetchImpl(input, { ...init, signal: controller.signal });
+          // Retry only verified read-only requests, never writes or unknown RPCs.
+          // Delay reduces the chance of repeating a brief PostgREST outage.
+          if (safeRead && attempt < attempts - 1 && [502, 503, 504].includes(response.status) && !callerSignal?.aborted) {
+            await wait(600 + attempt * 400);
+            continue;
+          }
           if (!response.ok && response.status >= 500) {
             emitNetworkError(url, method, {
               kind: "server",
@@ -171,6 +181,11 @@ export function createNetworkFetch(fetchImpl, timeoutMs = 12_000, readCacheMs = 
 
     const pending = execute()
       .then((response) => {
+        if (response.status >= 502 && response.status <= 504 && rpc === 'ec_my_account_approval') {
+          // Suppress request storms, but never retain an outage for long.
+          transientFailures.set(readKey, { response: response.clone(), expiresAt: Date.now() + 3_000 });
+          if (transientFailures.size > 30) transientFailures.delete(transientFailures.keys().next().value);
+        }
         if (response.ok && readCacheMs > 0) {
           const ttl = isAuthUserRead ? Math.max(readCacheMs, 10_000) : readCacheMs;
           recentReads.set(readKey, { response: response.clone(), expiresAt: Date.now() + ttl });

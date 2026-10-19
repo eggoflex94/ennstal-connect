@@ -83,8 +83,10 @@ window.addEventListener("ec:network-error", (event) => {
   const d = event.detail || {};
   const kind = d.kind || "request";
   const host = networkHost(d.endpoint);
-  if (kind === "timeout" || kind === "network") {
-    const key = `${host}:${kind}`;
+  if (kind === "timeout" || kind === "network" || Number(d.status) >= 500) {
+    const key = Number(d.status) >= 500
+      ? `${d.endpoint || host}:${d.status}`
+      : `${host}:${kind}`;
     const last = recentNetworkBursts.get(key) || 0;
     if (Date.now() - last < NETWORK_BURST_COOLDOWN_MS) return;
     recentNetworkBursts.set(key, Date.now());
