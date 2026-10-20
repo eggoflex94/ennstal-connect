@@ -33,9 +33,10 @@ export default function PropertyListings({user,canManage=false}){
  <label>Beschreibung<textarea required minLength={15} maxLength={6000} rows={5} value={form.description} onChange={e=>update("description",e.target.value)}/></label>
  <label>Bild-URL (optional, HTTPS)<input type="url" maxLength={1500} value={form.image_url} onChange={e=>update("image_url",e.target.value)} placeholder="https://..."/></label>
  <label>Kontakt (E-Mail, Telefonnummer oder Kontaktweg)<input required minLength={5} maxLength={250} value={form.contact_info} onChange={e=>update("contact_info",e.target.value)}/></label>
- <small>Das Angebot wird erst nach Prüfung und Freigabe durch einen Admin öffentlich sichtbar.</small><small>Bitte nur Objekte anbieten, für die du berechtigt bist. Kontaktdaten sind für eingeloggte Mitglieder sichtbar.</small>
+ <small>Das Angebot wird erst nach Prüfung und Freigabe durch einen Admin öffentlich sichtbar. Auch Änderungen an bestehenden Angeboten werden erneut geprüft.</small><small>Bitte nur Objekte anbieten, für die du berechtigt bist. Kontaktdaten sind für eingeloggte Mitglieder sichtbar.</small>
  <button type="submit" className="primary-button" disabled={busy}>{busy?"Speichern…":"Zur Admin-Freigabe einreichen"}</button></form>}
  {canManage&&<p role="status"><strong>{items.filter(item=>item.status==="PENDING").length}</strong> Immobilienangebote warten auf Admin-Freigabe.</p>}
+ <div style={{display:"flex",justifyContent:"flex-end",marginBottom:10}}><button type="button" onClick={()=>void load()} disabled={busy}>Angebote aktualisieren</button></div>
  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:10,margin:"18px 0"}}>
  <label>Suche<input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Ort, Objekt, Stichwort"/></label>
  <label>Kaufen oder mieten<select value={offer} onChange={e=>setOffer(e.target.value)}><option value="ALL">Alle Angebote</option><option value="SALE">Kaufen</option><option value="RENT">Mieten</option></select></label>
