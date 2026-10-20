@@ -2,8 +2,6 @@ name: Deploy to Cloudflare Workers
 # Production deployment for ennstal-connect.com; changes on main trigger Cloudflare.
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 concurrency:
