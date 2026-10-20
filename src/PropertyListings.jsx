@@ -13,7 +13,7 @@ export default function PropertyListings({user,canManage=false}){
   const record={title:form.title.trim(),description:form.description.trim(),offer_type:form.offer_type,property_type:form.property_type,location:form.location.trim(),price:Number(form.price),area_sqm:form.area_sqm?Number(form.area_sqm):null,rooms:form.rooms?Number(form.rooms):null,contact_info:form.contact_info.trim(),image_url:form.image_url.trim()||null};
   if(!Number.isFinite(record.price)||record.price<0){setError("Bitte einen gültigen Preis eingeben.");setBusy(false);return;}
   const request=editing?supabase.from("property_listings").update(record).eq("id",editing):supabase.from("property_listings").insert({...record,owner_id:user.id});
-  const {error:e}=await request;if(e)setError(e.message);else{setForm(empty);setEditing(null);setShowForm(false);await load();}setBusy(false);
+  const {error:saveError}=await request;if(saveError)setError(saveError.message);else{setForm(empty);setEditing(null);setShowForm(false);await load();}setBusy(false);
  }
  async function review(item,status){if(!canManage)return;setBusy(true);const {error:e}=await supabase.from("property_listings").update({status}).eq("id",item.id);if(e)setError(e.message);else await load();setBusy(false);}
  async function close(item){if(!window.confirm("Dieses Immobilienangebot schließen?"))return;setBusy(true);const {error:e}=await supabase.from("property_listings").update({status:"CLOSED"}).eq("id",item.id);if(e)setError(e.message);else await load();setBusy(false);}
