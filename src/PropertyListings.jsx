@@ -1,14 +1,30 @@
 import React,{useEffect,useState} from "react";
+import {prepareImageUpload} from "./prepareImageUpload.js";
 import {supabase} from "./supabaseClient";
 
 const TYPES={APARTMENT:"Wohnung",HOUSE:"Haus",LAND:"Grundstück",COMMERCIAL:"Gewerbe",OTHER:"Sonstiges"};
 const empty={title:"",description:"",offer_type:"SALE",property_type:"APARTMENT",location:"",price:"",area_sqm:"",rooms:"",contact_info:"",image_url:""};
 export default function PropertyListings({user,canManage=false}){
  const [items,setItems]=useState([]),[error,setError]=useState(""),[busy,setBusy]=useState(false),[form,setForm]=useState(empty),[showForm,setShowForm]=useState(false);
+ const [approvalOnly,setApprovalOnly]=useState(false),[photoBusy,setPhotoBusy]=useState(false);
  const [query,setQuery]=useState(""),[type,setType]=useState("ALL"),[offer,setOffer]=useState("ALL"),[maxPrice,setMaxPrice]=useState(""),[editing,setEditing]=useState(null);
  async function load(){const {data,error:e}=await supabase.from("property_listings").select("*").order("created_at",{ascending:false}).limit(200);if(e)setError(e.message);else{setItems(data||[]);setError("");}}
  useEffect(()=>{if(user?.id)void load();},[user?.id]);
  const update=(key,value)=>setForm(old=>({...old,[key]:value}));
+ async function uploadPhoto(file){
+  if(!file)return;
+  setPhotoBusy(true);setError("");
+  try{
+    if(!file.type.startsWith("image/")||file.size>12*1024*1024)throw new Error("Bitte ein Bild unter 12 MB auswählen.");
+    const result=await prepareImageUpload(file,{maxEdge:1200,quality:0.72});
+    if(result.type!=="image/webp"||result.size>2*1024*1024)throw new Error("Foto zu groß. Bitte ein anderes Bild verwenden.");
+    const path=user.id+"/"+crypto.randomUUID()+".webp";
+    const {error:uploadError}=await supabase.storage.from("real-estate-images").upload(path,result,{contentType:"image/webp",upsert:false});
+    if(uploadError)throw uploadError;
+    update("image_url",supabase.storage.from("real-estate-images").getPublicUrl(path).data.publicUrl);
+  }catch(err){setError(err.message||"Bild konnte nicht gespeichert werden.");}
+  finally{setPhotoBusy(false);}
+ }
  async function save(e){e.preventDefault();setBusy(true);setError("");
   const record={title:form.title.trim(),description:form.description.trim(),offer_type:form.offer_type,property_type:form.property_type,location:form.location.trim(),price:Number(form.price),area_sqm:form.area_sqm?Number(form.area_sqm):null,rooms:form.rooms?Number(form.rooms):null,contact_info:form.contact_info.trim(),image_url:form.image_url.trim()||null};
   if(!Number.isFinite(record.price)||record.price<0){setError("Bitte einen gültigen Preis eingeben.");setBusy(false);return;}
@@ -17,7 +33,7 @@ export default function PropertyListings({user,canManage=false}){
  }
  async function review(item,status){if(!canManage)return;setBusy(true);const {error:e}=await supabase.from("property_listings").update({status}).eq("id",item.id);if(e)setError(e.message);else await load();setBusy(false);}
  async function close(item){if(!window.confirm("Dieses Immobilienangebot schließen?"))return;setBusy(true);const {error:e}=await supabase.from("property_listings").update({status:"CLOSED"}).eq("id",item.id);if(e)setError(e.message);else await load();setBusy(false);}
- const visible=items.filter(item=>(item.status==="ACTIVE"||item.owner_id===user?.id||canManage)&&(type==="ALL"||item.property_type===type)&&(offer==="ALL"||item.offer_type===offer)&&(!maxPrice||item.price<=Number(maxPrice))&&[item.title,item.location,item.description].join(" ").toLocaleLowerCase("de-AT").includes(query.toLocaleLowerCase("de-AT")));
+ const visible=items.filter(item=>(!approvalOnly||!canManage||item.status==="PENDING")&&(item.status==="ACTIVE"||item.owner_id===user?.id||canManage)&&(type==="ALL"||item.property_type===type)&&(offer==="ALL"||item.offer_type===offer)&&(!maxPrice||item.price<=Number(maxPrice))&&[item.title,item.location,item.description].join(" ").toLocaleLowerCase("de-AT").includes(query.toLocaleLowerCase("de-AT")));
  return <section className="panel" style={{margin:"18px 0",padding:18}} aria-label="Immobilienmarkt">
  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12}}><div><span className="eyebrow">REGIONALER IMMOBILIENMARKT</span><h2>🏡 Immobilien kaufen & mieten</h2><p>Wohnungen, Häuser, Grundstücke und Gewerbeobjekte aus der Region.</p></div><button type="button" className="primary-button" onClick={()=>{setEditing(null);setForm(empty);setShowForm(v=>!v);}}>{showForm?"Abbrechen":"+ Immobilie anbieten"}</button></div>
  {showForm&&<form onSubmit={save} style={{display:"grid",gap:12,margin:"20px 0",padding:16,border:"1px solid #dae5ed",borderRadius:14}}>
@@ -31,11 +47,11 @@ export default function PropertyListings({user,canManage=false}){
  <label>Fläche in m²<input type="number" min="1" step="0.01" value={form.area_sqm} onChange={e=>update("area_sqm",e.target.value)}/></label>
  <label>Zimmer<input type="number" min="0.5" step="0.5" value={form.rooms} onChange={e=>update("rooms",e.target.value)}/></label></div>
  <label>Beschreibung<textarea required minLength={15} maxLength={6000} rows={5} value={form.description} onChange={e=>update("description",e.target.value)}/></label>
- <label>Bild-URL (optional, HTTPS)<input type="url" maxLength={1500} value={form.image_url} onChange={e=>update("image_url",e.target.value)} placeholder="https://..."/></label>
+ <label>Immobilienfoto hochladen (optional)<input type="file" accept="image/jpeg,image/png,image/webp" disabled={photoBusy} onChange={e=>{void uploadPhoto(e.target.files?.[0]);e.target.value="";}}/></label>{photoBusy&&<small>Foto wird verkleinert und hochgeladen …</small>}{form.image_url&&<img src={form.image_url} alt="Fotovorschau" style={{maxWidth:250,maxHeight:150,objectFit:"contain"}}/>}<small>Automatisch komprimiert: WebP, maximal 1200 Pixel und 2 MB.</small>
  <label>Kontakt (E-Mail, Telefonnummer oder Kontaktweg)<input required minLength={5} maxLength={250} value={form.contact_info} onChange={e=>update("contact_info",e.target.value)}/></label>
  <small>Das Angebot wird erst nach Prüfung und Freigabe durch einen Admin öffentlich sichtbar. Auch Änderungen an bestehenden Angeboten werden erneut geprüft.</small><small>Bitte nur Objekte anbieten, für die du berechtigt bist. Kontaktdaten sind für eingeloggte Mitglieder sichtbar.</small>
- <button type="submit" className="primary-button" disabled={busy}>{busy?"Speichern…":"Zur Admin-Freigabe einreichen"}</button></form>}
- {canManage&&<p role="status"><strong>{items.filter(item=>item.status==="PENDING").length}</strong> Immobilienangebote warten auf Admin-Freigabe.</p>}
+ <button type="submit" className="primary-button" disabled={busy||photoBusy}>{busy?"Speichern…":"Zur Admin-Freigabe einreichen"}</button></form>}
+ {canManage&&<div style={{margin:"12px 0"}}><button type="button" onClick={()=>setApprovalOnly(v=>!v)}>{approvalOnly?"Alle Angebote":"Admin-Freigaben"} ({items.filter(item=>item.status==="PENDING").length} offen)</button><p>Wartende Immobilien hier prüfen, freigeben oder ablehnen.</p></div>}
  <div style={{display:"flex",justifyContent:"flex-end",marginBottom:10}}><button type="button" onClick={()=>void load()} disabled={busy}>Angebote aktualisieren</button></div>
  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:10,margin:"18px 0"}}>
  <label>Suche<input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Ort, Objekt, Stichwort"/></label>
