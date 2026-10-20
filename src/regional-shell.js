@@ -2,7 +2,7 @@ import { publicImageVariant } from './imageDelivery.js';
 import { supabase } from './supabaseClient';
 import { loadMemberScores } from './member-score.js';
 
-const TOP_LINKS=[['⌂','Startseite','home'],['♟','Mitglieder','members'],['▤','Forum','forum'],['●','Gruppen','groups'],['▣','Events','events'],['▥','Community','community'],['🛍','Marktplatz','marketplace']];
+const TOP_LINKS=[['⌂','Startseite','home'],['♟','Mitglieder','members'],['▤','Forum','forum'],['●','Gruppen','groups'],['▣','Events','events'],['▥','Community','community'],['🛍','Marktplatz','marketplace'],['🏡','Immobilien','properties']];
 const DOCK_LINKS=[
   ['Mein Profil','profile'],
   ['Nachrichten','messages'],
@@ -26,7 +26,7 @@ const DOCK_ICONS={
 const FALLBACK_REGIONS=[{slug:'ennstal',name:'Ennstal'},{slug:'leoben-bruck-muerzzuschlag',name:'Alpenraum'}];
 let regions=FALLBACK_REGIONS,activeRegion=null,regionalAssignments=[],currentProfile=null,profiles=[],showAllMembers=false;
 
-const pageNames={home:['Startseite'],members:['Mitglieder'],forum:['Forum'],groups:['Gruppen'],events:['Events','Veranstaltungen'],photos:['Fotos','Eventfotos'],news:['Neuigkeiten'],community:['Community'],ads:['Community'],profile:['Mein Profil','Profil gestalten'],messages:['Nachrichten'],friends:['Freunde'],requests:['Anfragen'],blocked:['Blockiert'],help:['Hilfe'],admin:['Admin-Zentrale','Admin Zentrale'],adminTools:['Admin Tools'],legal:['Rechtliche Beweissicherung']};
+const pageNames={home:['Startseite'],members:['Mitglieder'],forum:['Forum'],groups:['Gruppen'],events:['Events','Veranstaltungen'],photos:['Fotos','Eventfotos'],news:['Neuigkeiten'],community:['Community'],properties:['Immobilien'],ads:['Community'],profile:['Mein Profil','Profil gestalten'],messages:['Nachrichten'],friends:['Freunde'],requests:['Anfragen'],blocked:['Blockiert'],help:['Hilfe'],admin:['Admin-Zentrale','Admin Zentrale'],adminTools:['Admin Tools'],legal:['Rechtliche Beweissicherung']};
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const regionName=id=>regions.find(r=>r.id===id)?.name||'Nicht festgelegt';
 const assignmentsFor=p=>regionalAssignments.filter(a=>a.user_id===p?.id&&a.active);
