@@ -361,7 +361,7 @@ export default function App() {
         return;
       }
       const pageMap = {
-        home: "home", members: "members", forum: "forum", groups: "groups", marketplace: "marketplace", photos: "events",
+        home: "home", members: "members", forum: "forum", groups: "groups", marketplace: "marketplace", properties: "properties", photos: "events",
         community: "community", events: "events", news: "news", ads: "community", profile: "profile",
         messages: "messages", notifications: "notifications", friends: "friends", requests: "friend-requests",
         blocked: "blocked", admin: "admin", "admin-forum": "admin-forum", municipality: "municipality"
