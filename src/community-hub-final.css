@@ -318,3 +318,11 @@
     flex:1 1 140px!important;
   }
 }
+
+/* Compact advertising: never let a tall sponsor image take over the community page. */
+.community-hub .community-ad-list{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr))!important;gap:14px!important;align-items:start!important}
+.community-hub .community-ad-card{min-width:0!important;max-width:480px!important;overflow:hidden!important;border-radius:14px!important}
+.community-hub .community-ad-card>a,.community-hub .community-ad-card>div{display:flex!important;flex-direction:column!important;gap:7px!important;min-width:0!important}
+.community-hub .community-ad-card img{display:block!important;width:100%!important;height:clamp(140px,19vw,220px)!important;max-height:220px!important;object-fit:contain!important;object-position:center!important;background:#f7f8f5!important;border-radius:10px!important}
+.community-hub .community-ad-card strong,.community-hub .community-ad-card span{overflow-wrap:anywhere!important}
+@media(max-width:600px){.community-hub .community-ad-card img{height:160px!important}.community-hub .community-ad-card{max-width:100%!important}}
