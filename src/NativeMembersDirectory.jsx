@@ -48,9 +48,7 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
     if (!canViewSuspended || !showSuspended || !supabase) return undefined;
     let cancelled = false;
     const load = async () => {
-      const { data, error } = await supabase.from("profiles")
-        .select("id,nickname,first_name,last_name,role,account_badge,account_status,is_suspended,home_region_id,district_code,location,created_at,points,avatar_url,profile_photo_url,suspension_reason")
-        .eq("account_status", "SUSPENDED").limit(500);
+      const { data, error } = await supabase.rpc("ec_admin_suspended_members_directory");
       if (cancelled) return;
       setSuspendedMembers(data || []);
       setSuspendedLoadError(error ? "Gesperrte Konten konnten nicht geladen werden. Bitte Admin-Berechtigung prüfen." : "");
