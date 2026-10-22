@@ -288,7 +288,7 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
       </div>
     </div>
 
-    <div className="member-grid native-member-grid">
+    <div className="member-grid native-member-grid" style={showSuspended && canViewSuspended ? {display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,260px),1fr))",gap:16,alignItems:"stretch"} : undefined}>
       {pagedVisible.map((member) => {
         const homeRegionMeta = regionById[member.home_region_id] || null;
         const homeRegionLabel = homeRegionMeta?.short_name || homeRegionMeta?.name || "Hauptregion";
@@ -307,13 +307,23 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
               : isRegionalAdmin(member)
                 ? { ...member, directory_admin: isRegionalAdminHere(member), directory_supporter: !isRegionalAdminHere(member), directory_role_star: roleStarSrc(member), directory_responsibility_label: `Regional Admin · Region ${regionalLabel}` }
                 : { ...member, directory_role_star: roleStarSrc(member) };
-        return <React.Fragment key={member.id}>{showSuspended && canViewSuspended && <div style={{gridColumn:"1/-1",fontSize:13,fontWeight:700}}>🔒 Gesperrt · {member.points ?? "?"} Punkte</div>}<MemberCardView
-          member={cardMember}
-          foundingHighlightUntil={foundingHighlights[member.id]}
-          profile={profile}
-          friendships={friendships}
-          onOpen={openMember}
-        /></React.Fragment>;
+        return showSuspended && canViewSuspended
+          ? <article key={member.id} className="panel" style={{padding:16,borderRadius:16,display:"flex",flexDirection:"column",gap:10,minWidth:0}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap"}}>
+                <strong style={{overflowWrap:"anywhere"}}>{displayName(member)}</strong>
+                <span style={{fontSize:12,fontWeight:700,color:"#b42318"}}>🔒 Gesperrt</span>
+              </div>
+              <div style={{fontSize:14}}>Punktestand: <strong>{member.points ?? "–"}</strong></div>
+              {member.suspension_reason && <p style={{fontSize:12,opacity:0.75,margin:0,overflowWrap:"anywhere"}}>{member.suspension_reason}</p>}
+              <button type="button" onClick={()=>openMember(member)} style={{marginTop:"auto",alignSelf:"flex-start"}}>Profil ansehen</button>
+            </article>
+          : <MemberCardView key={member.id}
+              member={cardMember}
+              foundingHighlightUntil={foundingHighlights[member.id]}
+              profile={profile}
+              friendships={friendships}
+              onOpen={openMember}
+            />;
       })}
       {!visible.length && <div className="empty-card">Keine Mitglieder für diese Auswahl gefunden.</div>}
     </div>
