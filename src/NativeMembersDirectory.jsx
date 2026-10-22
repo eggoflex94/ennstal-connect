@@ -27,6 +27,10 @@ function presenceOnline(member) {
 
 export default function NativeMembersDirectory({ members = [], regions = [], activeRegion, profile, friendships = [], onOpen }) {
   const [query, setQuery] = useState("");
+  const [showSuspended, setShowSuspended] = useState(false);
+  const [suspendedMembers, setSuspendedMembers] = useState([]);
+  const [suspendedLoadError, setSuspendedLoadError] = useState("");
+  const canViewSuspended = isGlobalAdmin(profile);
   const [foundingHighlights, setFoundingHighlights] = useState({});
   useEffect(() => {
     if (!supabase) return undefined;
@@ -40,6 +44,20 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
     window.addEventListener("focus", load);
     return () => { cancelled = true; window.clearInterval(timer); window.removeEventListener("focus", load); };
   }, []);
+  useEffect(() => {
+    if (!canViewSuspended || !showSuspended || !supabase) return undefined;
+    let cancelled = false;
+    const load = async () => {
+      const { data, error } = await supabase.from("profiles")
+        .select("id,nickname,first_name,last_name,role,account_badge,account_status,is_suspended,home_region_id,district_code,location,created_at,points,avatar_url,profile_photo_url,suspension_reason")
+        .eq("account_status", "SUSPENDED").limit(500);
+      if (cancelled) return;
+      setSuspendedMembers(data || []);
+      setSuspendedLoadError(error ? "Gesperrte Konten konnten nicht geladen werden. Bitte Admin-Berechtigung prüfen." : "");
+    };
+    void load();
+    return () => { cancelled = true; };
+  }, [canViewSuspended, showSuspended]);
   const [regionId, setRegionId] = useState(profile?.home_region_id || "ALL");
   const [onlineOnly, setOnlineOnly] = useState(false);
   const [memberType, setMemberType] = useState("ALL");
@@ -150,8 +168,8 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
       if (normalized(member?.role) === "SUPPORTER") return 4;
       return 5;
     };
-    return liveMembers
-      .filter((member) => member && member.account_status !== "SUSPENDED" && !member.is_test_account)
+    return (showSuspended && canViewSuspended ? suspendedMembers : liveMembers)
+      .filter((member) => member && (showSuspended && canViewSuspended ? member.account_status === "SUSPENDED" : member.account_status !== "SUSPENDED") && !member.is_test_account)
       .filter((member) => regionId === "ALL" || member.home_region_id === regionId)
       .filter((member) => districtFilter === "ALL" || (member.district_code === districtFilter && publicDistrict(member)))
       .filter((member) => !onlineOnly || (!member.hide_online_status && presenceOnline(member)))
@@ -181,7 +199,7 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
         if (aRank !== bRank) return aRank - bRank;
         return displayName(a).localeCompare(displayName(b), "de", { sensitivity: "base" });
       });
-  }, [liveMembers, regionId, districtFilter, onlineOnly, memberType, newOnly, query, regionById, regionalAdminByUser, activeRegion?.id]);
+  }, [liveMembers, suspendedMembers, showSuspended, canViewSuspended, regionId, districtFilter, onlineOnly, memberType, newOnly, query, regionById, regionalAdminByUser, activeRegion?.id]);
 
   const pageCount = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
   const pagedVisible = useMemo(() => {
@@ -191,7 +209,7 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
 
   useEffect(() => {
     setPage(1);
-  }, [query, regionId, districtFilter, onlineOnly, memberType, newOnly, activeRegion?.id]);
+  }, [query, regionId, districtFilter, onlineOnly, memberType, newOnly, showSuspended, activeRegion?.id]);
 
   // Do not mutate React-owned member-directory children from effects.
   // Older cleanup code removed text/element nodes behind React's back, which
@@ -241,6 +259,11 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
     </div>
 
 
+    {canViewSuspended && <div style={{display:"flex",gap:10,margin:"12px 0",flexWrap:"wrap"}} role="group" aria-label="Mitgliederstatus anzeigen">
+      <button type="button" aria-pressed={!showSuspended} className={!showSuspended?"primary-button":""} onClick={()=>{setShowSuspended(false);setOnlineOnly(false);}}>Aktive Mitglieder</button>
+      <button type="button" aria-pressed={showSuspended} className={showSuspended?"primary-button":""} onClick={()=>{setShowSuspended(true);setOnlineOnly(false);setRegionId("ALL");setDistrictFilter("ALL");}}>🔒 Gesperrte Mitglieder</button>
+    </div>}
+    {showSuspended && canViewSuspended && <p role="status">Nur für Admins: gesperrte Konten. {suspendedLoadError}</p>}
     <div className="native-member-search panel">
       <input className="search-input" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name, Ort, Interesse, Unternehmen oder Rolle suchen …" />
       <select value={regionId} onChange={(event) => setRegionId(event.target.value)} aria-label="Region auswählen">
@@ -257,7 +280,7 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
         <option value="MUNICIPALITY">Gemeinden</option>
         <option value="ADMIN">Administration</option>
       </select>
-      <label><input type="checkbox" checked={onlineOnly} onChange={(event) => setOnlineOnly(event.target.checked)} /> Nur online</label>
+      {!showSuspended && <label><input type="checkbox" checked={onlineOnly} onChange={(event) => setOnlineOnly(event.target.checked)} /> Nur online</label>}
       <label><input type="checkbox" checked={newOnly} onChange={(event) => setNewOnly(event.target.checked)} /> Neu seit 30 Tagen</label>
       <div className="native-member-quick-filters">
         <button type="button" className={regionId === "ALL" ? "active" : ""} onClick={() => setRegionId("ALL")}>Alle Regionen</button>
@@ -286,14 +309,13 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
               : isRegionalAdmin(member)
                 ? { ...member, directory_admin: isRegionalAdminHere(member), directory_supporter: !isRegionalAdminHere(member), directory_role_star: roleStarSrc(member), directory_responsibility_label: `Regional Admin · Region ${regionalLabel}` }
                 : { ...member, directory_role_star: roleStarSrc(member) };
-        return <MemberCardView
-          key={member.id}
+        return <React.Fragment key={member.id}>{showSuspended && canViewSuspended && <div style={{gridColumn:"1/-1",fontSize:13,fontWeight:700}}>🔒 Gesperrt · {member.points ?? "?"} Punkte</div>}<MemberCardView
           member={cardMember}
           foundingHighlightUntil={foundingHighlights[member.id]}
           profile={profile}
           friendships={friendships}
           onOpen={openMember}
-        />;
+        /></React.Fragment>;
       })}
       {!visible.length && <div className="empty-card">Keine Mitglieder für diese Auswahl gefunden.</div>}
     </div>
