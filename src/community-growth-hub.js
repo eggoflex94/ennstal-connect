@@ -4,6 +4,7 @@ import './community-growth-hub.css';
 let timer=null;
 let requestVersion=0;
 const esc=(value)=>String(value??'').replace(/[&<>"']/g,(char)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+const safeExternalUrl=(value)=>{try{const url=new URL(String(value||'').trim());return ['https:','http:'].includes(url.protocol)?url.href:'';}catch{return '';}};
 const fmt=(value)=>{const d=new Date(value);return Number.isNaN(d.getTime())?'':new Intl.DateTimeFormat('de-AT',{weekday:'short',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}).format(d)};
 const nav=(page)=>window.dispatchEvent(new CustomEvent('ec:navigate',{detail:{page}}));
 const REQUEST_LABELS={MITFAHREN:'Mitfahrgelegenheit',WANDERPARTNER:'Wanderpartner',REGIONALER_TIPP:'Regionaler Tipp',HILFE:'Hilfe gesucht',SUCHE:'Suche',BIETE:'Biete',EMPFEHLUNG:'Empfehlung'};
@@ -113,10 +114,10 @@ async function renderHome(){
 function businessPanelMarkup(member,listings=[]){
   const title=member.company_name||member.nickname||'Unternehmenskonto';
   const desc=member.company_description||'Regionales Unternehmen oder Verein auf Ennstal Connect.';
-  const website=String(member.company_website||'').trim();
+  const website=safeExternalUrl(member.company_website);
   const hours=String(member.company_opening_hours||'').trim();
-  const meta=[hours?`<span>Öffnungszeiten: ${esc(hours)}</span>`:'',website?`<a href="${esc(website)}" target="_blank" rel="noreferrer">Webseite öffnen ↗</a>`:'','<span>Verifiziertes Unternehmenskonto</span>',member.home_region_id?'<span>Regional sichtbar</span>':''].filter(Boolean).join('');
-  const items=listings.length?`<div class="ec-business-listings"><h3>Aktuelle Angebote & Stellen</h3>${listings.map((item)=>`<article>${item.is_ai_generated?'<span class="ai-content-badge">✦ KI-Inhalt</span>':''}<span>${esc(LISTING_LABELS[item.listing_type]||'Angebot')}</span><strong>${esc(item.title)}</strong><p>${esc(item.body)}</p>${item.link_url?`<a href="${esc(item.link_url)}" target="_blank" rel="noreferrer">Mehr erfahren ↗</a>`:''}</article>`).join('')}</div>`:'';
+  const meta=[hours?`<span>Öffnungszeiten: ${esc(hours)}</span>`:'',website?`<a href="${esc(website)}" target="_blank" rel="noopener noreferrer">Webseite öffnen ↗</a>`:'','<span>Verifiziertes Unternehmenskonto</span>',member.home_region_id?'<span>Regional sichtbar</span>':''].filter(Boolean).join('');
+  const items=listings.length?`<div class="ec-business-listings"><h3>Aktuelle Angebote & Stellen</h3>${listings.map((item)=>`<article>${item.is_ai_generated?'<span class="ai-content-badge">✦ KI-Inhalt</span>':''}<span>${esc(LISTING_LABELS[item.listing_type]||'Angebot')}</span><strong>${esc(item.title)}</strong><p>${esc(item.body)}</p>${safeExternalUrl(item.link_url)?`<a href="${esc(safeExternalUrl(item.link_url))}" target="_blank" rel="noopener noreferrer">Mehr erfahren ↗</a>`:''}</article>`).join('')}</div>`:'';
   return `<header><div><span class="ec-business-kicker">REGIONALER PARTNER</span><h2>${esc(title)}</h2></div><span aria-label="Unternehmenskonto">★</span></header><p>${esc(desc)}</p><div class="ec-business-meta">${meta}</div>${items}`;
 }
 
