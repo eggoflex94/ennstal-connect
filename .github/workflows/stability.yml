@@ -33,7 +33,7 @@ jobs:
       - name: Install Playwright smoke-test runtime
         run: |
           npm install --no-save @playwright/test@1.55.0
-          npx playwright install --with-deps chromium
+          npx playwright install chromium
       - name: Browser visibility smoke tests
         timeout-minutes: 20
         run: npx playwright test --config=playwright.config.mjs
