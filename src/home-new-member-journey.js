@@ -22,9 +22,11 @@ function taskButton(key,title,copy,done,page){
 async function count(query){
   try{
     const {count,error}=await query;
-    return error?0:Number(count||0);
-  }catch{
-    return 0;
+    if(error){console.warn('Startplan-Aktivität nicht verfügbar:',error.message);return null;}
+    return Number(count??0);
+  }catch(error){
+    console.warn('Startplan-Aktivität nicht verfügbar:',error);
+    return null;
   }
 }
 
@@ -61,11 +63,12 @@ async function refresh(force=false){
   const profileDone=Boolean(String(profile.nickname||'').trim()&&String(profile.bio||'').trim()&&String(profile.interests||'').trim());
   const tasks=[
     {key:'profile',title:'Profil persönlich machen',copy:'Spitzname, Kurzinfo und Interessen ergänzen.',done:profileDone,page:'profile'},
-    {key:'group',title:'Erste Gruppe finden',copy:'Menschen mit ähnlichen Interessen entdecken.',done:groups>0,page:'groups'},
-    {key:'forum',title:'Ein erstes Servus schreiben',copy:'Dich vorstellen oder bei einem Thema mitreden.',done:posts>0,page:'forum'},
-    {key:'friend',title:'Ersten Kontakt knüpfen',copy:'Mit einem Mitglied aus deiner Region verbinden.',done:friends>0,page:'members'}
+    {key:'group',title:'Erste Gruppe finden',copy:'Menschen mit ähnlichen Interessen entdecken.',done:groups===null?null:groups>0,page:'groups'},
+    {key:'forum',title:'Ein erstes Servus schreiben',copy:'Dich vorstellen oder bei einem Thema mitreden.',done:posts===null?null:posts>0,page:'forum'},
+    {key:'friend',title:'Ersten Kontakt knüpfen',copy:'Mit einem Mitglied aus deiner Region verbinden.',done:friends===null?null:friends>0,page:'members'}
   ];
-  const done=tasks.filter(task=>task.done).length;
+  const unavailable=tasks.some(task=>task.done===null);
+  const done=tasks.filter(task=>task.done===true).length;
   const remaining=tasks.length-done;
   const daysLeft=Math.max(1,Math.ceil((SEVEN_DAYS-ageMs)/(24*60*60*1000)));
 
@@ -84,7 +87,12 @@ async function refresh(force=false){
     grid.className='ec-first-steps-grid';
     section.appendChild(grid);
   }
-  grid.replaceChildren(...tasks.map(task=>taskButton(task.key,task.title,task.copy,task.done,task.page)));
+  grid.replaceChildren(...tasks.map(task=>taskButton(task.key,task.title,task.done===null?'Aktivität derzeit nicht verfügbar.':task.copy,task.done===true,task.page)));
+  for(const task of tasks.filter(task=>task.done===null)){
+    const button=grid.querySelector(`[data-task="${task.key}"]`);
+    if(button){button.disabled=true;button.dataset.done='unknown';}
+  }
+  section.dataset.activityUnavailable=unavailable?'true':'false';
 
   let progress=section.querySelector('.ec-starter-progress');
   if(!progress){
