@@ -48,3 +48,8 @@ test('business links reject non-http URL schemes', () => {
   assert.equal(context.safeExternalUrl('data:text/html,hello'), '');
   assert.equal(context.safeExternalUrl('https://example.org/'), 'https://example.org/');
 });
+
+test('regional business filtering happens before limiting results', () => {
+  const source = read('src/community-growth-hub.js');
+  assert.match(source, /\.eq\('account_badge','BUSINESS'\)\.or\(`home_region_id\.eq\.\$\{ctx\.region\.id\},home_region_id\.is\.null`\)\.limit\(16\)/);
+});
