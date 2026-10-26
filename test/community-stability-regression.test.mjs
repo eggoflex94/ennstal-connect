@@ -35,3 +35,16 @@ test('growth hub only requests current user friendships', () => {
   const source = read('src/community-growth-hub.js');
   assert.match(source, /\.from\('friendships'\)[^\n]*\.or\(`requester_id\.eq\.\$\{ctx\.user\.id\},receiver_id\.eq\.\$\{ctx\.user\.id\}`\)/);
 });
+
+test('business links reject non-http URL schemes', () => {
+  const source = read('src/community-growth-hub.js');
+  assert.match(source, /safeExternalUrl\(member\.company_website\)/);
+  assert.match(source, /safeExternalUrl\(item\.link_url\)/);
+  const match = source.match(/const safeExternalUrl=\(value\)=>\{[^\n]+/);
+  assert.ok(match);
+  const context = { URL };
+  vm.runInNewContext(match[0].replace(/^const safeExternalUrl/, 'this.safeExternalUrl'), context);
+  assert.equal(context.safeExternalUrl('javascript:alert(1)'), '');
+  assert.equal(context.safeExternalUrl('data:text/html,hello'), '');
+  assert.equal(context.safeExternalUrl('https://example.org/'), 'https://example.org/');
+});
