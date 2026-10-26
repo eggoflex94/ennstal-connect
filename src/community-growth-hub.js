@@ -81,7 +81,7 @@ async function renderHome(){
     supabase.from('profiles').select('id,nickname,first_name,last_name,avatar_url,created_at,home_region_id,account_status,is_test_account').eq('home_region_id',ctx.region.id).eq('account_status','ACTIVE').eq('is_test_account',false).neq('id',ctx.user.id).order('created_at',{ascending:false}).limit(4),
     supabase.from('community_groups').select('id,name,description,region_id,created_at,is_featured').or(`region_id.eq.${ctx.region.id},region_id.is.null`).order('is_featured',{ascending:false}).order('created_at',{ascending:false}).limit(5),
     supabase.from('community_group_members').select('group_id,user_id'),
-    supabase.from('friendships').select('requester_id,receiver_id,status').eq('status','ACCEPTED')
+    supabase.from('friendships').select('requester_id,receiver_id,status').eq('status','ACCEPTED').or(`requester_id.eq.${ctx.user.id},receiver_id.eq.${ctx.user.id}`)
   ]);
   if(version!==requestVersion)return;
   const activeEvents=(events||[]).filter((event)=>String(event.status||'').toUpperCase()!=='CANCELLED').sort((a,b)=>Number(Boolean(b.is_featured))-Number(Boolean(a.is_featured))||new Date(a.event_at)-new Date(b.event_at)).slice(0,3);
