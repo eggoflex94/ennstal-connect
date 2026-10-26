@@ -93,6 +93,13 @@ async function refresh(force=false){
     if(button){button.disabled=true;button.dataset.done='unknown';}
   }
   section.dataset.activityUnavailable=unavailable?'true':'false';
+  if(unavailable){
+    const note=document.createElement('p');
+    note.className='ec-starter-unavailable';
+    note.setAttribute('role','status');
+    note.textContent='Einige Aktivitäten konnten gerade nicht geprüft werden. Dein Fortschritt bleibt erhalten.';
+    grid.appendChild(note);
+  }
 
   let progress=section.querySelector('.ec-starter-progress');
   if(!progress){
