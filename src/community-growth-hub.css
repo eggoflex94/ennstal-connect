@@ -82,3 +82,12 @@
   max-width:100%;
 }
 .home-page .ec-discover-stat { min-width:0; overflow-wrap:anywhere }
+
+/* Community-first participation panel */
+.ec-join-activities{margin:16px 0 20px;padding:20px;border:1px solid #d6e5ef;border-radius:18px;background:linear-gradient(110deg,#f0f8ff,#fff);display:grid;gap:14px;color:#213c53}
+.ec-join-intro>span{font-size:.69rem;font-weight:850;letter-spacing:.11em;color:#1873ad}
+.ec-join-intro h2{margin:4px 0 6px;font-size:1.35rem}.ec-join-intro p{margin:0;line-height:1.5}
+.ec-join-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.ec-join-actions button{border:1px solid #c8ddea;border-radius:12px;background:#fff;padding:14px 10px;text-align:center;color:#194461;font-weight:750;cursor:pointer;min-height:60px}
+.ec-join-actions button:hover,.ec-join-actions button:focus-visible{background:#e7f4ff;outline-offset:3px}
+@media(max-width:720px){.ec-join-activities{padding:15px}.ec-join-actions{grid-template-columns:1fr}.ec-join-actions button{min-height:48px}}
