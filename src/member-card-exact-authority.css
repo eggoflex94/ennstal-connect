@@ -259,3 +259,14 @@ article.member-card[data-role-theme] img.ec-member-name-verified{
     justify-content:center!important;
   }
 }
+
+/* Operator-only final visual override. Loaded after all general member-card rules. */
+article.member-card.ec-operator-card[data-role-theme="admin"]{
+  --ec-card-bg:linear-gradient(160deg,#ff5965 0%,#ef2848 45%,#d7193d 78%,#bd1236 100%)!important;
+  --ec-card-border:#ffe06b!important;
+  background:var(--ec-card-bg)!important;
+  background-image:var(--ec-card-bg)!important;
+  border:7px solid #ffe06b!important;
+  box-shadow:0 0 0 2px #b87809,0 0 0 4px rgba(255,223,87,.74),0 0 20px rgba(255,204,65,.62),0 8px 18px rgba(34,8,14,.19)!important;
+}
+article.member-card.ec-operator-card[data-role-theme="admin"]>.ec-role-surface{background:var(--ec-card-bg)!important;background-image:var(--ec-card-bg)!important}
