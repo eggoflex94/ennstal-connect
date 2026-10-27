@@ -251,6 +251,7 @@ async function apply(){
 function schedule(delay=80){clearTimeout(timer);timer=setTimeout(()=>void apply(),delay)}
 window.addEventListener('ec:navigate',()=>schedule(100));
 window.addEventListener('ec:region-change',()=>schedule(120));
+window.addEventListener('ec:alpenraum-preferences-changed',()=>schedule(100));
 window.addEventListener('ec:business-account-changed',()=>schedule(60));
 window.addEventListener('ec:business-jobs-changed',()=>schedule(60));
 window.addEventListener('focus',()=>schedule(80));
