@@ -6,8 +6,18 @@ let layoutTimer = null;
 const recentNetworkBursts = new Map();
 const NETWORK_BURST_COOLDOWN_MS = 60_000;
 
+function networkEndpoint(endpoint) {
+  try {
+    const url = new URL(String(endpoint || ""), location.origin);
+    if (!["http:", "https:"].includes(url.protocol)) return "network";
+    return url.origin + url.pathname.slice(0, 250);
+  } catch {
+    return "network";
+  }
+}
 function networkHost(endpoint) {
-  return String(endpoint || "").split("/")[0] || "network";
+  try { return new URL(networkEndpoint(endpoint)).host; }
+  catch { return "network"; }
 }
 
 function text(value, max = 3000) {
@@ -83,10 +93,12 @@ window.addEventListener("ec:network-error", (event) => {
   const d = event.detail || {};
   const kind = d.kind || "request";
   const host = networkHost(d.endpoint);
+  const safeEndpoint = networkEndpoint(d.endpoint);
+  const method = String(d.method || "GET").toUpperCase().slice(0, 12);
   if (kind === "timeout" || kind === "network" || Number(d.status) >= 500) {
     const key = Number(d.status) >= 500
-      ? `${d.endpoint || host}:${d.status}`
-      : `${host}:${kind}`;
+      ? `${safeEndpoint}:${d.status}`
+      : `${safeEndpoint}:${kind}`;
     const last = recentNetworkBursts.get(key) || 0;
     if (Date.now() - last < NETWORK_BURST_COOLDOWN_MS) return;
     recentNetworkBursts.set(key, Date.now());
@@ -96,8 +108,8 @@ window.addEventListener("ec:network-error", (event) => {
     severity: Number(d.status) >= 500 ? "ERROR" : "WARN",
     title: kind === "timeout" ? "Serververbindung verzögert" : `Netzwerkfehler${d.status ? ` HTTP ${d.status}` : ""}`,
     message: d.message || "Eine Serveranfrage ist fehlgeschlagen.",
-    source: kind === "timeout" || kind === "network" ? host : (d.endpoint || ""),
-    metadata: { endpoint: d.endpoint || "", method: d.method || "", status: d.status || null, kind }
+    source: safeEndpoint,
+    metadata: { endpoint: safeEndpoint, host, method, status: d.status || null, kind, online: navigator.onLine, occurred_at: new Date().toISOString() }
   });
 });
 
