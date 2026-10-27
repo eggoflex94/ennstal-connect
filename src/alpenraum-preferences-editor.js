@@ -6,6 +6,7 @@ const node=(tag,cls,text)=>{const el=document.createElement(tag);if(cls)el.class
 let editing=false;
 let busy=false;
 let currentUserId='';
+let refreshInFlight=false;
 const css=`
 .ec-alpenraum-edit{position:fixed;right:18px;bottom:85px;z-index:9998;padding:11px 15px;border:0;border-radius:12px;background:#1269b0;color:#fff;font-weight:800;box-shadow:0 8px 24px #172e4d33;cursor:pointer}
 .ec-alpenraum-backdrop{position:fixed;inset:0;z-index:2147483100;background:#081c36bb;display:grid;place-items:center;padding:16px}
@@ -13,7 +14,7 @@ const css=`
 .ec-alpenraum-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.ec-alpenraum-options label{padding:9px;border:1px solid #dce6ef;border-radius:9px;display:flex;gap:9px;align-items:center}
 .ec-alpenraum-actions{display:flex;justify-content:flex-end;gap:10px}.ec-alpenraum-actions button{padding:10px 13px;border:0;border-radius:8px;cursor:pointer}
 .ec-alpenraum-save{background:#1269b0;color:white}.ec-alpenraum-error{color:#ac241d}
-@media(max-width:550px){.ec-alpenraum-options{grid-template-columns:1fr}}
+@media(max-width:550px){.ec-alpenraum-options{grid-template-columns:1fr}.ec-alpenraum-edit{right:12px;bottom:calc(76px + env(safe-area-inset-bottom,0px));max-width:calc(100vw - 24px);font-size:13px}.ec-alpenraum-dialog{padding:16px;max-height:85dvh}}
 `;
 function ensureStyle(){if(document.getElementById(key+'-style'))return;const s=node('style');s.id=key+'-style';s.textContent=css;document.head.appendChild(s)}
 async function openEditor(){
@@ -25,7 +26,7 @@ async function openEditor(){
   supabase.from('profiles').select('id,interests,home_region_id').eq('id',user.id).maybeSingle(),
   supabase.from('regions').select('id,slug,name').eq('is_active',true).order('name')
  ]);
- if(profileError||regionError||!profile){editing=false;alert('Einstellungen konnten nicht geladen werden.');return}
+ if(profileError||regionError||!profile||!document.querySelector('.my-profile-card')){editing=false;if(profileError||regionError)alert('Einstellungen konnten nicht geladen werden.');return}
  ensureStyle();
  const backdrop=node('div','ec-alpenraum-backdrop'),dialog=node('section','ec-alpenraum-dialog');
  dialog.setAttribute('role','dialog');dialog.setAttribute('aria-modal','true');dialog.setAttribute('aria-label','Meine Alpenregionen und Interessen');
@@ -50,7 +51,9 @@ async function openEditor(){
  const error=node('p','ec-alpenraum-error');error.setAttribute('role','alert');
  const actions=node('div','ec-alpenraum-actions'),cancel=node('button',null,'Abbrechen'),save=node('button','ec-alpenraum-save','Speichern');
  cancel.type='button';save.type='button';
- const close=()=>{backdrop.remove();editing=false};
+ const close=()=>{backdrop.remove();editing=false;document.removeEventListener('keydown',onKey)};
+ const onKey=(event)=>{if(event.key==='Escape'&&!busy)close()};
+ document.addEventListener('keydown',onKey);
  cancel.onclick=close;
  backdrop.addEventListener('click',e=>{if(e.target===backdrop&&!busy)close()});
  save.onclick=async()=>{
@@ -71,7 +74,9 @@ async function openEditor(){
  actions.append(cancel,save);dialog.append(error,actions);backdrop.appendChild(dialog);document.body.appendChild(backdrop);cancel.focus();
 }
 async function refresh(){
- if(!supabase)return;
+ if(!supabase||refreshInFlight)return;
+ refreshInFlight=true;
+ try{
  const own=document.querySelector('.my-profile-card');
  let button=document.getElementById(key+'-button');
  if(!own){button?.remove();currentUserId='';return}
@@ -81,6 +86,7 @@ async function refresh(){
   currentUserId=user.id;
   if(!button){button=node('button','ec-alpenraum-edit','Meine Alpenregionen & Interessen');button.id=key+'-button';button.type='button';button.onclick=()=>void openEditor();document.body.appendChild(button)}
  }catch{button?.remove();currentUserId=''}
+ }finally{refreshInFlight=false}
 }
 if(typeof document!=='undefined'){
  void refresh();
