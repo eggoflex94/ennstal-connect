@@ -78,7 +78,7 @@ async function renderHome(){
   const now=new Date().toISOString();
   const discoveryRegionIds=[ctx.region.id,...ctx.additionalRegions.map(r=>r.id)];
   const [{data:events},{data:requests},{data:businesses},{data:listings},{data:newMembers},{data:groups},{data:memberships},{data:friendships}]=await Promise.all([
-    supabase.from('community_events').select('id,title,event_at,location,status,region_id,is_featured,featured_color,is_ai_generated').in('region_id',discoveryRegionIds).gte('event_at',now).order('event_at',{ascending:true}).limit(6),
+    supabase.from('community_events').select('id,title,event_at,location,status,region_id,is_featured,featured_color,is_ai_generated').in('region_id',discoveryRegionIds).gte('event_at',now).order('event_at',{ascending:true}).limit(30),
     supabase.from('community_requests').select('id,title,content,category,region_id,status,created_at').eq('region_id',ctx.region.id).order('created_at',{ascending:false}).limit(8),
     supabase.from('profiles').select('id,nickname,first_name,last_name,company_name,company_description,account_badge,home_region_id').eq('account_badge','BUSINESS').or(`home_region_id.eq.${ctx.region.id},home_region_id.is.null`).limit(16),
     supabase.from('business_listings').select('id,owner_id,region_id,listing_type,title,body,link_url,valid_until,is_active,is_ai_generated,created_at').eq('is_active',true).or(`region_id.eq.${ctx.region.id},region_id.is.null`).order('created_at',{ascending:false}).limit(10),
