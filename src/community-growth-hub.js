@@ -24,8 +24,8 @@ async function context(){
   return {user,profile,region,additionalRegions};
 }
 
-function eventCard(event){
-  return `<button type="button" class="ec-growth-item ec-clickable ${event.is_featured?`is-featured featured-${event.featured_color||'gold'}`:''}" data-growth-nav="events">${event.is_ai_generated?'<span class="ai-content-badge">✦ KI-Inhalt</span>':''}${event.is_featured?'<span class="ec-growth-featured">★ Hervorgehoben</span>':''}<span class="ec-growth-tag">TERMIN</span><strong>${esc(event.title)}</strong><span>${esc(fmt(event.event_at))}${event.location?` · ${esc(event.location)}`:''}</span></button>`;
+function eventCard(event,regionName=''){
+  return `<button type="button" class="ec-growth-item ec-clickable ${event.is_featured?`is-featured featured-${event.featured_color||'gold'}`:''}" data-growth-nav="events">${event.is_ai_generated?'<span class="ai-content-badge">✦ KI-Inhalt</span>':''}${event.is_featured?'<span class="ec-growth-featured">★ Hervorgehoben</span>':''}<span class="ec-growth-tag">TERMIN</span><strong>${esc(event.title)}</strong><span>${regionName?`${esc(regionName)} · `:''}${esc(fmt(event.event_at))}${event.location?` · ${esc(event.location)}`:''}</span></button>`;
 }
 function requestCard(request){
   return `<button type="button" class="ec-growth-item ec-clickable" data-growth-nav="home"><span class="ec-growth-tag">${esc(REQUEST_LABELS[request.category]||'Community')}</span><strong>${esc(request.title)}</strong><span>${esc(String(request.content||'').slice(0,120))}</span></button>`;
@@ -38,12 +38,12 @@ function businessCard(member){
 function listingCard(listing){
   return `<button type="button" class="ec-growth-item ec-clickable" data-growth-profile="${esc(listing.owner_id)}">${listing.is_ai_generated?'<span class="ai-content-badge">✦ KI-Inhalt</span>':''}<span class="ec-growth-tag">${esc(LISTING_LABELS[listing.listing_type]||'Angebot')}</span><strong>${esc(listing.title)}</strong><span>${esc(String(listing.body||'').slice(0,120))}</span></button>`;
 }
-function discoverMember(member){
+function discoverMember(member,regionName=''){
   const name=member.nickname||[member.first_name,member.last_name].filter(Boolean).join(' ')||'Mitglied';
-  return `<button type="button" class="ec-discover-item" data-growth-profile="${esc(member.id)}"><img class="ec-discover-avatar" src="${esc(member.avatar_url||'/community-default-avatar.png')}" alt=""><span class="ec-discover-copy"><strong>${esc(name)}</strong><span>Neu in deiner Region</span></span></button>`;
+  return `<button type="button" class="ec-discover-item" data-growth-profile="${esc(member.id)}"><img class="ec-discover-avatar" src="${esc(member.avatar_url||'/community-default-avatar.png')}" alt=""><span class="ec-discover-copy"><strong>${esc(name)}</strong><span>${regionName?`Neu aus ${esc(regionName)}`:'Neu in deiner Region'}</span></span></button>`;
 }
-function discoverGroup(group,count){
-  return `<button type="button" class="ec-discover-item" data-growth-nav="community"><span class="ec-discover-copy"><strong>${esc(group.name)}</strong><span>${esc(group.description||'Community-Gruppe')}</span><span class="ec-discover-badge">${count} Mitglied${count===1?'':'er'}</span></span></button>`;
+function discoverGroup(group,count,regionName=''){
+  return `<button type="button" class="ec-discover-item" data-growth-nav="community"><span class="ec-discover-copy"><strong>${esc(group.name)}</strong><span>${regionName?`${esc(regionName)} · `:''}${esc(group.description||'Community-Gruppe')}</span><span class="ec-discover-badge">${count} Mitglied${count===1?'':'er'}</span></span></button>`;
 }
 function section(title,page,items,empty){
   return `<article class="ec-growth-card"><div class="ec-growth-card-head"><h3>${esc(title)}</h3>${page?`<button type="button" data-growth-nav="${esc(page)}">Alle ansehen →</button>`:''}</div><div class="ec-growth-list">${items.length?items.join(''):`<p class="ec-growth-empty">${esc(empty)}</p>`}</div></article>`;
@@ -77,6 +77,7 @@ async function renderHome(){
   if(!ctx?.region||version!==requestVersion)return;
   const now=new Date().toISOString();
   const discoveryRegionIds=[ctx.region.id,...ctx.additionalRegions.map(r=>r.id)];
+  const regionNames=new Map([ctx.region,...ctx.additionalRegions].map(region=>[region.id,region.name]));
   const [{data:events},{data:requests},{data:businesses},{data:listings},{data:newMembers},{data:groups},{data:memberships},{data:friendships}]=await Promise.all([
     supabase.from('community_events').select('id,title,event_at,location,status,region_id,is_featured,featured_color,is_ai_generated').in('region_id',discoveryRegionIds).gte('event_at',now).order('event_at',{ascending:true}).limit(30),
     supabase.from('community_requests').select('id,title,content,category,region_id,status,created_at').eq('region_id',ctx.region.id).order('created_at',{ascending:false}).limit(8),
@@ -103,11 +104,11 @@ async function renderHome(){
 
   const hub=document.createElement('section');
   hub.className='ec-growth-hub';
-  hub.innerHTML=`<div class="ec-growth-head"><div><small>DEINE REGION AUF EINEN BLICK</small><h2>Heute & demnächst in ${esc(ctx.region.name)}</h2></div><span class="ec-growth-region">${esc(ctx.region.name)}</span></div><div class="ec-growth-grid">${section('Heute & demnächst','events',activeEvents.map(eventCard),'Derzeit keine kommenden Termine.')}${section('Gesucht & angeboten','home',activeRequests.map(requestCard),'Noch keine offenen Community-Aufrufe.')}${section('Regionale Unternehmen','community',regionalBusinesses.map(businessCard),'Noch keine Unternehmenskonten in dieser Region.')}${section('Angebote, Jobs & Lehrstellen','community',currentListings.map(listingCard),'Noch keine Unternehmensangebote veröffentlicht.')}</div>`;
+  hub.innerHTML=`<div class="ec-growth-head"><div><small>DEINE REGION AUF EINEN BLICK</small><h2>Heute & demnächst in ${esc(ctx.region.name)}</h2></div><span class="ec-growth-region">${esc(ctx.region.name)}</span></div><div class="ec-growth-grid">${section('Heute & demnächst','events',activeEvents.map(event=>eventCard(event,regionNames.get(event.region_id)||'')),'Derzeit keine kommenden Termine.')}${section('Gesucht & angeboten','home',activeRequests.map(requestCard),'Noch keine offenen Community-Aufrufe.')}${section('Regionale Unternehmen','community',regionalBusinesses.map(businessCard),'Noch keine Unternehmenskonten in dieser Region.')}${section('Angebote, Jobs & Lehrstellen','community',currentListings.map(listingCard),'Noch keine Unternehmensangebote veröffentlicht.')}</div>`;
 
   const discover=document.createElement('section');
   discover.className='ec-discover';
-  discover.innerHTML=`<div class="ec-discover-head"><div><small>ENTDECKEN</small><h2>${ctx.additionalRegions.length?'Mein Alpenraum – '+esc(ctx.region.name)+' & weitere Regionen':'Mehr aus '+esc(ctx.region.name)}</h2></div><button type="button" data-growth-nav="community">Community entdecken →</button></div><div class="ec-discover-grid"><article class="ec-discover-card"><h3>Neu in deiner Region</h3><div class="ec-discover-list">${nearbyMembers.length?nearbyMembers.map(discoverMember).join(''):'<p class="ec-discover-empty">Gerade keine neuen Mitglieder.</p>'}</div></article><article class="ec-discover-card"><h3>Gruppen entdecken</h3><div class="ec-discover-list">${nearbyGroups.length?nearbyGroups.slice(0,3).map((group)=>discoverGroup(group,groupCounts.get(group.id)||0)).join(''):'<p class="ec-discover-empty">Noch keine Gruppen in dieser Region.</p>'}</div></article><article class="ec-discover-card"><h3>Deine Community</h3><div class="ec-discover-stat-grid"><div class="ec-discover-stat"><strong>${friendCount}</strong><span>Freunde</span></div><div class="ec-discover-stat"><strong>${(groups||[]).length}</strong><span>Gruppen</span></div><div class="ec-discover-stat"><strong>${(newMembers||[]).length}</strong><span>Neue Mitglieder</span></div></div></article></div>`;
+  discover.innerHTML=`<div class="ec-discover-head"><div><small>ENTDECKEN</small><h2>${ctx.additionalRegions.length?'Mein Alpenraum – '+esc(ctx.region.name)+' & weitere Regionen':'Mehr aus '+esc(ctx.region.name)}</h2></div><button type="button" data-growth-nav="community">Community entdecken →</button></div><div class="ec-discover-grid"><article class="ec-discover-card"><h3>Neu in deiner Region</h3><div class="ec-discover-list">${nearbyMembers.length?nearbyMembers.map(member=>discoverMember(member,regionNames.get(member.home_region_id)||'')).join(''):'<p class="ec-discover-empty">Gerade keine neuen Mitglieder.</p>'}</div></article><article class="ec-discover-card"><h3>Gruppen entdecken</h3><div class="ec-discover-list">${nearbyGroups.length?nearbyGroups.slice(0,3).map((group)=>discoverGroup(group,groupCounts.get(group.id)||0,regionNames.get(group.region_id)||'')).join(''):'<p class="ec-discover-empty">Noch keine Gruppen in dieser Region.</p>'}</div></article><article class="ec-discover-card"><h3>Deine Community</h3><div class="ec-discover-stat-grid"><div class="ec-discover-stat"><strong>${friendCount}</strong><span>Freunde</span></div><div class="ec-discover-stat"><strong>${(groups||[]).length}</strong><span>Gruppen</span></div><div class="ec-discover-stat"><strong>${(newMembers||[]).length}</strong><span>Neue Mitglieder</span></div></div></article></div>`;
 
   const heading=home.querySelector(':scope > .page-heading');
   if(heading){heading.insertAdjacentElement('afterend',hub);hub.insertAdjacentElement('afterend',discover);}else{home.prepend(discover);home.prepend(hub);}
