@@ -103,7 +103,7 @@ export default function MemberCardView({ member, profile, friendships, onOpen, i
       <div className="ec-card-badge-rail" aria-label="Profilkennzeichnungen">
         {presentation.star && (
           <span className={`ec-card-badge-icon ec-card-badge-role ec-card-badge-role-${presentation.theme}`} title={presentation.label} aria-label={presentation.label}>
-            <img className="ec-card-badge-img ec-card-badge-role-img" src={presentation.star} alt="" aria-hidden="true" />
+            <img className="ec-card-badge-img ec-card-badge-role-img" src={isOperatorCard ? "/operator-star-gold.svg" : presentation.star} alt="" aria-hidden="true" />
           </span>
         )}
         {member?.is_community_photographer && (
