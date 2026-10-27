@@ -105,3 +105,8 @@
 /* Group discovery connects directly to planning an activity. */
 .ec-group-activity-action{width:100%;margin-top:12px;padding:11px 12px;min-height:44px;border:1px solid #c8ddea;border-radius:10px;background:#f0f8ff;color:#194461;font-weight:750;text-align:left;cursor:pointer}
 .ec-group-activity-action:hover,.ec-group-activity-action:focus-visible{background:#deefff;outline-offset:2px}
+
+.ec-next-activity{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:12px 0;padding:17px 20px;border:1px solid #c9ded4;border-radius:16px;background:#f1faf5;color:#204c37}
+.ec-next-activity small{font-size:.68rem;font-weight:850;letter-spacing:.1em;color:#287e53}.ec-next-activity h2{font-size:1.25rem;margin:4px 0}.ec-next-activity p{margin:0;line-height:1.5}
+.ec-next-activity button{border:1px solid #a9d0bc;border-radius:10px;background:#fff;color:#205a40;font-weight:750;padding:12px;cursor:pointer;min-height:44px;flex-shrink:0}
+@media(max-width:720px){.ec-next-activity{flex-direction:column;align-items:stretch;padding:15px}.ec-next-activity button{width:100%}}
