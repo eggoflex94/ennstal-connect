@@ -7,5 +7,5 @@ test('only primary operator gets styling, not every admin',()=>{
  assert.match(component,/is_primary_head_admin === true/);
  assert.match(component,/isOperatorCard \? "ec-operator-card"/);
  assert.match(css,/\.ec-operator-card\[data-role-theme="admin"\]/);
- assert.match(css,/#ffdf62/);
+ assert.match(css,/#edc650/);
 });
