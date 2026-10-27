@@ -418,6 +418,8 @@ article.member-card[data-role-theme="member"] .ec-card-badge-role{
   }
 }
 
-/* Only primary operator card: warmer red and gold outline. Keep all layout untouched. */
-article.member-card.ec-operator-card[data-role-theme="admin"]{--ec-card-border:#ffdf62!important;--ec-card-bg:linear-gradient(155deg,#fa4c5c 0%,#e52546 42%,#c81739 78%,#a71030 100%)!important;border:6px solid #ffdf62!important;border-color:#ffdf62!important;box-shadow:0 0 0 2px #b67a08,0 0 0 4px rgba(255,226,113,.65),0 0 22px rgba(255,195,36,.6),0 10px 20px rgba(53,11,15,.24)!important}
+
+/* Operator only: jewel-red card, restrained gold trim and black nickname. */
+article.member-card.ec-operator-card[data-role-theme="admin"]{--ec-card-border:#edc650!important;--ec-card-bg:linear-gradient(155deg,#ee2545 0%,#c90a2d 45%,#9e0527 78%,#79021d 100%)!important;border:3px solid #edc650!important;box-shadow:0 0 0 1px rgba(245,202,84,.48),0 5px 13px rgba(54,6,18,.28)!important}
 article.member-card.ec-operator-card[data-role-theme="admin"]>.ec-role-surface{background:var(--ec-card-bg)!important}
+article.member-card.ec-operator-card[data-role-theme="admin"]>.member-nickname{color:#14100e!important;-webkit-text-fill-color:#14100e!important;text-shadow:0 1px 1px rgba(255,255,255,.22)!important}
