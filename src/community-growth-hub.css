@@ -91,3 +91,13 @@
 .ec-join-actions button{border:1px solid #c8ddea;border-radius:12px;background:#fff;padding:14px 10px;text-align:center;color:#194461;font-weight:750;cursor:pointer;min-height:60px}
 .ec-join-actions button:hover,.ec-join-actions button:focus-visible{background:#e7f4ff;outline-offset:3px}
 @media(max-width:720px){.ec-join-activities{padding:15px}.ec-join-actions{grid-template-columns:1fr}.ec-join-actions button{min-height:48px}}
+
+/* Helpful first steps for newly registered members */
+.ec-new-member-start{margin:12px 0 20px;padding:20px;border:1px solid #cbdde5;border-radius:18px;background:#f3faf8;color:#173c43;display:grid;gap:14px}
+.ec-new-member-start small{font-size:.7rem;letter-spacing:.1em;font-weight:800;color:#24776b}
+.ec-new-member-start h2{font-size:1.35rem;margin:5px 0}
+.ec-new-member-start p{margin:0;line-height:1.5}
+.ec-new-member-steps{display:flex;gap:10px;flex-wrap:wrap}
+.ec-new-member-steps button{padding:12px 15px;min-height:48px;border:1px solid #bcd4d2;border-radius:12px;background:#fff;color:#194d4a;font-weight:750;cursor:pointer}
+.ec-new-member-steps button:hover,.ec-new-member-steps button:focus-visible{background:#def5ed;outline-offset:2px}
+@media(max-width:720px){.ec-new-member-start{padding:15px}.ec-new-member-steps{display:grid;grid-template-columns:1fr}.ec-new-member-steps button{width:100%;text-align:left}}
