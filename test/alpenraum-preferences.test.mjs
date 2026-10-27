@@ -15,3 +15,11 @@ test('recommendations score home and additional Alpine regions',()=>{
   assert.match(source,/regionBoost\(g\.region_id\)/);
   assert.match(source,/regionBoost\(e\.region_id\)/);
 });
+
+test('home discovery includes only selected regions and prioritizes home region',()=>{
+  const source=readFileSync(new URL('../src/community-growth-hub.js',import.meta.url),'utf8');
+  assert.match(source,/discoveryRegionIds=\[ctx\.region\.id,\.\.\.ctx\.additionalRegions\.map/);
+  assert.match(source,/\.in\('region_id',discoveryRegionIds\)/);
+  assert.match(source,/\.in\('home_region_id',discoveryRegionIds\)/);
+  assert.match(source,/region_id\.in\.\(\$\{discoveryRegionIds\.join\(','\)\}\)/);
+});
