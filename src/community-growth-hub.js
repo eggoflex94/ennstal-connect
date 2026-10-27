@@ -4,6 +4,7 @@ import './community-growth-hub.css';
 let timer=null;
 let requestVersion=0;
 const esc=(value)=>String(value??'').replace(/[&<>"']/g,(char)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+const safeExternalUrl=(value)=>{try{const url=new URL(String(value||'').trim());return ['https:','http:'].includes(url.protocol)?url.href:'';}catch{return '';}};
 const fmt=(value)=>{const d=new Date(value);return Number.isNaN(d.getTime())?'':new Intl.DateTimeFormat('de-AT',{weekday:'short',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}).format(d)};
 const nav=(page)=>window.dispatchEvent(new CustomEvent('ec:navigate',{detail:{page}}));
 const REQUEST_LABELS={MITFAHREN:'Mitfahrgelegenheit',WANDERPARTNER:'Wanderpartner',REGIONALER_TIPP:'Regionaler Tipp',HILFE:'Hilfe gesucht',SUCHE:'Suche',BIETE:'Biete',EMPFEHLUNG:'Empfehlung'};
@@ -76,12 +77,12 @@ async function renderHome(){
   const [{data:events},{data:requests},{data:businesses},{data:listings},{data:newMembers},{data:groups},{data:memberships},{data:friendships}]=await Promise.all([
     supabase.from('community_events').select('id,title,event_at,location,status,region_id,is_featured,featured_color,is_ai_generated').eq('region_id',ctx.region.id).gte('event_at',now).order('event_at',{ascending:true}).limit(6),
     supabase.from('community_requests').select('id,title,content,category,region_id,status,created_at').eq('region_id',ctx.region.id).order('created_at',{ascending:false}).limit(8),
-    supabase.from('profiles').select('id,nickname,first_name,last_name,company_name,company_description,account_badge,home_region_id').eq('account_badge','BUSINESS').limit(16),
+    supabase.from('profiles').select('id,nickname,first_name,last_name,company_name,company_description,account_badge,home_region_id').eq('account_badge','BUSINESS').or(`home_region_id.eq.${ctx.region.id},home_region_id.is.null`).limit(16),
     supabase.from('business_listings').select('id,owner_id,region_id,listing_type,title,body,link_url,valid_until,is_active,is_ai_generated,created_at').eq('is_active',true).or(`region_id.eq.${ctx.region.id},region_id.is.null`).order('created_at',{ascending:false}).limit(10),
     supabase.from('profiles').select('id,nickname,first_name,last_name,avatar_url,created_at,home_region_id,account_status,is_test_account').eq('home_region_id',ctx.region.id).eq('account_status','ACTIVE').eq('is_test_account',false).neq('id',ctx.user.id).order('created_at',{ascending:false}).limit(4),
     supabase.from('community_groups').select('id,name,description,region_id,created_at,is_featured').or(`region_id.eq.${ctx.region.id},region_id.is.null`).order('is_featured',{ascending:false}).order('created_at',{ascending:false}).limit(5),
     supabase.from('community_group_members').select('group_id,user_id'),
-    supabase.from('friendships').select('requester_id,receiver_id,status').eq('status','ACCEPTED')
+    supabase.from('friendships').select('requester_id,receiver_id,status').eq('status','ACCEPTED').or(`requester_id.eq.${ctx.user.id},receiver_id.eq.${ctx.user.id}`)
   ]);
   if(version!==requestVersion)return;
   const activeEvents=(events||[]).filter((event)=>String(event.status||'').toUpperCase()!=='CANCELLED').sort((a,b)=>Number(Boolean(b.is_featured))-Number(Boolean(a.is_featured))||new Date(a.event_at)-new Date(b.event_at)).slice(0,3);
@@ -113,10 +114,10 @@ async function renderHome(){
 function businessPanelMarkup(member,listings=[]){
   const title=member.company_name||member.nickname||'Unternehmenskonto';
   const desc=member.company_description||'Regionales Unternehmen oder Verein auf Ennstal Connect.';
-  const website=String(member.company_website||'').trim();
+  const website=safeExternalUrl(member.company_website);
   const hours=String(member.company_opening_hours||'').trim();
-  const meta=[hours?`<span>Öffnungszeiten: ${esc(hours)}</span>`:'',website?`<a href="${esc(website)}" target="_blank" rel="noreferrer">Webseite öffnen ↗</a>`:'','<span>Verifiziertes Unternehmenskonto</span>',member.home_region_id?'<span>Regional sichtbar</span>':''].filter(Boolean).join('');
-  const items=listings.length?`<div class="ec-business-listings"><h3>Aktuelle Angebote & Stellen</h3>${listings.map((item)=>`<article>${item.is_ai_generated?'<span class="ai-content-badge">✦ KI-Inhalt</span>':''}<span>${esc(LISTING_LABELS[item.listing_type]||'Angebot')}</span><strong>${esc(item.title)}</strong><p>${esc(item.body)}</p>${item.link_url?`<a href="${esc(item.link_url)}" target="_blank" rel="noreferrer">Mehr erfahren ↗</a>`:''}</article>`).join('')}</div>`:'';
+  const meta=[hours?`<span>Öffnungszeiten: ${esc(hours)}</span>`:'',website?`<a href="${esc(website)}" target="_blank" rel="noopener noreferrer">Webseite öffnen ↗</a>`:'','<span>Verifiziertes Unternehmenskonto</span>',member.home_region_id?'<span>Regional sichtbar</span>':''].filter(Boolean).join('');
+  const items=listings.length?`<div class="ec-business-listings"><h3>Aktuelle Angebote & Stellen</h3>${listings.map((item)=>`<article>${item.is_ai_generated?'<span class="ai-content-badge">✦ KI-Inhalt</span>':''}<span>${esc(LISTING_LABELS[item.listing_type]||'Angebot')}</span><strong>${esc(item.title)}</strong><p>${esc(item.body)}</p>${safeExternalUrl(item.link_url)?`<a href="${esc(safeExternalUrl(item.link_url))}" target="_blank" rel="noopener noreferrer">Mehr erfahren ↗</a>`:''}</article>`).join('')}</div>`:'';
   return `<header><div><span class="ec-business-kicker">REGIONALER PARTNER</span><h2>${esc(title)}</h2></div><span aria-label="Unternehmenskonto">★</span></header><p>${esc(desc)}</p><div class="ec-business-meta">${meta}</div>${items}`;
 }
 
