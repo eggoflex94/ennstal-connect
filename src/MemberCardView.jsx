@@ -56,6 +56,7 @@ function rolePresentation(member) {
 
 export default function MemberCardView({ member, profile, friendships, onOpen, interactive = true, foundingHighlightUntil = null }) {
   const presentation = rolePresentation(member);
+  const isOperatorCard = Boolean(member?.is_primary_head_admin === true || (member?.id === profile?.id && profile?.is_primary_head_admin === true));
   const foundingFeatured = Boolean(foundingHighlightUntil && new Date(foundingHighlightUntil).getTime() > Date.now() && member.avatar_url);
   const baseRole = String(member?.role || "MEMBER").toUpperCase();
   const friendship = (friendships || []).find((item) => (item.requester_id === profile?.id && item.receiver_id === member.id) || (item.receiver_id === profile?.id && item.requester_id === member.id));
@@ -77,7 +78,7 @@ export default function MemberCardView({ member, profile, friendships, onOpen, i
 
   return (
     <article
-      className={`member-card ${presentation.key} role-theme-${presentation.theme} ${foundingFeatured ? "ec-founding-featured" : ""}`}
+      className={`member-card ${presentation.key} role-theme-${presentation.theme} ${foundingFeatured ? "ec-founding-featured" : ""} ${isOperatorCard ? "ec-operator-card" : ""}`}
       data-member-id={member.id}
       data-base-role={baseRole}
       data-home-region-id={member.home_region_id || ""}
