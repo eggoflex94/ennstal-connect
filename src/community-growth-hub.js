@@ -27,8 +27,8 @@ async function context(){
 function eventCard(event,regionName=''){
   return `<button type="button" class="ec-growth-item ec-clickable ${event.is_featured?`is-featured featured-${event.featured_color||'gold'}`:''}" data-growth-nav="events">${event.is_ai_generated?'<span class="ai-content-badge">✦ KI-Inhalt</span>':''}${event.is_featured?'<span class="ec-growth-featured">★ Hervorgehoben</span>':''}<span class="ec-growth-tag">TERMIN</span><strong>${esc(event.title)}</strong><span>${regionName?`${esc(regionName)} · `:''}${esc(fmt(event.event_at))}${event.location?` · ${esc(event.location)}`:''}</span></button>`;
 }
-function requestCard(request){
-  return `<button type="button" class="ec-growth-item ec-clickable" data-growth-nav="home"><span class="ec-growth-tag">${esc(REQUEST_LABELS[request.category]||'Community')}</span><strong>${esc(request.title)}</strong><span>${esc(String(request.content||'').slice(0,120))}</span></button>`;
+function requestCard(request,regionName=''){
+  return `<button type="button" class="ec-growth-item ec-clickable" data-growth-nav="home"><span class="ec-growth-tag">${esc(REQUEST_LABELS[request.category]||'Community')}</span><strong>${esc(request.title)}</strong><span>${regionName?`${esc(regionName)} · `:''}${esc(String(request.content||'').slice(0,120))}</span></button>`;
 }
 function businessCard(member){
   const name=member.company_name||member.nickname||[member.first_name,member.last_name].filter(Boolean).join(' ')||'Unternehmen';
@@ -80,7 +80,7 @@ async function renderHome(){
   const regionNames=new Map([ctx.region,...ctx.additionalRegions].map(region=>[region.id,region.name]));
   const [{data:events},{data:requests},{data:businesses},{data:listings},{data:newMembers},{data:groups},{data:memberships},{data:friendships}]=await Promise.all([
     supabase.from('community_events').select('id,title,event_at,location,status,region_id,is_featured,featured_color,is_ai_generated').in('region_id',discoveryRegionIds).gte('event_at',now).order('event_at',{ascending:true}).limit(30),
-    supabase.from('community_requests').select('id,title,content,category,region_id,status,created_at').eq('region_id',ctx.region.id).order('created_at',{ascending:false}).limit(8),
+    supabase.from('community_requests').select('id,title,content,category,region_id,status,created_at').in('region_id',discoveryRegionIds).order('created_at',{ascending:false}).limit(30),
     supabase.from('profiles').select('id,nickname,first_name,last_name,company_name,company_description,account_badge,home_region_id').eq('account_badge','BUSINESS').or(`home_region_id.eq.${ctx.region.id},home_region_id.is.null`).limit(16),
     supabase.from('business_listings').select('id,owner_id,region_id,listing_type,title,body,link_url,valid_until,is_active,is_ai_generated,created_at').eq('is_active',true).or(`region_id.eq.${ctx.region.id},region_id.is.null`).order('created_at',{ascending:false}).limit(10),
     supabase.from('profiles').select('id,nickname,first_name,last_name,avatar_url,created_at,home_region_id,account_status,is_test_account').in('home_region_id',discoveryRegionIds).eq('account_status','ACTIVE').eq('is_test_account',false).neq('id',ctx.user.id).order('created_at',{ascending:false}).limit(4),
@@ -90,7 +90,7 @@ async function renderHome(){
   ]);
   if(version!==requestVersion)return;
   const activeEvents=(events||[]).filter((event)=>String(event.status||'').toUpperCase()!=='CANCELLED').sort((a,b)=>Number(b.region_id===ctx.region.id)-Number(a.region_id===ctx.region.id)||Number(Boolean(b.is_featured))-Number(Boolean(a.is_featured))||new Date(a.event_at)-new Date(b.event_at)).slice(0,3);
-  const activeRequests=(requests||[]).filter((request)=>!request.status||!['CLOSED','DONE','ARCHIVED'].includes(String(request.status).toUpperCase())).slice(0,3);
+  const activeRequests=(requests||[]).filter((request)=>!request.status||!['CLOSED','DONE','ARCHIVED'].includes(String(request.status).toUpperCase())).sort((a,b)=>Number(b.region_id===ctx.region.id)-Number(a.region_id===ctx.region.id)||new Date(b.created_at)-new Date(a.created_at)).slice(0,3);
   const regionalBusinesses=(businesses||[]).filter((member)=>!member.home_region_id||member.home_region_id===ctx.region.id).slice(0,3);
   const currentListings=(listings||[]).filter((item)=>!item.valid_until||new Date(item.valid_until).getTime()>=Date.now()).slice(0,3);
   const nearbyMembers=[...(newMembers||[])].sort((a,b)=>Number(b.home_region_id===ctx.region.id)-Number(a.home_region_id===ctx.region.id)).slice(0,4);
@@ -104,7 +104,7 @@ async function renderHome(){
 
   const hub=document.createElement('section');
   hub.className='ec-growth-hub';
-  hub.innerHTML=`<div class="ec-growth-head"><div><small>DEINE REGION AUF EINEN BLICK</small><h2>Heute & demnächst in ${esc(ctx.region.name)}</h2></div><span class="ec-growth-region">${esc(ctx.region.name)}</span></div><div class="ec-growth-grid">${section('Heute & demnächst','events',activeEvents.map(event=>eventCard(event,regionNames.get(event.region_id)||'')),'Derzeit keine kommenden Termine.')}${section('Gesucht & angeboten','home',activeRequests.map(requestCard),'Noch keine offenen Community-Aufrufe.')}${section('Regionale Unternehmen','community',regionalBusinesses.map(businessCard),'Noch keine Unternehmenskonten in dieser Region.')}${section('Angebote, Jobs & Lehrstellen','community',currentListings.map(listingCard),'Noch keine Unternehmensangebote veröffentlicht.')}</div>`;
+  hub.innerHTML=`<div class="ec-growth-head"><div><small>DEINE REGION AUF EINEN BLICK</small><h2>Heute & demnächst in ${esc(ctx.region.name)}</h2></div><span class="ec-growth-region">${esc(ctx.region.name)}</span></div><div class="ec-growth-grid">${section('Heute & demnächst','events',activeEvents.map(event=>eventCard(event,regionNames.get(event.region_id)||'')),'Derzeit keine kommenden Termine.')}${section('Gesucht & angeboten','home',activeRequests.map(request=>requestCard(request,regionNames.get(request.region_id)||'')),'Noch keine offenen Community-Aufrufe.')}${section('Regionale Unternehmen','community',regionalBusinesses.map(businessCard),'Noch keine Unternehmenskonten in dieser Region.')}${section('Angebote, Jobs & Lehrstellen','community',currentListings.map(listingCard),'Noch keine Unternehmensangebote veröffentlicht.')}</div>`;
 
   const discover=document.createElement('section');
   discover.className='ec-discover';
