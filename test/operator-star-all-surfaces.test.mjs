@@ -1,0 +1,4 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';
+const identity=readFileSync(new URL('../src/operator-identity.js',import.meta.url),'utf8');const sidebar=readFileSync(new URL('../src/sidebar-overview.js',import.meta.url),'utf8');const role=readFileSync(new URL('../src/roleIdentity.js',import.meta.url),'utf8');
+test('operator is identified by explicit account, never HEAD_ADMIN role',()=>{assert.match(identity,/OPERATOR_PROFILE_ID/);assert.match(identity,/is_primary_head_admin === true/);assert.match(role,/isOperatorProfile\(profile\)/);});
+test('friends online and profile visits receive operator badge',()=>{assert.match(sidebar,/d\.online_friends/);assert.match(sidebar,/d\.profile_visitors/);assert.match(sidebar,/ec-sidebar-operator-star/);});

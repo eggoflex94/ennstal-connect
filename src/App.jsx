@@ -1,3 +1,4 @@
+import { isOperatorProfile, operatorStarSrc } from './operator-identity.js';
 import AccountApprovals, { AccountApprovalNotice } from './AccountApprovals.jsx';
 import { prepareImageUpload } from './prepareImageUpload.js';
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -67,7 +68,7 @@ const PERMISSIONS = [
 ];
 
 const roleLabel = (role) => role === "HEAD_ADMIN" ? "Hauptadmin" : role === "ADMIN" ? "Community Admin" : role === "MUNICIPALITY" ? "Gemeinde" : role === "SUPPORTER" ? "Supporter" : "Mitglied";
-function RoleStar({ member }) { const role=member?.role; const src=member?.is_primary_head_admin===true?'/operator-star-gold.svg':role==='HEAD_ADMIN'||role==='ADMIN'?'/role-star-red.svg':role==='MUNICIPALITY'?(member?.role_star_url||'/role-star-green.svg'):role==='SUPPORTER'?'/supporter-star.svg':member?.account_badge==='BUSINESS'?'/role-star-blue.svg':'/role-star-member.svg'; return <img className="ec-inline-role-star" src={src} alt="" aria-hidden="true"/>; }
+function RoleStar({ member }) { const role=member?.role; const src=isOperatorProfile(member)?operatorStarSrc:role==='HEAD_ADMIN'||role==='ADMIN'?'/role-star-red.svg':role==='MUNICIPALITY'?(member?.role_star_url||'/role-star-green.svg'):role==='SUPPORTER'?'/supporter-star.svg':member?.account_badge==='BUSINESS'?'/role-star-blue.svg':'/role-star-member.svg'; return <img className="ec-inline-role-star" src={src} alt="" aria-hidden="true"/>; }
 const roleMark = (role) => role === "HEAD_ADMIN" || role === "ADMIN" || role === "MUNICIPALITY" || role === "SUPPORTER" ? "★" : "";
 const roleClass = (role) => String(role || "MEMBER").toLowerCase().replace("_", "-");
 const isAdmin = (role) => role === "ADMIN" || role === "HEAD_ADMIN";
@@ -3255,7 +3256,7 @@ function EventsPage({ members, showNotice, events, eventRsvps, user, profile, ac
   const photosFor = (eventId) => eventPhotos.filter((photo) => photo.event_id === eventId);
   const awardsFor = (eventId) => eventAwards.filter((award) => award.event_id === eventId);
   const publicPhotoUrl = (path) => supabase.storage.from("event-photos").getPublicUrl(path).data.publicUrl;
-  const roleStarFor = (member) => member?.is_primary_head_admin === true ? '/operator-star-gold.svg' : member?.role_star_url || (String(member?.role || "").toUpperCase() === "HEAD_ADMIN" ? "/role-star-red.svg" : String(member?.role || "").toUpperCase() === "ADMIN" ? "/role-star-blue.svg" : String(member?.role || "").toUpperCase() === "SUPPORTER" ? "/supporter-star.svg" : null);
+  const roleStarFor = (member) => isOperatorProfile(member) ? operatorStarSrc : member?.role_star_url || (String(member?.role || "").toUpperCase() === "HEAD_ADMIN" ? "/role-star-red.svg" : String(member?.role || "").toUpperCase() === "ADMIN" ? "/role-star-blue.svg" : String(member?.role || "").toUpperCase() === "SUPPORTER" ? "/supporter-star.svg" : null);
 
   const openEventPhotos = async (eventId) => {
     setPhotoUploadError("");
