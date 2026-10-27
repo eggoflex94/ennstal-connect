@@ -99,6 +99,11 @@ async function renderHome(){
   (memberships||[]).forEach((row)=>groupCounts.set(row.group_id,(groupCounts.get(row.group_id)||0)+1));
   const friendCount=(friendships||[]).filter((row)=>row.requester_id===ctx.user.id||row.receiver_id===ctx.user.id).length;
 
+  home.querySelector(':scope > .ec-join-activities')?.remove();
+  const join=document.createElement('section');
+  join.className='ec-join-activities';
+  join.setAttribute('aria-label','Gemeinsam aktiv werden');
+  join.innerHTML=`<div class="ec-join-intro"><span>GEMEINSAM IM ALPENRAUM</span><h2>Wer macht mit?</h2><p>Finde Menschen für gemeinsame Unternehmungen oder starte selbst einen Community-Aufruf.</p></div><div class="ec-join-actions"><button type="button" data-growth-nav="community">🥾 Wanderpartner finden</button><button type="button" data-growth-nav="events">📅 Gemeinsam etwas erleben</button><button type="button" data-growth-nav="community">🤝 Hilfe suchen oder anbieten</button></div>`;
   home.querySelector(':scope > .ec-growth-hub')?.remove();
   home.querySelector(':scope > .ec-discover')?.remove();
 
@@ -112,6 +117,8 @@ async function renderHome(){
 
   const heading=home.querySelector(':scope > .page-heading');
   if(heading){heading.insertAdjacentElement('afterend',hub);hub.insertAdjacentElement('afterend',discover);}else{home.prepend(discover);home.prepend(hub);}
+  hub.insertAdjacentElement('afterend',join);
+  wire(join);
   wire(hub);
   wire(discover);
   enhanceRequestForm();
