@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient';
 import './community-growth-hub.css';
+import { manageHomepageFrames } from './homepage-frame-manager.js';
 
 let timer=null;
 let requestVersion=0;
@@ -14,7 +15,7 @@ async function context(){
   const {data:{user}}=await supabase.auth.getUser();
   if(!user?.id)return null;
   const [{data:profile},{data:regions}]=await Promise.all([
-    supabase.from('profiles').select('id,created_at,home_region_id,account_badge,company_name,company_description,company_website,company_opening_hours,business_jobs_enabled').eq('id',user.id).maybeSingle(),
+    supabase.from('profiles').select('id,role,created_at,home_region_id,account_badge,company_name,company_description,company_website,company_opening_hours,business_jobs_enabled').eq('id',user.id).maybeSingle(),
     supabase.from('regions').select('id,slug,name').eq('is_active',true)
   ]);
   const slug=document.documentElement.dataset.ecRegion||document.querySelector('.ec-region-picker select')?.value||localStorage.getItem('ec-active-region')||'';
@@ -144,6 +145,7 @@ async function renderHome(){
   wire(hub);
   wire(discover);
   enhanceRequestForm();
+  await manageHomepageFrames(home,ctx);
 }
 
 function businessPanelMarkup(member,listings=[]){
