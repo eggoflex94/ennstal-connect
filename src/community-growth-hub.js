@@ -100,6 +100,14 @@ async function renderHome(){
   (memberships||[]).forEach((row)=>groupCounts.set(row.group_id,(groupCounts.get(row.group_id)||0)+1));
   const friendCount=(friendships||[]).filter((row)=>row.requester_id===ctx.user.id||row.receiver_id===ctx.user.id).length;
 
+  home.querySelector(':scope > .ec-next-activity')?.remove();
+  const nextEvent=activeEvents[0]||null;
+  let nextActivity=null;
+  if(nextEvent){
+    nextActivity=document.createElement('section');
+    nextActivity.className='ec-next-activity';
+    nextActivity.innerHTML=`<div><small>NÄCHSTE AKTIVITÄT IM ALPENRAUM</small><h2>${esc(nextEvent.title)}</h2><p>${esc(regionNames.get(nextEvent.region_id)||ctx.region.name)} · ${esc(fmt(nextEvent.event_at))}${nextEvent.location?` · ${esc(nextEvent.location)}`:''}</p></div><button type="button" data-growth-nav="events">Aktivität ansehen →</button>`;
+  }
   home.querySelector(':scope > .ec-new-member-start')?.remove();
   const isNewMember=ctx.profile?.created_at && Date.now()-new Date(ctx.profile.created_at).getTime()<30*86400000;
   const hasJoinedGroup=joinedGroupIds.size>0;
@@ -129,6 +137,7 @@ async function renderHome(){
   const heading=home.querySelector(':scope > .page-heading');
   if(heading){heading.insertAdjacentElement('afterend',hub);hub.insertAdjacentElement('afterend',discover);}else{home.prepend(discover);home.prepend(hub);}
   hub.insertAdjacentElement('afterend',join);
+  if(nextActivity){hub.insertAdjacentElement('afterend',nextActivity);wire(nextActivity);}
   if(newcomer){join.insertAdjacentElement('afterend',newcomer);wire(newcomer);}
   wire(join);
   wire(hub);
