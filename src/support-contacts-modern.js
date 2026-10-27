@@ -170,6 +170,7 @@ function signature(profiles) {
   return profiles.map((profile) => [
     profile.user_id,
     profile.role,
+    profile.is_primary_head_admin,
     profile.nickname,
     profile.forum_moderator,
     profile.group_moderator,
@@ -184,7 +185,11 @@ async function refreshTeam() {
   try {
     const { data, error } = await supabase.rpc("community_moderation_contacts");
     if (error) throw error;
-    const profiles = (data || []).map((profile) => ({ ...profile, id: profile.user_id }));
+    const ids=(data||[]).map(p=>p.user_id).filter(Boolean);
+    const {data:flags,error:flagsError}=ids.length?await supabase.from('profiles').select('id,is_primary_head_admin').in('id',ids):{data:[]};
+    if(flagsError)throw flagsError;
+    const primaryIds=new Set((flags||[]).filter(p=>p.is_primary_head_admin===true).map(p=>p.id));
+    const profiles = (data || []).map((profile) => ({ ...profile, id: profile.user_id, is_primary_head_admin: primaryIds.has(profile.user_id) }));
     const nextSignature = signature(profiles);
     if (nextSignature !== lastSignature || !document.querySelector(".ec-team-panel")) {
       lastSignature = nextSignature;
