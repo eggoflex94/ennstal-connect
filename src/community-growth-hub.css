@@ -110,3 +110,9 @@
 .ec-next-activity small{font-size:.68rem;font-weight:850;letter-spacing:.1em;color:#287e53}.ec-next-activity h2{font-size:1.25rem;margin:4px 0}.ec-next-activity p{margin:0;line-height:1.5}
 .ec-next-activity button{border:1px solid #a9d0bc;border-radius:10px;background:#fff;color:#205a40;font-weight:750;padding:12px;cursor:pointer;min-height:44px;flex-shrink:0}
 @media(max-width:720px){.ec-next-activity{flex-direction:column;align-items:stretch;padding:15px}.ec-next-activity button{width:100%}}
+
+/* Clear information hierarchy: community first, business content on demand */
+.ec-growth-more{margin-top:14px;border-top:1px solid #dbe5eb;padding-top:13px}
+.ec-growth-more summary{cursor:pointer;padding:12px 14px;border-radius:10px;background:#f1f6fa;color:#194461;font-weight:750;list-style-position:inside}
+.ec-growth-more summary:hover,.ec-growth-more summary:focus-visible{background:#e2f0fa;outline-offset:2px}
+.ec-growth-more[open]>.ec-growth-grid{margin-top:12px}
