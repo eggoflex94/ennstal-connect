@@ -37,6 +37,7 @@ import "./notification-center.js";
 import "./error-monitor.js";
 import "./admin-error-center.js";
 import "./member-onboarding.js";
+import "./alpenraum-preferences-editor.js";
 import "./admin-workspace.css";
 import "./admin-workspace.js";
 import "./sidebar-news-popup.js";
