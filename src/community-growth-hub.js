@@ -14,7 +14,7 @@ async function context(){
   const {data:{user}}=await supabase.auth.getUser();
   if(!user?.id)return null;
   const [{data:profile},{data:regions}]=await Promise.all([
-    supabase.from('profiles').select('id,home_region_id,account_badge,company_name,company_description,company_website,company_opening_hours,business_jobs_enabled').eq('id',user.id).maybeSingle(),
+    supabase.from('profiles').select('id,created_at,home_region_id,account_badge,company_name,company_description,company_website,company_opening_hours,business_jobs_enabled').eq('id',user.id).maybeSingle(),
     supabase.from('regions').select('id,slug,name').eq('is_active',true)
   ]);
   const slug=document.documentElement.dataset.ecRegion||document.querySelector('.ec-region-picker select')?.value||localStorage.getItem('ec-active-region')||'';
@@ -99,6 +99,16 @@ async function renderHome(){
   (memberships||[]).forEach((row)=>groupCounts.set(row.group_id,(groupCounts.get(row.group_id)||0)+1));
   const friendCount=(friendships||[]).filter((row)=>row.requester_id===ctx.user.id||row.receiver_id===ctx.user.id).length;
 
+  home.querySelector(':scope > .ec-new-member-start')?.remove();
+  const isNewMember=ctx.profile?.created_at && Date.now()-new Date(ctx.profile.created_at).getTime()<30*86400000;
+  const hasJoinedGroup=(memberships||[]).some((membership)=>membership.user_id===ctx.user.id);
+  let newcomer=null;
+  if(isNewMember && (!friendCount || !hasJoinedGroup)){
+    newcomer=document.createElement('section');
+    newcomer.className='ec-new-member-start';
+    newcomer.setAttribute('aria-label','Dein Einstieg in die Community');
+    newcomer.innerHTML=`<div><small>DEIN START IM ALPENRAUM</small><h2>Schön, dass du dabei bist!</h2><p>Entdecke Menschen und Gruppen aus ${esc(ctx.region.name)} und deinen gewählten Alpenregionen.</p></div><div class="ec-new-member-steps">${!friendCount?'<button type="button" data-growth-nav="community">👋 Kontakte knüpfen →</button>':''}${!hasJoinedGroup?'<button type="button" data-growth-nav="community">🏔️ Gruppe entdecken →</button>':''}<button type="button" data-growth-nav="events">📆 Aktivität finden →</button></div>`;
+  }
   home.querySelector(':scope > .ec-join-activities')?.remove();
   const join=document.createElement('section');
   join.className='ec-join-activities';
@@ -118,6 +128,7 @@ async function renderHome(){
   const heading=home.querySelector(':scope > .page-heading');
   if(heading){heading.insertAdjacentElement('afterend',hub);hub.insertAdjacentElement('afterend',discover);}else{home.prepend(discover);home.prepend(hub);}
   hub.insertAdjacentElement('afterend',join);
+  if(newcomer){join.insertAdjacentElement('afterend',newcomer);wire(newcomer);}
   wire(join);
   wire(hub);
   wire(discover);
