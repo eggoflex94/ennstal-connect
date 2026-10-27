@@ -118,7 +118,7 @@ export default function MemberCardView({ member, profile, friendships, onOpen, i
         )}
       </div>
 
-      <strong className={`member-nickname ec-native-nickname ${presentation.theme}`}>
+      <strong className={`member-nickname ec-native-nickname ${presentation.theme}`} style={isOperatorCard ? { color: "#111111", WebkitTextFillColor: "#111111", textShadow: "none" } : undefined}>
         {getName(member)}
       </strong>
 
