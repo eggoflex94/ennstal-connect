@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { isOperatorProfile, operatorStarSrc } from './operator-identity.js';
 
 const STAR_BY_THEME={admin:'/role-star-red.svg',municipality:'/role-star-green.svg',supporter:'/supporter-star.svg',business:'/role-star-blue.svg'};
 let state={userId:null,profile:null,regions:[],regionalAdmins:[]};
@@ -55,7 +56,7 @@ function apply(){
   if(label!==heading&&label.textContent!==(profile.nickname||'Mitglied'))label.textContent=profile.nickname||'Mitglied';
   if(label===heading&&heading.textContent!==(profile.nickname||'Mitglied'))heading.textContent=profile.nickname||'Mitglied';
 
-  const star=theme==='municipality'?(profile.role_star_url||STAR_BY_THEME.municipality):(STAR_BY_THEME[theme]||'');
+  const star=isOperatorProfile(profile)?operatorStarSrc:theme==='municipality'?(profile.role_star_url||STAR_BY_THEME.municipality):(STAR_BY_THEME[theme]||'');
   if(star)dock.style.setProperty('--ec-sidebar-role-star',`url("${star}")`);
   else dock.style.removeProperty('--ec-sidebar-role-star');
 }
