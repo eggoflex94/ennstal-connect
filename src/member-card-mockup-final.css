@@ -419,5 +419,5 @@ article.member-card[data-role-theme="member"] .ec-card-badge-role{
 }
 
 /* Only primary operator card: warmer red and gold outline. Keep all layout untouched. */
-article.member-card.ec-operator-card[data-role-theme="admin"]{--ec-card-border:#e6ba48!important;--ec-card-bg:linear-gradient(145deg,#d5233c 0%,#b40d2c 42%,#8e0923 73%,#490613 100%)!important;border-color:#e6ba48!important;box-shadow:0 0 0 1px rgba(255,227,137,.45),0 7px 15px rgba(20,37,52,.14)!important}
+article.member-card.ec-operator-card[data-role-theme="admin"]{--ec-card-border:#ffd34e!important;--ec-card-bg:linear-gradient(145deg,#f03c52 0%,#d3193e 34%,#ad082b 70%,#65091e 100%)!important;border:4px solid #ffd34e!important;border-color:#ffd34e!important;box-shadow:0 0 0 2px rgba(255,235,148,.85),0 0 16px rgba(255,190,44,.6),0 8px 18px rgba(53,11,15,.26)!important}
 article.member-card.ec-operator-card[data-role-theme="admin"]>.ec-role-surface{background:var(--ec-card-bg)!important}
