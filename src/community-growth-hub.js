@@ -94,14 +94,15 @@ async function renderHome(){
   const regionalBusinesses=(businesses||[]).filter((member)=>!member.home_region_id||member.home_region_id===ctx.region.id).slice(0,3);
   const currentListings=(listings||[]).filter((item)=>!item.valid_until||new Date(item.valid_until).getTime()>=Date.now()).slice(0,3);
   const nearbyMembers=[...(newMembers||[])].sort((a,b)=>Number(b.home_region_id===ctx.region.id)-Number(a.home_region_id===ctx.region.id)).slice(0,4);
-  const nearbyGroups=[...(groups||[])].sort((a,b)=>Number(b.region_id===ctx.region.id)-Number(a.region_id===ctx.region.id));
+  const joinedGroupIds=new Set((memberships||[]).filter((row)=>row.user_id===ctx.user.id).map((row)=>row.group_id));
+  const nearbyGroups=[...(groups||[])].sort((a,b)=>Number(joinedGroupIds.has(a.id))-Number(joinedGroupIds.has(b.id))||Number(b.region_id===ctx.region.id)-Number(a.region_id===ctx.region.id));
   const groupCounts=new Map();
   (memberships||[]).forEach((row)=>groupCounts.set(row.group_id,(groupCounts.get(row.group_id)||0)+1));
   const friendCount=(friendships||[]).filter((row)=>row.requester_id===ctx.user.id||row.receiver_id===ctx.user.id).length;
 
   home.querySelector(':scope > .ec-new-member-start')?.remove();
   const isNewMember=ctx.profile?.created_at && Date.now()-new Date(ctx.profile.created_at).getTime()<30*86400000;
-  const hasJoinedGroup=(memberships||[]).some((membership)=>membership.user_id===ctx.user.id);
+  const hasJoinedGroup=joinedGroupIds.size>0;
   let newcomer=null;
   if(isNewMember && (!friendCount || !hasJoinedGroup)){
     newcomer=document.createElement('section');
@@ -123,7 +124,7 @@ async function renderHome(){
 
   const discover=document.createElement('section');
   discover.className='ec-discover';
-  discover.innerHTML=`<div class="ec-discover-head"><div><small>ENTDECKEN</small><h2>${ctx.additionalRegions.length?'Mein Alpenraum – '+esc(ctx.region.name)+' & weitere Regionen':'Mehr aus '+esc(ctx.region.name)}</h2></div><button type="button" data-growth-nav="community">Community entdecken →</button></div><div class="ec-discover-grid"><article class="ec-discover-card"><h3>Neu in deiner Region</h3><div class="ec-discover-list">${nearbyMembers.length?nearbyMembers.map(member=>discoverMember(member,regionNames.get(member.home_region_id)||'')).join(''):'<p class="ec-discover-empty">Gerade keine neuen Mitglieder.</p>'}</div></article><article class="ec-discover-card"><h3>Gruppen entdecken</h3><div class="ec-discover-list">${nearbyGroups.length?nearbyGroups.slice(0,3).map((group)=>discoverGroup(group,groupCounts.get(group.id)||0,regionNames.get(group.region_id)||'')).join(''):'<p class="ec-discover-empty">Noch keine Gruppen in dieser Region.</p>'}</div></article><article class="ec-discover-card"><h3>Deine Community</h3><div class="ec-discover-stat-grid"><div class="ec-discover-stat"><strong>${friendCount}</strong><span>Freunde</span></div><div class="ec-discover-stat"><strong>${(groups||[]).length}</strong><span>Gruppen</span></div><div class="ec-discover-stat"><strong>${(newMembers||[]).length}</strong><span>Neue Mitglieder</span></div></div></article></div>`;
+  discover.innerHTML=`<div class="ec-discover-head"><div><small>ENTDECKEN</small><h2>${ctx.additionalRegions.length?'Mein Alpenraum – '+esc(ctx.region.name)+' & weitere Regionen':'Mehr aus '+esc(ctx.region.name)}</h2></div><button type="button" data-growth-nav="community">Community entdecken →</button></div><div class="ec-discover-grid"><article class="ec-discover-card"><h3>Neu in deiner Region</h3><div class="ec-discover-list">${nearbyMembers.length?nearbyMembers.map(member=>discoverMember(member,regionNames.get(member.home_region_id)||'')).join(''):'<p class="ec-discover-empty">Gerade keine neuen Mitglieder.</p>'}</div></article><article class="ec-discover-card"><h3>Gruppen entdecken</h3><div class="ec-discover-list">${nearbyGroups.length?nearbyGroups.slice(0,3).map((group)=>discoverGroup(group,groupCounts.get(group.id)||0,regionNames.get(group.region_id)||'')).join(''):'<p class="ec-discover-empty">Noch keine Gruppen gefunden. Du kannst in der Community eine neue Gruppe starten.</p>'}</div></article><article class="ec-discover-card"><h3>Deine Community</h3><div class="ec-discover-stat-grid"><div class="ec-discover-stat"><strong>${friendCount}</strong><span>Freunde</span></div><div class="ec-discover-stat"><strong>${(groups||[]).length}</strong><span>Gruppen</span></div><div class="ec-discover-stat"><strong>${(newMembers||[]).length}</strong><span>Neue Mitglieder</span></div></div></article></div>`;
 
   const heading=home.querySelector(':scope > .page-heading');
   if(heading){heading.insertAdjacentElement('afterend',hub);hub.insertAdjacentElement('afterend',discover);}else{home.prepend(discover);home.prepend(hub);}
