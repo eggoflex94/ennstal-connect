@@ -22,10 +22,20 @@ async function openEditor(){
  editing=true;
  let user;
  try{const auth=await supabase.auth.getUser();user=auth.data?.user;if(!user||user.id!==currentUserId){editing=false;return}}catch{editing=false;return}
- const [{data:profile,error:profileError},{data:regions,error:regionError}]=await Promise.all([
-  supabase.from('profiles').select('id,interests,home_region_id').eq('id',user.id).maybeSingle(),
-  supabase.from('regions').select('id,slug,name').eq('is_active',true).order('name')
- ]);
+ let profile,regions,profileError,regionError;
+ try{
+  const result=await Promise.all([
+   supabase.from('profiles').select('id,interests,home_region_id').eq('id',user.id).maybeSingle(),
+   supabase.from('regions').select('id,slug,name').eq('is_active',true).order('name')
+  ]);
+  ({data:profile,error:profileError}=result[0]);
+  ({data:regions,error:regionError}=result[1]);
+ }catch(error){
+  editing=false;
+  console.warn('Alpenraum-Einstellungen konnten nicht geladen werden:',error);
+  alert('Einstellungen konnten nicht geladen werden. Bitte versuche es erneut.');
+  return;
+ }
  if(profileError||regionError||!profile||!document.querySelector('.my-profile-card')){editing=false;if(profileError||regionError)alert('Einstellungen konnten nicht geladen werden.');return}
  ensureStyle();
  const backdrop=node('div','ec-alpenraum-backdrop'),dialog=node('section','ec-alpenraum-dialog');
