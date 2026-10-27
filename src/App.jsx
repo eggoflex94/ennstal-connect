@@ -3255,7 +3255,7 @@ function EventsPage({ members, showNotice, events, eventRsvps, user, profile, ac
   const photosFor = (eventId) => eventPhotos.filter((photo) => photo.event_id === eventId);
   const awardsFor = (eventId) => eventAwards.filter((award) => award.event_id === eventId);
   const publicPhotoUrl = (path) => supabase.storage.from("event-photos").getPublicUrl(path).data.publicUrl;
-  const roleStarFor = (member) => member?.role_star_url || (String(member?.role || "").toUpperCase() === "HEAD_ADMIN" ? "/role-star-red.svg" : String(member?.role || "").toUpperCase() === "ADMIN" ? "/role-star-blue.svg" : String(member?.role || "").toUpperCase() === "SUPPORTER" ? "/supporter-star.svg" : null);
+  const roleStarFor = (member) => member?.is_primary_head_admin === true ? '/operator-star-gold.svg' : member?.role_star_url || (String(member?.role || "").toUpperCase() === "HEAD_ADMIN" ? "/role-star-red.svg" : String(member?.role || "").toUpperCase() === "ADMIN" ? "/role-star-blue.svg" : String(member?.role || "").toUpperCase() === "SUPPORTER" ? "/supporter-star.svg" : null);
 
   const openEventPhotos = async (eventId) => {
     setPhotoUploadError("");
