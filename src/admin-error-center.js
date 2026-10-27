@@ -62,6 +62,7 @@ function renderRow(row) {
       <span>Zuletzt: ${esc(row.last_user_nickname || "Unbekannt")}</span>
       <span>Status: ${esc(row.status)}</span>
     </div>
+    ${row.error_type === "NETWORK" ? `<p class="ec-error-hint">Netzwerkdiagnose: ${esc(row.metadata?.endpoint || row.source || "Endpunkt unbekannt")} · ${esc(row.metadata?.method || "Methode unbekannt")} · ${esc(row.metadata?.kind || "Anfragetyp unbekannt")}${row.metadata?.status ? ` · HTTP ${esc(row.metadata.status)}` : ""}</p>` : ""}
     <details>
       <summary>Technische Details</summary>
       <pre>${esc([row.source && `Quelle: ${row.source}`, row.stack, row.metadata && JSON.stringify(row.metadata, null, 2)].filter(Boolean).join("\n\n"))}</pre>
