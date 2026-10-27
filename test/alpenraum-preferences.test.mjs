@@ -23,3 +23,12 @@ test('home discovery includes only selected regions and prioritizes home region'
   assert.match(source,/\.in\('home_region_id',discoveryRegionIds\)/);
   assert.match(source,/region_id\.in\.\(\$\{discoveryRegionIds\.join\(','\)\}\)/);
 });
+
+test('existing members can update Alpine regions and interests in profile',()=>{
+  const editor=readFileSync(new URL('../src/alpenraum-preferences-editor.js',import.meta.url),'utf8');
+  const entry=readFileSync(new URL('../src/main.jsx',import.meta.url),'utf8');
+  assert.match(entry,/import "\.\/alpenraum-preferences-editor\.js"/);
+  assert.match(editor,/supabase\.auth\.updateUser\(\{data:\{alpenraum_region_slugs:extra\}\}\)/);
+  assert.match(editor,/\.update\(\{interests\}\)\.eq\('id',user\.id\)/);
+  assert.match(editor,/r\.id===profile\.home_region_id/);
+});
