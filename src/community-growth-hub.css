@@ -101,3 +101,7 @@
 .ec-new-member-steps button{padding:12px 15px;min-height:48px;border:1px solid #bcd4d2;border-radius:12px;background:#fff;color:#194d4a;font-weight:750;cursor:pointer}
 .ec-new-member-steps button:hover,.ec-new-member-steps button:focus-visible{background:#def5ed;outline-offset:2px}
 @media(max-width:720px){.ec-new-member-start{padding:15px}.ec-new-member-steps{display:grid;grid-template-columns:1fr}.ec-new-member-steps button{width:100%;text-align:left}}
+
+/* Group discovery connects directly to planning an activity. */
+.ec-group-activity-action{width:100%;margin-top:12px;padding:11px 12px;min-height:44px;border:1px solid #c8ddea;border-radius:10px;background:#f0f8ff;color:#194461;font-weight:750;text-align:left;cursor:pointer}
+.ec-group-activity-action:hover,.ec-group-activity-action:focus-visible{background:#deefff;outline-offset:2px}
