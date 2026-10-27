@@ -3,7 +3,7 @@ import './homepage-frame-manager.css';
 const BLOCKS=[['next-activity','Nächste Aktivität','.ec-next-activity'],['community','Community-Aktuelles','.ec-growth-hub'],['join','Wer macht mit?','.ec-join-activities'],['welcome','Willkommen','.ec-new-member-start'],['discover','Menschen & Gruppen','.ec-discover']];
 const orderOf=(key)=>BLOCKS.findIndex(item=>item[0]===key)*10;
 export async function manageHomepageFrames(home,ctx){
-  const old=home.querySelector(':scope > .ec-managed-home');if(old){old.remove();home.querySelector(':scope > .ec-home-layout-admin')?.remove()}
+  const old=home.querySelector(':scope > .ec-managed-home');if(old){const hasFresh=BLOCKS.some(([, ,selector])=>home.querySelector(':scope > '+selector));if(!hasFresh)old.querySelectorAll('[data-home-block]').forEach(node=>home.appendChild(node));old.remove();home.querySelector(':scope > .ec-home-layout-admin')?.remove()}
   const nodes=BLOCKS.map(([key,title,selector])=>({key,title,node:home.querySelector(':scope > '+selector)})).filter(item=>item.node);
   if(!nodes.length)return;
   const scope='REGION:'+ctx.region.id;
