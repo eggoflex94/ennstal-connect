@@ -6,10 +6,10 @@ const card=readFileSync(new URL('../src/MemberCardView.jsx',import.meta.url),'ut
 const app=readFileSync(new URL('../src/App.jsx',import.meta.url),'utf8');
 const support=readFileSync(new URL('../src/support-contacts-modern.js',import.meta.url),'utf8');
 test('HEAD_ADMIN alone does not grant operator star',()=>{
- assert.match(role,/profile\.is_primary_head_admin === true \?/);
+ assert.match(role,/isOperatorProfile\(profile\)/);
  assert.match(role,/icon:"\/role-star-red.svg"/);
  assert.doesNotMatch(card,/\|\| \(String\(member\?\.role/);
- assert.match(app,/member\?\.is_primary_head_admin===true\?'/);
+ assert.match(app,/isOperatorProfile\(member\)/);
 });
 test('support role badges load actual primary operator flag',()=>{
  assert.match(support,/select\('id,is_primary_head_admin'\)/);
