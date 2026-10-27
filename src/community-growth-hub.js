@@ -19,7 +19,9 @@ async function context(){
   ]);
   const slug=document.documentElement.dataset.ecRegion||document.querySelector('.ec-region-picker select')?.value||localStorage.getItem('ec-active-region')||'';
   const region=(regions||[]).find((item)=>item.slug===slug)||(regions||[]).find((item)=>item.id===profile?.home_region_id)||null;
-  return {user,profile,region};
+  const selectedSlugs=Array.isArray(user.user_metadata?.alpenraum_region_slugs)?user.user_metadata.alpenraum_region_slugs:[];
+  const additionalRegions=(regions||[]).filter(item=>selectedSlugs.includes(item.slug)&&item.id!==region?.id);
+  return {user,profile,region,additionalRegions};
 }
 
 function eventCard(event){
@@ -74,21 +76,24 @@ async function renderHome(){
   const ctx=await context();
   if(!ctx?.region||version!==requestVersion)return;
   const now=new Date().toISOString();
+  const discoveryRegionIds=[ctx.region.id,...ctx.additionalRegions.map(r=>r.id)];
   const [{data:events},{data:requests},{data:businesses},{data:listings},{data:newMembers},{data:groups},{data:memberships},{data:friendships}]=await Promise.all([
-    supabase.from('community_events').select('id,title,event_at,location,status,region_id,is_featured,featured_color,is_ai_generated').eq('region_id',ctx.region.id).gte('event_at',now).order('event_at',{ascending:true}).limit(6),
+    supabase.from('community_events').select('id,title,event_at,location,status,region_id,is_featured,featured_color,is_ai_generated').in('region_id',discoveryRegionIds).gte('event_at',now).order('event_at',{ascending:true}).limit(6),
     supabase.from('community_requests').select('id,title,content,category,region_id,status,created_at').eq('region_id',ctx.region.id).order('created_at',{ascending:false}).limit(8),
     supabase.from('profiles').select('id,nickname,first_name,last_name,company_name,company_description,account_badge,home_region_id').eq('account_badge','BUSINESS').or(`home_region_id.eq.${ctx.region.id},home_region_id.is.null`).limit(16),
     supabase.from('business_listings').select('id,owner_id,region_id,listing_type,title,body,link_url,valid_until,is_active,is_ai_generated,created_at').eq('is_active',true).or(`region_id.eq.${ctx.region.id},region_id.is.null`).order('created_at',{ascending:false}).limit(10),
-    supabase.from('profiles').select('id,nickname,first_name,last_name,avatar_url,created_at,home_region_id,account_status,is_test_account').eq('home_region_id',ctx.region.id).eq('account_status','ACTIVE').eq('is_test_account',false).neq('id',ctx.user.id).order('created_at',{ascending:false}).limit(4),
-    supabase.from('community_groups').select('id,name,description,region_id,created_at,is_featured').or(`region_id.eq.${ctx.region.id},region_id.is.null`).order('is_featured',{ascending:false}).order('created_at',{ascending:false}).limit(5),
+    supabase.from('profiles').select('id,nickname,first_name,last_name,avatar_url,created_at,home_region_id,account_status,is_test_account').in('home_region_id',discoveryRegionIds).eq('account_status','ACTIVE').eq('is_test_account',false).neq('id',ctx.user.id).order('created_at',{ascending:false}).limit(4),
+    supabase.from('community_groups').select('id,name,description,region_id,created_at,is_featured').or(`region_id.in.(${discoveryRegionIds.join(',')}),region_id.is.null`).order('is_featured',{ascending:false}).order('created_at',{ascending:false}).limit(5),
     supabase.from('community_group_members').select('group_id,user_id'),
     supabase.from('friendships').select('requester_id,receiver_id,status').eq('status','ACCEPTED').or(`requester_id.eq.${ctx.user.id},receiver_id.eq.${ctx.user.id}`)
   ]);
   if(version!==requestVersion)return;
-  const activeEvents=(events||[]).filter((event)=>String(event.status||'').toUpperCase()!=='CANCELLED').sort((a,b)=>Number(Boolean(b.is_featured))-Number(Boolean(a.is_featured))||new Date(a.event_at)-new Date(b.event_at)).slice(0,3);
+  const activeEvents=(events||[]).filter((event)=>String(event.status||'').toUpperCase()!=='CANCELLED').sort((a,b)=>Number(b.region_id===ctx.region.id)-Number(a.region_id===ctx.region.id)||Number(Boolean(b.is_featured))-Number(Boolean(a.is_featured))||new Date(a.event_at)-new Date(b.event_at)).slice(0,3);
   const activeRequests=(requests||[]).filter((request)=>!request.status||!['CLOSED','DONE','ARCHIVED'].includes(String(request.status).toUpperCase())).slice(0,3);
   const regionalBusinesses=(businesses||[]).filter((member)=>!member.home_region_id||member.home_region_id===ctx.region.id).slice(0,3);
   const currentListings=(listings||[]).filter((item)=>!item.valid_until||new Date(item.valid_until).getTime()>=Date.now()).slice(0,3);
+  const nearbyMembers=[...(newMembers||[])].sort((a,b)=>Number(b.home_region_id===ctx.region.id)-Number(a.home_region_id===ctx.region.id)).slice(0,4);
+  const nearbyGroups=[...(groups||[])].sort((a,b)=>Number(b.region_id===ctx.region.id)-Number(a.region_id===ctx.region.id));
   const groupCounts=new Map();
   (memberships||[]).forEach((row)=>groupCounts.set(row.group_id,(groupCounts.get(row.group_id)||0)+1));
   const friendCount=(friendships||[]).filter((row)=>row.requester_id===ctx.user.id||row.receiver_id===ctx.user.id).length;
@@ -102,7 +107,7 @@ async function renderHome(){
 
   const discover=document.createElement('section');
   discover.className='ec-discover';
-  discover.innerHTML=`<div class="ec-discover-head"><div><small>ENTDECKEN</small><h2>Mehr aus ${esc(ctx.region.name)}</h2></div><button type="button" data-growth-nav="community">Community entdecken →</button></div><div class="ec-discover-grid"><article class="ec-discover-card"><h3>Neu in deiner Region</h3><div class="ec-discover-list">${(newMembers||[]).length?(newMembers||[]).map(discoverMember).join(''):'<p class="ec-discover-empty">Gerade keine neuen Mitglieder.</p>'}</div></article><article class="ec-discover-card"><h3>Gruppen entdecken</h3><div class="ec-discover-list">${(groups||[]).length?(groups||[]).slice(0,3).map((group)=>discoverGroup(group,groupCounts.get(group.id)||0)).join(''):'<p class="ec-discover-empty">Noch keine Gruppen in dieser Region.</p>'}</div></article><article class="ec-discover-card"><h3>Deine Community</h3><div class="ec-discover-stat-grid"><div class="ec-discover-stat"><strong>${friendCount}</strong><span>Freunde</span></div><div class="ec-discover-stat"><strong>${(groups||[]).length}</strong><span>Gruppen</span></div><div class="ec-discover-stat"><strong>${(newMembers||[]).length}</strong><span>Neue Mitglieder</span></div></div></article></div>`;
+  discover.innerHTML=`<div class="ec-discover-head"><div><small>ENTDECKEN</small><h2>${ctx.additionalRegions.length?'Mein Alpenraum – '+esc(ctx.region.name)+' & weitere Regionen':'Mehr aus '+esc(ctx.region.name)}</h2></div><button type="button" data-growth-nav="community">Community entdecken →</button></div><div class="ec-discover-grid"><article class="ec-discover-card"><h3>Neu in deiner Region</h3><div class="ec-discover-list">${nearbyMembers.length?nearbyMembers.map(discoverMember).join(''):'<p class="ec-discover-empty">Gerade keine neuen Mitglieder.</p>'}</div></article><article class="ec-discover-card"><h3>Gruppen entdecken</h3><div class="ec-discover-list">${nearbyGroups.length?nearbyGroups.slice(0,3).map((group)=>discoverGroup(group,groupCounts.get(group.id)||0)).join(''):'<p class="ec-discover-empty">Noch keine Gruppen in dieser Region.</p>'}</div></article><article class="ec-discover-card"><h3>Deine Community</h3><div class="ec-discover-stat-grid"><div class="ec-discover-stat"><strong>${friendCount}</strong><span>Freunde</span></div><div class="ec-discover-stat"><strong>${(groups||[]).length}</strong><span>Gruppen</span></div><div class="ec-discover-stat"><strong>${(newMembers||[]).length}</strong><span>Neue Mitglieder</span></div></div></article></div>`;
 
   const heading=home.querySelector(':scope > .page-heading');
   if(heading){heading.insertAdjacentElement('afterend',hub);hub.insertAdjacentElement('afterend',discover);}else{home.prepend(discover);home.prepend(hub);}
