@@ -49,7 +49,7 @@
 
 /* ABSOLUTE LAST BADGE AUTHORITY: keep the uploaded friendship motif visible on every role color. */
 .native-member-friend-badge,
-.modern-main article.member-card .ec-card-badge-friend{
+:is(.modern-main,.ec-member-hover-preview) article.member-card .ec-card-badge-friend{
   display:inline-flex!important;
   align-items:center!important;
   justify-content:center!important;
@@ -67,8 +67,8 @@
   visibility:visible!important;
 }
 .native-member-friend-badge img,
-.modern-main article.member-card .ec-card-badge-friend img,
-.modern-main article.member-card .ec-card-badge-friend .ec-card-badge-friend-img{
+:is(.modern-main,.ec-member-hover-preview) article.member-card .ec-card-badge-friend img,
+:is(.modern-main,.ec-member-hover-preview) article.member-card .ec-card-badge-friend .ec-card-badge-friend-img{
   display:block!important;
   width:20px!important;
   height:20px!important;

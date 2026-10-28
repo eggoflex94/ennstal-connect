@@ -73,7 +73,7 @@ function jwt(userId, email) {
 
 async function installSupabaseMock(page, role, options = {}) {
   const profile = profileFor(role);
-  const secondaryMember = {...otherMember(),is_online:options.onlineFriend === true,...(options.operatorVisitor?{role:'HEAD_ADMIN',is_primary_head_admin:true,nickname:'egga'}:{})};
+  const secondaryMember = {...otherMember(),is_online:options.onlineFriend === true,...(options.visitorRole?{role:options.visitorRole}:{}),...(options.operatorVisitor?{role:'HEAD_ADMIN',is_primary_head_admin:true,nickname:'egga'}:{})};
   const members = [profile, secondaryMember];
   const rpcCalls = [];
   const visitedAt = nowIso();
@@ -655,7 +655,16 @@ test("profile-visitor nickname opens a stable matching member-card preview",asyn
  await page.evaluate(()=>{const node=document.createElement('div');node.id='unrelated-preview-update';document.querySelector('.modern-main').append(node);});
  await expect(page.locator('#ec-member-hover-preview .member-nickname')).toHaveText('Zweites Mitglied');
  await page.waitForTimeout(500); // More than two observer debounce cycles.
- expect(await original.evaluate(n=>n.isConnected)).toBe(true);
+ expect(await original.evaluate(n=>n.isConnected)).toBe(true); 
+ const before=await name.boundingBox();
+ for(let i=0;i<3;i++){
+  await page.evaluate(()=>window.dispatchEvent(new CustomEvent('ec:profile-visits-changed')));
+  await page.waitForTimeout(200);
+  expect(await original.evaluate(n=>n.isConnected)).toBe(true);
+  expect(await name.boundingBox()).toEqual(before);
+  await expect(name).toContainText('Zweites Mitglied');
+ }
+
  await expect(page.locator('#ec-member-hover-preview .member-nickname')).toHaveText('Zweites Mitglied');
  await page.mouse.move(1,1);
  await expect(page.locator('#ec-member-hover-preview')).toHaveCount(0);
@@ -665,25 +674,31 @@ test("profile-visitor nickname opens a stable matching member-card preview",asyn
 });
 
 
-test("profile-visitor nickname preserves the operator crown and full card colors",async({page},testInfo)=>{
+function cardAppearance(node){
+ const keys=['width','height','fontSize','fontWeight','fontFamily','lineHeight','color','backgroundImage','backgroundColor','borderColor','borderWidth','borderRadius','padding','opacity','textShadow'];
+ const snapshot=n=>{const s=getComputedStyle(n);return {text:n.innerText,src:n.tagName==='IMG'?new URL(n.src).pathname:null,style:Object.fromEntries(keys.map(k=>[k,s[k]]))};};
+ return {card:snapshot(node),parts:[...node.querySelectorAll('.member-nickname,.ec-member-realname,.ec-member-responsibility,.ec-member-age,.member-avatar,.ec-card-badge-role-img,.ec-card-badge-photographer,.ec-card-badge-friend,.member-status,.ec-member-presence-label')].map(snapshot)};
+}
+
+for(const kind of ['operator','admin','member'])test(`profile-visitor nickname preserves the complete ${kind} member card`,async({page},testInfo)=>{
  test.skip(testInfo.project.name.includes('mobile'),'Hover requires a mouse');
- await login(page,"ADMIN",{includeVisits:true,operatorVisitor:true});
+ await login(page,"ADMIN",{includeVisits:true,includeFriend:true,operatorVisitor:kind==='operator',visitorRole:kind==='admin'?'ADMIN':'MEMBER'});
  await assertTopNavigationWorks(page,"Mitglieder");
  const regular=page.locator(`.native-members-directory .member-card[data-member-id="${OTHER_ID}"]`);
  await expect(regular).toBeVisible();
- const appearance=await regular.evaluate(n=>{const s=getComputedStyle(n);return {opacity:s.opacity,background:s.backgroundImage,color:s.backgroundColor};});
- const name=page.locator('[data-panel="visits"] .ec-profile-visitor-name, [data-panel="visits"] .ec-profile-visit-name strong').filter({hasText:'egga'}).first();
+ const appearance=await regular.evaluate(cardAppearance);
+ const name=page.locator('[data-panel="visits"] .ec-profile-visitor-name, [data-panel="visits"] .ec-profile-visit-name strong').filter({hasText:kind==='operator'?'egga':'Zweites Mitglied'}).first();
  await expect(name).toBeVisible({timeout:15000});
  let lastRect='',stableSince=Date.now();
  await expect.poll(async()=>{const rect=JSON.stringify(await name.boundingBox());if(rect!==lastRect){lastRect=rect;stableSince=Date.now();}return Date.now()-stableSince;},{timeout:10000}).toBeGreaterThanOrEqual(700);
  await name.hover();
  const preview=page.locator('#ec-member-hover-preview .member-card');
  await expect(preview).toBeVisible();
- await expect(preview.locator('.ec-card-badge-role-img')).toHaveAttribute('src',/operator-crown-gold\.svg/);
+ if(kind==='operator')await expect(preview.locator('.ec-card-badge-role-img')).toHaveAttribute('src',/operator-crown-gold\.svg/);
  await expect(preview).toHaveCSS('opacity','1');
  await expect(preview).not.toHaveAttribute('aria-disabled');
- await expect.poll(()=>preview.evaluate(n=>{const s=getComputedStyle(n);return {opacity:s.opacity,background:s.backgroundImage,color:s.backgroundColor};})).toEqual(appearance);
+ await expect.poll(()=>preview.evaluate(cardAppearance)).toEqual(appearance);
  await page.waitForTimeout(500);
- await expect(preview.locator('.ec-card-badge-role-img')).toHaveAttribute('src',/operator-crown-gold\.svg/);
+ if(kind==='operator')await expect(preview.locator('.ec-card-badge-role-img')).toHaveAttribute('src',/operator-crown-gold\.svg/);
  await page.mouse.move(1,1);await expect(preview).toHaveCount(0);
 });

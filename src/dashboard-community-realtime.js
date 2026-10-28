@@ -5,6 +5,8 @@ import { loadMemberScores } from './member-score.js';
 let userId = null;
 let channel = null;
 let timer = null;
+let refreshInFlight = null, refreshAgain = false;
+const visitProfiles = new Map();
 
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const fmt = (value) => value ? new Date(value).toLocaleString('de-AT', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' }) : '';
@@ -43,9 +45,10 @@ async function loadVisitProfiles(visits) {
     .from('profiles')
     .select('id,nickname,avatar_url,role,account_badge,role_star_url,points')
     .in('id', ids);
-  if (error) return new Map();
+  if (error) return visitProfiles;
   const scores = await loadMemberScores(ids);
-  return new Map((data || []).map((profile) => [profile.id, { ...profile, total_score: scores.get(String(profile.id)) ?? Number(profile.points || 0) }]));
+  (data || []).forEach(profile => visitProfiles.set(profile.id, { ...profile, total_score: scores.get(String(profile.id)) ?? Number(profile.points || 0) }));
+  return visitProfiles;
 }
 
 function uniqueRecentVisits(visits, limit = 10) {
@@ -61,7 +64,7 @@ function uniqueRecentVisits(visits, limit = 10) {
   return rows;
 }
 
-async function refresh() {
+async function refreshData() {
   if (!userId || !document.querySelector('.ec-right-dock')) return;
   const picker = document.querySelector('.ec-region-picker select');
   const slug = picker?.value || localStorage.getItem('ec-active-region');
@@ -81,18 +84,25 @@ async function refresh() {
     const visitsPanel = document.querySelector('.ec-dock-detail[data-panel="visits"]');
     setCount('.ec-dock-visits-count', visits.length);
     if (visitsPanel) {
-      const markup = visits.length ? visits.map((row) => {
-        const profile = profiles.get(row.visitor_id);
-        const nickname = profile?.nickname || 'Mitglied';
-        const avatar = profile?.avatar_url || '/community-default-avatar-fast.svg';
-        const star = profileStar(profile);
-        return `<button type="button" class="ec-dock-detail-row ec-profile-visit-row" data-profile-id="${esc(row.visitor_id)}"><img class="ec-profile-visit-avatar" src="${esc(avatar)}" alt=""><span class="ec-profile-visit-main"><span class="ec-profile-visit-name">${star ? `<img class="ec-profile-visit-star" src="${esc(star)}" alt="">` : ''}<strong>${esc(nickname)} <span class="ec-inline-points">[${esc(Number(profile?.total_score??profile?.points??0).toLocaleString('de-AT'))}]</span></strong></span><small>hat dein Profil besucht</small></span><time datetime="${esc(row.visited_at)}">${esc(fmt(row.visited_at))}</time></button>`;
-      }).join('') : '<div class="ec-dock-empty">Noch keine Profilbesuche.</div>';
-      if (visitsPanel.dataset.visitMarkup !== markup) {
-        visitsPanel.dataset.visitMarkup = markup;
-        visitsPanel.innerHTML = markup;
-        bindProfileRows(visitsPanel);
-      }
+      visitsPanel.dataset.visitsOwner = 'dashboard';
+      const remaining = new Set(visits.map(row=>row.visitor_id));
+      visitsPanel.querySelectorAll('[data-profile-id]').forEach(row=>{if(!remaining.has(row.dataset.profileId))row.remove();});
+      if(visits.length)visitsPanel.querySelectorAll('.ec-dock-empty').forEach(node=>node.remove());
+      visits.forEach((row,index)=>{
+        const person=profiles.get(row.visitor_id);
+        let node=[...visitsPanel.children].find(node=>node.dataset.profileId===row.visitor_id);
+        // Preserve the last resolved identity during temporary lookup failures.
+        if(!person && node)return;
+        const nickname=person?.nickname || 'Mitglied';
+        const star=profileStar(person || {id:row.visitor_id});
+        const markup=`<span class="ec-profile-visitor-copy"><strong>${star?`<img class="ec-inline-role-star" src="${esc(star)}" alt="" aria-hidden="true">`:''}<span class="ec-profile-visitor-name" data-member-preview-id="${esc(row.visitor_id)}">${esc(nickname)} <span class="ec-inline-points">[${esc(Number(person?.total_score??person?.points??0).toLocaleString('de-AT'))}]</span></span></strong><small>hat dein Profil besucht</small><time datetime="${esc(row.visited_at)}">${esc(fmt(row.visited_at))}</time></span>`;
+        if(!node){node=document.createElement('button');node.type='button';node.className='ec-dock-detail-row ec-profile-visitor-link';node.dataset.profileId=row.visitor_id;}
+        if(node.dataset.visitMarkup!==markup){node.dataset.visitMarkup=markup;node.innerHTML=markup;node.setAttribute('aria-label',`Profil von ${nickname} öffnen`);}
+        const reference=visitsPanel.children[index];
+        if(reference!==node)visitsPanel.insertBefore(node,reference||null);
+      });
+      if(!visits.length && !visitsPanel.querySelector('.ec-dock-empty'))visitsPanel.innerHTML='<div class="ec-dock-empty">Noch keine Profilbesuche.</div>';
+      bindProfileRows(visitsPanel);
     }
   }
 
@@ -126,6 +136,12 @@ async function refresh() {
   }
 }
 
+function refresh(){
+  if(refreshInFlight){refreshAgain=true;return refreshInFlight;}
+  refreshInFlight=refreshData().catch(error=>console.warn('Dashboard konnte nicht aktualisiert werden:',error)).finally(()=>{refreshInFlight=null;if(refreshAgain){refreshAgain=false;queue(0);}});
+  return refreshInFlight;
+}
+
 function queue(delay = 80) {
   clearTimeout(timer);
   timer = setTimeout(() => void refresh(), delay);
@@ -153,6 +169,7 @@ async function start() {
   });
 }
 
+window.addEventListener('ec:dashboard-visits-refresh',()=>queue());
 window.addEventListener('ec:region-change',() => queue());
 window.addEventListener('focus',() => queue(),{passive:true});
 document.addEventListener('visibilitychange',() => { if (!document.hidden) queue(); });
@@ -171,6 +188,7 @@ supabase.auth.onAuthStateChange((_event, session) => {
   if (nextId === userId) return;
   if (!nextId) {
     userId = null;
+    visitProfiles.clear();
     clearTimeout(timer);
     if (channel) void supabase.removeChannel(channel);
     channel = null;

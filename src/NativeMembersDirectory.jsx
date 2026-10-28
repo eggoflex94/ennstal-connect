@@ -1,3 +1,4 @@
+import {directoryCardMember} from './memberCardPresentation.js';
 import { isOperatorProfile, operatorStarSrc } from './operator-identity.js';
 import { STYRIAN_DISTRICTS, publicDistrict } from "./regions.js";
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -291,23 +292,7 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
 
     <div className="member-grid native-member-grid" style={showSuspended && canViewSuspended ? {display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(min(100%,260px),1fr))",gap:16,alignItems:"stretch"} : undefined}>
       {pagedVisible.map((member) => {
-        const homeRegionMeta = regionById[member.home_region_id] || null;
-        const homeRegionLabel = homeRegionMeta?.short_name || homeRegionMeta?.name || "Hauptregion";
-        const assignedRegionNames = [...(regionalAdminByUser.get(member?.id) || [])]
-          .map((regionId) => regionById[regionId])
-          .filter(Boolean)
-          .map((region) => region.short_name || region.name)
-          .filter(Boolean);
-        const regionalLabel = assignedRegionNames.length ? assignedRegionNames.join(", ") : homeRegionLabel;
-        const cardMember = isOperatorProfile(member)
-          ? { ...member, directory_admin: true, directory_role_star: roleStarSrc(member), directory_responsibility_label: "" }
-          : isHeadAdmin(member)
-            ? { ...member, directory_admin: true, directory_role_star: roleStarSrc(member), directory_responsibility_label: "Hauptadmin · alle Regionen" }
-            : normalized(member?.role) === "ADMIN"
-              ? { ...member, directory_admin: true, directory_role_star: roleStarSrc(member), directory_responsibility_label: `Global Admin · Region ${homeRegionLabel}` }
-              : isRegionalAdmin(member)
-                ? { ...member, directory_admin: isRegionalAdminHere(member), directory_supporter: !isRegionalAdminHere(member), directory_role_star: roleStarSrc(member), directory_responsibility_label: `Regional Admin · Region ${regionalLabel}` }
-                : { ...member, directory_role_star: roleStarSrc(member) };
+        const cardMember = directoryCardMember(member,{regions,activeRegion,regionalAssignments});
         return showSuspended && canViewSuspended
           ? <article key={member.id} className="panel" style={{padding:16,borderRadius:16,display:"flex",flexDirection:"column",gap:10,minWidth:0}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap"}}>

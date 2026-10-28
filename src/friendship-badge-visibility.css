@@ -1,6 +1,6 @@
 /* Final friendship badge visibility authority. */
 .native-member-friend-badge,
-.modern-main article.member-card .ec-card-badge-friend,
+:is(.modern-main,.ec-member-hover-preview) article.member-card .ec-card-badge-friend,
 .member-profile-actions .ec-profile-friendship-accepted::before,
 .profile-actions .ec-profile-friendship-accepted::before{
   box-sizing:border-box!important;
@@ -18,10 +18,10 @@
   display:block!important;width:18px!important;height:18px!important;min-width:18px!important;min-height:18px!important;
   object-fit:contain!important;filter:none!important;opacity:1!important;
 }
-.modern-main article.member-card .ec-card-badge-friend{
+:is(.modern-main,.ec-member-hover-preview) article.member-card .ec-card-badge-friend{
   width:28px!important;height:28px!important;min-width:28px!important;min-height:28px!important;padding:2px!important;
 }
-.modern-main article.member-card .ec-card-badge-friend .ec-card-badge-friend-img{
+:is(.modern-main,.ec-member-hover-preview) article.member-card .ec-card-badge-friend .ec-card-badge-friend-img{
   display:block!important;width:22px!important;height:22px!important;min-width:22px!important;min-height:22px!important;
   object-fit:contain!important;filter:none!important;opacity:1!important;
 }
