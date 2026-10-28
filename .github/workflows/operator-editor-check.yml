@@ -5,6 +5,7 @@ on:
       - 'src/PageDesignStudio.jsx'
       - 'src/operatorContentStore.js'
       - 'src/operatorPageDesign.js'
+      - 'src/dashboard-community-realtime.js'
       - 'src/dashboard-points-wallet.css'
       - 'src/mobile-desktop-parity-2026.css'
       - 'src/memberHoverPreview.js'
@@ -29,7 +30,7 @@ jobs:
       - run: npm ci
       - run: npm install --no-save @playwright/test@1.55.0
       - run: npx playwright install chromium
-      - run: npx playwright test --grep 'operator can save|support nickname|ordinary member cannot see|online-friend nickname|offline friend|directory filters' --workers=1 --retries=0 --repeat-each=3
+      - run: npx playwright test --grep 'operator can save|support nickname|ordinary member cannot see|profile-visitor nickname|online-friend nickname|offline friend|directory filters' --workers=1 --retries=0 --repeat-each=3
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
