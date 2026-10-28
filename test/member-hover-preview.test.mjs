@@ -119,3 +119,18 @@ test('a replacement nickname for the same member retains its pending preview',as
  assert.equal(h.b.attrs['aria-describedby'],'ec-member-hover-preview');
  h.dispose();
 });
+
+
+test('admin preview uses the same private-field access as the full member profile',()=>{
+ const member={id:'target',birth_date:'1990-01-01',first_name:'Example',last_name:'Member',privacy_settings:{birth_date:'FRIENDS',name:'PRIVATE',last_name:'ADMIN_ONLY'}};
+ for(const role of ['ADMIN','HEAD_ADMIN']){
+  const result=privatePreviewMember(member,{id:'viewer',role});
+  assert.equal(result.birth_date,'1990-01-01');
+  assert.equal(result.first_name,'Example');
+  assert.equal(result.last_name,'Member');
+ }
+ for(const role of ['MEMBER','SUPPORTER','MUNICIPALITY'])assert.equal(privatePreviewMember(member,{id:'viewer',role}).birth_date,null);
+ const friend=[{requester_id:'viewer',receiver_id:'target',status:'ACCEPTED'}];
+ assert.equal(privatePreviewMember(member,{id:'viewer',role:'MEMBER'},friend).birth_date,'1990-01-01');
+ assert.equal(member.privacy_settings.birth_date,'FRIENDS');
+});
