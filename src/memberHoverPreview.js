@@ -36,7 +36,9 @@ export function resolvePreviewTarget(node, members) {
 // Separate lifecycle so stale network responses cannot reopen a dismissed preview.
 export function bindHoverPreview({ document, window, resolve, load, show, hide, delay = 180 }) {
   let active = null, timer, revision = 0, pointer = null, visibleMember = null;
-  const close = () => {
+  const debug=(type,detail={})=>window.__memberPreviewDebug?.push({type,...detail});
+  const close = (event) => {
+    debug('close',{event:event?.type,html:active?.element.outerHTML,stack:new Error().stack});
     revision++;
     window.clearTimeout(timer);
     if (active) {
@@ -58,11 +60,14 @@ export function bindHoverPreview({ document, window, resolve, load, show, hide, 
     const currentRevision = revision;
     timer = window.setTimeout(async () => {
       try {
+        debug('load',{html:next.element.outerHTML});
         const member = await load({ ...next.member });
+        debug('loaded',{id:member?.id,currentRevision,revision,connected:next.element.isConnected});
         if (currentRevision !== revision || !next.element.isConnected || !member?.id) return;
         const described = next.element.getAttribute('aria-describedby');
         next.element.setAttribute('aria-describedby', [described, 'ec-member-hover-preview'].filter(Boolean).join(' '));
         visibleMember=member;
+        debug('show',{id:member.id});
         show(member, next.element.getBoundingClientRect());
       } catch { if (currentRevision === revision) close(); }
     }, delay);
