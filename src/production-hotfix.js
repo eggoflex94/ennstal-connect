@@ -74,7 +74,7 @@ function fixBrand(){
 }
 
 async function logout(){
-  try{await supabase.auth.signOut();localStorage.removeItem('ec-active-region');sessionStorage.clear();window.location.replace('/')}catch(error){alert(`Abmelden fehlgeschlagen: ${error?.message||error}`)}
+  try{await supabase.rpc('record_presence',{p_online:false});await supabase.auth.signOut();localStorage.removeItem('ec-active-region');sessionStorage.clear();window.location.replace('/')}catch(error){alert(`Abmelden fehlgeschlagen: ${error?.message||error}`)}
 }
 
 function cleanDock(){

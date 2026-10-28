@@ -35,3 +35,11 @@ test('offline presence requests can finish while the page is closing',async()=>{
  await fetcher('https://example.test/rest/v1/rpc/record_presence',{method:'POST',body:JSON.stringify({p_online:true})});
  assert.equal(calls[0].keepalive,true);assert.notEqual(calls[1].keepalive,true);assert.equal(calls.length,2);
 });
+test('the live dock logout marks offline before signing out',async()=>{
+ const {parse}=await import('@babel/parser');const vm=await import('node:vm');
+ const source=readFileSync(new URL('../src/regional-shell.js',import.meta.url),'utf8');
+ const ast=parse(source,{sourceType:'module'});const fn=ast.program.body.find(n=>n.type==='FunctionDeclaration'&&n.id.name==='logout');
+ const calls=[];
+ const logout=vm.runInNewContext(`(${source.slice(fn.start,fn.end)})`,{document:{querySelector:()=>null},supabase:{rpc:async(name,args)=>{calls.push(args.p_online);return {};},auth:{signOut:async()=>{calls.push('signOut');return {};}}},localStorage:{removeItem(){}},sessionStorage:{clear(){}},location:{replace(){}},alert(){}});
+ await logout();assert.deepEqual(calls,[false,'signOut']);
+});

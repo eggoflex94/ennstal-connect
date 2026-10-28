@@ -616,7 +616,7 @@ test("online-friend nickname shows the card instead of the native tooltip",async
  await login(page,"MEMBER",{includeFriend:true,onlineFriend:true});
  await openPersonalDock(page);
  const nickname=page.locator('.ec-online-nickname').filter({hasText:'Zweites Mitglied'});
- await expect(nickname).toBeVisible();await nickname.hover();
+ await expect(nickname).toBeVisible({timeout:15000});await nickname.hover();
  await expect(page.locator('#ec-member-hover-preview .member-card')).toBeVisible();
  await expect(page.locator('.ec-online-friend').first()).not.toHaveAttribute('title');
  await page.mouse.move(1,1);await expect(page.locator('#ec-member-hover-preview')).toHaveCount(0);

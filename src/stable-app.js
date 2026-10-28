@@ -183,7 +183,7 @@ function ensureDock(){
     box.remove();
   }
   let logout=dock.querySelector('.ec-logout,.ec-stable-logout');if(!logout){logout=document.createElement('button');logout.type='button';logout.className='ec-stable-logout';logout.innerHTML='<b>↪</b><span>Abmelden</span>';dock.appendChild(logout)}
-  logout.onclick=async e=>{e.preventDefault();e.stopPropagation();logout.disabled=true;try{await supabase.auth.signOut();localStorage.removeItem('ec-active-region');sessionStorage.clear();location.replace('/')}catch(error){logout.disabled=false;alert(`Abmelden fehlgeschlagen: ${error.message||error}`)}};
+  logout.onclick=async e=>{e.preventDefault();e.stopPropagation();logout.disabled=true;try{await supabase.rpc('record_presence',{p_online:false});await supabase.auth.signOut();localStorage.removeItem('ec-active-region');sessionStorage.clear();location.replace('/')}catch(error){logout.disabled=false;alert(`Abmelden fehlgeschlagen: ${error.message||error}`)}};
 }
 
 function normalizePages(){document.querySelectorAll('.forum-page,.groups-page,.news-page,.events-page,.community-page,.ads-page,.profile-page-layout,.my-area-layout').forEach(root=>root.classList.add('ec-stable-page'))}

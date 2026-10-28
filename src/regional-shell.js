@@ -222,7 +222,7 @@ function bindDockButton(button){
     requestAnimationFrame(applyRegionalDirectory);
   });
 }
-async function logout(){const button=document.querySelector('.ec-logout');if(button)button.disabled=true;try{const {error}=await supabase.auth.signOut();if(error)throw error;localStorage.removeItem('ec-active-region');sessionStorage.clear();location.replace('/')}catch(error){if(button)button.disabled=false;alert(`Abmelden fehlgeschlagen: ${error.message||error}`)}}
+async function logout(){const button=document.querySelector('.ec-logout');if(button)button.disabled=true;try{await supabase.rpc('record_presence',{p_online:false});const {error}=await supabase.auth.signOut();if(error)throw error;localStorage.removeItem('ec-active-region');sessionStorage.clear();location.replace('/')}catch(error){if(button)button.disabled=false;alert(`Abmelden fehlgeschlagen: ${error.message||error}`)}}
 
 let dockScrollFrame=0;
 function syncDesktopDockWithPage(){
