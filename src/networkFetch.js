@@ -24,7 +24,7 @@ function emitNetworkError(url, method, detail = {}) {
     const parsed = new URL(String(url || ""), globalThis.location?.href || "http://localhost");
     globalThis.window?.dispatchEvent?.(new CustomEvent("ec:network-error", {
       detail: {
-        endpoint: `${parsed.host}${parsed.pathname}`.slice(0, 500),
+        endpoint: `${parsed.origin}${parsed.pathname}`.slice(0, 500),
         method,
         ...detail
       }

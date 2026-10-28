@@ -80,7 +80,7 @@ function bindDirectAction(button, label) {
       event.preventDefault();
       event.stopPropagation();
       document.body.classList.remove('ec-dock-open');
-      openHelp();
+      window.dispatchEvent(new CustomEvent('ec:navigate',{detail:{page:'help'}}));
     };
   }
   // Heimatregion keeps its native shell dialog handler.

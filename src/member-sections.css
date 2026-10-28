@@ -4,3 +4,5 @@
 @media(max-width:760px){.ec-member-settings-grid{grid-template-columns:1fr}.ec-profile-statistics-entry{align-items:flex-start;flex-direction:column}.ec-member-section-tabs button{flex:1 1 auto;justify-content:center}.ec-member-settings .panel{padding:16px}}
 
 .ec-dock-request-badge{position:absolute;top:-4px;right:-4px;display:grid;place-items:center;min-width:19px;height:19px;padding:0 4px;border:2px solid #fff;border-radius:99px;background:#e85b20;color:#fff;font:800 10px/1 Arial,sans-serif;font-style:normal;pointer-events:none}
+
+.ec-sidebar-shell .ec-updates-block,.ec-sidebar-refactor .ec-sidebar-block:has(>.ec-rf-updates){display:none!important}

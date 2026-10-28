@@ -5,6 +5,7 @@ import { loadMemberScores } from './member-score.js';
 let userId = null;
 let channel = null;
 let timer = null;
+let startPromise = null, channelSequence = 0, restartTimer = null, lifecycleRevision = 0;
 let refreshInFlight = null, refreshAgain = false;
 const visitProfiles = new Map();
 
@@ -66,19 +67,22 @@ function uniqueRecentVisits(visits, limit = 10) {
 
 async function refreshData() {
   if (!userId || !document.querySelector('.ec-right-dock')) return;
+  const refreshUserId=userId;
   const picker = document.querySelector('.ec-region-picker select');
   const slug = picker?.value || localStorage.getItem('ec-active-region');
   const { data: regions } = await supabase.from('regions').select('id,slug').eq('is_active',true);
   const regionId = (regions || []).find((region) => region.slug === slug)?.id || null;
 
   const [visitsResult, newsResult] = await Promise.all([
-    supabase.from('profile_visits').select('visitor_id,visited_at').eq('profile_id',userId).order('visited_at',{ascending:false}).limit(40),
+    supabase.from('profile_visits').select('visitor_id,visited_at').eq('profile_id',refreshUserId).order('visited_at',{ascending:false}).limit(40),
     regionId ? supabase.from('news').select('id,title,created_at',{count:'exact'}).eq('region_id',regionId).order('created_at',{ascending:false}).limit(8) : Promise.resolve({data:[],count:0,error:null})
   ]);
 
+  if(refreshUserId!==userId)return;
   if (!visitsResult.error) {
     const visits = uniqueRecentVisits(visitsResult.data || []);
     const profiles = await loadVisitProfiles(visits);
+    if(refreshUserId!==userId)return;
     const visitsPanel = document.querySelector('.ec-dock-detail[data-panel="visits"]');
     setCount('.ec-dock-visits-count', visits.length);
     if (visitsPanel) {
@@ -125,32 +129,46 @@ function queue(delay = 80) {
   timer = setTimeout(() => void refresh(), delay);
 }
 
-async function start() {
-  const { data:{ session } } = await supabase.auth.getSession();
-  const user = session?.user;
-  if (!user?.id || !session?.access_token) return;
-  userId = user.id;
-  supabase.realtime.setAuth(session.access_token);
-  await refresh();
-  if (channel) await supabase.removeChannel(channel);
-  const nextChannel = supabase.channel(`dashboard-community-${user.id}-${Date.now()}`)
-    .on('postgres_changes',{event:'*',schema:'public',table:'public_profile_updates'},() => queue())
-    .on('postgres_changes',{event:'*',schema:'public',table:'profile_activity'},() => queue())
-    .on('postgres_changes',{event:'*',schema:'public',table:'news'},() => queue());
-  channel = nextChannel;
-  nextChannel.subscribe((status) => {
-    if (channel !== nextChannel) return;
-    if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-      channel = null;
-      window.setTimeout(() => { if (!document.hidden) void start(); }, 1000);
-    }
+function scheduleStart(delay=0){
+ clearTimeout(restartTimer);
+ restartTimer=window.setTimeout(()=>{if(!document.hidden)void start();},delay);
+}
+function start(){
+ if(startPromise)return startPromise;
+ const generation=lifecycleRevision;
+ startPromise=(async()=>{
+  const {data:{session}}=await supabase.auth.getSession();
+  const user=session?.user;
+  if(generation!==lifecycleRevision||!user?.id||!session?.access_token)return;
+  userId=user.id;
+  await supabase.realtime.setAuth(session.access_token);
+  if(generation!==lifecycleRevision)return;
+  if(channel){const previous=channel;channel=null;await supabase.removeChannel(previous);}
+  if(generation!==lifecycleRevision)return;
+  // Unique even when two auth events or reconnects occur in the same millisecond.
+  const nextChannel=supabase.channel(`dashboard-community-${user.id}-${++channelSequence}`);
+  nextChannel.on('postgres_changes',{event:'*',schema:'public',table:'news'},()=>queue());
+  channel=nextChannel;
+  nextChannel.subscribe(status=>{
+   if(channel!==nextChannel)return;
+   if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'||status==='CLOSED'){
+    channel=null;
+    void supabase.removeChannel(nextChannel).catch(()=>{});
+    scheduleStart(1000);
+   }
   });
+  await refresh();
+ })().catch(error=>{console.warn('Live-Aktualisierung konnte nicht gestartet werden:',error);if(userId)scheduleStart(1000);}).finally(()=>{
+  startPromise=null;
+  if(generation!==lifecycleRevision&&userId)scheduleStart();
+ });
+ return startPromise;
 }
 
 window.addEventListener('ec:dashboard-visits-refresh',()=>queue());
 window.addEventListener('ec:region-change',() => queue());
-window.addEventListener('focus',() => queue(),{passive:true});
-document.addEventListener('visibilitychange',() => { if (!document.hidden) queue(); });
+window.addEventListener('focus',()=>{queue();if(!channel)void start();},{passive:true});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){queue();if(!channel)void start();}});
 let observedDock = null, observedVisitsPanel = null;
 new MutationObserver(() => {
   const dock = document.querySelector('.ec-right-dock');
@@ -161,19 +179,15 @@ new MutationObserver(() => {
   if (dock) queue(120);
 }).observe(document.documentElement,{childList:true,subtree:true});
 
-supabase.auth.onAuthStateChange((_event, session) => {
-  const nextId = session?.user?.id || null;
-  if (nextId === userId) return;
-  if (!nextId) {
-    userId = null;
-    visitProfiles.clear();
-    clearTimeout(timer);
-    if (channel) void supabase.removeChannel(channel);
-    channel = null;
-    return;
-  }
-  // Start outside the auth callback so getSession cannot wait on its own lock.
-  window.setTimeout(() => void start(), 0);
+supabase.auth.onAuthStateChange((_event,session)=>{
+ const nextId=session?.user?.id||null;
+ if(nextId===userId&&channel)return;
+ if(!nextId||nextId!==userId){lifecycleRevision++;visitProfiles.clear();}
+ userId=nextId;
+ clearTimeout(restartTimer);
+ if(!nextId){clearTimeout(timer);if(channel){const previous=channel;channel=null;void supabase.removeChannel(previous).catch(()=>{});}return;}
+ // Auth callbacks never await another auth method while the auth lock is held.
+ scheduleStart();
 });
 
 void start();

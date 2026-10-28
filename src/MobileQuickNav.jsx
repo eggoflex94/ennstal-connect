@@ -13,7 +13,7 @@ const extraPages = [
   ["friends", "Freunde"], ["settings", "Einstellungen"],
   ["notifications", "Aktuelles"],
   ["news", "Neuigkeiten"], ["events", "Events & Eventfotos"], ["marketplace", "Marktplatz"], ["groups", "Gruppen"],
-  ["forum", "Forum & Beiträge"], ["profile", "Mein Profil"], ["municipality", "Gemeinden"]
+  ["forum", "Forum & Beiträge"], ["profile", "Mein Profil"], ["help", "Hilfe"], ["municipality", "Gemeinden"]
 ];
 
 export default function MobileQuickNav({ page, onNavigate, isAdmin, canReviewAccounts = false, onLogout, unread = 0, unreadNotifications = 0, pendingRequests = 0 }) {
@@ -25,7 +25,7 @@ export default function MobileQuickNav({ page, onNavigate, isAdmin, canReviewAcc
     window.addEventListener("keydown", close);
     return () => window.removeEventListener("keydown", close);
   }, [expanded]);
-  const navigate = (target) => { setExpanded(false); onNavigate(target); };
+  const navigate = (target) => { setExpanded(false); if(target==='help')window.dispatchEvent(new CustomEvent('ec:navigate',{detail:{page:'help'}}));else onNavigate(target); };
   return (
     <div className="ec-mobile-quicknav">
       {expanded && <div className="ec-mobile-menu-backdrop" onClick={() => setExpanded(false)} aria-hidden="true" />}
