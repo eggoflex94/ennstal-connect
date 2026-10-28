@@ -12,7 +12,8 @@ const fmt = (value) => value ? new Date(value).toLocaleString('de-AT', { day:'2-
 function setCount(selector, value) {
   const node = document.querySelector(selector);
   if (!node) return;
-  node.textContent = String(value ?? 0);
+  const text = String(value ?? 0);
+  if (node.textContent !== text) node.textContent = text;
   node.hidden = false;
 }
 
@@ -80,14 +81,18 @@ async function refresh() {
     const visitsPanel = document.querySelector('.ec-dock-detail[data-panel="visits"]');
     setCount('.ec-dock-visits-count', visits.length);
     if (visitsPanel) {
-      visitsPanel.innerHTML = visits.length ? visits.map((row) => {
+      const markup = visits.length ? visits.map((row) => {
         const profile = profiles.get(row.visitor_id);
         const nickname = profile?.nickname || 'Mitglied';
         const avatar = profile?.avatar_url || '/community-default-avatar-fast.svg';
         const star = profileStar(profile);
         return `<button type="button" class="ec-dock-detail-row ec-profile-visit-row" data-profile-id="${esc(row.visitor_id)}"><img class="ec-profile-visit-avatar" src="${esc(avatar)}" alt=""><span class="ec-profile-visit-main"><span class="ec-profile-visit-name">${star ? `<img class="ec-profile-visit-star" src="${esc(star)}" alt="">` : ''}<strong>${esc(nickname)} <span class="ec-inline-points">[${esc(Number(profile?.total_score??profile?.points??0).toLocaleString('de-AT'))}]</span></strong></span><small>hat dein Profil besucht</small></span><time datetime="${esc(row.visited_at)}">${esc(fmt(row.visited_at))}</time></button>`;
       }).join('') : '<div class="ec-dock-empty">Noch keine Profilbesuche.</div>';
-      bindProfileRows(visitsPanel);
+      if (visitsPanel.dataset.visitMarkup !== markup) {
+        visitsPanel.dataset.visitMarkup = markup;
+        visitsPanel.innerHTML = markup;
+        bindProfileRows(visitsPanel);
+      }
     }
   }
 
@@ -143,7 +148,21 @@ async function start() {
     if (channel !== nextChannel) return;
     if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
       channel = null;
-      window.setTimeout(() => { if (!document.hidden) void start(); }, 1000);
+      window.setTimeout(() => { if (!document.hidden) supabase.auth.onAuthStateChange((_event, session) => {
+  const nextId = session?.user?.id || null;
+  if (nextId === userId) return;
+  if (!nextId) {
+    userId = null;
+    clearTimeout(timer);
+    if (channel) void supabase.removeChannel(channel);
+    channel = null;
+    return;
+  }
+  // Start outside the auth callback so getSession cannot wait on its own lock.
+  window.setTimeout(() => void start(), 0);
+});
+
+void start(); }, 1000);
     }
   });
 }
@@ -151,9 +170,29 @@ async function start() {
 window.addEventListener('ec:region-change',() => queue());
 window.addEventListener('focus',() => queue(),{passive:true});
 document.addEventListener('visibilitychange',() => { if (!document.hidden) queue(); });
+let observedDock = null, observedVisitsPanel = null;
 new MutationObserver(() => {
-  if (document.querySelector('.ec-right-dock')) queue(120);
+  const dock = document.querySelector('.ec-right-dock');
+  const panel = dock?.querySelector('.ec-dock-detail[data-panel="visits"]');
+  if (dock === observedDock && panel === observedVisitsPanel) return;
+  observedDock = dock;
+  observedVisitsPanel = panel;
+  if (dock) queue(120);
 }).observe(document.documentElement,{childList:true,subtree:true});
+
+supabase.auth.onAuthStateChange((_event, session) => {
+  const nextId = session?.user?.id || null;
+  if (nextId === userId) return;
+  if (!nextId) {
+    userId = null;
+    clearTimeout(timer);
+    if (channel) void supabase.removeChannel(channel);
+    channel = null;
+    return;
+  }
+  // Start outside the auth callback so getSession cannot wait on its own lock.
+  window.setTimeout(() => void start(), 0);
+});
 
 void start();
 
