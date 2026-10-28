@@ -641,6 +641,14 @@ test("profile-visitor nickname opens a stable matching member-card preview",asyn
  await openPersonalDock(page);
  const name=page.locator('[data-panel="visits"] .ec-profile-visitor-name, [data-panel="visits"] .ec-profile-visit-name strong').filter({hasText:'Zweites Mitglied'}).first();
  await expect(name).toBeVisible({timeout:15000});
+ // The asynchronous admin controls can still move the visitor list after login.
+ // Start the hover once the nickname has stayed in place for 700 ms.
+ let lastRect='',stableSince=Date.now();
+ await expect.poll(async()=>{
+  const rect=JSON.stringify(await name.boundingBox());
+  if(rect!==lastRect){lastRect=rect;stableSince=Date.now();}
+  return Date.now()-stableSince;
+ },{timeout:10000}).toBeGreaterThanOrEqual(700);
  await name.hover();
  await expect(page.locator('#ec-member-hover-preview .member-nickname')).toHaveText('Zweites Mitglied');
  const original=await name.elementHandle();
