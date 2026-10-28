@@ -2,8 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import vm from 'node:vm';
+import {isOperatorProfile, operatorStarSrc} from '../src/operator-identity.js';
 
-const source = (await fs.readFile(new URL('../src/role-region-polish.js', import.meta.url), 'utf8')).replace(/^import[^\n]+\n/, '');
+const source = (await fs.readFile(new URL('../src/role-region-polish.js', import.meta.url), 'utf8')).replace(/^import[^\n]+\n/gm, '');
 
 test('inline identity decoration settles and never decorates its own nested strong', () => {
   let writes = 0, html = '', decorated = false;
@@ -17,6 +18,7 @@ test('inline identity decoration settles and never decorates its own nested stro
   };
   const inner = { closest() { return {}; }, set innerHTML(_) { assert.fail('must not nest another identity'); } };
   const context = vm.createContext({
+    isOperatorProfile, operatorStarSrc,
     document: { readyState: 'loading', addEventListener() {}, documentElement: { dataset: {} }, querySelectorAll: () => decorated ? [outer, inner] : [outer] },
     localStorage: { getItem() { return ''; } }
   });

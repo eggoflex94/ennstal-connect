@@ -4,7 +4,8 @@ export const ROLE_ORDER = { HEAD_ADMIN: 1, ADMIN: 2, MUNICIPALITY: 3, SUPPORTER:
 export function roleIdentity(profile = {}) {
   const role = String(profile.role || "MEMBER").toUpperCase();
   const badge = String(profile.account_badge || "").toUpperCase();
-  if (role === "HEAD_ADMIN") return isOperatorProfile(profile) ? { key:"head-admin", label:"Hauptadmin · Betreiber", mark:"", icon:operatorStarSrc, color:"#efc350" } : { key:"head-admin", label:"Hauptadmin", mark:"", icon:"/role-star-red.svg", color:"#ef4444" };
+  if (isOperatorProfile(profile)) return { key:"head-admin", label:"Betreiber", mark:"", icon:operatorStarSrc, color:"#efc350" };
+  if (role === "HEAD_ADMIN") return { key:"head-admin", label:"Hauptadmin", mark:"", icon:"/role-star-red.svg", color:"#ef4444" };
   if (role === "ADMIN") return { key:"admin", label:"Admin", mark:"", icon:"/role-star-red.svg", color:"#ef4444" };
   if (role === "SUPPORTER") return { key:"supporter", label:"Supporter", mark:"", icon:"/supporter-star.svg", color:"#ffd400" };
   if (role === "MUNICIPALITY") { const identity={ key:"municipality", label:"Gemeinde", mark:"", icon:"/role-star-green.svg", color:"#20a866" }; identity.label=profile.role_display_label||identity.label; identity.icon=profile.role_star_url||identity.icon; identity.color=profile.role_accent_color||identity.color; return identity; }

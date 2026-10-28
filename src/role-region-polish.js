@@ -1,3 +1,4 @@
+import { isOperatorProfile, operatorStarSrc } from './operator-identity.js';
 import { supabase } from './supabaseClient';
 
 const ADMIN_STAR = '/role-star-red.svg';
@@ -44,7 +45,7 @@ const roleTheme = (profile, regionId = null) => {
   if (moderationFor(profile, regionId).length || isRegionalAdminAnywhere(profile)) return 'supporter';
   return 'member';
 };
-const starFor = (profile, regionId = null) => { const theme = roleTheme(profile, regionId); if (theme === 'admin') return ADMIN_STAR; if (theme === 'supporter') return SUPPORTER_STAR; if (theme === 'business') return BUSINESS_STAR; return ''; };
+const starFor = (profile, regionId = null) => { if (isOperatorProfile(profile)) return operatorStarSrc; const theme = roleTheme(profile, regionId); if (theme === 'admin') return ADMIN_STAR; if (theme === 'supporter') return SUPPORTER_STAR; if (theme === 'business') return BUSINESS_STAR; return ''; };
 
 async function loadContext(force = false) {
   if (!supabase || refreshRunning) return;

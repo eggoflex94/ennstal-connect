@@ -1,6 +1,7 @@
+import { isOperatorProfile, operatorStarSrc } from './operator-identity.js';
 import { supabase } from "./supabaseClient";
 
-const roleIcon = (role) => role === "HEAD_ADMIN" ? "♛" : role === "ADMIN" ? "★" : role === "SUPPORTER" ? "★" : "";
+const roleIcon = (role, profile) => isOperatorProfile(profile) ? `<img src="${operatorStarSrc}" alt="Betreiber" width="18" height="18">` : role === "HEAD_ADMIN" ? "♛" : role === "ADMIN" ? "★" : role === "SUPPORTER" ? "★" : "";
 const roleClass = (role) => String(role || "MEMBER").toLowerCase().replace("_", "-");
 
 async function sessionUser() {
@@ -69,7 +70,7 @@ async function decorateHomepageFrames() {
     const role = author?.role || "MEMBER";
     const badge = document.createElement("div");
     badge.className = `ec-frame-author ${roleClass(role)}`;
-    badge.innerHTML = `<span class="ec-frame-author-icon">${roleIcon(role)}</span><span>Erstellt von ${name}</span>`;
+    badge.innerHTML = `<span class="ec-frame-author-icon">${roleIcon(role,author)}</span><span>Erstellt von ${name}</span>`;
     card.insertBefore(badge, card.firstChild);
   }
 }

@@ -1,3 +1,4 @@
+import { isOperatorProfile, operatorStarSrc } from './operator-identity.js';
 import { supabase } from './supabaseClient';
 
 let queued = false;
@@ -5,7 +6,8 @@ let progress = null;
 let progressLoadedAt = 0;
 let loading = null;
 
-function starForRoleLabel(label = '') {
+function starForRoleLabel(label = '', actor = null) {
+  if (isOperatorProfile(actor) || String(label).toLowerCase().includes('betreiber')) return operatorStarSrc;
   const text = String(label).toLowerCase();
   if (text.includes('betreiber') || text.includes('hauptadmin') || text.includes('regional admin') || text.includes('community admin') || text === 'admin') return '/role-star-red.svg';
   if (text.includes('supporter')) return '/supporter-star.svg';
@@ -79,7 +81,7 @@ function enhancePointMessages() {
     const modern = first.match(/^Du hast soeben von ★\s*(.+?)\s*\((.+?)\)\s*([+-]?\d+)\s*Punkte erhalten\.$/i);
     if (modern) {
       const [, nickname, roleLabel, amountRaw] = modern;
-      const star = starForRoleLabel(roleLabel);
+      const star = starForRoleLabel(roleLabel, {id: paragraph.closest('[data-sender-id]')?.dataset.senderId});
       const reasonLine = lines.find((line) => /^Grund:/i.test(line)) || 'Grund: Keine Begründung';
       const footer = lines.find((line) => /^Dies ist eine automatisierte Nachricht$/i) || 'Dies ist eine automatisierte Nachricht';
       paragraph.dataset.ecPointIdentity = '1';
@@ -98,7 +100,7 @@ function enhancePointMessages() {
     if (divider < 0) return;
     const nickname = actorLine.slice(0, divider).trim();
     const roleLabel = actorLine.slice(divider + 3).trim();
-    const star = starForRoleLabel(roleLabel);
+    const star = starForRoleLabel(roleLabel, {id: paragraph.closest('[data-sender-id]')?.dataset.senderId});
     const amount = lines[1];
     const reason = lines.slice(2).join(' ');
     paragraph.dataset.ecPointIdentity = '1';

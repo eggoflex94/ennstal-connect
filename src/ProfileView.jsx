@@ -1,3 +1,4 @@
+import { isOperatorProfile, operatorStarSrc } from './operator-identity.js';
 import { STYRIAN_DISTRICTS, publicDistrict } from "./regions.js";
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "./supabaseClient";
@@ -9,7 +10,7 @@ const MAX_AVATAR_BYTES = 8 * 1024 * 1024;
 const AVATAR_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
 const roleMeta = {
-  HEAD_ADMIN: { label: "Betreiber (Hauptadmin)", cls: "head-admin", star: "/role-star-red.svg" },
+  HEAD_ADMIN: { label: "Hauptadmin", cls: "head-admin", star: "/role-star-red.svg" },
   ADMIN: { label: "Admin", cls: "admin", star: "/role-star-red.svg" },
   SUPPORTER: { label: "Supporter", cls: "supporter", star: "/supporter-star.svg" },
   MEMBER: { label: "Mitglied", cls: "member", star: "" },
@@ -68,9 +69,9 @@ function privacyVisible(member, field, mine, viewerIsAdmin) {
   return String(member?.privacy_settings?.[field] || "PUBLIC").toUpperCase() !== "PRIVATE";
 }
 
-function RoleBadge({ role, accountBadge }) {
+function RoleBadge({ role, accountBadge, member }) {
   const normalized = normalizeRole(role);
-  const item = normalized === "MEMBER" && accountBadge === "BUSINESS"
+  const item = isOperatorProfile(member) ? { label: "Betreiber", cls: "head-admin", star: operatorStarSrc } : normalized === "MEMBER" && accountBadge === "BUSINESS"
     ? { label: "Unternehmenskonto", cls: "business", star: "/role-star-blue.svg" }
     : roleMeta[normalized] || roleMeta.MEMBER;
   return <span className={`profile-role-badge ${item.cls}`} title={item.label}>
@@ -326,7 +327,7 @@ export default function ProfileView({
         </div>
         <div className="profile-function-card">
           <span className="profile-function-eyebrow">FUNKTION</span>
-          <RoleBadge role={member.role} accountBadge={member.account_badge} />
+          <RoleBadge member={member} role={member.role} accountBadge={member.account_badge} />
           <small>Heimatregion: {homeRegion}</small>
         </div>
       </div>

@@ -1,3 +1,4 @@
+import { isOperatorProfile, operatorStarSrc } from './operator-identity.js';
 import { supabase } from './supabaseClient';
 
 const PANEL_ID = 'ec-member-suggestions';
@@ -17,6 +18,7 @@ const interestsOf = (value) => {
 const normalize = (value) => clean(value).toLocaleLowerCase('de-AT');
 const displayName = (member) => clean(member?.nickname || member?.first_name || 'Mitglied');
 const roleStar = (member) => {
+  if (isOperatorProfile(member)) return operatorStarSrc;
   const role = clean(member?.role).toUpperCase();
   if (role === 'HEAD_ADMIN' || role === 'ADMIN' || (Array.isArray(member?.regional_admin_region_ids) && member.regional_admin_region_ids.length)) return '/role-star-red.svg';
   if (role === 'MUNICIPALITY') return member?.role_star_url || '/role-star-green.svg';

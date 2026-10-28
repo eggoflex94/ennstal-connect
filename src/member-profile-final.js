@@ -1,3 +1,4 @@
+import { isOperatorProfile, operatorStarSrc } from './operator-identity.js';
 import { supabase } from './supabaseClient';
 
 let regions=[];
@@ -58,6 +59,7 @@ function visible(target,field,isFriend){
   return setting==='PUBLIC'||(setting==='FRIENDS'&&isFriend);
 }
 async function functionInfo(target){
+  if(isOperatorProfile(target))return{label:"Betreiber",star:operatorStarSrc};
   const role=String(target.role||'MEMBER').toUpperCase();
   if(role==='HEAD_ADMIN')return{label:'Hauptadmin',star:'/role-star-red.svg'};
   if(role==='ADMIN'||role==='GLOBAL_ADMIN')return{label:'Global Admin',star:'/role-star-red.svg'};
@@ -163,7 +165,7 @@ async function build(root){
       card.insertAdjacentHTML('afterbegin',coverMarkup(target));
     }
     const left=document.createElement('div');left.className='ec-mp-left';
-    const photoTheme=role.star==='/role-star-red.svg'?'admin':role.star==='/supporter-star.svg'?'supporter':role.star==='/role-star-blue.svg'?'business':'member';
+    const photoTheme=isOperatorProfile(target)||role.star==='/role-star-red.svg'?'admin':role.star==='/supporter-star.svg'?'supporter':role.star==='/role-star-blue.svg'?'business':'member';
     const photo=document.createElement('div');photo.className='ec-mp-photo';photo.dataset.roleTheme=photoTheme;if(avatar)photo.appendChild(avatar);left.appendChild(photo);
     const functionBox=document.createElement('div');functionBox.className='ec-mp-function';
     const roleMarkup=role.star?`<span class="ec-mp-function-role"><img class="ec-mp-role-star" src="${role.star}" alt="" aria-hidden="true"><strong>${esc(role.label)}</strong></span>`:`<span class="ec-mp-function-role"><strong>${esc(role.label)}</strong></span>`;

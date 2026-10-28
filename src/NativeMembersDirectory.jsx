@@ -1,3 +1,4 @@
+import { isOperatorProfile, operatorStarSrc } from './operator-identity.js';
 import { STYRIAN_DISTRICTS, publicDistrict } from "./regions.js";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "./supabaseClient";
@@ -150,7 +151,7 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
   const isRegionalAdmin = member => regionalRole(member).assigned;
   const isRegionalAdminHere = member => regionalRole(member).here;
 
-  const roleStarSrc = (member) => isHeadAdmin(member) || isGlobalAdmin(member) ? "/role-star-red.svg" : isRegionalAdmin(member) ? regionalRole(member).star : normalized(member?.role) === "MUNICIPALITY" ? "/role-star-green.svg" : isBusiness(member) ? "/role-star-blue.svg" : normalized(member?.role) === "SUPPORTER" ? "/supporter-star.svg" : null;
+  const roleStarSrc = (member) => isOperatorProfile(member) ? operatorStarSrc : isHeadAdmin(member) || isGlobalAdmin(member) ? "/role-star-red.svg" : isRegionalAdmin(member) ? regionalRole(member).star : normalized(member?.role) === "MUNICIPALITY" ? "/role-star-green.svg" : isBusiness(member) ? "/role-star-blue.svg" : normalized(member?.role) === "SUPPORTER" ? "/supporter-star.svg" : null;
 
   const openMember = (member) => {
     if (!member?.id) return;
@@ -298,8 +299,8 @@ export default function NativeMembersDirectory({ members = [], regions = [], act
           .map((region) => region.short_name || region.name)
           .filter(Boolean);
         const regionalLabel = assignedRegionNames.length ? assignedRegionNames.join(", ") : homeRegionLabel;
-        const cardMember = member?.is_primary_head_admin
-          ? { ...member, directory_admin: true, directory_role_star: roleStarSrc(member), directory_responsibility_label: "Hauptverantwortlicher · Community" }
+        const cardMember = isOperatorProfile(member)
+          ? { ...member, directory_admin: true, directory_role_star: roleStarSrc(member), directory_responsibility_label: "" }
           : isHeadAdmin(member)
             ? { ...member, directory_admin: true, directory_role_star: roleStarSrc(member), directory_responsibility_label: "Hauptadmin · alle Regionen" }
             : normalized(member?.role) === "ADMIN"

@@ -1120,7 +1120,7 @@ test("Neon Pink About Me section keeps bio text readable", async()=>{
 
 test("admin member cards show the current responsibility labels", async()=>{
   const directory=await source("src/NativeMembersDirectory.jsx");
-  assert.match(directory,/member\?\.is_primary_head_admin[\s\S]*Hauptverantwortlicher · Community/);
+  assert.match(directory,/isOperatorProfile\(member\)[\s\S]*directory_responsibility_label: ""/);
   assert.match(directory,/isHeadAdmin\(member\)[\s\S]*Hauptadmin · alle Regionen/);
   assert.match(directory,/Global Admin · Region/);
   assert.match(directory,/Regional Admin · Region/);
@@ -1155,7 +1155,7 @@ test("profile visits authenticate realtime before subscribing", async()=>{
 
 test("primary Head Admin card uses community oversight label", async()=>{
   const directory=await source("src/NativeMembersDirectory.jsx");
-  assert.match(directory,/member\?\.is_primary_head_admin[\s\S]*Hauptverantwortlicher · Community/);
+  assert.match(directory,/isOperatorProfile\(member\)[\s\S]*directory_responsibility_label: ""/);
 });
 
 
@@ -1176,9 +1176,9 @@ test("profile visit realtime channel setup is serialized", async()=>{
 });
 
 
-test("primary Head Admin uses community oversight label", async()=>{
+test("operator card omits the redundant responsibility line", async()=>{
   const directory=await source("src/NativeMembersDirectory.jsx");
-  assert.match(directory,/Hauptverantwortlicher · Community/);
+  assert.doesNotMatch(directory,/Hauptverantwortlicher · Community/);
 });
 
 

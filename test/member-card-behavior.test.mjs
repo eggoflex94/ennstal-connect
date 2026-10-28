@@ -45,7 +45,7 @@ test('normal members render without a role star',()=>{
 test('only the designated operator renders a gold star among head admins',()=>{
  for(const [member,gold] of [[{id:operatorIdentity.OPERATOR_PROFILE_ID},true],[{id:'primary',is_primary_head_admin:true},true],[{id:'other-head-admin'},false]]){
   const html=renderToStaticMarkup(React.createElement(Card,{member:{...member,nickname:'Test',role:'HEAD_ADMIN'},profile:{id:'viewer'},friendships:[],onOpen(){}}));
-  assert.equal(html.includes('operator-star-gold.svg'),gold);
+  assert.equal(html.includes('operator-crown-gold.svg'),gold);
   assert.equal(html.includes('role-star-red.svg'),!gold);
  }
 });
@@ -67,4 +67,14 @@ test('read-only previews stay out of the keyboard tab order',()=>{
  assert.ok(!preview.includes('tabindex'));
  const card=renderToStaticMarkup(React.createElement(Card,{member,onOpen(){}}));
  assert.ok(card.includes('tabindex="0"'));
+});
+
+test('operator card keeps age and status but omits the responsibility line',()=>{
+ const html=renderToStaticMarkup(React.createElement(Card,{member:{id:operatorIdentity.OPERATOR_PROFILE_ID,nickname:'egga',first_name:'Marco',last_name:'Egger',birth_date:'1994-01-01',role:'HEAD_ADMIN',directory_responsibility_label:'Hauptverantwortlicher · Community',is_online:true,last_active_at:new Date().toISOString()},profile:{id:'viewer'},friendships:[],onOpen(){}}));
+ assert.ok(html.includes('operator-crown-gold.svg'));
+ assert.ok(html.includes('BETREIBER'));
+ assert.ok(html.includes('Marco Egger'));
+ assert.ok(html.includes('Jahre'));
+ assert.ok(html.includes('Online'));
+ assert.ok(!html.includes('ec-member-responsibility'));
 });

@@ -1,3 +1,4 @@
+import { isOperatorProfile, operatorStarSrc } from './operator-identity.js';
 import { supabase } from './supabaseClient';
 
 let queued = false;
@@ -67,6 +68,7 @@ function homeRegionName(profile) {
 }
 
 function roleInfo(profile) {
+  if (isOperatorProfile(profile)) return { label: "Betreiber", star: operatorStarSrc, cls: "admin" };
   const role = String(profile?.role || 'MEMBER').toUpperCase();
   if (role === 'HEAD_ADMIN') return { label: 'Betreiber - Hauptadmin', star: '/role-star-red.svg', cls: 'admin' };
   if (role === 'ADMIN') return { label: 'Admin', star: '/role-star-red.svg', cls: 'admin' };

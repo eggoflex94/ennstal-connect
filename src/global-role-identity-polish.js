@@ -1,3 +1,4 @@
+import { isOperatorProfile, operatorStarSrc } from './operator-identity.js';
 import { supabase } from './supabaseClient';
 
 const STARS={ADMIN:'/role-star-red.svg',SUPPORTER:'/supporter-star.svg',BUSINESS:'/role-star-blue.svg'};
@@ -14,7 +15,7 @@ const norm=v=>String(v||'').replace(/\s+/g,' ').trim();
 const assignmentsFor=p=>regionalAdmins.filter(a=>a.user_id===p?.id&&a.active);
 const activeRegion=()=>{const slug=document.documentElement.dataset.ecRegion||localStorage.getItem('ec-active-region')||'';return regions.find(r=>r.slug===slug)||regions[0]||null};
 const themeFor=(p,regionId=null)=>{const r=String(p?.role||'MEMBER').toUpperCase();if(r==='HEAD_ADMIN'||r==='ADMIN'||(regionId&&assignmentsFor(p).some(a=>a.region_id===regionId)))return'ADMIN';if(r==='SUPPORTER'||regionalModeration.some(a=>a.user_id===p?.id&&a.active&&(!regionId||a.region_id===regionId))||assignmentsFor(p).length)return'SUPPORTER';if(p?.account_badge==='BUSINESS')return'BUSINESS';return'MEMBER'};
-const starFor=(p,regionId=null)=>STARS[themeFor(p,regionId)]||'';
+const starFor=(p,regionId=null)=>isOperatorProfile(p)?operatorStarSrc:STARS[themeFor(p,regionId)]||'';
 const nick=p=>p?.nickname||'Mitglied';
 
 function hydrateCache(){

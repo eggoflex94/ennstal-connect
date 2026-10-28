@@ -1,3 +1,4 @@
+import { isOperatorProfile, operatorStarSrc } from './operator-identity.js';
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../supabaseClient";
 import {
@@ -47,7 +48,8 @@ function getDisplayName(member) {
   return member.nickname || fullName || "Unbekanntes Mitglied";
 }
 
-function roleIcon(role) {
+function roleIcon(role, member) {
+  if (isOperatorProfile(member)) return <img src={operatorStarSrc} width={16} height={16} alt="Betreiber" />;
   switch (normalizeRole(role)) {
     case "HEAD_ADMIN":
       return <Crown size={16} />;
@@ -382,7 +384,7 @@ export default function Members({ onNavigate }) {
                     </div>
 
                     <div className={`member-role role-${role.toLowerCase()}`}>
-                      {roleIcon(role)}
+                      {roleIcon(role, member)}
                       {ROLE_LABELS[role]}
                     </div>
                   </div>
@@ -469,7 +471,7 @@ export default function Members({ onNavigate }) {
               <h2>{getDisplayName(selectedMember)}</h2>
 
               <div className={`member-role role-${normalizeRole(selectedMember.role).toLowerCase()}`}>
-                {roleIcon(selectedMember.role)}
+                {roleIcon(selectedMember.role, selectedMember)}
                 {ROLE_LABELS[normalizeRole(selectedMember.role)]}
               </div>
 

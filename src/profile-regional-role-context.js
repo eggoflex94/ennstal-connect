@@ -1,3 +1,4 @@
+import { isOperatorProfile, operatorStarSrc } from './operator-identity.js';
 import { supabase } from './supabaseClient';
 import './profile-legacy-cleanup.css';
 
@@ -65,6 +66,7 @@ async function applyProfileRoleContext() {
   if (!page.isConnected || page.dataset.profileId !== profileId || !profile) return;
 
   const role = norm(profile.role);
+  if (isOperatorProfile(profile)) return setFunctionPresentation(box, 'Betreiber', operatorStarSrc);
   if (role === 'HEAD_ADMIN') return setFunctionPresentation(box, 'Hauptadmin', '/role-star-red.svg');
   if (role === 'ADMIN' || role === 'GLOBAL_ADMIN') return setFunctionPresentation(box, 'Global Admin', '/role-star-red.svg');
 

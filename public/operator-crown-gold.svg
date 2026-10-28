@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="tile" x1="8" y1="4" x2="54" y2="62" gradientUnits="userSpaceOnUse"><stop stop-color="#73182f"/><stop offset=".55" stop-color="#420d20"/><stop offset="1" stop-color="#240b17"/></linearGradient>
+    <linearGradient id="edge" x1="6" y1="3" x2="56" y2="64" gradientUnits="userSpaceOnUse"><stop stop-color="#fff0bc"/><stop offset=".34" stop-color="#d9a942"/><stop offset=".7" stop-color="#f5d68b"/><stop offset="1" stop-color="#af7927"/></linearGradient>
+    <linearGradient id="gold" x1="17" y1="18" x2="44" y2="48" gradientUnits="userSpaceOnUse"><stop stop-color="#fff0b9"/><stop offset=".5" stop-color="#f2d07b"/><stop offset="1" stop-color="#c08a2e"/></linearGradient>
+  </defs>
+  <rect x="1.5" y="1.5" width="61" height="61" rx="15" fill="url(#tile)" stroke="url(#edge)" stroke-width="2"/>
+  <rect x="4" y="4" width="56" height="56" rx="12.5" stroke="#fff0bc" stroke-opacity=".28"/>
+  <path d="M12 23l13 10 7-18 7 18 13-10-5 22H17l-5-22z" fill="url(#gold)" stroke="#ffe6a1" stroke-width=".6" stroke-linejoin="round"/>
+  <path d="M32 15v30H17l15-12V15z" fill="#ffe8a4"/>
+  <path d="M32 33l15 12H32V33z" fill="#d5a84d"/>
+  <path d="M12 23l13 10-8 12-5-22z" fill="#edc66d"/>
+  <path d="M52 23L39 33l8 12 5-22z" fill="#c59337"/>
+  <path d="M18 49h28v4H18z" fill="url(#edge)"/>
+  <path d="M18 49h28" stroke="#ffeab3" stroke-width=".8"/>
+</svg>

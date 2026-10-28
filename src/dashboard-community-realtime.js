@@ -1,3 +1,4 @@
+import { isOperatorProfile, operatorStarSrc } from './operator-identity.js';
 import { supabase } from './supabaseClient';
 import { loadMemberScores } from './member-score.js';
 
@@ -25,6 +26,7 @@ function bindProfileRows(panel) {
 }
 
 function profileStar(profile) {
+  if (isOperatorProfile(profile)) return operatorStarSrc;
   const role = String(profile?.role || '').toUpperCase();
   if (role === 'HEAD_ADMIN' || role === 'ADMIN') return '/role-star-red.svg';
   if (role === 'MUNICIPALITY') return profile?.role_star_url || '/role-star-green.svg';

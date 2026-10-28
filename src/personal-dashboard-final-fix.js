@@ -1,3 +1,4 @@
+import { isOperatorProfile, operatorStarSrc } from './operator-identity.js';
 import { supabase } from './supabaseClient';
 import { loadMemberScores } from './member-score.js';
 
@@ -13,7 +14,7 @@ const INFO_ICON='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy=
 const POPUP_ICON='<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M8 9h8M8 13h5"/></svg>';
 const STATS_ICON='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19V9M12 19V5M19 19v-7"/><path d="M3 19h18"/></svg>';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function personStar(p){const role=String(p?.role||'MEMBER').toUpperCase();if(role==='HEAD_ADMIN'||role==='ADMIN')return'/role-star-red.svg';if(role==='SUPPORTER')return'/supporter-star.svg';if(p?.account_badge==='BUSINESS')return'/role-star-blue.svg';return''}
+function personStar(p){if(isOperatorProfile(p))return operatorStarSrc;const role=String(p?.role||'MEMBER').toUpperCase();if(role==='HEAD_ADMIN'||role==='ADMIN')return'/role-star-red.svg';if(role==='SUPPORTER')return'/supporter-star.svg';if(p?.account_badge==='BUSINESS')return'/role-star-blue.svg';return''}
 function closeOverlay(){document.querySelector('.ec-dashboard-info-overlay')?.remove();document.body.classList.remove('ec-dashboard-info-open')}
 function go(page){document.body.classList.remove('ec-dock-open');window.dispatchEvent(new CustomEvent('ec:navigate',{detail:{page}}))}
 function placeDockInPageFlow(){

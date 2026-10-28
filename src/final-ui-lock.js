@@ -1,3 +1,4 @@
+import { isOperatorProfile, operatorStarSrc } from './operator-identity.js';
 import { supabase } from './supabaseClient';
 
 let viewer=null, regions=[];
@@ -11,7 +12,7 @@ function dockIdentity(){
   const dock=document.querySelector('.ec-right-dock'); if(!dock||!viewer)return;
   let el=dock.querySelector('.ec-dock-identity'); if(!el){el=document.createElement('div');el.className='ec-dock-identity';(dock.querySelector('.ec-dock-head')||dock.firstElementChild)?.after(el)}
   const role=String(viewer.role||'MEMBER').toUpperCase(); const region=regions.find(r=>r.id===viewer.home_region_id)?.name||'Keine Region';
-  el.innerHTML=`<span class="ec-dock-role-star" aria-hidden="true">${['HEAD_ADMIN','ADMIN'].includes(role)?'★':'☆'}</span><div><strong>${viewer.nickname||'Mitglied'}</strong><small>${roleLabel(role)} · ${region}</small></div>`;
+  el.innerHTML=`<span class="ec-dock-role-star" aria-hidden="true">${isOperatorProfile(viewer)?`<img src="${operatorStarSrc}" alt="Betreiber" width="24" height="24">`:['HEAD_ADMIN','ADMIN'].includes(role)?'★':'☆'}</span><div><strong>${viewer.nickname||'Mitglied'}</strong><small>${roleLabel(role)} · ${region}</small></div>`;
 }
 function lock(){
   document.querySelector('.member-grid')?.classList.add('ec-final-member-grid');

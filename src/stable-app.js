@@ -1,3 +1,4 @@
+import { isOperatorProfile, operatorStarSrc } from './operator-identity.js';
 import { supabase } from './supabaseClient';
 
 let viewer=null,profiles=[],regions=[],regionalAdmins=[],running=false,queued=false;
@@ -25,6 +26,7 @@ function activeRegion(){
 
 function assignmentsFor(member){return regionalAdmins.filter(a=>a.user_id===member?.id&&a.active)}
 function effectiveRole(member){
+  if(isOperatorProfile(member))return{theme:"admin",star:operatorStarSrc,label:"Betreiber",profile:"Betreiber"};
   const base=String(member?.role||'MEMBER').toUpperCase(),current=activeRegion(),assigned=assignmentsFor(member);
   const regionalHere=Boolean(current&&member?.home_region_id===current.id&&assigned.some(a=>a.region_id===current.id));
   if(base==='HEAD_ADMIN')return{theme:'admin',label:'Hauptadmin · Betreiber',profile:'★ Hauptadmin · Betreiber',star:'/role-star-red.svg'};

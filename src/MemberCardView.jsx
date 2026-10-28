@@ -1,4 +1,4 @@
-import { isOperatorProfile } from './operator-identity.js';
+import { isOperatorProfile, operatorStarSrc } from './operator-identity.js';
 import { publicImageVariant } from './imageDelivery.js';
 const DEFAULT_AVATAR = "/community-default-avatar-fast.svg";
 const ROLE_STAR_VERSION = "20260922a";
@@ -70,7 +70,7 @@ export default function MemberCardView({ member, profile, friendships, onOpen, i
   const birthDate = member.birth_date || (member.id === profile?.id ? profile?.birth_date : null);
   const age = getAge(birthDate);
   const statusLabel = online ? (String(member?.presence_device || "").toUpperCase() === "MOBILE" ? "Mobil online" : "Online") : "Offline";
-  const responsibilityLabel = compactResponsibilityLabel(member?.directory_responsibility_label || (baseRole === "HEAD_ADMIN" ? "Hauptverantwortlicher · alle Regionen" : ""));
+  const responsibilityLabel = isOperatorCard ? "" : compactResponsibilityLabel(member?.directory_responsibility_label || (baseRole === "HEAD_ADMIN" ? "Hauptverantwortlicher · alle Regionen" : ""));
 
   const openProfile = () => {
     if (!interactive) return;
@@ -103,8 +103,8 @@ export default function MemberCardView({ member, profile, friendships, onOpen, i
 
       <div className="ec-card-badge-rail" aria-label="Profilkennzeichnungen">
         {presentation.star && (
-          <span className={`ec-card-badge-icon ec-card-badge-role ec-card-badge-role-${presentation.theme}`} title={presentation.label} aria-label={presentation.label}>
-            <img className="ec-card-badge-img ec-card-badge-role-img" src={isOperatorCard ? "/operator-star-gold.svg" : presentation.star} alt="" aria-hidden="true" />
+          <span className={`ec-card-badge-icon ec-card-badge-role ec-card-badge-role-${presentation.theme}`} title={isOperatorCard ? "Betreiber" : presentation.label} aria-label={isOperatorCard ? "Betreiber" : presentation.label}>
+            <img className="ec-card-badge-img ec-card-badge-role-img" src={isOperatorCard ? operatorStarSrc : presentation.star} alt="" aria-hidden="true" />
           </span>
         )}
         {member?.is_community_photographer && (

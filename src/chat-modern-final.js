@@ -1,3 +1,4 @@
+import { isOperatorProfile, operatorStarSrc } from './operator-identity.js';
 import { supabase } from "./supabaseClient";
 import "./chat-modern-media.css";
 
@@ -35,6 +36,7 @@ const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&":
 const getName = (profile) => profile?.nickname || [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || "Mitglied";
 const peerFor = (message) => message.sender_id === currentUser?.id ? message.receiver_id : message.sender_id;
 const starFor = (profile) => {
+  if (isOperatorProfile(profile)) return operatorStarSrc;
   const role = String(profile?.role || "MEMBER").toUpperCase();
   if (["HEAD_ADMIN", "ADMIN", "GLOBAL_ADMIN", "REGIONAL_ADMIN"].includes(role)) return "/role-star-red.svg";
   if (role === "SUPPORTER") return "/supporter-star.svg";
@@ -190,7 +192,7 @@ function renderOverview(shell) {
 function automatedHeader(message, peer) {
   const sender = automatedActorProfile(message, peer);
   const invite = String(message?.message_type || "").toUpperCase() === "GROUP_INVITE";
-  return `<div class="ec-chat-modern-auto-head"><span class="ec-chat-modern-auto-label">${invite ? "GRUPPENEINLADUNG" : "AUTOMATISCHE NACHRICHT"}</span><span class="ec-chat-modern-auto-actor"><img src="${esc(starFor(sender))}" alt="Rollenstern"><strong>${esc(getName(sender))}</strong></span></div>`;
+  return `<div class="ec-chat-modern-auto-head"><span class="ec-chat-modern-auto-label">${invite ? "GRUPPENEINLADUNG" : "AUTOMATISCHE NACHRICHT"}</span><span class="ec-chat-modern-auto-actor"><img src="${esc(starFor(sender))}" alt="Rollenabzeichen"><strong>${esc(getName(sender))}</strong></span></div>`;
 }
 
 function automatedMessageContent(message, peer) {

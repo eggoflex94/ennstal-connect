@@ -1,3 +1,4 @@
+import { isOperatorProfile, operatorStarSrc } from './operator-identity.js';
 import { supabase } from './supabaseClient';
 
 const ADMIN_STAR='/role-star-red.svg';
@@ -16,6 +17,7 @@ function hydrate(){try{const x=JSON.parse(localStorage.getItem(CACHE_KEY)||'null
 function persist(){try{localStorage.setItem(CACHE_KEY,JSON.stringify(cache))}catch{}}
 
 function effectiveRole(member){
+  if(isOperatorProfile(member))return{theme:"admin",star:operatorStarSrc,label:"Betreiber"};
   const base=role(member);
   if(base==='HEAD_ADMIN'||base==='ADMIN')return{theme:'admin',star:ADMIN_STAR,label:'Global Admin'};
   const regional=assignmentsFor(member?.id);

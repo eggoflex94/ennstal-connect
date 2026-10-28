@@ -1,3 +1,4 @@
+import { isOperatorProfile, operatorStarSrc } from './operator-identity.js';
 import { supabase } from './supabaseClient';
 
 let state={viewer:null,profiles:[],regions:[],assignments:[]};
@@ -22,6 +23,7 @@ async function load(force=false){
 }
 
 function roleInfo(member){
+  if(isOperatorProfile(member))return{theme:"admin",star:operatorStarSrc,card:"Betreiber",profile:"Betreiber"};
   const base=String(member?.role||'MEMBER').toUpperCase();
   const current=activeRegion();
   const assigned=state.assignments.filter(a=>a.user_id===member?.id&&a.active);

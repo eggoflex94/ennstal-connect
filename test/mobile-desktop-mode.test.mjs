@@ -95,7 +95,7 @@ test("member profile keeps identical desktop structure on touch devices", async 
 
 test("member role stars stay mapped to the correct functions", async () => {
   const code = await source("src/NativeMembersDirectory.jsx");
-  assert.match(code, /const roleStarSrc = \(member\) => isHeadAdmin\(member\) \|\| isGlobalAdmin\(member\) \? "\/role-star-red\.svg" : isRegionalAdmin\(member\) \? regionalRole\(member\)\.star : normalized\(member\?\.role\) === "MUNICIPALITY" \? "\/role-star-green\.svg" : isBusiness\(member\) \? "\/role-star-blue\.svg" : normalized\(member\?\.role\) === "SUPPORTER" \? "\/supporter-star\.svg" : null;/);
+  assert.match(code, /const roleStarSrc = \(member\) => isOperatorProfile\(member\) \? operatorStarSrc : isHeadAdmin\(member\) \|\| isGlobalAdmin\(member\) \? "\/role-star-red\.svg" : isRegionalAdmin\(member\) \? regionalRole\(member\)\.star : normalized\(member\?\.role\) === "MUNICIPALITY" \? "\/role-star-green\.svg" : isBusiness\(member\) \? "\/role-star-blue\.svg" : normalized\(member\?\.role\) === "SUPPORTER" \? "\/supporter-star\.svg" : null;/);
 });
 
 test("municipality cards use the standard role frame and sort between business and supporter", async () => {
