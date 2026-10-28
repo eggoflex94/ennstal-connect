@@ -11,3 +11,11 @@
 [data-member-preview-id]:focus-visible { outline:2px solid #c79a46; outline-offset:3px; border-radius:3px; }
 @keyframes ecMemberPreviewIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
 @media(prefers-reduced-motion:reduce) { .ec-member-hover-preview { animation:none; } }
+
+/* Nicknames must receive hover events even inside click-through button labels. */
+button:not(:disabled) [data-member-preview-id],
+.ec-right-dock .ec-profile-visitor-name,
+.ec-right-dock .ec-profile-visit-name strong,
+.ec-right-dock .ec-online-nickname{
+  pointer-events:auto!important;
+}
