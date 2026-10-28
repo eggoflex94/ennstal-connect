@@ -641,8 +641,16 @@ test("profile-visitor nickname opens a stable matching member-card preview",asyn
  await openPersonalDock(page);
  const name=page.locator('[data-panel="visits"] .ec-profile-visitor-name, [data-panel="visits"] .ec-profile-visit-name strong').filter({hasText:'Zweites Mitglied'}).first();
  await expect(name).toBeVisible({timeout:15000});
+ await page.evaluate(()=>{
+  window.__visitorEvents=[];
+  for(const type of ['pointerover','pointerout','scroll'])document.addEventListener(type,event=>{
+   window.__visitorEvents.push({type,cls:event.target?.className,related:event.relatedTarget?.className,x:event.clientX,y:event.clientY,sy:scrollY});
+   if(window.__visitorEvents.length>50)window.__visitorEvents.shift();
+  },true);
+ });
  await name.hover();
- await expect(page.locator('#ec-member-hover-preview .member-nickname')).toHaveText('Zweites Mitglied');
+ try{await expect(page.locator('#ec-member-hover-preview .member-nickname')).toHaveText('Zweites Mitglied');}
+ catch(error){console.log('VISITOR_DIAG',JSON.stringify({calls:mock.rpcCalls,dom:await name.evaluate(n=>({html:n.outerHTML,ancestors:[...function*(p){while(p){yield p.className;p=p.parentElement;}}(n)],events:window.__visitorEvents}))}));throw error;}
  const original=await name.elementHandle();
  await page.evaluate(()=>{const node=document.createElement('div');node.id='unrelated-preview-update';document.querySelector('.modern-main').append(node);});
  await expect(page.locator('#ec-member-hover-preview .member-nickname')).toHaveText('Zweites Mitglied');
