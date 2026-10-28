@@ -148,21 +148,7 @@ async function start() {
     if (channel !== nextChannel) return;
     if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
       channel = null;
-      window.setTimeout(() => { if (!document.hidden) supabase.auth.onAuthStateChange((_event, session) => {
-  const nextId = session?.user?.id || null;
-  if (nextId === userId) return;
-  if (!nextId) {
-    userId = null;
-    clearTimeout(timer);
-    if (channel) void supabase.removeChannel(channel);
-    channel = null;
-    return;
-  }
-  // Start outside the auth callback so getSession cannot wait on its own lock.
-  window.setTimeout(() => void start(), 0);
-});
-
-void start(); }, 1000);
+      window.setTimeout(() => { if (!document.hidden) void start(); }, 1000);
     }
   });
 }
