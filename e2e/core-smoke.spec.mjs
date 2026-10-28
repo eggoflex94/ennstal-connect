@@ -616,8 +616,14 @@ test("online-friend nickname shows the card instead of the native tooltip",async
  await login(page,"MEMBER",{includeFriend:true,onlineFriend:true});
  await openPersonalDock(page);
  const nickname=page.locator('.ec-online-nickname').filter({hasText:'Zweites Mitglied'});
- await expect(nickname).toBeVisible({timeout:15000});await nickname.hover();
- await expect(page.locator('#ec-member-hover-preview .member-card')).toBeVisible();
+ await expect(nickname).toBeVisible({timeout:15000});
+ await page.evaluate(()=>{
+  window.__hoverDebug=[];const save=(event)=>{const n=event.target;window.__hoverDebug.push({type:event.type,tag:n?.tagName,cls:n?.className,match:n?.closest?.('[data-member-preview-id],.ec-online-nickname,.ec-online-friend-name')?.outerHTML?.slice(0,400),related:event.relatedTarget?.className});if(window.__hoverDebug.length>80)window.__hoverDebug.shift();};
+  ['pointerover','pointerout','scroll','visibilitychange'].forEach(type=>document.addEventListener(type,save,true));
+ });
+ await nickname.hover();
+ try {await expect(page.locator('#ec-member-hover-preview .member-card')).toBeVisible();}
+ catch(error){console.log('HOVER_DIAGNOSTIC',JSON.stringify(await page.evaluate(()=>({events:window.__hoverDebug,name:document.querySelector('.ec-online-nickname')?.outerHTML,ancestors:[...function*(n){while(n){yield n.className;n=n.parentElement;}}(document.querySelector('.ec-online-nickname'))]}))));throw error;}
  await expect(page.locator('.ec-online-friend').first()).not.toHaveAttribute('title');
  await page.mouse.move(1,1);await expect(page.locator('#ec-member-hover-preview')).toHaveCount(0);
 });
