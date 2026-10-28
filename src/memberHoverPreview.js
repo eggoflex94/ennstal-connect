@@ -35,7 +35,7 @@ export function resolvePreviewTarget(node, members) {
 
 // Separate lifecycle so stale network responses cannot reopen a dismissed preview.
 export function bindHoverPreview({ document, window, resolve, load, show, hide, delay = 180 }) {
-  let active = null, timer, revision = 0;
+  let active = null, timer, revision = 0, pointer = null, visibleMember = null;
   const close = () => {
     revision++;
     window.clearTimeout(timer);
@@ -44,11 +44,12 @@ export function bindHoverPreview({ document, window, resolve, load, show, hide, 
       if (described.length) active.element.setAttribute('aria-describedby', described.join(' '));
       else active.element.removeAttribute('aria-describedby');
     }
-    active = null;
+    active = null;visibleMember = null;
     hide();
   };
   const enter = event => {
     if (event.pointerType === 'touch') return;
+    if(Number.isFinite(event.clientX)&&Number.isFinite(event.clientY))pointer={x:event.clientX,y:event.clientY};
     const next = resolve(event.target);
     if (next?.element === active?.element) return;
     close();
@@ -61,6 +62,7 @@ export function bindHoverPreview({ document, window, resolve, load, show, hide, 
         if (currentRevision !== revision || !next.element.isConnected || !member?.id) return;
         const described = next.element.getAttribute('aria-describedby');
         next.element.setAttribute('aria-describedby', [described, 'ec-member-hover-preview'].filter(Boolean).join(' '));
+        visibleMember=member;
         show(member, next.element.getBoundingClientRect());
       } catch { if (currentRevision === revision) close(); }
     }, delay);
@@ -68,12 +70,19 @@ export function bindHoverPreview({ document, window, resolve, load, show, hide, 
   const leave = event => {
     if (active && active.element.contains(event.target) && !active.element.contains(event.relatedTarget)) close();
   };
+  const scroll = () => {
+    if(!active)return;
+    const under=pointer&&document.elementFromPoint?resolve(document.elementFromPoint(pointer.x,pointer.y)):null;
+    if(!under||under.member.id!==active.member.id){close();return;}
+    active.element=under.element;
+    if(visibleMember)show(visibleMember,under.element.getBoundingClientRect());
+  };
   const escape = event => { if (event.key === 'Escape') close(); };
   const listeners = [
     [document, 'pointerover', enter], [document, 'pointerout', leave],
     [document, 'focusin', enter], [document, 'focusout', leave],
     [document, 'keydown', escape], [document, 'pointerdown', close],
-    [document, 'click', close], [document, 'scroll', close, true],
+    [document, 'click', close], [document, 'scroll', scroll, true],
     [document, 'visibilitychange', close], [window, 'resize', close], [window, 'blur', close]
   ];
   listeners.forEach(([target, event, handler, capture]) => target.addEventListener(event, handler, capture));

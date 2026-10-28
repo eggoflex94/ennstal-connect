@@ -89,3 +89,10 @@ test('visitor nickname resolves using its profile id, not a potentially ambiguou
  assert.equal(resolvePreviewTarget(node,[]).member.nickname,'Jasi');
  assert.equal(resolvePreviewTarget({closest:()=>null},[]),null);
 });
+
+test('scrolling does not cancel a preview while the same nickname stays under the pointer',async()=>{
+ const h=setup();h.document.elementFromPoint=()=>h.a;
+ h.dispatch('pointerover',h.a,{clientX:40,clientY:70});h.dispatch('scroll',h.document);
+ await h.run();assert.deepEqual(h.shown,['a']);
+ h.document.elementFromPoint=()=>null;h.dispatch('scroll',h.document);assert.ok(!h.a.attrs['aria-describedby']);h.dispose();
+});
