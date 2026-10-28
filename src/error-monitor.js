@@ -8,7 +8,9 @@ const NETWORK_BURST_COOLDOWN_MS = 60_000;
 
 function networkEndpoint(endpoint) {
   try {
-    const url = new URL(String(endpoint || ""), location.origin);
+    const raw=String(endpoint||'');
+    const absolute=/^[a-z0-9.-]+\.[a-z]{2,}(?::\d+)?(?:\/|$)/i.test(raw)?`https://${raw}`:raw;
+    const url = new URL(absolute, location.origin);
     if (!["http:", "https:"].includes(url.protocol)) return "network";
     return url.origin + url.pathname.slice(0, 250);
   } catch {
@@ -98,7 +100,7 @@ window.addEventListener("ec:network-error", (event) => {
   if (kind === "timeout" || kind === "network" || Number(d.status) >= 500) {
     const key = Number(d.status) >= 500
       ? `${safeEndpoint}:${d.status}`
-      : `${safeEndpoint}:${kind}`;
+      : `${host}:${kind}`;
     const last = recentNetworkBursts.get(key) || 0;
     if (Date.now() - last < NETWORK_BURST_COOLDOWN_MS) return;
     recentNetworkBursts.set(key, Date.now());

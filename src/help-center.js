@@ -2,9 +2,10 @@ import { supabase } from "./supabaseClient";
 let mounted=false;
 const el=(t,c,x)=>{const n=document.createElement(t);if(c)n.className=c;if(x!==undefined)n.textContent=x;return n;};
 const sections=[
+["Wo finde ich welche Funktion?","Freundschaftsanfragen findest du unter Freunde → Anfragen. Blockierte Mitglieder und deine Heimatregion verwaltest du unter Einstellungen & Datenschutz. Deine Statistik liegt in Mein Profil. Immobilien sind eine Kategorie im Marktplatz. Profil-Aktualisierungen und Community-Aktionen findest du gesammelt unter Benachrichtigungen."],
 ["Was ist Ennstal Connect?","Ennstal Connect ist eine regionale Community-Plattform für Austausch, Gruppen, Veranstaltungen, Forum, Nachrichten und gemeinsame Aktivitäten. Dein Profil, deine Privatsphäre und deine Sichtbarkeit kannst du selbst steuern."],
 ["Erste Schritte","Gestalte zuerst dein Profil, lege deine Sichtbarkeit fest und entdecke anschließend Mitglieder, Gruppen, Veranstaltungen und das Forum. Freundschaftsanfragen und Privatnachrichten helfen dir beim direkten Austausch."],
-["Online-Zeit & Profildesigns","Ennstal Connect hat kein allgemeines Punktesystem. Bestimmte Profildesigns werden stattdessen abhängig von deiner gesammelten Online-Zeit freigeschaltet. Welche Designs für dich verfügbar sind, siehst du direkt bei der Profilgestaltung."],
+["Online-Zeit & Profildesigns","Bestimmte Profildesigns werden abhängig von deiner gesammelten Online-Zeit freigeschaltet. Deine Punkte und Kaufpunkte findest du in deinem Bereich; Kaufpunkte kannst du im Marktplatz verwenden. Welche Designs für dich verfügbar sind, siehst du direkt bei der Profilgestaltung."],
 ["Gruppen & Veranstaltungen","Du kannst Gruppen beitreten, dich austauschen und an Veranstaltungen teilnehmen. Hervorgehobene Gruppen erscheinen zusätzlich als Gruppe der Woche."],
 ["Forum & Kommentare","Im Forum kannst du eigene Beiträge erstellen und auf andere Beiträge antworten. Wenn jemand auf einen von dir erstellten Forenbeitrag kommentiert, erhältst du automatisch einen Hinweis."],
 ["Nachrichten & Freundschaftsanfragen","Neue Privatnachrichten und neue Freundschaftsanfragen werden dir automatisch als Hinweis eingeblendet. Über die jeweiligen Bereiche kannst du direkt reagieren."],

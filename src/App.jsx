@@ -1,3 +1,4 @@
+import {MemberSectionTabs,MemberSettings,MemberActivityFeed} from "./MemberSections.jsx";
 import { isOperatorProfile, operatorStarSrc } from './operator-identity.js';
 import AccountApprovals, { AccountApprovalNotice } from './AccountApprovals.jsx';
 import { prepareImageUpload } from './prepareImageUpload.js';
@@ -367,7 +368,7 @@ export default function App() {
         home: "home", members: "members", forum: "forum", groups: "groups", marketplace: "marketplace", properties: "properties", photos: "events",
         community: "community", events: "events", news: "news", ads: "community", profile: "profile",
         messages: "messages", notifications: "notifications", friends: "friends", requests: "friend-requests",
-        blocked: "blocked", admin: "admin", "admin-forum": "admin-forum", municipality: "municipality"
+        settings: "settings", blocked: "blocked", admin: "admin", "admin-forum": "admin-forum", municipality: "municipality"
       };
       if (pageMap[requested]) setPage(pageMap[requested]);
     };
@@ -443,6 +444,7 @@ export default function App() {
   const friendshipWith = (id) => friendships.find((x) => (x.requester_id === user?.id && x.receiver_id === id) || (x.receiver_id === user?.id && x.requester_id === id));
   const blockedIds = useMemo(() => new Set(blockedUsers.map((x) => x.blocked_id)), [blockedUsers]);
   const incomingRequests = useMemo(() => friendships.filter((x) => x.status === "PENDING" && x.receiver_id === user?.id), [friendships, user?.id]);
+  useEffect(()=>{window.dispatchEvent(new CustomEvent("ec:friend-request-count",{detail:{count:incomingRequests.length}}));},[incomingRequests.length]);
   const sentRequests = useMemo(() => friendships.filter((x) => x.status === "PENDING" && x.requester_id === user?.id), [friendships, user?.id]);
   const acceptedFriendIds = useMemo(() => friendships.filter((x) => x.status === "ACCEPTED").map((x) => x.requester_id === user?.id ? x.receiver_id : x.requester_id), [friendships, user?.id]);
   const isFeatureLocked = (feature) => featureLocks.some((lock) => lock.feature_key === feature && lock.is_locked);
@@ -1903,24 +1905,27 @@ export default function App() {
         <nav className="modern-nav">
           <button onClick={() => setPage("home")}>⌂ <span>Startseite</span></button>
           <button onClick={() => setPage("members")}>♙ <span>Mitglieder</span></button>
-          <button onClick={() => setPage("friends")}>♥ <span>Freunde</span></button>
-          <button onClick={() => setPage("friend-requests")}>♢ <span>Anfragen</span>{incomingRequests.length > 0 && <em>{incomingRequests.length}</em>}</button>
-          <button onClick={() => setPage("blocked")}>⊘ <span>Blockiert</span></button>
+          <button onClick={() => setPage("friends")}>♥ <span>Freunde</span>{incomingRequests.length > 0 && <em>{incomingRequests.length}</em>}</button>
           <button onClick={() => setPage("messages")}>☏ <span>Nachrichten</span>{unread > 0 && <em>{unread}</em>}</button>
           <button onClick={() => setPage("notifications")}>◎ <span>Aktuelles</span>{unreadNotifications > 0 && <em>{unreadNotifications}</em>}</button>
           <button onClick={() => setPage("news")}>▣ <span>Neuigkeiten</span></button>
           <button onClick={() => setPage("community")}>✦ <span>Community</span></button>
           <button onClick={() => setPage("marketplace")}>🛍 <span>Marktplatz</span></button>
-          <button onClick={() => setPage("properties")}>🏡 <span>Immobilien</span></button>
           <button onClick={() => setPage("groups")}>◉ <span>Gruppen</span></button>
           <button onClick={() => setPage("forum")}>▤ <span>Forum</span></button>
           <button onClick={() => setPage("profile")}>⚙ <span>Mein Profil</span></button>
+          <button onClick={() => setPage("settings")}>⚙ <span>Einstellungen</span></button>
           {canReviewAccounts && <button className="admin-nav-entry" onClick={() => setPage("account-approvals")}>✓ <span>Accounts freigeben</span></button>}
           {isAdmin(profile?.role) && <button className="admin-nav-entry" onClick={() => setPage("admin")}>♛ <span>Admin-Zentrale</span></button>}
         </nav>
         <button className="sidebar-logout" onClick={logout}>⇥ <span>Abmelden</span></button>
       </aside>
       <main className="modern-main"><div className="content-root"><AccountApprovalNotice key={user.id} userId={user.id} onUpdated={() => void loadAll()}/>{networkIssue && <aside className="network-recovery-banner" role="status" aria-live="polite"><div><strong>Verbindung unterbrochen</strong><span>Ennstal Connect bleibt geöffnet. Bereits geladene Inhalte sind weiter sichtbar.</span></div><button type="button" className="secondary-button" onClick={() => { setNetworkIssue(false); void loadAllRef.current?.(); }}>Erneut versuchen</button></aside>}{(sectionStatus.pending.length > 0 || sectionStatus.failed.length > 0) && <aside className="panel" role="status" aria-live="polite">{sectionStatus.pending.length > 0 && <p>Weitere Inhalte werden geladen …</p>}{sectionStatus.failed.length > 0 && <><p>Noch nicht aktualisiert: {sectionStatus.failed.join(", ")}. Bereits geladene Inhalte bleiben verfügbar.</p><button type="button" className="secondary-button" disabled={sectionStatus.pending.length > 0} onClick={() => void loadAllRef.current()}>Erneut laden</button></>}</aside>}{notice && <div className="toast">{notice}</div>}{incomingMessage && <aside className="incoming-message-popup" role="status"><strong>✉ Neue Nachricht von {incomingMessage.senderName}</strong><p>{incomingMessage.content || "Du hast eine neue private Nachricht erhalten."}</p><div><button className="primary-button" onClick={() => { const sender = members.find((member) => member.id === incomingMessage.senderId); setIncomingMessage(null); if (sender) openChat(sender); else setPage("messages"); }}>Nachricht öffnen</button><button className="secondary-button" onClick={() => setIncomingMessage(null)}>Später</button></div></aside>}
+        {['marketplace','properties'].includes(page) && <MemberSectionTabs label="Marktplatz-Bereiche" page={page} onNavigate={setPage} items={[["marketplace","Angebote & Kaufpunkte"],["properties","Immobilien"]]}/>}
+        {['friends','friend-requests'].includes(page) && <MemberSectionTabs label="Freunde und Anfragen" page={page} onNavigate={setPage} items={[["friends","Freunde"],["friend-requests","Anfragen",incomingRequests.length]]}/>}
+        {['settings','blocked'].includes(page) && <MemberSectionTabs label="Einstellungen und Datenschutz" page={page} onNavigate={setPage} items={[["settings","Einstellungen"],["blocked","Blockierte Mitglieder"]]}/>}
+        {page === "settings" && <MemberSettings profile={profile} regions={regions} onNavigate={setPage} onUpdated={loadAll}/>}
+        {page === "profile" && <section className="panel ec-profile-statistics-entry"><div><h2>Deine Statistik</h2><p>Deine Aktivität, Onlinezeit und freigeschalteten Designs.</p></div><button type="button" onClick={()=>window.dispatchEvent(new CustomEvent('ec:open-admin-statistics',{detail:{returnPage:'profile'}}))}>Statistik öffnen</button></section>}
         {page === "marketplace" && <KaufpunkteMarket user={user} profile={profile} canManage={hasAdminPermission("manage_marketplace")} />}
         {page === "properties" && <PropertyListings user={user} canManage={hasAdminPermission("manage_marketplace")} />}
         {page === "home" && (
@@ -1939,7 +1944,8 @@ export default function App() {
         {page === "friend-requests" && <FriendRequests incoming={incomingRequests} sent={sentRequests} memberById={memberById} respond={respondToFriendRequest} cancel={cancelFriendRequest}/>} 
         {page === "blocked" && <Blocked blockedUsers={blockedUsers} memberById={memberById} unblock={unblockUser}/>} 
         {page === "messages" && <Messages user={user} profile={profile} members={members} messages={messages} chatMember={chatMember} setChatMember={setChatMember} memberById={memberById} openChat={openChat} messageText={messageText} setMessageText={setMessageText} sendMessage={sendMessage} deleteMessage={deleteMessage}/>}
-        {page === "notifications" && <NotificationCenter notifications={notifications} onOpen={openNotification} onMarkAll={markAllNotificationsRead} members={members} onOpenMember={openMember} showNotice={showNotice}/>} 
+        {page === "notifications" && <NotificationCenter notifications={notifications} onOpen={openNotification} onMarkAll={markAllNotificationsRead} members={members} onOpenMember={openMember} showNotice={showNotice}/>}
+        {page === "notifications" && <MemberActivityFeed members={members} onNavigate={setPage} onOpenMember={openMember}/>} 
         {page === "news" && <News news={regionFilter(news)} members={members} profile={profile} canManage={canManageActiveRegion} activeRegion={activeRegion} createNews={createNews} editNews={editNews} deleteNews={deleteNews}/>}
         {page === "municipality" && <section className="municipality-loading-host" aria-live="polite"><div id="ec-municipality-runtime-host" className="ec-municipality-runtime-host" /></section>}
         {page === "community" && <><CommunityHub members={regionalMembers} ads={regionFilter(communityAds)} photos={memberPhotos} profile={profile} profileUpdates={publicProfileUpdates} activeRegion={activeRegion} onDeleteAd={deleteCommunityAd}/>{isHeadAdmin(profile?.role) && <AdminCommunityTools members={regionalMembers} createAd={createCommunityAd} setBusinessAccount={setBusinessAccount}/>}</>}
@@ -1971,7 +1977,7 @@ export default function App() {
         {page === "rules" && <CommunityRules/>}
       </div></main>
     </div>
-    <MobileQuickNav page={page} onNavigate={setPage} onLogout={logout} isAdmin={isAdmin(profile?.role) || !!profile?.is_primary_head_admin} canReviewAccounts={canReviewAccounts} unread={unread} unreadNotifications={unreadNotifications} />
+    <MobileQuickNav page={page} onNavigate={setPage} onLogout={logout} isAdmin={isAdmin(profile?.role) || !!profile?.is_primary_head_admin} canReviewAccounts={canReviewAccounts} unread={unread} unreadNotifications={unreadNotifications} pendingRequests={incomingRequests.length} />
     <footer className="site-footer"><strong>Ennstal Connect</strong><div><button onClick={() => setPage("impressum")}>Impressum</button><button onClick={() => setPage("privacy")}>Datenschutz</button><button onClick={() => setPage("rules")}>Community-Regeln</button></div></footer>
     {rulesAccepted === false && <RulesAcceptanceModal accepting={acceptingRules} onAccept={acceptCommunityRules}/>}{user?.id && profile?.id === user.id && !profile?.district_code && rulesAccepted !== false && <RequiredHomeDistrict userId={user.id} onSaved={(changes) => { setProfile((current) => ({ ...current, ...changes })); setMembers((current) => current.map((member) => member.id === user.id ? { ...member, ...changes } : member)); }}/>} 
   </div>;

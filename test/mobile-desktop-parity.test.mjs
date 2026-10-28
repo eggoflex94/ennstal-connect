@@ -21,7 +21,7 @@ test('mobile navigation uses the same page handler as desktop and exposes core d
   const app = read('src/App.jsx');
   const nav = read('src/MobileQuickNav.jsx');
   assert.match(app, /<MobileQuickNav page=\{page\} onNavigate=\{setPage\}/);
-  for (const page of ['home','members','messages','community','friends','friend-requests','notifications','events','marketplace','groups','forum','profile']) {
+  for (const page of ['home','members','messages','community','friends','settings','notifications','events','marketplace','groups','forum','profile']) {
     assert.match(nav, new RegExp('["\\x27]' + page + '["\\x27]'));
   }
 });

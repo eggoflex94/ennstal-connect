@@ -2,6 +2,8 @@ name: Operator Editor Checks
 on:
   push:
     paths:
+      - 'src/MemberSections.jsx'
+      - 'src/member-sections.css'
       - 'src/PageDesignStudio.jsx'
       - 'src/operatorContentStore.js'
       - 'src/operatorPageDesign.js'
@@ -35,7 +37,7 @@ jobs:
       - run: npm ci
       - run: npm install --no-save @playwright/test@1.55.0
       - run: npx playwright install chromium
-      - run: npx playwright test --grep 'operator can save|support nickname|ordinary member cannot see|profile-visitor nickname|online-friend nickname|offline friend|directory filters' --workers=1 --retries=0 --repeat-each=3
+      - run: npx playwright test --grep 'simplified member navigation|operator can save|support nickname|ordinary member cannot see|profile-visitor nickname|online-friend nickname|offline friend|directory filters' --workers=1 --retries=0 --repeat-each=3
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

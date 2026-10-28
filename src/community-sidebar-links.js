@@ -62,7 +62,7 @@ function scheduleSweep(){if(sweepQueued)return;sweepQueued=true;requestAnimation
 
 document.addEventListener('click',event=>{
   const notification=event.target.closest?.('.ec-sidebar-refactor [data-rf-nav="notifications"]');
-  if(notification){event.preventDefault();event.stopImmediatePropagation();window.dispatchEvent(new CustomEvent('ec:open-notifications'));return;}
+  if(notification){event.preventDefault();event.stopImmediatePropagation();window.dispatchEvent(new CustomEvent('ec:navigate',{detail:{page:'notifications'}}));return;}
   const target=event.target.closest?.('.ec-sidebar-refactor [data-profile]');
   if(!target)return;
   event.preventDefault();
