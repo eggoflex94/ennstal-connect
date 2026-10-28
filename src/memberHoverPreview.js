@@ -79,7 +79,7 @@ export function bindHoverPreview({ document, window, resolve, load, show, hide, 
   };
   const escape = event => { if (event.key === 'Escape') close(); };
   const listeners = [
-    [document, 'pointerover', enter], [document, 'pointerout', leave],
+    [document, 'pointerover', enter], [document, 'pointermove', enter], [document, 'pointerout', leave],
     [document, 'focusin', enter], [document, 'focusout', leave],
     [document, 'keydown', escape], [document, 'pointerdown', close],
     [document, 'click', close], [document, 'scroll', scroll, true],
