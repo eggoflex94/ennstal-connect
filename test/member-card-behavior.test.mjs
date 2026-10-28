@@ -60,3 +60,11 @@ test('private online status does not render last activity',()=>{
  const html=renderToStaticMarkup(React.createElement(Card,{member:{id:'a',nickname:'Test',hide_online_status:true,last_active_at:'2026-09-07T08:00:00Z'},profile:{id:'b'},friendships:[],onOpen(){}}));
  assert.ok(!html.includes('zuletzt aktiv'));assert.ok(!html.includes('Offline'));
 });
+
+test('read-only previews stay out of the keyboard tab order',()=>{
+ const member={id:'preview',nickname:'Vorschau',role:'MEMBER'};
+ const preview=renderToStaticMarkup(React.createElement(Card,{member,interactive:false}));
+ assert.ok(!preview.includes('tabindex'));
+ const card=renderToStaticMarkup(React.createElement(Card,{member,onOpen(){}}));
+ assert.ok(card.includes('tabindex="0"'));
+});

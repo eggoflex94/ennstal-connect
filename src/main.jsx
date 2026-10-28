@@ -203,6 +203,7 @@ import "./MobileQuickNav.css";
 /* Absolute final member-card authority: approved visual mockup. */
 import "./member-card-mockup-final.css";
 import "./member-card-exact-authority.css";
+import "./member-hover-preview.css";
 import "./founding-member-highlight.css";
 import "./municipality-role.css";
 

@@ -94,7 +94,7 @@ export default function MemberCardView({ member, profile, friendships, onOpen, i
         }
       } : undefined}
       role={interactive ? "button" : "group"}
-      tabIndex={0}
+      tabIndex={interactive ? 0 : undefined}
       aria-disabled={!interactive || undefined}
       aria-label={interactive ? `Profil von ${getName(member)} öffnen` : `Vorschau der Mitgliederkarte von ${getName(member)}`}
       style={presentation.theme === "municipality" ? { "--ec-municipality-role-accent": presentation.color } : undefined}
@@ -119,9 +119,11 @@ export default function MemberCardView({ member, profile, friendships, onOpen, i
         )}
       </div>
 
-      <strong className={`member-nickname ec-native-nickname ${presentation.theme}`} style={isOperatorCard ? { color: "#111111", WebkitTextFillColor: "#111111", textShadow: "none" } : undefined}>
+      <strong className={`member-nickname ec-native-nickname ${presentation.theme}`}>
         {getName(member)}
       </strong>
+
+      {isOperatorCard && <span className="ec-operator-label">BETREIBER</span>}
 
       <div className="ec-member-avatar-wrap">
         <img

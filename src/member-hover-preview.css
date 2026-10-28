@@ -1,0 +1,13 @@
+.ec-member-hover-preview {
+  position:fixed;
+  z-index:100000;
+  width:190px;
+  height:250px;
+  pointer-events:none;
+  filter:drop-shadow(0 12px 22px rgba(16,27,43,.24));
+  animation:ecMemberPreviewIn .14s ease-out;
+}
+.ec-member-hover-preview article.member-card { margin:0!important; cursor:default!important; }
+[data-member-preview-id]:focus-visible { outline:2px solid #c79a46; outline-offset:3px; border-radius:3px; }
+@keyframes ecMemberPreviewIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
+@media(prefers-reduced-motion:reduce) { .ec-member-hover-preview { animation:none; } }
