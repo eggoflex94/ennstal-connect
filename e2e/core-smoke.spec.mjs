@@ -76,6 +76,7 @@ async function installSupabaseMock(page, role, options = {}) {
   const secondaryMember = {...otherMember(),is_online:options.onlineFriend === true};
   const members = [profile, secondaryMember];
   const rpcCalls = [];
+  const visitedAt = nowIso();
   const designRows = new Map();
   const email = role === "HEAD_ADMIN" ? "head-admin@example.test" : role === "ADMIN" ? "admin@example.test" : "member@example.test";
   const user = {
@@ -194,6 +195,7 @@ async function installSupabaseMock(page, role, options = {}) {
       return json(accept.includes("application/vnd.pgrst.object+json") ? selected : idFilter ? [selected] : members);
     }
 
+    if(path === "/rest/v1/profile_visits" && options.includeVisits) return json([{id:'visit-one',profile_id:MEMBER_ID,visitor_id:OTHER_ID,visited_at:visitedAt}]);
     if(path === "/rest/v1/friendships" && options.includeFriend) return json([{requester_id:MEMBER_ID,receiver_id:OTHER_ID,status:"ACCEPTED"}]);
     if (path === "/rest/v1/user_permissions") {
       return json(accept.includes("application/vnd.pgrst.object+json") ? {} : []);
@@ -630,4 +632,24 @@ test("offline friend with a recent timestamp is excluded from friends online",as
  await login(page,"MEMBER",{includeFriend:true,onlineFriend:false});await openPersonalDock(page);
  await expect(page.locator('.ec-online-friends-panel')).toBeVisible();
  await expect(page.locator('.ec-online-friend')).toHaveCount(0);
+});
+
+
+test("profile-visitor nickname opens a stable matching member-card preview",async({page},testInfo)=>{
+ test.skip(testInfo.project.name.includes('mobile'),'Hover requires a mouse');
+ const mock=await login(page,"ADMIN",{includeVisits:true});
+ await openPersonalDock(page);
+ const name=page.locator('[data-panel="visits"] .ec-profile-visitor-name, [data-panel="visits"] .ec-profile-visit-name strong').filter({hasText:'Zweites Mitglied'}).first();
+ await expect(name).toBeVisible({timeout:15000});
+ await name.hover();
+ await expect(page.locator('#ec-member-hover-preview .member-nickname')).toHaveText('Zweites Mitglied');
+ const original=await name.elementHandle();
+ await page.evaluate(()=>{const node=document.createElement('div');node.id='unrelated-preview-update';document.querySelector('.modern-main').append(node);});
+ await expect(page.locator('#ec-member-hover-preview .member-nickname')).toHaveText('Zweites Mitglied');
+ await page.waitForTimeout(500); // More than two observer debounce cycles.
+ expect(await original.evaluate(n=>n.isConnected)).toBe(true);
+ await expect(page.locator('#ec-member-hover-preview .member-nickname')).toHaveText('Zweites Mitglied');
+ await page.mouse.move(1,1);
+ await expect(page.locator('#ec-member-hover-preview')).toHaveCount(0);
+ expect(mock.rpcCalls.some(call=>/record.*profile.*visit/.test(call.fn||call.name||''))).toBe(false);
 });
