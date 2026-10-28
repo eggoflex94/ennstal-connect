@@ -55,9 +55,9 @@ async function load(){
 }
 
 function roleScope(){const region=activeRegion(),p=state.profile,base=role(p);if(base==='HEAD_ADMIN')return{label:'GLOBAL ADMIN · BETREIBER',kind:'global'};if(base==='ADMIN')return{label:'GLOBAL ADMIN',kind:'global'};if(region&&isRegionalAdmin(p,region.id))return{label:`REGIONAL ADMIN · ${region.name}`,kind:'regional'};if(base==='SUPPORTER')return{label:'SUPPORTER',kind:'supporter'};return null}
-function ensureRoleScope(dock){const head=dock.querySelector('.ec-dock-head');if(!head)return;let chip=head.querySelector('.ec-dashboard-role-scope');const scope=roleScope();if(!scope){chip?.remove();return}if(!chip){chip=document.createElement('div');chip.className='ec-dashboard-role-scope';head.appendChild(chip)}chip.className=`ec-dashboard-role-scope is-${scope.kind}`;chip.textContent=scope.label}
+function ensureRoleScope(dock){const head=dock.querySelector('.ec-dock-head');if(!head)return;let chip=head.querySelector('.ec-dashboard-role-scope');const scope=roleScope();if(!scope){chip?.remove();return}if(!chip){chip=document.createElement('div');chip.className='ec-dashboard-role-scope';head.appendChild(chip)}chip.className=`ec-dashboard-role-scope is-${scope.kind}`;if(chip.textContent!==scope.label)chip.textContent=scope.label}
 function ensureAdminLabel(dock){dock.querySelector('.ec-admin-tools-label')?.remove();dock.querySelectorAll('.ec-admin-visible-label').forEach(node=>node.remove())}
-function ensureAdminBadge(dock){const button=dock.querySelector('.ec-admin-icon-button[data-ec-page="admin"]');if(!button)return;let badge=button.querySelector('.ec-admin-alert-badge');if(!state.adminAlerts){badge?.remove();return}if(!badge){badge=document.createElement('em');badge.className='ec-admin-alert-badge';button.appendChild(badge)}badge.textContent=state.adminAlerts>99?'99+':String(state.adminAlerts);button.title=`Admin-Zentrale · ${state.adminAlerts} offene Aufgabe${state.adminAlerts===1?'':'n'}`}
+function ensureAdminBadge(dock){const button=dock.querySelector('.ec-admin-icon-button[data-ec-page="admin"]');if(!button)return;let badge=button.querySelector('.ec-admin-alert-badge');if(!state.adminAlerts){badge?.remove();return}if(!badge){badge=document.createElement('em');badge.className='ec-admin-alert-badge';button.appendChild(badge)}const text=state.adminAlerts>99?'99+':String(state.adminAlerts);if(badge.textContent!==text)badge.textContent=text;button.title=`Admin-Zentrale · ${state.adminAlerts} offene Aufgabe${state.adminAlerts===1?'':'n'}`}
 
 function ensureOnlineFriends(dock){
   let panel=dock.querySelector('.ec-online-friends-panel');
@@ -70,7 +70,9 @@ function ensureOnlineFriends(dock){
     const points=Number(friend.total_score??friend.points??0).toLocaleString('de-AT');
     return `<button type="button" class="ec-online-friend" data-profile-id="${esc(friend.id)}" aria-label="Profil von ${name} öffnen"><span class="ec-online-dot" aria-hidden="true"></span>${star?`<img class="ec-online-friend-star" src="${esc(star)}" alt="" aria-hidden="true">`:''}<strong class="ec-online-friend-name"><span class="ec-online-nickname" data-member-preview-id="${esc(friend.id)}">${name}</span><span class="ec-inline-points">[${esc(points)}]</span></strong></button>`;
   }).join('');
-  panel.innerHTML=`<div class="ec-online-friends-head"><span>FREUNDE ONLINE</span><em>${state.friends.length}</em></div><div class="ec-online-friends-list">${rows||'<small>Derzeit keine Freunde online.</small>'}</div>`;
+  const content=`<div class="ec-online-friends-head"><span>FREUNDE ONLINE</span><em>${state.friends.length}</em></div><div class="ec-online-friends-list">${rows||'<small>Derzeit keine Freunde online.</small>'}</div>`;
+  if(panel.dataset.friendSignature===content&&panel.querySelector('.ec-online-friends-list'))return;
+  panel.dataset.friendSignature=content;panel.innerHTML=content;
   panel.querySelectorAll('[data-profile-id]').forEach(btn=>btn.onclick=(clickEvent)=>{
     clickEvent.preventDefault();
     clickEvent.stopPropagation();
@@ -152,8 +154,8 @@ function ensurePointsWallet(dock){
    entries.slice(0,50).forEach(entry=>{const line=document.createElement('p');line.textContent=[entry.created_at?new Date(entry.created_at).toLocaleDateString('de-AT'):'',entry.reason||entry.description||'Punkte',String(entry.delta??entry.amount??entry.points??'')].filter(Boolean).join(' · ');rows.appendChild(line)});
   });
  }
- wallet.querySelector('.ec-wallet-normal').textContent=Number(state.profile.display_score??state.profile.points??0).toLocaleString('de-AT');
- wallet.querySelector('.ec-wallet-buy').textContent=Number(state.profile.display_buy??state.profile.purchase_points??0).toLocaleString('de-AT')+' [k]';
+ const normal=Number(state.profile.display_score??state.profile.points??0).toLocaleString('de-AT');const normalNode=wallet.querySelector('.ec-wallet-normal');if(normalNode.textContent!==normal)normalNode.textContent=normal;
+ const buy=Number(state.profile.display_buy??state.profile.purchase_points??0).toLocaleString('de-AT')+' [k]';const buyNode=wallet.querySelector('.ec-wallet-buy');if(buyNode.textContent!==buy)buyNode.textContent=buy;
 }
 
 function render(){const dock=document.querySelector('.ec-right-dock');if(!dock)return;dock.classList.add('ec-dashboard-top-integrated');ensureRoleScope(dock);ensurePointsWallet(dock);ensureOnlineFriends(dock);ensureMunicipalityPanel(dock);ensureAdminLabel(dock);ensureAdminBadge(dock)}

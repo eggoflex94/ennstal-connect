@@ -51,3 +51,12 @@ test('the friends-list predicate ignores Array.filter index arguments',async()=>
  const recent=new Date(Date.now()-1000).toISOString();
  assert.equal([{is_online:true,last_active_at:recent},{is_online:false,last_active_at:recent}].filter(predicate).length,1);
 });
+test('unchanged online friends keep their DOM nodes while other page content changes',async()=>{
+ const {parse}=await import('@babel/parser');const vm=await import('node:vm');
+ const source=readFileSync(new URL('../src/dashboard-top-polish.js',import.meta.url),'utf8');
+ const fn=parse(source,{sourceType:'module'}).program.body.find(n=>n.type==='FunctionDeclaration'&&n.id.name==='ensureOnlineFriends');
+ let writes=0;const panel={dataset:{},classList:{add(){}},removeAttribute(){},querySelector:()=>({}),querySelectorAll:()=>[],set innerHTML(value){writes++;}};
+ const render=vm.runInNewContext(`(${source.slice(fn.start,fn.end)})`,{state:{friends:[{id:'friend',nickname:'egga'}]},activeRegion:()=>null,starFor:()=>'',esc:String});
+ const dock={querySelector:()=>panel};render(dock);for(let i=0;i<20;i++)render(dock);
+ assert.equal(writes,1,'hover targets must survive unrelated DOM mutations');
+});
