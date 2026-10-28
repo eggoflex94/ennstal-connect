@@ -204,6 +204,7 @@ import "./MobileQuickNav.css";
 import "./member-card-mockup-final.css";
 import "./member-card-exact-authority.css";
 import "./member-hover-preview.css";
+import "./page-design-studio.css";
 import "./founding-member-highlight.css";
 import "./municipality-role.css";
 

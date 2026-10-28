@@ -76,6 +76,7 @@ async function installSupabaseMock(page, role) {
   const secondaryMember = otherMember();
   const members = [profile, secondaryMember];
   const rpcCalls = [];
+  const designRows = new Map();
   const email = role === "HEAD_ADMIN" ? "head-admin@example.test" : role === "ADMIN" ? "admin@example.test" : "member@example.test";
   const user = {
     id: MEMBER_ID,
@@ -143,6 +144,8 @@ async function installSupabaseMock(page, role) {
       if (["community_member_directory", "admin_full_member_directory", "admin_member_directory"].includes(fn)) {
         return json(members);
       }
+      if(fn === "community_moderation_contacts") return json([{...profileFor("HEAD_ADMIN"),user_id:MEMBER_ID,responsibilities:["Gesamtverantwortung","Sicherheit"]}]);
+      if(fn === "community_member_profile") return json(members.find(m=>m.id===body?.p_user)||null);
       if (fn === "community_activity_progress") {
         return json({
           score: 0,
@@ -173,6 +176,18 @@ async function installSupabaseMock(page, role) {
       return json([]);
     }
 
+    if(path === "/rest/v1/operator_page_blocks") {
+      const scope=(url.searchParams.get("page_key")||"").replace(/^eq\./,"");
+      const region=(url.searchParams.get("region_key")||"").replace(/^eq\./,"");
+      const key=(url.searchParams.get("block_key")||"").replace(/^eq\./,"");
+      if(method==="POST"||method==="PATCH"){
+        const input=request.postDataJSON();
+        const row={...(designRows.get(`${scope}:${region}:${key}`)||{}),...input,page_key:input.page_key||scope,region_key:input.region_key||region,block_key:input.block_key||key,updated_at:nowIso(),updated_by:MEMBER_ID,editor_profile:profile};
+        designRows.set(`${row.page_key}:${row.region_key}:${row.block_key}`,row);
+        return json(accept.includes("application/vnd.pgrst.object+json")?row:[row]);
+      }
+      return json([...designRows.values()].filter(r=>(!scope||r.page_key===scope)&&(!region||r.region_key===region)));
+    }
     if (path === "/rest/v1/profiles") {
       const idFilter = url.searchParams.get("id") || "";
       const selected = idFilter.includes(OTHER_ID) ? secondaryMember : profile;
@@ -558,4 +573,38 @@ test("cover typography changes are reflected immediately in the live preview", a
   const headingSize = await preview.locator('h2').evaluate(node => parseFloat(getComputedStyle(node).fontSize));
   expect(headingSize).toBe(24);
   await expect(page.locator('.app-recovery')).toHaveCount(0);
+});
+
+
+test("operator can save a styled page block and see it after reload",async({page})=>{
+ await login(page,"HEAD_ADMIN");
+ await page.getByRole('button',{name:'✎ Seite gestalten',exact:true}).click();
+ await page.getByRole('button',{name:'＋ Grauen Inhaltsrahmen hinzufügen',exact:true}).click();
+ const inspector=page.locator('.ec-design-inspector');
+ await inspector.getByLabel('Überschrift',{exact:true}).fill('Gespeicherter Testbereich');
+ await inspector.getByLabel('Inhalt / Ergänzung',{exact:true}).fill('Dieser Text bleibt nach dem Neuladen erhalten.');
+ await inspector.getByRole('button',{name:'Speichern & veröffentlichen',exact:true}).click();
+ await expect(inspector.getByRole('status')).toContainText('Gespeichert und veröffentlicht.');
+ await page.reload();
+ await expect(page.locator('.ec-page-custom-block h2')).toHaveText('Gespeicherter Testbereich');
+ await expect(page.locator('.ec-page-custom-block')).toContainText('Dieser Text bleibt nach dem Neuladen erhalten.');
+ await expect(page.locator('.ec-page-custom-block .ec-content-edit-stamp')).toContainText('Smoke Hauptadmin');
+});
+
+test("support nickname opens and dismisses the member-card hover preview",async({page},testInfo)=>{
+ test.skip(testInfo.project.name.includes('mobile'),'Hover requires a mouse');
+ await login(page,"HEAD_ADMIN");
+ await assertTopNavigationWorks(page,"Community");
+ const name=page.locator('.ec-team-name').first();
+ await expect(name).toBeVisible();await name.hover();
+ await expect(page.locator('#ec-member-hover-preview .member-card')).toBeVisible();
+ await page.mouse.move(1,1);
+ await expect(page.locator('#ec-member-hover-preview')).toHaveCount(0);
+});
+
+test("ordinary member cannot see the operator page or contact editor",async({page})=>{
+ await login(page,"MEMBER");
+ await expect(page.locator('.ec-design-launch')).toHaveCount(0);
+ await assertTopNavigationWorks(page,"Community");
+ await expect(page.locator('.ec-team-edit')).toHaveCount(0);
 });

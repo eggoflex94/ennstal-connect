@@ -10,6 +10,7 @@ import { logDeniedAdminAction, preparePrivilegedAction, supabase, supabaseUnavai
 import ProfileSections from "./ProfileSections.jsx";
 import MemberCardView from "./MemberCardView.jsx";
 import MemberHoverPreview from "./MemberHoverPreview.jsx";
+import PageDesignStudio from "./PageDesignStudio.jsx";
 import { loadMemberProfile } from "./memberProfileLoader.js";
 import NativeMembersDirectory from "./NativeMembersDirectory.jsx";
 import MobileQuickNav from "./MobileQuickNav.jsx";
@@ -1891,6 +1892,7 @@ export default function App() {
   const myRole = roleLabel(profile?.role);
   return <div className={`app layout-${["theme-red", "theme-blue", "theme-neon", "theme-neon-pink", "theme-alpine", "theme-teal", "theme-violet", "theme-copper", "theme-aurora"].includes(profile?.profile_layout) ? profile.profile_layout : "standard"}`}>
     <MemberHoverPreview members={visibleMembers} profile={profile} friendships={friendships} page={page}/>
+    <PageDesignStudio key={user.id} page={page} regionId={activeRegion?.id} profile={profile}/>
     <div className="dashboard-layout">
       <aside className="modern-sidebar">
         <div className="sidebar-profile" onClick={() => setPage("profile")}><img src={profile?.avatar_url || DEFAULT_AVATAR} alt=""/><div><strong>{isOperatorProfile(profile) && <img className="ec-inline-role-star" src={operatorStarSrc} alt="Betreiberkrone" style={{width:24,height:24,objectFit:"contain",verticalAlign:"middle",marginRight:6}} />}{getName(profile)}</strong><span className={`role-badge ${profile?.account_badge === "BUSINESS" ? "business" : roleClass(profile?.role)}`}>{isOperatorProfile(profile) ? "Betreiber" : profile?.role === "HEAD_ADMIN" ? "Hauptadmin" : profile?.role === "ADMIN" ? "★ Community Admin" : profile?.role === "SUPPORTER" ? "★ Supporter" : profile?.account_badge === "BUSINESS" ? "★ Unternehmenskonto" : "Mitglied"}</span></div></div>

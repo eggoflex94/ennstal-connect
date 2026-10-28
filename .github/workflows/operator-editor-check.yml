@@ -1,0 +1,34 @@
+name: Operator Editor Checks
+on:
+  push:
+    paths:
+      - 'src/PageDesignStudio.jsx'
+      - 'src/operatorContentStore.js'
+      - 'src/operatorPageDesign.js'
+      - 'src/memberHoverPreview.js'
+      - 'src/MemberHoverPreview.jsx'
+      - 'src/support-contacts-modern.js'
+      - 'e2e/core-smoke.spec.mjs'
+      - '.github/workflows/operator-editor-check.yml'
+permissions:
+  contents: read
+jobs:
+  browser-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm install --no-save @playwright/test@1.55.0
+      - run: npx playwright install chromium
+      - run: npx playwright test --grep 'operator can save|support nickname|ordinary member cannot see' --workers=1 --retries=0
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: operator-editor-diagnostics
+          path: |
+            test-results
+            playwright-report

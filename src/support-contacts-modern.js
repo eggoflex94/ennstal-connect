@@ -1,7 +1,11 @@
+import {loadPageBlocks,appendEditStamp} from './operatorContentStore.js';
+import {isOperatorProfile} from './operator-identity.js';
 import { supabase } from "./supabaseClient";
 import { roleIdentity, makeRoleIcon } from "./roleIdentity.js";
 
 const SUPPORT_EMAIL = "ennstal.connect@gmx.at";
+let contactEdits = new Map();
+let canEditContacts = false;
 let refreshRunning = false;
 let lastSignature = "";
 let realtimeStarted = false;
@@ -25,7 +29,7 @@ function hideLegacyContacts(host, heading, panel) {
     if (
       /Zuständig\s+für|Gesamtverantwortung|Nachrichten verwalten|Profilbesuche|Community-Verwaltung|Technischen Support|Technischer Support|Hauptadmin|Betreiber|Moderation|Verifizierungen|Forum moderieren|Statistik/i.test(text)
     ) {
-      child.style.display = "none";
+      child.style.setProperty("display", "none", "important");
       child.dataset.ecLegacyContact = "true";
     }
   });
@@ -33,6 +37,8 @@ function hideLegacyContacts(host, heading, panel) {
 
 function responsibilitiesFor(profile) {
   const role = normalizeRole(profile.role);
+  const override=contactEdits.get(profile.user_id||profile.id)?.content?.responsibilities;
+  if(typeof override==='string')return override.split(/\n/).map(x=>x.trim()).filter(Boolean);
   const custom = Array.isArray(profile.responsibilities) ? profile.responsibilities.filter(Boolean) : [];
   if (role === "HEAD_ADMIN") return custom.length ? custom : ["Gesamtverantwortung", "Sicherheit", "Regeln"];
   if (custom.length) return custom;
@@ -77,6 +83,7 @@ function makePerson(profile) {
   const name = document.createElement("strong");
   name.className = "ec-team-name ec-identity-name";
   name.textContent = displayName(profile);
+  name.dataset.memberPreviewId = profile.user_id || profile.id;
   nameRow.appendChild(name);
 
   const responsibilities = document.createElement("small");
@@ -105,6 +112,13 @@ function makePerson(profile) {
     }))
   );
   card.appendChild(profileButton);
+  const record=contactEdits.get(profile.user_id||profile.id);
+  appendEditStamp(card,record);
+  if(canEditContacts){
+    const edit=document.createElement('button');edit.type='button';edit.className='ec-team-edit';edit.textContent='Zuständigkeiten bearbeiten';
+    edit.addEventListener('click',()=>window.dispatchEvent(new CustomEvent('ec:edit-contact',{detail:{id:profile.user_id||profile.id,name:displayName(profile),text:responsibilitiesFor(profile).join('\n'),record}})));
+    card.append(edit);
+  }
   return card;
 }
 
@@ -183,6 +197,11 @@ async function refreshTeam() {
   if (!supabase || refreshRunning || !findHostCard()) return;
   refreshRunning = true;
   try {
+    const {data:{session}}=await supabase.auth.getSession();
+    if(!session?.user)return;
+    const {data:viewer}=await supabase.from('profiles').select('id,is_primary_head_admin,account_status').eq('id',session.user.id).maybeSingle();
+    canEditContacts=isOperatorProfile(viewer)&&viewer?.account_status==='ACTIVE';
+    contactEdits=new Map((await loadPageBlocks('__support__')).map(row=>[row.block_key,row]));
     const { data, error } = await supabase.rpc("community_moderation_contacts");
     if (error) throw error;
     const ids=(data||[]).map(p=>p.user_id).filter(Boolean);
@@ -190,7 +209,7 @@ async function refreshTeam() {
     if(flagsError)throw flagsError;
     const primaryIds=new Set((flags||[]).filter(p=>p.is_primary_head_admin===true).map(p=>p.id));
     const profiles = (data || []).map((profile) => ({ ...profile, id: profile.user_id, is_primary_head_admin: primaryIds.has(profile.user_id) }));
-    const nextSignature = signature(profiles);
+    const nextSignature = signature(profiles)+JSON.stringify([...contactEdits.values()])+canEditContacts;
     if (nextSignature !== lastSignature || !document.querySelector(".ec-team-panel")) {
       lastSignature = nextSignature;
       renderTeam(profiles);
@@ -240,3 +259,5 @@ const observer = new MutationObserver(() => {
   if (findHostCard() && !document.querySelector(".ec-team-panel")) refreshTeam();
 });
 observer.observe(document.documentElement, { childList: true, subtree: true });
+
+window.addEventListener('ec:page-block-saved',event=>{if(event.detail?.page_key==='__support__'){lastSignature='';void refreshTeam();}});
