@@ -660,4 +660,6 @@ test("profile-visitor nickname opens a stable matching member-card preview",asyn
  await page.mouse.move(1,1);
  await expect(page.locator('#ec-member-hover-preview')).toHaveCount(0);
  expect(mock.rpcCalls.some(call=>/record.*profile.*visit/.test(call.fn||call.name||''))).toBe(false);
+ await name.click();
+ await expect(page.locator('.member-profile-page')).toBeVisible();
 });
