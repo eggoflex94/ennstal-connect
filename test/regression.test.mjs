@@ -396,7 +396,7 @@ test("regional dashboard renders its compact icon grid natively", async()=>{
   const shell=await source("src/regional-shell.js");
   assert.match(shell,/ec-right-dock ec-compact-personal-dock/);
   assert.match(shell,/class="ec-compact-menu-grid"/);
-  for(const label of ["Benachrichtigungen","Mein Profil","Nachrichten","Freunde","Anfragen","Blockiert","Einstellungen","Hilfe","Heimatregion ändern"]){
+  for(const label of ["Benachrichtigungen","Mein Profil","Nachrichten","Freunde","Einstellungen","Hilfe"]){
     assert.ok(shell.includes(label), "missing dashboard item: "+label);
   }
   assert.match(shell,/ec-compact-menu-icon/);

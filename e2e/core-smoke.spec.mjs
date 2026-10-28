@@ -169,6 +169,7 @@ async function installSupabaseMock(page, role, options = {}) {
       if (fn === "member_onboarding_status") {
         return json([{ completed: true }]);
       }
+      if(fn === "ec_change_home_region" && options.secondRegion){profile.home_region_id='44444444-4444-4444-8444-444444444444';return json(profile.home_region_id);}
       if (fn === "record_online_time") return json({ rewards: 0 });
       if (fn === "my_admin_permissions") return json(role === "ADMIN" || role === "HEAD_ADMIN" ? { manage_members: true, manage_reports: true, manage_news: true, manage_community: true } : {});
       if (fn === "admin_get_permissions") return json({});
@@ -196,6 +197,9 @@ async function installSupabaseMock(page, role, options = {}) {
     }
 
     if(path === "/rest/v1/profile_visits" && options.includeVisits) return json([{id:'visit-one',profile_id:MEMBER_ID,visitor_id:OTHER_ID,visited_at:visitedAt}]);
+    if(path === "/rest/v1/friendships" && options.pendingRequest && !url.searchParams.get('status')?.includes('ACCEPTED')) return json([{id:'request-one',requester_id:OTHER_ID,receiver_id:MEMBER_ID,status:'PENDING'}]);
+    if(path === "/rest/v1/public_profile_updates" && options.includeActivity) return json([{id:'update-one',profile_id:OTHER_ID,nickname:'Zweites Mitglied',activity_type:'Profilfoto aktualisiert',created_at:visitedAt}]);
+    if(path === "/rest/v1/profile_activity" && options.includeActivity) return json([{id:'activity-one',actor_id:OTHER_ID,activity_type:'GROUP',text:'Neue Gruppe gegründet',created_at:visitedAt}]);
     if(path === "/rest/v1/friendships" && options.includeFriend) return json([{requester_id:MEMBER_ID,receiver_id:OTHER_ID,status:"ACCEPTED"}]);
     if (path === "/rest/v1/user_permissions") {
       return json(accept.includes("application/vnd.pgrst.object+json") ? {} : []);
@@ -207,7 +211,7 @@ async function installSupabaseMock(page, role, options = {}) {
     }
 
     if (path === "/rest/v1/regions") {
-      return json([{ id: REGION_ID, slug: "ennstal", name: "Ennstal", active: true, is_active: true }]);
+      return json([{ id: REGION_ID, slug: "ennstal", name: "Ennstal", active: true, is_active: true },...(options.secondRegion?[{id:'44444444-4444-4444-8444-444444444444',slug:'alpenraum',name:'Alpenraum',active:true,is_active:true}]:[])]);
     }
 
     if (path === "/rest/v1/regional_admin_assignments") {
@@ -266,7 +270,7 @@ async function assertTopNavigationWorks(page, label) {
     "Events": "events",
     "Fotos": "photos",
     "Neuigkeiten": "news",
-    "Community": "community"
+    "Community": "community", "Marktplatz":"marketplace"
   };
   const target = pageByLabel[label];
   const button = target
@@ -337,7 +341,7 @@ test("member core functions remain visible and navigable", async ({ page }) => {
     await expect(button).toBeEnabled();
   }
 
-  for (const label of ["Mein Profil", "Nachrichten", "Freunde", "Anfragen", "Blockiert"]) {
+  for (const label of ["Mein Profil", "Nachrichten", "Freunde", "Einstellungen"]) {
     await assertDockNavigationWorks(page, label);
   }
 
@@ -400,22 +404,22 @@ test("public login and registration entry points stay visible", async ({ page })
 const ROLE_VISIBILITY_MATRIX = {
   MEMBER: {
     top: ["Startseite", "Mitglieder", "Forum", "Gruppen", "Events", "Community"],
-    dock: ["Mein Profil", "Nachrichten", "Freunde", "Anfragen", "Blockiert"],
+    dock: ["Mein Profil", "Nachrichten", "Freunde", "Einstellungen"],
     adminVisible: false
   },
   ADMIN: {
     top: ["Startseite", "Mitglieder", "Forum", "Gruppen", "Events", "Community"],
-    dock: ["Mein Profil", "Nachrichten", "Freunde", "Anfragen", "Blockiert", "Admin-Zentrale"],
+    dock: ["Mein Profil", "Nachrichten", "Freunde", "Einstellungen", "Admin-Zentrale"],
     adminVisible: true
   },
   REGIONAL_ADMIN: {
     top: ["Startseite", "Mitglieder", "Forum", "Gruppen", "Events", "Community"],
-    dock: ["Mein Profil", "Nachrichten", "Freunde", "Anfragen", "Blockiert", "Admin-Zentrale"],
+    dock: ["Mein Profil", "Nachrichten", "Freunde", "Einstellungen", "Admin-Zentrale"],
     adminVisible: true
   },
   HEAD_ADMIN: {
     top: ["Startseite", "Mitglieder", "Forum", "Gruppen", "Events", "Community"],
-    dock: ["Mein Profil", "Nachrichten", "Freunde", "Anfragen", "Blockiert", "Admin-Zentrale"],
+    dock: ["Mein Profil", "Nachrichten", "Freunde", "Einstellungen", "Admin-Zentrale"],
     adminVisible: true
   }
 };
@@ -701,4 +705,46 @@ for(const kind of ['operator','admin','member'])test(`profile-visitor nickname p
  await page.waitForTimeout(500);
  if(kind==='operator')await expect(preview.locator('.ec-card-badge-role-img')).toHaveAttribute('src',/operator-crown-gold\.svg/);
  await page.mouse.move(1,1);await expect(preview).toHaveCount(0);
+});
+
+
+test("simplified member navigation keeps every moved function reachable",async({page})=>{
+ const mock=await login(page,"MEMBER",{pendingRequest:true,includeActivity:true,secondRegion:true});
+ await openPersonalDock(page);
+ const dock=page.locator('.ec-right-dock');
+ for(const label of ['Anfragen','Blockiert','Info','Statistik','Heimatregion ändern'])await expect(dock.getByRole('button',{name:label,exact:true})).toHaveCount(0);
+ await expect(page.locator('.ec-top-nav [data-ec-page="properties"]')).toHaveCount(0);
+ await assertDockNavigationWorks(page,'Freunde');
+ const friends=page.getByRole('navigation',{name:'Freunde und Anfragen'});
+ await expect(friends.getByRole('button',{name:/Anfragen/})).toContainText('1');
+ await friends.getByRole('button',{name:/Anfragen/}).click();
+ await expect(page.getByRole('heading',{name:'Freundschaftsanfragen',exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'✓ Annehmen',exact:true})).toBeVisible();
+ await assertDockNavigationWorks(page,'Einstellungen');
+ await expect(page.getByRole('heading',{name:'Einstellungen & Datenschutz'})).toBeVisible();
+ await expect(page.getByLabel('Deine Heimatregion',{exact:true})).toBeVisible();
+ await page.getByLabel('Deine Heimatregion',{exact:true}).selectOption('44444444-4444-4444-8444-444444444444');
+ await page.getByRole('button',{name:'Heimatregion speichern',exact:true}).click();
+ await expect(page.locator('.ec-member-settings [role="status"]')).toHaveText('Heimatregion gespeichert.');
+ expect(mock.rpcCalls.some(c=>c.fn==='ec_change_home_region'&&c.body.p_region_slug==='alpenraum')).toBe(true);
+ await page.locator('.ec-member-settings').getByRole('button',{name:'Blockierte Mitglieder',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Blockierliste'})).toBeVisible();
+ await page.getByRole('navigation',{name:'Einstellungen und Datenschutz'}).getByRole('button',{name:'Einstellungen',exact:true}).click();
+ await page.getByRole('button',{name:'Meine Daten & Konto',exact:true}).click();
+ await expect(page.locator('.ec-privacy-modal')).toBeVisible();
+ await page.locator('.ec-privacy-close').click();
+ await assertDockNavigationWorks(page,'Mein Profil');
+ await page.getByRole('button',{name:'Statistik öffnen',exact:true}).click();
+ await expect(page.locator('.ec-statistics-page')).toBeVisible();
+ await page.locator('.ec-statistics-page .ec-tool-page-back').click();
+ await assertTopNavigationWorks(page,'Marktplatz');
+ await page.getByRole('navigation',{name:'Marktplatz-Bereiche'}).getByRole('button',{name:'Immobilien',exact:true}).click();
+ await expect(page.getByRole('heading',{name:/Immobilien/}).first()).toBeVisible();
+ await assertDockNavigationWorks(page,'Benachrichtigungen');
+ await expect(page.getByRole('heading',{name:'Benachrichtigungen',exact:true})).toBeVisible();
+ await expect(page.locator('.ec-member-activity-feed')).toContainText('Profilfoto aktualisiert');
+ await expect(page.locator('.ec-member-activity-feed')).toContainText('Neue Gruppe gegründet');
+ await assertDockNavigationWorks(page,'Hilfe');
+ await expect(page.locator('.ec-help-modal')).toContainText('Wo finde ich welche Funktion?');
+ await expect(page.locator('.app-recovery')).toHaveCount(0);
 });

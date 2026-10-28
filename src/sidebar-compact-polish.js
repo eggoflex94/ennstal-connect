@@ -3,11 +3,8 @@ const MENU_LABELS = [
   'Mein Profil',
   'Nachrichten',
   'Freunde',
-  'Anfragen',
-  'Blockiert',
   'Einstellungen',
   'Hilfe',
-  'Heimatregion ändern'
 ];
 
 const PAGE_TARGETS = {
@@ -16,7 +13,7 @@ const PAGE_TARGETS = {
   'Freunde': 'friends',
   'Anfragen': 'requests',
   'Blockiert': 'blocked',
-  'Einstellungen': 'profile'
+  'Einstellungen': 'settings'
 };
 
 const ICONS = {
@@ -73,7 +70,7 @@ function bindDirectAction(button, label) {
       event.preventDefault();
       event.stopPropagation();
       document.body.classList.remove('ec-dock-open');
-      window.dispatchEvent(new CustomEvent('ec:open-notifications'));
+      window.dispatchEvent(new CustomEvent('ec:navigate',{detail:{page:'notifications'}}));
     };
     return;
   }

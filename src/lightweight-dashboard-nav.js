@@ -15,6 +15,8 @@ const DIRECT_PAGES = new Set([
   'profile',
   'messages',
   'friends',
+  'settings',
+  'notifications',
   'requests',
   'blocked',
   'admin',

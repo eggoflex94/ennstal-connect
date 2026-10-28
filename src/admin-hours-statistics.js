@@ -2,6 +2,7 @@ import { isOperatorProfile, operatorStarSrc } from './operator-identity.js';
 import { supabase } from './supabaseClient';
 
 let loading=false;
+let returnPage='home';
 const LAYOUTS=[['Standard',0],['Alpen',2],['Aurora',5],['Ozean',10],['Schiefer',15],['Ember',20],['Bergrot',25],['Lavendel',30],['Mitternacht',35],['Sonnenaufgang',40],['Neon Connect',50]];
 const hours=s=>Number(s||0)/3600;
 const fmtHours=s=>`${hours(s).toLocaleString('de-AT',{minimumFractionDigits:1,maximumFractionDigits:1})} h`;
@@ -47,7 +48,7 @@ async function renderPage(){
     let page=root.querySelector('.ec-statistics-page');if(!page){page=document.createElement('section');page.className='ec-statistics-page';root.appendChild(page)}
     document.body.classList.add('ec-statistics-page-open');
     page.innerHTML='<div class="ec-tool-page-head"><button type="button" class="ec-tool-page-back">← Zurück</button><div><span class="eyebrow">MEIN BEREICH</span><h1>Statistik</h1><p>Deine persönliche Aktivität und – mit Adminrechten – die Gesamtübersicht.</p></div></div><p class="ec-admin-tool-loading">Statistik wird geladen …</p>';
-    page.querySelector('.ec-tool-page-back').onclick=()=>{closePage();window.dispatchEvent(new CustomEvent('ec:navigate',{detail:{page:'home'}}))};
+    page.querySelector('.ec-tool-page-back').onclick=()=>{closePage();window.dispatchEvent(new CustomEvent('ec:navigate',{detail:{page:returnPage}}))};
     const viewer=await getViewer();if(!viewer){page.innerHTML+='<p class="ec-admin-tool-error">Statistik konnte nicht geladen werden.</p>';return}
     const rows=await getAdminRows(viewer);
     page.querySelector('.ec-admin-tool-loading')?.remove();
@@ -55,9 +56,9 @@ async function renderPage(){
     if(rows.length)page.insertAdjacentHTML('beforeend',adminMarkup(rows));
     page.querySelector('.ec-hours-refresh')?.addEventListener('click',()=>void renderPage());
     window.dispatchEvent(new CustomEvent('ec:layout-refresh-requested'));
-  }catch(error){const page=document.querySelector('.ec-statistics-page');if(page)page.innerHTML=`<div class="ec-tool-page-head"><button type="button" class="ec-tool-page-back">← Zurück</button><div><span class="eyebrow">MEIN BEREICH</span><h1>Statistik</h1></div></div><p class="ec-admin-tool-error">Statistik konnte nicht geladen werden: ${esc(error.message||error)}</p>`;page?.querySelector('.ec-tool-page-back')?.addEventListener('click',()=>{closePage();window.dispatchEvent(new CustomEvent('ec:navigate',{detail:{page:'home'}}))})}finally{loading=false}
+  }catch(error){const page=document.querySelector('.ec-statistics-page');if(page)page.innerHTML=`<div class="ec-tool-page-head"><button type="button" class="ec-tool-page-back">← Zurück</button><div><span class="eyebrow">MEIN BEREICH</span><h1>Statistik</h1></div></div><p class="ec-admin-tool-error">Statistik konnte nicht geladen werden: ${esc(error.message||error)}</p>`;page?.querySelector('.ec-tool-page-back')?.addEventListener('click',()=>{closePage();window.dispatchEvent(new CustomEvent('ec:navigate',{detail:{page:returnPage}}))})}finally{loading=false}
 }
 
 function closePage(){document.querySelector('.ec-statistics-page')?.remove();document.body.classList.remove('ec-statistics-page-open');window.dispatchEvent(new CustomEvent('ec:layout-refresh-requested'))}
-function boot(){window.addEventListener('ec:open-admin-statistics',()=>void renderPage());window.addEventListener('ec:online-reward',()=>{if(document.body.classList.contains('ec-statistics-page-open'))void renderPage()});window.addEventListener('ec:navigate',()=>{if(document.body.classList.contains('ec-statistics-page-open'))closePage()})}
+function boot(){window.addEventListener('ec:open-admin-statistics',event=>{returnPage=event.detail?.returnPage||'home';void renderPage();});window.addEventListener('ec:online-reward',()=>{if(document.body.classList.contains('ec-statistics-page-open'))void renderPage()});window.addEventListener('ec:navigate',()=>{if(document.body.classList.contains('ec-statistics-page-open'))closePage()})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();

@@ -71,10 +71,8 @@ async function refreshData() {
   const { data: regions } = await supabase.from('regions').select('id,slug').eq('is_active',true);
   const regionId = (regions || []).find((region) => region.slug === slug)?.id || null;
 
-  const [visitsResult, updatesResult, actionsResult, newsResult] = await Promise.all([
+  const [visitsResult, newsResult] = await Promise.all([
     supabase.from('profile_visits').select('visitor_id,visited_at').eq('profile_id',userId).order('visited_at',{ascending:false}).limit(40),
-    supabase.from('public_profile_updates').select('profile_id,nickname,activity_type,created_at',{count:'exact'}).order('created_at',{ascending:false}).limit(10),
-    supabase.from('profile_activity').select('actor_id,profile_id,target_user_id,activity_type,text,created_at',{count:'exact'}).order('created_at',{ascending:false}).limit(10),
     regionId ? supabase.from('news').select('id,title,created_at',{count:'exact'}).eq('region_id',regionId).order('created_at',{ascending:false}).limit(8) : Promise.resolve({data:[],count:0,error:null})
   ]);
 
@@ -104,26 +102,6 @@ async function refreshData() {
       if(!visits.length && !visitsPanel.querySelector('.ec-dock-empty'))visitsPanel.innerHTML='<div class="ec-dock-empty">Noch keine Profilbesuche.</div>';
       bindProfileRows(visitsPanel);
     }
-  }
-
-  if (!updatesResult.error) setCount('.ec-dock-updates-count', updatesResult.count ?? updatesResult.data?.length ?? 0);
-  if (!actionsResult.error) setCount('.ec-dock-actions-count', actionsResult.count ?? actionsResult.data?.length ?? 0);
-
-  const updatesPanel = document.querySelector('.ec-dock-detail[data-panel="updates"]');
-  if (updatesPanel && !updatesResult.error) {
-    const rows = updatesResult.data || [];
-    updatesPanel.innerHTML = rows.length ? rows.map((row) => `<button type="button" class="ec-dock-detail-row" data-profile-id="${esc(row.profile_id)}"><span><strong>${esc(row.nickname || 'Mitglied')}</strong><small>${esc(row.activity_type || 'Profil aktualisiert')}</small></span><time>${esc(fmt(row.created_at))}</time></button>`).join('') : '<div class="ec-dock-empty">Noch keine Einträge.</div>';
-    bindProfileRows(updatesPanel);
-  }
-
-  const actionsPanel = document.querySelector('.ec-dock-detail[data-panel="actions"]');
-  if (actionsPanel && !actionsResult.error) {
-    const rows = actionsResult.data || [];
-    actionsPanel.innerHTML = rows.length ? rows.map((row) => {
-      const profileId = row.actor_id || row.profile_id || row.target_user_id || '';
-      return `<button type="button" class="ec-dock-detail-row" data-profile-id="${esc(profileId)}"><span><strong>${esc(row.activity_type || 'Community-Aktion')}</strong><small>${esc(row.text || 'Neue Aktivität')}</small></span><time>${esc(fmt(row.created_at))}</time></button>`;
-    }).join('') : '<div class="ec-dock-empty">Noch keine Einträge.</div>';
-    bindProfileRows(actionsPanel);
   }
 
   const newsPanel = document.querySelector('.ec-dock-detail[data-panel="news"]');
