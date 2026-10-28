@@ -26,7 +26,7 @@ export function privatePreviewMember(member, viewer, friendships = []) {
 }
 
 export function resolvePreviewTarget(node, members) {
-  const element = node?.closest?.('[data-member-preview-id], .ec-profile-visitor-name, .ec-profile-visit-name strong, .ec-team-name, .ec-profile-link, .ec-role-person strong, .ec-global-role-identity strong, .ec-identity-name');
+  const element = node?.closest?.('[data-member-preview-id], .ec-profile-visitor-name, .ec-profile-visit-name strong, .ec-team-name, .ec-profile-link, .ec-role-person strong, .ec-global-role-identity strong, .ec-identity-name, .ec-online-nickname, .ec-online-friend-name, .ec-profile-native-link');
   if (!element || element.closest('.ec-member-hover-preview, .member-card')) return null;
   const owner = element.closest('[data-member-preview-id], [data-profile-id], [data-member-id]');
   const id = owner?.dataset.memberPreviewId || owner?.dataset.profileId || owner?.dataset.memberId;

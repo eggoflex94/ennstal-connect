@@ -868,8 +868,9 @@ export default function App() {
       if (error) ({ error } = await supabase.from("profiles").update(online ? { is_online: true, last_active_at: new Date().toISOString() } : { is_online: false }).eq("id", user.id));
       if (error) console.warn("Presence could not be saved:", error.message);
     };
-    const clearPresence = () => { void writePresence(false); setProfile((current) => current?.id === user.id ? { ...current, is_online: false } : current); setMembers((current) => current.map((member) => member.id === user.id ? { ...member, is_online: false } : member)); };
+    const clearPresence = () => { lastSent = 0; void writePresence(false); setProfile((current) => current?.id === user.id ? { ...current, is_online: false } : current); setMembers((current) => current.map((member) => member.id === user.id ? { ...member, is_online: false } : member)); };
     const setPresence = () => {
+      if (document.visibilityState !== "visible") return;
       window.clearTimeout(inactiveTimer);
       inactiveTimer = window.setTimeout(clearPresence, 5 * 60 * 1000);
       if (Date.now() - lastSent < 120000) return;
@@ -880,10 +881,12 @@ export default function App() {
       setMembers((current) => current.map((member) => member.id === user.id ? { ...member, is_online: true, last_active_at: lastActive, presence_device: presenceDevice } : member));
     };
     setPresence();
-    const activityEvents = ["pointerdown", "keydown", "scroll", "touchstart"];
+    const activityEvents = ["pointerdown", "pointermove", "keydown", "scroll", "touchstart"];
     activityEvents.forEach((eventName) => window.addEventListener(eventName, setPresence, { passive: true }));
+    const visibilityPresence = () => document.visibilityState === "visible" ? setPresence() : clearPresence();
+    document.addEventListener("visibilitychange", visibilityPresence);
     window.addEventListener("pagehide", clearPresence);
-    return () => { window.clearTimeout(inactiveTimer); activityEvents.forEach((eventName) => window.removeEventListener(eventName, setPresence)); window.removeEventListener("pagehide", clearPresence); };
+    return () => { window.clearTimeout(inactiveTimer); activityEvents.forEach((eventName) => window.removeEventListener(eventName, setPresence)); window.removeEventListener("pagehide", clearPresence); document.removeEventListener("visibilitychange", visibilityPresence); };
   }, [user?.id]);
 
   async function loadActivationDashboard() {

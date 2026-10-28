@@ -8,6 +8,9 @@ on:
       - 'src/memberHoverPreview.js'
       - 'src/MemberHoverPreview.jsx'
       - 'src/support-contacts-modern.js'
+      - 'src/dashboard-top-polish.js'
+      - 'src/memberPresence.js'
+      - 'src/mobile-presence-sync.js'
       - 'e2e/core-smoke.spec.mjs'
       - '.github/workflows/operator-editor-check.yml'
 permissions:
@@ -24,7 +27,7 @@ jobs:
       - run: npm ci
       - run: npm install --no-save @playwright/test@1.55.0
       - run: npx playwright install chromium
-      - run: npx playwright test --grep 'operator can save|support nickname|ordinary member cannot see' --workers=1 --retries=0
+      - run: npx playwright test --grep 'operator can save|support nickname|ordinary member cannot see|online-friend nickname|offline friend' --workers=1 --retries=0
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

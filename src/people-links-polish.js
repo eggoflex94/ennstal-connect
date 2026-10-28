@@ -56,7 +56,9 @@ function normalizeOnlineFriends(){
 
       const name=(row.querySelector('.ec-online-friend-name')?.textContent||'Mitglied').trim();
       row.setAttribute('aria-label',`Profil von ${name} öffnen`);
-      row.title=`Profil von ${name} öffnen`;
+      row.removeAttribute('title');
+      const previewName=row.querySelector('.ec-online-nickname,.ec-online-friend-name');
+      if(previewName)previewName.dataset.memberPreviewId=id;
       row.style.cursor='pointer';
       row.style.touchAction='manipulation';
     });

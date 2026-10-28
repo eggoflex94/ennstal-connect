@@ -71,9 +71,9 @@ function jwt(userId, email) {
   ].join(".");
 }
 
-async function installSupabaseMock(page, role) {
+async function installSupabaseMock(page, role, options = {}) {
   const profile = profileFor(role);
-  const secondaryMember = otherMember();
+  const secondaryMember = {...otherMember(),is_online:options.onlineFriend === true};
   const members = [profile, secondaryMember];
   const rpcCalls = [];
   const designRows = new Map();
@@ -194,6 +194,7 @@ async function installSupabaseMock(page, role) {
       return json(accept.includes("application/vnd.pgrst.object+json") ? selected : idFilter ? [selected] : members);
     }
 
+    if(path === "/rest/v1/friendships" && options.includeFriend) return json([{requester_id:MEMBER_ID,receiver_id:OTHER_ID,status:"ACCEPTED"}]);
     if (path === "/rest/v1/user_permissions") {
       return json(accept.includes("application/vnd.pgrst.object+json") ? {} : []);
     }
@@ -228,8 +229,8 @@ async function installSupabaseMock(page, role) {
   return { rpcCalls };
 }
 
-async function login(page, role = "MEMBER") {
-  const mock = await installSupabaseMock(page, role);
+async function login(page, role = "MEMBER", options = {}) {
+  const mock = await installSupabaseMock(page, role, options);
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Anmelden" })).toBeVisible();
   await page.locator('input[name="email"]').fill(role === "HEAD_ADMIN" ? "head-admin@example.test" : role === "ADMIN" ? "admin@example.test" : "member@example.test");
@@ -607,4 +608,21 @@ test("ordinary member cannot see the operator page or contact editor",async({pag
  await expect(page.locator('.ec-design-launch')).toHaveCount(0);
  await assertTopNavigationWorks(page,"Community");
  await expect(page.locator('.ec-team-edit')).toHaveCount(0);
+});
+
+
+test("online-friend nickname shows the card instead of the native tooltip",async({page},testInfo)=>{
+ test.skip(testInfo.project.name.includes('mobile'),'Hover requires a mouse');
+ await login(page,"MEMBER",{includeFriend:true,onlineFriend:true});
+ await openPersonalDock(page);
+ const nickname=page.locator('.ec-online-nickname').filter({hasText:'Zweites Mitglied'});
+ await expect(nickname).toBeVisible();await nickname.hover();
+ await expect(page.locator('#ec-member-hover-preview .member-card')).toBeVisible();
+ await expect(page.locator('.ec-online-friend').first()).not.toHaveAttribute('title');
+ await page.mouse.move(1,1);await expect(page.locator('#ec-member-hover-preview')).toHaveCount(0);
+});
+test("offline friend with a recent timestamp is excluded from friends online",async({page})=>{
+ await login(page,"MEMBER",{includeFriend:true,onlineFriend:false});await openPersonalDock(page);
+ await expect(page.locator('.ec-online-friends-panel')).toBeVisible();
+ await expect(page.locator('.ec-online-friend')).toHaveCount(0);
 });

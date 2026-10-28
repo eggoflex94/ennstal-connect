@@ -1,3 +1,4 @@
+import {isMemberOnline} from './memberPresence.js';
 import { supabase } from './supabaseClient';
 import { loadMemberScores } from './member-score.js';
 import { isOperatorProfile, operatorStarSrc } from './operator-identity.js';
@@ -17,7 +18,7 @@ const isRegionalAdmin=(p,regionId)=>state.regionalAdmins.some(a=>a.active&&a.use
 const defaultMunicipalityStar=p=>{if(role(p)==='MUNICIPALITY')return MUNICIPALITY_STAR;return''};
 const starFor=(p,regionId)=>{if(isOperatorProfile(p))return operatorStarSrc;if(['HEAD_ADMIN','ADMIN'].includes(role(p))||isRegionalAdmin(p,regionId))return ADMIN_STAR;if(role(p)==='MUNICIPALITY')return p?.role_star_url||defaultMunicipalityStar(p);if(role(p)==='SUPPORTER')return SUPPORTER_STAR;if(String(p?.account_badge||'').toUpperCase()==='BUSINESS')return BUSINESS_STAR;return''};
 const presenceTime=p=>{const raw=p?.last_active_at||p?.last_seen_at;if(!raw)return 0;const time=new Date(raw).getTime();return Number.isFinite(time)?time:0};
-const isActuallyOnline=p=>!p?.hide_online_status&&presenceTime(p)>0&&Date.now()-presenceTime(p)<=ONLINE_WINDOW_MS;
+const isActuallyOnline=isMemberOnline;
 
 async function count(table,filter){try{let q=supabase.from(table).select('*',{count:'exact',head:true});if(filter)q=filter(q);const {count,error}=await q;return error?0:(count||0)}catch{return 0}}
 
@@ -34,7 +35,7 @@ async function load(){
     state.profile=profile||null;
     if(state.profile){const [scores,wallet]=await Promise.all([loadMemberScores([user.id]),supabase.rpc('kaufpunkte_my_marketplace')]);state.profile.display_score=scores.get(String(user.id))??Number(profile.points||0);state.profile.display_buy=wallet.error?Number(profile.purchase_points||0):Number(wallet.data?.balance??profile.purchase_points??0)}
     state.regions=regions||[];state.regionalAdmins=assignments||[];
-    const friendIds=(friendships||[]).map(f=>f.requester_id===user.id?f.receiver_id:f.requester_id).filter(Boolean);
+    const friendIds=(friendships||[]).map(f=>f.requester_id===user.id?f.receiver_id:f.requester_id).filter(id=>id&&id!==user.id);
     if(friendIds.length){
       const {data:friends}=await supabase.from('profiles').select('id,nickname,role,account_badge,points,is_online,hide_online_status,last_active_at,last_seen_at,home_region_id,account_status,role_display_label,role_star_url,role_accent_color').in('id',friendIds).eq('account_status','ACTIVE');
       const onlineFriends=(friends||[]).filter(isActuallyOnline);const scores=await loadMemberScores(onlineFriends.map(friend=>friend.id));state.friends=onlineFriends.map(friend=>({...friend,total_score:scores.get(String(friend.id))??Number(friend.points||0)})).sort((a,b)=>String(a.nickname||'').localeCompare(String(b.nickname||''),'de'));
@@ -67,7 +68,7 @@ function ensureOnlineFriends(dock){
     const star=starFor(friend,region?.id||null);
     const name=esc(friend.nickname||'Mitglied');
     const points=Number(friend.total_score??friend.points??0).toLocaleString('de-AT');
-    return `<button type="button" class="ec-online-friend" data-profile-id="${esc(friend.id)}" title="Profil von ${name} öffnen"><span class="ec-online-dot" aria-hidden="true"></span>${star?`<img class="ec-online-friend-star" src="${esc(star)}" alt="" aria-hidden="true">`:''}<strong class="ec-online-friend-name"><span class="ec-online-nickname">${name}</span><span class="ec-inline-points">[${esc(points)}]</span></strong></button>`;
+    return `<button type="button" class="ec-online-friend" data-profile-id="${esc(friend.id)}" aria-label="Profil von ${name} öffnen"><span class="ec-online-dot" aria-hidden="true"></span>${star?`<img class="ec-online-friend-star" src="${esc(star)}" alt="" aria-hidden="true">`:''}<strong class="ec-online-friend-name"><span class="ec-online-nickname" data-member-preview-id="${esc(friend.id)}">${name}</span><span class="ec-inline-points">[${esc(points)}]</span></strong></button>`;
   }).join('');
   panel.innerHTML=`<div class="ec-online-friends-head"><span>FREUNDE ONLINE</span><em>${state.friends.length}</em></div><div class="ec-online-friends-list">${rows||'<small>Derzeit keine Freunde online.</small>'}</div>`;
   panel.querySelectorAll('[data-profile-id]').forEach(btn=>btn.onclick=(clickEvent)=>{

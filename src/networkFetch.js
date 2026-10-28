@@ -139,7 +139,8 @@ export function createNetworkFetch(fetchImpl, timeoutMs = 12_000, readCacheMs = 
         )), effectiveTimeoutMs);
 
         try {
-          const response = await fetchImpl(input, { ...init, signal: controller.signal });
+          const offlinePresence = rpc === 'record_presence' && typeof init.body === 'string' && /"p_online"\s*:\s*false/.test(init.body);
+          const response = await fetchImpl(input, { ...init, ...(offlinePresence ? {keepalive:true} : {}), signal: controller.signal });
           // Retry only verified read-only requests, never writes or unknown RPCs.
           // Delay reduces the chance of repeating a brief PostgREST outage.
           if (safeRead && attempt < attempts - 1 && [502, 503, 504].includes(response.status) && !callerSignal?.aborted) {

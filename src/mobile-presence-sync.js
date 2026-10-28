@@ -44,6 +44,7 @@ const activity = () => void touchPresence(false);
 ['pointerdown','touchstart','keydown'].forEach((type) => window.addEventListener(type, activity, { passive: true }));
 window.addEventListener('focus', () => void touchPresence(true));
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') void touchPresence(true); });
-window.setInterval(() => void touchPresence(false), 60_000);
+// Actual input, focus or returning to the page may renew presence.
+// A timer must never turn an inactive session back online.
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => void touchPresence(true), { once: true });
 else void touchPresence(true);
