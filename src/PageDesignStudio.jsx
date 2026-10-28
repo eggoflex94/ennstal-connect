@@ -84,7 +84,7 @@ export default function PageDesignStudio({page,regionId,profile}) {
   }catch(error){setStatus(`Speichern fehlgeschlagen: ${error.message}`);}finally{setBusy(false);}
  };
  const add=()=>{
-  const key=`custom:${crypto.randomUUID()}`,row={block_key:key,content:normalizeBlock({custom:true,title:'Neuer Bereich',text:'Hier deinen Text eintragen.'})};
+  const key=`custom:${crypto.randomUUID()}`,row={block_key:key,content:normalizeBlock({custom:true,order:999,title:'Neuer Bereich',text:'Hier deinen Text eintragen.'})};
   runtime.current[key]=row.content;dirty.current=true;setCustomRows(current=>[...current,row]);setSelected(key);setDraft(row.content);setContact(null);
   requestAnimationFrame(()=>{const found=scan();setBlocks(found);const b=found.find(b=>b.key===key);if(b)choose(b);});
  };
@@ -94,8 +94,9 @@ export default function PageDesignStudio({page,regionId,profile}) {
   setOpened(false);setContact(null);document.querySelectorAll('.ec-design-selected').forEach(n=>n.classList.remove('ec-design-selected'));
  };
  const toggle=()=>{setOpened(true);setContact(null);setBlocks(scan());};
+ const customHost=document.querySelector('.modern-main .ec-home-magazine,.modern-main .community-hub-grid')||document.querySelector('.modern-main > .content-root > section')||document.querySelector('.modern-main > .content-root');
  return <>
-  {customRows.length>0&&document.querySelector('.modern-main > .content-root')&&createPortal(<div className="ec-page-custom-blocks">{customRows.map(row=><section key={row.block_key} data-page-block={row.block_key} className="panel ec-page-custom-block"><h2>{row.content.title}</h2></section>)}</div>,document.querySelector('.modern-main > .content-root'))}
+  {customRows.length>0&&customHost&&createPortal(<>{customRows.map(row=><section key={row.block_key} data-page-block={row.block_key} className="panel ec-page-custom-block"><h2>{row.content.title}</h2></section>)}</>,customHost)}
   {canEdit&&createPortal(<div className="ec-design-studio">
    {!opened?<button type="button" className="ec-design-launch" onClick={toggle}>✎ Seite gestalten</button>:<aside className="ec-design-inspector" aria-label="Seite gestalten">
     <header><div><small>BETREIBER · {page==='home'?'STARTSEITE':page.toUpperCase()}</small><h2>{contact?`Zuständigkeiten · ${contact.name}`:'Seite gestalten'}</h2></div><button type="button" onClick={close} aria-label="Editor schließen">×</button></header>
