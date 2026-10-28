@@ -15,7 +15,7 @@ export function privatePreviewMember(member, viewer, friendships = []) {
     ((row.requester_id === viewer?.id && row.receiver_id === member.id) ||
      (row.receiver_id === viewer?.id && row.requester_id === member.id)));
   const admin = ['HEAD_ADMIN', 'ADMIN'].includes(viewer?.role);
-  const visible = field => own || (member.privacy_settings?.[field] || 'PUBLIC') === 'PUBLIC' ||
+  const visible = field => own || admin || (member.privacy_settings?.[field] || 'PUBLIC') === 'PUBLIC' ||
     (member.privacy_settings?.[field] === 'FRIENDS' && friend);
   return {
     ...member,
