@@ -6,6 +6,17 @@ let userId = null;
 let channel = null;
 let timer = null;
 let refreshInFlight = null, refreshAgain = false;
+let startPromise = null;
+let channelSequence = 0;
+let retryTimer = null;
+let generation = 0;
+
+function scheduleRealtimeRestart(delay = 1000) {
+  clearTimeout(retryTimer);
+  retryTimer = window.setTimeout(() => {
+    if (!document.hidden && userId) void start();
+  }, delay);
+}
 const visitProfiles = new Map();
 
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
@@ -148,25 +159,53 @@ function queue(delay = 80) {
 }
 
 async function start() {
-  const { data:{ session } } = await supabase.auth.getSession();
-  const user = session?.user;
-  if (!user?.id || !session?.access_token) return;
-  userId = user.id;
-  supabase.realtime.setAuth(session.access_token);
-  await refresh();
-  if (channel) await supabase.removeChannel(channel);
-  const nextChannel = supabase.channel(`dashboard-community-${user.id}-${Date.now()}`)
-    .on('postgres_changes',{event:'*',schema:'public',table:'public_profile_updates'},() => queue())
-    .on('postgres_changes',{event:'*',schema:'public',table:'profile_activity'},() => queue())
-    .on('postgres_changes',{event:'*',schema:'public',table:'news'},() => queue());
-  channel = nextChannel;
-  nextChannel.subscribe((status) => {
-    if (channel !== nextChannel) return;
-    if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-      channel = null;
-      window.setTimeout(() => { if (!document.hidden) void start(); }, 1000);
+  // Multiple auth events or reconnect callbacks must never initialize the
+  // dashboard channel concurrently.
+  if (startPromise) return startPromise;
+  startPromise = (async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
+    if (!user?.id || !session?.access_token) return;
+    const currentGeneration = generation;
+    userId = user.id;
+    clearTimeout(retryTimer);
+    await supabase.realtime.setAuth(session.access_token);
+    await refresh();
+    if (currentGeneration !== generation || userId !== user.id) return;
+
+    const previousChannel = channel;
+    channel = null;
+    if (previousChannel) await supabase.removeChannel(previousChannel);
+    if (currentGeneration !== generation || userId !== user.id) return;
+
+    // Each restart owns a fresh channel; register every callback before
+    // subscribe(), as required by Supabase Realtime.
+    const nextChannel = supabase.channel(`dashboard-community-${user.id}-${++channelSequence}`);
+    nextChannel
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'public_profile_updates' }, () => queue())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profile_activity' }, () => queue())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'news' }, () => queue());
+
+    if (currentGeneration !== generation || userId !== user.id) {
+      await supabase.removeChannel(nextChannel);
+      return;
     }
+    channel = nextChannel;
+    nextChannel.subscribe((status) => {
+      if (channel !== nextChannel || currentGeneration !== generation) return;
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+        channel = null;
+        void supabase.removeChannel(nextChannel);
+        scheduleRealtimeRestart();
+      }
+    });
+  })().catch(error => {
+    console.warn('Dashboard-Realtime konnte nicht gestartet werden:', error);
+    scheduleRealtimeRestart();
+  }).finally(() => {
+    startPromise = null;
   });
+  return startPromise;
 }
 
 window.addEventListener('ec:dashboard-visits-refresh',()=>queue());
@@ -187,7 +226,9 @@ supabase.auth.onAuthStateChange((_event, session) => {
   const nextId = session?.user?.id || null;
   if (nextId === userId) return;
   if (!nextId) {
+    generation += 1;
     userId = null;
+    clearTimeout(retryTimer);
     visitProfiles.clear();
     clearTimeout(timer);
     if (channel) void supabase.removeChannel(channel);
