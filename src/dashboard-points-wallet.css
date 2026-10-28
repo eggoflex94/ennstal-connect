@@ -25,3 +25,10 @@
 .ec-top-points-wallet .ec-wallet-points{justify-content:flex-start!important;gap:5px!important;min-height:20px!important;line-height:1!important}
 .ec-top-points-wallet .ec-wallet-points strong,.ec-top-points-wallet .ec-wallet-buy{font-size:12px!important;font-weight:750!important}
 .ec-top-points-wallet .ec-points-list-link{margin-left:5px!important;font-size:10px!important;padding:1px 2px!important;flex:0 0 auto!important}
+
+/* The wallet link is inline content, so it must not inherit full-width dock buttons. */
+.ec-right-dock .ec-top-points-wallet .ec-points-list-link{
+  width:auto!important;min-width:0!important;max-width:100%!important;
+  height:auto!important;min-height:24px!important;
+}
+.ec-right-dock .ec-top-points-wallet .ec-wallet-points{flex-wrap:wrap!important}
