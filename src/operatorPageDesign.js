@@ -7,7 +7,7 @@ export function normalizeBlock(input={}) {
  color:color(input.color,d.color),background:color(input.background,d.background),borderColor:color(input.borderColor,d.borderColor),
  radius:clamp(input.radius,0,40,d.radius),padding:clamp(input.padding,0,60,d.padding),order:clamp(input.order,-1000,1000,0),
  fontFamily:['system','serif','mono'].includes(input.fontFamily)?input.fontFamily:'system',align:['left','center','right'].includes(input.align)?input.align:'left',
- title:typeof input.title==='string'?input.title.slice(0,180):'',text:typeof input.text==='string'?input.text.slice(0,12000):'',custom:input.custom===true };
+ title:typeof input.title==='string'?input.title.slice(0,180):'',text:typeof input.text==='string'?input.text.slice(0,12000):'',custom:input.custom===true,textOverride:input.textOverride===true };
 }
 export function blockKey(node, index=0) {
  if(node.dataset.pageBlock)return node.dataset.pageBlock;
@@ -18,7 +18,7 @@ export function blockKey(node, index=0) {
 export function discoverPageBlocks(root) {
  if(!root)return [];
  const candidates=[...root.querySelectorAll('.panel,.page-heading,.ec-team-panel,.ec-magazine-hero,.ec-magazine-categories,.ec-magazine-events,.ec-magazine-content,[data-page-block],:scope > section > section,:scope > section > article')]
- .filter(n=>!n.closest('form,.ec-design-studio,.ec-member-hover-preview,.member-card,.chat-box,.admin-member-cards'));
+ .filter(n=>!n.closest('form,.ec-design-studio,.ec-member-hover-preview,.member-card,.chat-box,.admin-member-cards,.ec-cover-live-preview,.ec-magazine-editor,.ec-cover-preview-canvas,.homepage-editor-toggle'));
  const selected=candidates.filter(n=>!candidates.some(other=>other!==n&&other.contains(n)));
  if(!selected.length)selected.push(...root.querySelectorAll(':scope > section'));
  const counts=new Map();

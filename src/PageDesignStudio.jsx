@@ -11,9 +11,8 @@ function applyBlock(node,value,row) {
  Object.entries(values).forEach(([key,val])=>node.style.setProperty(key,val,'important'));
  const heading=node.querySelector('h1,h2,h3,h4');
  if(s.title&&heading&&heading.textContent!==s.title&&!heading.closest('.member-card,.member-profile-hero'))heading.textContent=s.title;
- let text=node.querySelector(':scope > .ec-designed-text');
- if(s.text){if(!text){text=document.createElement('p');text.className='ec-designed-text';node.append(text);}if(text.textContent!==s.text)text.textContent=s.text;}
- else text?.remove();
+ let text=node.querySelector(':scope > .ec-designed-text')||(s.textOverride?node.querySelector(':scope > p'):null);
+ if(s.textOverride||s.custom){if(!text){text=document.createElement('p');text.className='ec-designed-text';node.append(text);}if(text.textContent!==s.text)text.textContent=s.text;}
  appendEditStamp(node,row);
 }
 function scopeBlocks() { return discoverPageBlocks(document.querySelector('.modern-main > .content-root')); }
@@ -60,10 +59,10 @@ export default function PageDesignStudio({page,regionId,profile}) {
  const choose=b=>{
   document.querySelectorAll('.ec-design-selected').forEach(n=>n.classList.remove('ec-design-selected'));
   b.node.classList.add('ec-design-selected');b.node.scrollIntoView({block:'center',behavior:'smooth'});
-  setSelected(b.key);setContact(null);setDraft(normalizeBlock(runtime.current[b.key]||records.current.get(b.key)?.content||{title:b.node.querySelector('h1,h2,h3,h4')?.textContent||''}));setStatus('');
+  setSelected(b.key);setContact(null);setDraft(normalizeBlock(runtime.current[b.key]||records.current.get(b.key)?.content||{title:b.node.querySelector('h1,h2,h3,h4')?.textContent||'',text:b.node.querySelector(':scope > p')?.textContent||''}));setStatus('');
  };
  const change=(key,value)=>{
-  const next={...draft,[key]:value};setDraft(next);dirty.current=true;
+  const next={...draft,[key]:value,...(key==='text'?{textOverride:true}:{})};setDraft(next);dirty.current=true;
   if(contact){setContact({...contact,text:next.text});return;}
   runtime.current[selected]=next;scan();
  };
@@ -111,7 +110,7 @@ export default function PageDesignStudio({page,regionId,profile}) {
      {['color','background','borderColor'].map((key,i)=><label key={key}>{['Schriftfarbe','Hintergrund','Rahmenfarbe'][i]}<input type="color" value={draft[key]} onChange={e=>change(key,e.target.value)}/></label>)}
      <label>Innenabstand<input type="range" min="0" max="60" value={draft.padding} onChange={e=>change('padding',+e.target.value)}/></label>
      <label>Rundung<input type="range" min="0" max="40" value={draft.radius} onChange={e=>change('radius',+e.target.value)}/></label></>}
-     <label>{contact?'Zuständigkeiten (eine pro Zeile)':'Inhalt / Ergänzung'}<textarea rows={6} value={draft.text} onChange={e=>change('text',e.target.value)} maxLength={12000}/></label>
+     <label>{contact?'Zuständigkeiten (eine pro Zeile)':'Inhalt / Ergänzung'}<textarea aria-label={contact?'Zuständigkeiten (eine pro Zeile)':'Inhalt / Ergänzung'} rows={6} value={draft.text} onChange={e=>change('text',e.target.value)} maxLength={12000}/></label>
     </div>}
     <footer><p role="status">{status}</p><button type="button" disabled={busy||(!draft&&!Object.keys(runtime.current).length)} onClick={()=>void save()}>{busy?'Speichert …':'Speichern & veröffentlichen'}</button></footer>
    </aside>}
