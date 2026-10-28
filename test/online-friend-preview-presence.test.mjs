@@ -43,3 +43,11 @@ test('the live dock logout marks offline before signing out',async()=>{
  const logout=vm.runInNewContext(`(${source.slice(fn.start,fn.end)})`,{document:{querySelector:()=>null},supabase:{rpc:async(name,args)=>{calls.push(args.p_online);return {};},auth:{signOut:async()=>{calls.push('signOut');return {};}}},localStorage:{removeItem(){}},sessionStorage:{clear(){}},location:{replace(){}},alert(){}});
  await logout();assert.deepEqual(calls,[false,'signOut']);
 });
+test('the friends-list predicate ignores Array.filter index arguments',async()=>{
+ const {parse}=await import('@babel/parser');const vm=await import('node:vm');
+ const source=readFileSync(new URL('../src/dashboard-top-polish.js',import.meta.url),'utf8');
+ const ast=parse(source,{sourceType:'module'});const declaration=ast.program.body.flatMap(n=>n.declarations||[]).find(n=>n.id.name==='isActuallyOnline');
+ const predicate=vm.runInNewContext(`(${source.slice(declaration.init.start,declaration.init.end)})`,{isMemberOnline});
+ const recent=new Date(Date.now()-1000).toISOString();
+ assert.equal([{is_online:true,last_active_at:recent},{is_online:false,last_active_at:recent}].filter(predicate).length,1);
+});

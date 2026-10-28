@@ -18,7 +18,7 @@ const isRegionalAdmin=(p,regionId)=>state.regionalAdmins.some(a=>a.active&&a.use
 const defaultMunicipalityStar=p=>{if(role(p)==='MUNICIPALITY')return MUNICIPALITY_STAR;return''};
 const starFor=(p,regionId)=>{if(isOperatorProfile(p))return operatorStarSrc;if(['HEAD_ADMIN','ADMIN'].includes(role(p))||isRegionalAdmin(p,regionId))return ADMIN_STAR;if(role(p)==='MUNICIPALITY')return p?.role_star_url||defaultMunicipalityStar(p);if(role(p)==='SUPPORTER')return SUPPORTER_STAR;if(String(p?.account_badge||'').toUpperCase()==='BUSINESS')return BUSINESS_STAR;return''};
 const presenceTime=p=>{const raw=p?.last_active_at||p?.last_seen_at;if(!raw)return 0;const time=new Date(raw).getTime();return Number.isFinite(time)?time:0};
-const isActuallyOnline=isMemberOnline;
+const isActuallyOnline=profile=>isMemberOnline(profile);
 
 async function count(table,filter){try{let q=supabase.from(table).select('*',{count:'exact',head:true});if(filter)q=filter(q);const {count,error}=await q;return error?0:(count||0)}catch{return 0}}
 
