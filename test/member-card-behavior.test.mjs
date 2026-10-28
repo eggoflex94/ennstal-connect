@@ -6,6 +6,7 @@ import React from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {transform} from 'esbuild';
 import { publicImageVariant } from '../src/imageDelivery.js';
+import * as operatorIdentity from '../src/operator-identity.js';
 const source=await fs.readFile(new URL('../src/MemberCardView.jsx',import.meta.url),'utf8');
 const {code}=await transform(source,{loader:'jsx',format:'cjs',jsxFactory:'React.createElement'});
 const context={
@@ -14,6 +15,7 @@ const context={
   React,
   require(name){
     if(name==='react') return React;
+    if(name==='./operator-identity.js') return operatorIdentity;
     if(name.includes('imageDelivery')) return { publicImageVariant };
     if(name.includes('memberProfileLoader')) return {loadMemberProfile:async(member)=>member};
     throw new Error(`Unexpected require: ${name}`);
@@ -38,6 +40,14 @@ test('normal members render without a role star',()=>{
  assert.ok(!html.includes('role-star-blue.svg'));
  assert.ok(!html.includes('role-star-green.svg'));
  assert.ok(html.includes('role-theme-member'));
+});
+
+test('only the designated operator renders a gold star among head admins',()=>{
+ for(const [member,gold] of [[{id:operatorIdentity.OPERATOR_PROFILE_ID},true],[{id:'primary',is_primary_head_admin:true},true],[{id:'other-head-admin'},false]]){
+  const html=renderToStaticMarkup(React.createElement(Card,{member:{...member,nickname:'Test',role:'HEAD_ADMIN'},profile:{id:'viewer'},friendships:[],onOpen(){}}));
+  assert.equal(html.includes('operator-star-gold.svg'),gold);
+  assert.equal(html.includes('role-star-red.svg'),!gold);
+ }
 });
 
 test('keyboard events from nested elements cannot open the profile card',()=>{
