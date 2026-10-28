@@ -618,17 +618,11 @@ test("online-friend nickname shows the card instead of the native tooltip",async
  await openPersonalDock(page);
  const nickname=page.locator('.ec-online-nickname').filter({hasText:'Zweites Mitglied'});
  await expect(nickname).toBeVisible({timeout:15000});
- await page.evaluate(()=>{
-  window.__hoverDebug=[];const save=(event)=>{const n=event.target;window.__hoverDebug.push({type:event.type,tag:n?.tagName,cls:n?.className,x:event.clientX,y:event.clientY,sy:scrollY,rect:document.querySelector('.ec-online-nickname')?.getBoundingClientRect().toJSON(),hit:event.clientX!=null?document.elementFromPoint(event.clientX,event.clientY)?.className:null,match:n?.closest?.('[data-member-preview-id],.ec-online-nickname,.ec-online-friend-name')?.outerHTML?.slice(0,400),related:event.relatedTarget?.className});if(window.__hoverDebug.length>200)window.__hoverDebug.shift();};
-  ['pointerover','pointerout','scroll','visibilitychange'].forEach(type=>document.addEventListener(type,save,true));
- });
- await page.evaluate(()=>{
-  window.__scrollCalls=[];
-  for(const [obj,key] of [[window,'scrollTo'],[Element.prototype,'scrollIntoView'],[HTMLElement.prototype,'focus']]){const original=obj[key];obj[key]=function(...args){window.__scrollCalls.push({key,args,cls:this.className,stack:new Error().stack});return original.apply(this,args);};}
- });
  await nickname.hover();
- try {await expect(page.locator('#ec-member-hover-preview .member-card')).toBeVisible();}
- catch(error){console.log('HOVER_DIAGNOSTIC',JSON.stringify(await page.evaluate(()=>({calls:window.__scrollCalls,events:window.__hoverDebug,name:document.querySelector('.ec-online-nickname')?.outerHTML,ancestors:[...function*(n){while(n){yield n.className;n=n.parentElement;}}(document.querySelector('.ec-online-nickname'))]}))));throw error;}
+ await expect(page.locator('#ec-member-hover-preview .member-card')).toBeVisible();
+ const rect=await nickname.boundingBox();
+ await page.mouse.move(rect.x+rect.width-2,rect.y+rect.height/2);
+ await expect(page.locator('#ec-member-hover-preview .member-name')).toContainText('Zweites Mitglied');
  await expect(page.locator('.ec-online-friend').first()).not.toHaveAttribute('title');
  await page.mouse.move(1,1);await expect(page.locator('#ec-member-hover-preview')).toHaveCount(0);
 });
