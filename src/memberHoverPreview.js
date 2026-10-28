@@ -52,6 +52,17 @@ export function bindHoverPreview({ document, window, resolve, load, show, hide, 
     if(Number.isFinite(event.clientX)&&Number.isFinite(event.clientY))pointer={x:event.clientX,y:event.clientY};
     const next = resolve(event.target);
     if (next?.element === active?.element) return;
+    if (next && active && next.member.id === active.member.id) {
+      const described = (active.element.getAttribute('aria-describedby') || '').split(/\s+/).filter(id => id && id !== 'ec-member-hover-preview');
+      if (described.length) active.element.setAttribute('aria-describedby', described.join(' '));
+      else active.element.removeAttribute('aria-describedby');
+      active = next;
+      if (visibleMember) {
+        active.element.setAttribute('aria-describedby', [active.element.getAttribute('aria-describedby'), 'ec-member-hover-preview'].filter(Boolean).join(' '));
+        show(visibleMember, active.element.getBoundingClientRect());
+      }
+      return;
+    }
     close();
     if (!next) return;
     active = next;
@@ -59,16 +70,20 @@ export function bindHoverPreview({ document, window, resolve, load, show, hide, 
     timer = window.setTimeout(async () => {
       try {
         const member = await load({ ...next.member });
-        if (currentRevision !== revision || !next.element.isConnected || !member?.id) return;
-        const described = next.element.getAttribute('aria-describedby');
-        next.element.setAttribute('aria-describedby', [described, 'ec-member-hover-preview'].filter(Boolean).join(' '));
+        if (currentRevision !== revision || !active?.element.isConnected || !member?.id) return;
+        const described = active.element.getAttribute('aria-describedby');
+        active.element.setAttribute('aria-describedby', [described, 'ec-member-hover-preview'].filter(Boolean).join(' '));
         visibleMember=member;
-        show(member, next.element.getBoundingClientRect());
+        show(member, active.element.getBoundingClientRect());
       } catch { if (currentRevision === revision) close(); }
     }, delay);
   };
   const leave = event => {
-    if (active && active.element.contains(event.target) && !active.element.contains(event.relatedTarget)) close();
+    if (active && active.element.contains(event.target) && !active.element.contains(event.relatedTarget)) {
+      const next = resolve(event.relatedTarget);
+      if (next?.member.id === active.member.id) enter({target:event.relatedTarget});
+      else close();
+    }
   };
   const scroll = () => {
     if(!active)return;

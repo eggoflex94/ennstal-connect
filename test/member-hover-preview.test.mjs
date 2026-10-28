@@ -106,3 +106,16 @@ test('scroll checks the current mouse position after moving inside a nickname',a
  h.dispatch('scroll',h.document);
  await h.run();assert.deepEqual(h.shown,['a']);h.dispose();
 });
+
+
+test('a replacement nickname for the same member retains its pending preview',async()=>{
+ let finish;const h=setup(m=>new Promise(resolve=>{finish=()=>resolve(m);}));
+ h.b.id='a';h.dispatch('pointerover',h.a);const pending=h.run();
+ h.a.isConnected=false;
+ h.dispatch('pointerout',h.a,{relatedTarget:h.b});
+ h.dispatch('pointerover',h.b);
+ finish();await pending;
+ assert.deepEqual(h.shown,['a']);
+ assert.equal(h.b.attrs['aria-describedby'],'ec-member-hover-preview');
+ h.dispose();
+});
