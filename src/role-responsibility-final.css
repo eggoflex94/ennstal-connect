@@ -86,3 +86,25 @@
   .ec-region-responsibility-person-head{column-gap:7px!important}
   .ec-region-responsibility-person ul{margin-left:0!important;margin-top:8px!important}
 }
+
+/* Keep the operator crown/star the same size as every other role mark,
+   including responsibility edit metadata and team identity rows. */
+.ec-team-panel img[src*="operator-star"],
+.ec-team-panel img[src*="operator-crown"],
+.ec-team-panel img[src*="role-star"],
+.ec-team-panel .ec-inline-role-star,
+.ec-region-responsibility-person img[src*="operator-star"],
+.ec-region-responsibility-person img[src*="operator-crown"],
+.ec-region-responsibility-person .ec-inline-role-star{
+  display:inline-block!important;
+  box-sizing:border-box!important;
+  width:var(--ec-role-badge-size)!important;
+  height:var(--ec-role-badge-size)!important;
+  min-width:var(--ec-role-badge-size)!important;
+  max-width:var(--ec-role-badge-size)!important;
+  min-height:var(--ec-role-badge-size)!important;
+  max-height:var(--ec-role-badge-size)!important;
+  flex:0 0 var(--ec-role-badge-size)!important;
+  object-fit:contain!important;
+  vertical-align:middle!important;
+}
