@@ -84,6 +84,7 @@ function linkResponsibilityPeople(){
 
 function linkDashboardActivity(){
   document.querySelectorAll('.ec-dock-detail-row[data-profile-id]').forEach(row=>{
+    if(row.closest('[data-visits-owner="dashboard"]'))return;
     const id=row.dataset.profileId;
     if(!id)return;
     row.dataset.profileHref=profileHref(id);

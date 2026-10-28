@@ -17,10 +17,10 @@ button.ec-profile-community-item{cursor:pointer!important}
 .ec-profile-community-empty{margin:0!important;padding:10px 2px!important;color:#718390!important;font-size:.85rem!important}
 
 /* Consistent role-colored member image rings. */
-.modern-main article.member-card[data-role-theme="admin"]>.member-avatar,.modern-main article.member-card.admin>.member-avatar{border:3px solid #d62845!important;box-shadow:0 0 0 2px rgba(214,40,69,.12)!important}
-.modern-main article.member-card[data-role-theme="supporter"]>.member-avatar,.modern-main article.member-card.supporter>.member-avatar{border:3px solid #f1c400!important;box-shadow:0 0 0 2px rgba(241,196,0,.14)!important}
-.modern-main article.member-card[data-role-theme="business"]>.member-avatar,.modern-main article.member-card.business>.member-avatar{border:3px solid #2d78c4!important;box-shadow:0 0 0 2px rgba(45,120,196,.12)!important}
-.modern-main article.member-card[data-role-theme="member"]>.member-avatar,.modern-main article.member-card.member>.member-avatar{border:2px solid #8fa3b2!important;box-shadow:0 0 0 1px rgba(143,163,178,.12)!important}
+:is(.modern-main,.ec-member-hover-preview) article.member-card[data-role-theme="admin"]>.member-avatar,:is(.modern-main,.ec-member-hover-preview) article.member-card.admin>.member-avatar{border:3px solid #d62845!important;box-shadow:0 0 0 2px rgba(214,40,69,.12)!important}
+:is(.modern-main,.ec-member-hover-preview) article.member-card[data-role-theme="supporter"]>.member-avatar,:is(.modern-main,.ec-member-hover-preview) article.member-card.supporter>.member-avatar{border:3px solid #f1c400!important;box-shadow:0 0 0 2px rgba(241,196,0,.14)!important}
+:is(.modern-main,.ec-member-hover-preview) article.member-card[data-role-theme="business"]>.member-avatar,:is(.modern-main,.ec-member-hover-preview) article.member-card.business>.member-avatar{border:3px solid #2d78c4!important;box-shadow:0 0 0 2px rgba(45,120,196,.12)!important}
+:is(.modern-main,.ec-member-hover-preview) article.member-card[data-role-theme="member"]>.member-avatar,:is(.modern-main,.ec-member-hover-preview) article.member-card.member>.member-avatar{border:2px solid #8fa3b2!important;box-shadow:0 0 0 1px rgba(143,163,178,.12)!important}
 .member-profile-page .ec-clean-profile-role.role-admin~*{}
 .member-profile-page .ec-clean-profile-left:has(.ec-clean-profile-role.role-admin) .ec-clean-profile-photo img{border:3px solid #d62845!important;box-shadow:0 0 0 2px rgba(214,40,69,.12)!important}
 .member-profile-page .ec-clean-profile-left:has(.ec-clean-profile-role.role-supporter) .ec-clean-profile-photo img{border:3px solid #f1c400!important;box-shadow:0 0 0 2px rgba(241,196,0,.14)!important}

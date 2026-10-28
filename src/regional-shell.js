@@ -70,7 +70,7 @@ async function loadDockCounts(){
   return{notifications,visits,updates,actions};
 }
 
-function renderDockCounts(d){const set=(sel,n,{hideZero=false}={})=>{const el=document.querySelector(sel);if(el){const value=Number(n||0);el.textContent=String(value);el.hidden=hideZero&&value<=0}};set('.ec-dock-notification-badge',d.notifications,{hideZero:true});set('.ec-dock-visits-count',d.visits,{hideZero:true});set('.ec-dock-updates-count',d.updates,{hideZero:true});set('.ec-dock-actions-count',d.actions,{hideZero:true})}
+function renderDockCounts(d){const set=(sel,n,{hideZero=false}={})=>{const el=document.querySelector(sel);if(el){const value=Number(n||0);el.textContent=String(value);el.hidden=hideZero&&value<=0}};set('.ec-dock-notification-badge',d.notifications,{hideZero:true});set('.ec-dock-updates-count',d.updates,{hideZero:true});set('.ec-dock-actions-count',d.actions,{hideZero:true})}
 
 async function syncDockCounts({force=false}={}){
   if(!currentProfile?.id)return;
@@ -117,35 +117,18 @@ function applyRealtimeProfileVisit(detail){
     .slice(0,10);
   dockDetailCache.set(key,{at:Date.now(),rows});
 
-  const panel=document.querySelector('.ec-dock-detail[data-panel="visits"]');
-  if(panel){
-    panel.innerHTML=renderDetail(rows,'visits');
-    bindDockDetailRows(panel);
-  }
-
-  if(dockCountsCache.userId===currentProfile.id&&dockCountsCache.data){
-    const nextCount=detail?.eventType==='INSERT'
-      ? Number(dockCountsCache.data.visits||0)+1
-      : Number(dockCountsCache.data.visits||0);
-    dockCountsCache={...dockCountsCache,at:Date.now(),data:{...dockCountsCache.data,visits:nextCount}};
-    renderDockCounts(dockCountsCache.data);
-  }
   return true;
 }
 
 async function refreshProfileVisitDock(detail=null){
-  const applied=applyRealtimeProfileVisit(detail);
-  invalidateDockDetails('visits');
-  if(!applied)dockCountsCache={userId:'',at:0,data:null};
-  window.setTimeout(()=>void Promise.all([
-    syncDockCounts({force:true}),
-    syncDockDetail('visits',{force:true})
-  ]),applied?250:0);
+  window.dispatchEvent(new CustomEvent('ec:dashboard-visits-refresh',{detail}));
 }
 
 window.addEventListener('ec:profile-visits-changed',(event)=>{void refreshProfileVisitDock(event.detail||null)});
 
 async function syncDockDetail(type,{force=false}={}){
+  if(type==='visits'){window.dispatchEvent(new CustomEvent('ec:dashboard-visits-refresh'));return;}
+
   const panel=document.querySelector(`.ec-dock-detail[data-panel="${type}"]`);
   if(!panel||!currentProfile?.id)return;
   const key=dockDetailKey(type),cached=dockDetailCache.get(key),now=Date.now();

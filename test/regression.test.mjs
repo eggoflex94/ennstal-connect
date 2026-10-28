@@ -944,8 +944,8 @@ test("profile visits have one realtime owner and refresh both dock and React sta
   const app=await source("src/App.jsx");
   assert.match(realtime,/ec:profile-visits-changed/);
   assert.doesNotMatch(realtime,/panel\.innerHTML/);
-  assert.match(shell,/syncDockCounts\(\{force:true\}\)/);
-  assert.match(shell,/syncDockDetail\('visits',\{force:true\}\)/);
+  assert.match(shell,/ec:dashboard-visits-refresh/);
+  assert.match(await source('src/dashboard-community-realtime.js'),/dataset.visitsOwner = 'dashboard'/);
   assert.match(app,/window\.addEventListener\("ec:profile-visits-changed", handleVisitsChanged\)/);
   assert.match(app,/setProfileVisits\(data \|\| \[\]\)/);
 });
@@ -1118,13 +1118,14 @@ test("Neon Pink About Me section keeps bio text readable", async()=>{
 });
 
 
-test("admin member cards show the current responsibility labels", async()=>{
-  const directory=await source("src/NativeMembersDirectory.jsx");
-  assert.match(directory,/isOperatorProfile\(member\)[\s\S]*directory_responsibility_label: ""/);
-  assert.match(directory,/isHeadAdmin\(member\)[\s\S]*Hauptadmin · alle Regionen/);
-  assert.match(directory,/Global Admin · Region/);
-  assert.match(directory,/Regional Admin · Region/);
+test("admin member cards share responsibility presentation with previews", async()=>{
+ const {directoryCardMember}=await import('../src/memberCardPresentation.js');
+ const context={regions:[{id:'home',name:'Ennstal'}],activeRegion:{id:'home'},regionalAssignments:[{user_id:'regional',region_id:'home',active:true}]};
+ assert.equal(directoryCardMember({id:'admin',role:'ADMIN',home_region_id:'home'},context).directory_responsibility_label,'Global Admin · Region Ennstal');
+ assert.equal(directoryCardMember({id:'regional',role:'MEMBER',home_region_id:'home'},context).directory_responsibility_label,'Regional Admin · Region Ennstal');
+ for(const file of ['src/NativeMembersDirectory.jsx','src/MemberHoverPreview.jsx'])assert.match(await source(file),/directoryCardMember\(/);
 });
+
 
 test("member profile admin actions remain React-owned", async()=>{
   const app=await source("src/App.jsx");
@@ -1153,17 +1154,14 @@ test("profile visits authenticate realtime before subscribing", async()=>{
 });
 
 
-test("primary Head Admin card uses community oversight label", async()=>{
-  const directory=await source("src/NativeMembersDirectory.jsx");
-  assert.match(directory,/isOperatorProfile\(member\)[\s\S]*directory_responsibility_label: ""/);
+test("primary Head Admin card omits its responsibility label",async()=>{
+ const {directoryCardMember}=await import('../src/memberCardPresentation.js');
+ assert.equal(directoryCardMember({id:'owner',role:'HEAD_ADMIN',is_primary_head_admin:true}).directory_responsibility_label,'');
 });
 
-
-test("global and regional admin cards show region", async()=>{
-  const directory=await source("src/NativeMembersDirectory.jsx");
-  assert.match(directory,/Global Admin · Region/);
-  assert.match(directory,/Regional Admin · Region/);
-  assert.match(directory,/Hauptadmin · alle Regionen/);
+test("delegated head admin retains its responsibility label",async()=>{
+ const {directoryCardMember}=await import('../src/memberCardPresentation.js');
+ assert.equal(directoryCardMember({id:'delegated',role:'HEAD_ADMIN'}).directory_responsibility_label,'Hauptadmin · alle Regionen');
 });
 
 

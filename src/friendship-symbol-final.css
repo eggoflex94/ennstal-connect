@@ -1,6 +1,6 @@
 /* Final authority for friendship symbols across member cards and profiles. */
 .native-member-friend-badge,
-.modern-main article.member-card .ec-card-badge-friend,
+:is(.modern-main,.ec-member-hover-preview) article.member-card .ec-card-badge-friend,
 .member-profile-actions .ec-profile-friendship-accepted::before,
 .profile-actions .ec-profile-friendship-accepted::before {
   box-sizing:border-box!important;
@@ -32,8 +32,8 @@
 }
 
 .native-member-friend-badge img,
-.modern-main article.member-card .ec-card-badge-friend img,
-.modern-main article.member-card .ec-card-badge-friend .ec-card-badge-friend-img {
+:is(.modern-main,.ec-member-hover-preview) article.member-card .ec-card-badge-friend img,
+:is(.modern-main,.ec-member-hover-preview) article.member-card .ec-card-badge-friend .ec-card-badge-friend-img {
   display:block!important;
   width:26px!important;
   height:26px!important;
@@ -59,7 +59,7 @@
 
 @media(max-width:620px){
   .native-member-friend-badge,
-  .modern-main article.member-card .ec-card-badge-friend,
+  :is(.modern-main,.ec-member-hover-preview) article.member-card .ec-card-badge-friend,
   .member-profile-actions .ec-profile-friendship-accepted::before,
   .profile-actions .ec-profile-friendship-accepted::before {
     width:28px!important;
@@ -73,8 +73,8 @@
     background-size:24px 24px!important;
   }
   .native-member-friend-badge img,
-  .modern-main article.member-card .ec-card-badge-friend img,
-  .modern-main article.member-card .ec-card-badge-friend .ec-card-badge-friend-img {
+  :is(.modern-main,.ec-member-hover-preview) article.member-card .ec-card-badge-friend img,
+  :is(.modern-main,.ec-member-hover-preview) article.member-card .ec-card-badge-friend .ec-card-badge-friend-img {
     width:24px!important;
     height:24px!important;
     min-width:24px!important;

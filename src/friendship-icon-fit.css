@@ -1,6 +1,6 @@
 /* Keep existing badge dimensions; prevent card photo rules from cropping the symbol. */
 .native-member-card .native-member-friend-badge img,
-.modern-main article.member-card .ec-card-badge-friend img {
+:is(.modern-main,.ec-member-hover-preview) article.member-card .ec-card-badge-friend img {
   position:static!important;
   inset:auto!important;
   transform:none!important;

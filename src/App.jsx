@@ -1894,7 +1894,7 @@ export default function App() {
   const unreadNotifications = notifications.filter((item) => !item.read_at).length;
   const myRole = roleLabel(profile?.role);
   return <div className={`app layout-${["theme-red", "theme-blue", "theme-neon", "theme-neon-pink", "theme-alpine", "theme-teal", "theme-violet", "theme-copper", "theme-aurora"].includes(profile?.profile_layout) ? profile.profile_layout : "standard"}`}>
-    <MemberHoverPreview members={visibleMembers} profile={profile} friendships={friendships} page={page}/>
+    <MemberHoverPreview members={visibleMembers} profile={profile} friendships={friendships} page={page} regions={regions} activeRegion={activeRegion}/>
     <PageDesignStudio key={user.id} page={page} regionId={activeRegion?.id} profile={profile}/>
     <div className="dashboard-layout">
       <aside className="modern-sidebar">
