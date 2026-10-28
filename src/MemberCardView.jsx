@@ -95,7 +95,6 @@ export default function MemberCardView({ member, profile, friendships, onOpen, i
       } : undefined}
       role={interactive ? "button" : "group"}
       tabIndex={interactive ? 0 : undefined}
-      aria-disabled={!interactive || undefined}
       aria-label={interactive ? `Profil von ${getName(member)} öffnen` : `Vorschau der Mitgliederkarte von ${getName(member)}`}
       style={presentation.theme === "municipality" ? { "--ec-municipality-role-accent": presentation.color } : undefined}
     >

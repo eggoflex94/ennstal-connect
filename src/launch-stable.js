@@ -40,6 +40,7 @@ function roleInfo(member){
 
 function fixRegionalCards(){
   document.querySelectorAll('article.member-card').forEach(card=>{
+    if(card.closest('.ec-member-hover-preview'))return;
     const member=profileByCard(card);if(!member)return;
     const info=roleInfo(member);
     card.dataset.memberId=member.id;card.dataset.homeRegionId=member.home_region_id||'';card.dataset.roleTheme=info.theme;card.dataset.effectiveRole=info.card;

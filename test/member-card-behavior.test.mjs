@@ -65,6 +65,7 @@ test('read-only previews stay out of the keyboard tab order',()=>{
  const member={id:'preview',nickname:'Vorschau',role:'MEMBER'};
  const preview=renderToStaticMarkup(React.createElement(Card,{member,interactive:false}));
  assert.ok(!preview.includes('tabindex'));
+ assert.ok(!preview.includes('aria-disabled'), 'a read-only card is content, not a disabled control');
  const card=renderToStaticMarkup(React.createElement(Card,{member,onOpen(){}}));
  assert.ok(card.includes('tabindex="0"'));
 });

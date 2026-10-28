@@ -73,7 +73,7 @@ function jwt(userId, email) {
 
 async function installSupabaseMock(page, role, options = {}) {
   const profile = profileFor(role);
-  const secondaryMember = {...otherMember(),is_online:options.onlineFriend === true};
+  const secondaryMember = {...otherMember(),is_online:options.onlineFriend === true,...(options.operatorVisitor?{role:'HEAD_ADMIN',is_primary_head_admin:true,nickname:'egga'}:{})};
   const members = [profile, secondaryMember];
   const rpcCalls = [];
   const visitedAt = nowIso();
@@ -662,4 +662,28 @@ test("profile-visitor nickname opens a stable matching member-card preview",asyn
  expect(mock.rpcCalls.some(call=>/record.*profile.*visit/.test(call.fn||call.name||''))).toBe(false);
  await name.click();
  await expect(page.locator('.member-profile-page')).toBeVisible();
+});
+
+
+test("profile-visitor nickname preserves the operator crown and full card colors",async({page},testInfo)=>{
+ test.skip(testInfo.project.name.includes('mobile'),'Hover requires a mouse');
+ await login(page,"ADMIN",{includeVisits:true,operatorVisitor:true});
+ await assertTopNavigationWorks(page,"Mitglieder");
+ const regular=page.locator(`.native-members-directory .member-card[data-member-id="${OTHER_ID}"]`);
+ await expect(regular).toBeVisible();
+ const appearance=await regular.evaluate(n=>{const s=getComputedStyle(n);return {opacity:s.opacity,background:s.backgroundImage,color:s.backgroundColor};});
+ const name=page.locator('[data-panel="visits"] .ec-profile-visitor-name, [data-panel="visits"] .ec-profile-visit-name strong').filter({hasText:'egga'}).first();
+ await expect(name).toBeVisible({timeout:15000});
+ let lastRect='',stableSince=Date.now();
+ await expect.poll(async()=>{const rect=JSON.stringify(await name.boundingBox());if(rect!==lastRect){lastRect=rect;stableSince=Date.now();}return Date.now()-stableSince;},{timeout:10000}).toBeGreaterThanOrEqual(700);
+ await name.hover();
+ const preview=page.locator('#ec-member-hover-preview .member-card');
+ await expect(preview).toBeVisible();
+ await expect(preview.locator('.ec-card-badge-role-img')).toHaveAttribute('src',/operator-crown-gold\.svg/);
+ await expect(preview).toHaveCSS('opacity','1');
+ await expect(preview).not.toHaveAttribute('aria-disabled');
+ await expect.poll(()=>preview.evaluate(n=>{const s=getComputedStyle(n);return {opacity:s.opacity,background:s.backgroundImage,color:s.backgroundColor};})).toEqual(appearance);
+ await page.waitForTimeout(500);
+ await expect(preview.locator('.ec-card-badge-role-img')).toHaveAttribute('src',/operator-crown-gold\.svg/);
+ await page.mouse.move(1,1);await expect(preview).toHaveCount(0);
 });
