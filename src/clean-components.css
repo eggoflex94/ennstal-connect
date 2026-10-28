@@ -76,10 +76,10 @@
 .ec-member-presence-dot{width:7px;height:7px;border-radius:50%;background:#b9c5cc;flex:0 0 7px}.online .ec-member-presence-dot{background:#39e58a}
 .modern-main article.member-card .ec-member-last-active{display:block!important;font-size:.7rem!important;line-height:1.4!important;white-space:normal!important;color:inherit!important}
 .modern-main article.member-card>.member-message{position:static!important;grid-column:1/-1;grid-row:4;width:100%!important;min-height:34px!important;height:auto!important;padding:6px 10px!important;margin:2px 0 0!important;border:1px solid rgba(255,255,255,.3)!important;border-radius:8px!important;background:#192c3c!important;color:#fff!important;font-size:.8rem!important;transform:none!important}
-.modern-main article.member-card[data-role-theme="supporter"]{background:linear-gradient(135deg,#ffe537,#9a7400 50%,#292000)!important;border-color:#d6a700!important}
-.modern-main article.member-card[data-role-theme="admin"]{background:linear-gradient(135deg,#a31b34,#490c19)!important;border-color:#e35068!important}
-.modern-main article.member-card[data-role-theme="business"]{background:linear-gradient(135deg,#136b9f,#092b45)!important;border-color:#3f9dd0!important}
-.modern-main article.member-card[data-role-theme="member"]{background:linear-gradient(135deg,#657585,#263441)!important;border-color:#a0aeb8!important}
+:is(.modern-main,.ec-member-hover-preview) article.member-card[data-role-theme="supporter"]{background:linear-gradient(135deg,#ffe537,#9a7400 50%,#292000)!important;border-color:#d6a700!important}
+:is(.modern-main,.ec-member-hover-preview) article.member-card[data-role-theme="admin"]{background:linear-gradient(135deg,#a31b34,#490c19)!important;border-color:#e35068!important}
+:is(.modern-main,.ec-member-hover-preview) article.member-card[data-role-theme="business"]{background:linear-gradient(135deg,#136b9f,#092b45)!important;border-color:#3f9dd0!important}
+:is(.modern-main,.ec-member-hover-preview) article.member-card[data-role-theme="member"]{background:linear-gradient(135deg,#657585,#263441)!important;border-color:#a0aeb8!important}
 .modern-main article.member-card[data-role-theme="supporter"] .member-name,.modern-main article.member-card[data-role-theme="supporter"] .member-status{color:#fff!important;text-shadow:0 1px 2px #342700}
 .member-card:focus-visible{outline:3px solid #ff6b25;outline-offset:3px}
 .community-hub,.community-hub-content,.community-contact-sidebar{min-width:0!important;width:100%!important}
