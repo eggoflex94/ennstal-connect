@@ -36,9 +36,7 @@ export function resolvePreviewTarget(node, members) {
 // Separate lifecycle so stale network responses cannot reopen a dismissed preview.
 export function bindHoverPreview({ document, window, resolve, load, show, hide, delay = 180 }) {
   let active = null, timer, revision = 0, pointer = null, visibleMember = null;
-  const debug=(type,detail={})=>window.__memberPreviewDebug?.push({type,...detail});
-  const close = (event) => {
-    debug('close',{event:event?.type,html:active?.element.outerHTML,stack:new Error().stack});
+  const close = () => {
     revision++;
     window.clearTimeout(timer);
     if (active) {
@@ -54,26 +52,38 @@ export function bindHoverPreview({ document, window, resolve, load, show, hide, 
     if(Number.isFinite(event.clientX)&&Number.isFinite(event.clientY))pointer={x:event.clientX,y:event.clientY};
     const next = resolve(event.target);
     if (next?.element === active?.element) return;
+    if (next && active && next.member.id === active.member.id) {
+      const described = (active.element.getAttribute('aria-describedby') || '').split(/\s+/).filter(id => id && id !== 'ec-member-hover-preview');
+      if (described.length) active.element.setAttribute('aria-describedby', described.join(' '));
+      else active.element.removeAttribute('aria-describedby');
+      active = next;
+      if (visibleMember) {
+        active.element.setAttribute('aria-describedby', [active.element.getAttribute('aria-describedby'), 'ec-member-hover-preview'].filter(Boolean).join(' '));
+        show(visibleMember, active.element.getBoundingClientRect());
+      }
+      return;
+    }
     close();
     if (!next) return;
     active = next;
     const currentRevision = revision;
     timer = window.setTimeout(async () => {
       try {
-        debug('load',{html:next.element.outerHTML});
         const member = await load({ ...next.member });
-        debug('loaded',{id:member?.id,currentRevision,revision,connected:next.element.isConnected});
-        if (currentRevision !== revision || !next.element.isConnected || !member?.id) return;
-        const described = next.element.getAttribute('aria-describedby');
-        next.element.setAttribute('aria-describedby', [described, 'ec-member-hover-preview'].filter(Boolean).join(' '));
+        if (currentRevision !== revision || !active?.element.isConnected || !member?.id) return;
+        const described = active.element.getAttribute('aria-describedby');
+        active.element.setAttribute('aria-describedby', [described, 'ec-member-hover-preview'].filter(Boolean).join(' '));
         visibleMember=member;
-        debug('show',{id:member.id});
-        show(member, next.element.getBoundingClientRect());
+        show(member, active.element.getBoundingClientRect());
       } catch { if (currentRevision === revision) close(); }
     }, delay);
   };
   const leave = event => {
-    if (active && active.element.contains(event.target) && !active.element.contains(event.relatedTarget)) close();
+    if (active && active.element.contains(event.target) && !active.element.contains(event.relatedTarget)) {
+      const next = resolve(event.relatedTarget);
+      if (next?.member.id === active.member.id) enter({target:event.relatedTarget});
+      else close();
+    }
   };
   const scroll = () => {
     if(!active)return;
