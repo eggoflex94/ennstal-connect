@@ -96,3 +96,13 @@ test('scrolling does not cancel a preview while the same nickname stays under th
  await h.run();assert.deepEqual(h.shown,['a']);
  h.document.elementFromPoint=()=>null;h.dispatch('scroll',h.document);assert.ok(!h.a.attrs['aria-describedby']);h.dispose();
 });
+
+
+test('scroll checks the current mouse position after moving inside a nickname',async()=>{
+ const h=setup();
+ h.document.elementFromPoint=(x,y)=>x===90&&y===70?h.a:null;
+ h.dispatch('pointerover',h.a,{clientX:40,clientY:70});
+ h.dispatch('pointermove',h.a,{clientX:90,clientY:70});
+ h.dispatch('scroll',h.document);
+ await h.run();assert.deepEqual(h.shown,['a']);h.dispose();
+});
