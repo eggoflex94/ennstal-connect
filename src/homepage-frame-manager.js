@@ -3,6 +3,7 @@ import './homepage-frame-manager.css';
 const BLOCKS=[['next-activity','Nächste Aktivität','.ec-next-activity'],['community','Community-Aktuelles','.ec-growth-hub'],['join','Wer macht mit?','.ec-join-activities'],['welcome','Willkommen','.ec-new-member-start'],['discover','Menschen & Gruppen','.ec-discover']];
 const orderOf=(key)=>BLOCKS.findIndex(item=>item[0]===key)*10;
 export async function manageHomepageFrames(home,ctx){
+  home.querySelector(':scope > .ec-home-layout-notice')?.remove();
   const old=home.querySelector(':scope > .ec-managed-home');if(old){const hasFresh=BLOCKS.some(([, ,selector])=>home.querySelector(':scope > '+selector));if(!hasFresh)old.querySelectorAll('[data-home-block]').forEach(node=>home.appendChild(node));old.remove();home.querySelector(':scope > .ec-home-layout-admin')?.remove()}
   const nodes=BLOCKS.map(([key,title,selector])=>({key,title,node:home.querySelector(':scope > '+selector)})).filter(item=>item.node);
   if(!nodes.length)return;
@@ -11,7 +12,7 @@ export async function manageHomepageFrames(home,ctx){
   const config=new Map();
   if(!error) for(const row of [...(rows||[]).filter(r=>r.scope_key==='GLOBAL'),...(rows||[]).filter(r=>r.scope_key===scope)])config.set(row.block_key,row);
   let canEdit=String(ctx.profile?.role||'').toUpperCase()==='HEAD_ADMIN';
-  if(!canEdit){const {data:ok}=await supabase.rpc('has_permission',{permission_name:'manage_homepage'});canEdit=Boolean(ok)}
+  if(!canEdit){const [{data:ok},{data:assignments}]=await Promise.all([supabase.rpc('has_permission',{permission_name:'manage_homepage'}),supabase.from('regional_admin_assignments').select('region_id').eq('user_id',ctx.user.id).eq('region_id',ctx.region.id).eq('active',true)]);canEdit=Boolean(ok)||Boolean(assignments?.length)}
   const sorted=nodes.sort((a,b)=>(config.get(a.key)?.sort_order??orderOf(a.key))-(config.get(b.key)?.sort_order??orderOf(b.key)));
   const shell=document.createElement('section');shell.className='ec-managed-home';shell.setAttribute('aria-label','Startseiten-Rahmen');
   const heading=home.querySelector(':scope > .page-heading');heading?.insertAdjacentElement('afterend',shell)||home.prepend(shell);
@@ -23,7 +24,8 @@ export async function manageHomepageFrames(home,ctx){
     item.node.hidden=layout?.is_visible===false;
     shell.appendChild(item.node);
   }
-  if(!canEdit||error)return;
+  if(!canEdit)return;
+  if(error){const notice=document.createElement('p');notice.className='ec-home-layout-notice';notice.textContent='Die Startseiten-Verwaltung ist noch nicht eingerichtet. Die Inhalte bleiben sichtbar; Änderungen sind bis zur Datenbank-Einrichtung nicht möglich.';shell.before(notice);return}
   const controls=document.createElement('details');controls.className='ec-home-layout-admin';
   controls.innerHTML='<summary>✎ Startseite bearbeiten · Rahmen & Anordnung</summary><p>Rahmen ein- oder ausblenden, Breite einstellen und die Reihenfolge verschieben. Änderungen werden regional gespeichert.</p>';
   const list=document.createElement('div');list.className='ec-home-layout-list';
