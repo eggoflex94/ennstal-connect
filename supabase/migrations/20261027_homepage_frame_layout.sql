@@ -14,8 +14,18 @@ create table if not exists public.homepage_frame_layout (
 alter table public.homepage_frame_layout enable row level security;
 create policy homepage_frame_layout_read on public.homepage_frame_layout for select to authenticated using(true);
 create policy homepage_frame_layout_insert on public.homepage_frame_layout for insert to authenticated
- with check(public.ec_is_head_admin() or (scope_key like 'REGION:%' and public.has_permission('manage_homepage')));
+ with check(public.ec_is_head_admin() or (scope_key ~ '^REGION:[0-9a-fA-F-]{36});
 create policy homepage_frame_layout_update on public.homepage_frame_layout for update to authenticated
  using(public.ec_is_head_admin() or (scope_key like 'REGION:%' and public.has_permission('manage_homepage')))
  with check(public.ec_is_head_admin() or (scope_key like 'REGION:%' and public.has_permission('manage_homepage')));
+grant select,insert,update on public.homepage_frame_layout to authenticated;
+ and public.ec_can_manage_homepage_region(substring(scope_key from 8)::uuid,'REGION')));
+create policy homepage_frame_layout_update on public.homepage_frame_layout for update to authenticated
+ using(public.ec_is_head_admin() or (scope_key ~ '^REGION:[0-9a-fA-F-]{36})
+ with check(public.ec_is_head_admin() or (scope_key like 'REGION:%' and public.has_permission('manage_homepage')));
+grant select,insert,update on public.homepage_frame_layout to authenticated;
+ and public.ec_can_manage_homepage_region(substring(scope_key from 8)::uuid,'REGION')))
+ with check(public.ec_is_head_admin() or (scope_key ~ '^REGION:[0-9a-fA-F-]{36});
+grant select,insert,update on public.homepage_frame_layout to authenticated;
+ and public.ec_can_manage_homepage_region(substring(scope_key from 8)::uuid,'REGION')));
 grant select,insert,update on public.homepage_frame_layout to authenticated;
