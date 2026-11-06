@@ -1,3 +1,4 @@
+import { openInactiveAccountReviews } from './inactive-account-reviews.js';
 import { supabase } from "./supabaseClient";
 let mounted=false,isHead=false,isGlobalAdmin=false,isRegionalAdmin=false,allowed=false,canReviewAccounts=false;
 let timer=null;
@@ -38,6 +39,9 @@ async function open(){
   const grid=el("div","ec-admin-workspace-grid");
   actionCard(grid,"⚙️","Admin-Bereich",regionalOnly?"Mitglieder, Meldungen und Verwaltung deiner Region öffnen.":"Mitglieder, Rollen, Meldungen und Verwaltung öffnen.",openAdminArea);
   if(isHead||isGlobalAdmin){managed.forEach(([selector,ico,title,desc])=>{if(!document.querySelector(selector))return;actionCard(grid,ico,title,desc,()=>{close();void openManaged(selector)})});}
+  if(isHead){
+    actionCard(grid,"⏳","30 Tage inaktive Accounts","Neue Inaktivitätsmeldungen prüfen, ignorieren oder über die bestehende Punkte- und Sperrlogik bearbeiten.",()=>{close();void openInactiveAccountReviews()});
+  }
   if(canReviewAccounts){
     actionCard(grid,"✓","Accounts freigeben","Neue Accounts prüfen und mit Auflagen für Namen oder Geburtsdatum freigeben.",()=>{close();window.dispatchEvent(new CustomEvent("ec:navigate",{detail:{page:"account-approvals"}}))});
   }
