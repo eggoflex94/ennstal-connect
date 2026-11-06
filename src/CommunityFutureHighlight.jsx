@@ -66,7 +66,7 @@ export default function CommunityFutureHighlight({ user }) {
     background: selected ? "#fff0e5" : "#fff", color: "#192435",
     fontSize: "1rem", fontWeight: 700, textAlign: "left"
   });
-  return <section aria-labelledby="ec-future-heading" style={{
+  return <section className="ec-community-future-highlight" aria-labelledby="ec-future-heading" style={{
     background: "linear-gradient(135deg,#450a0a,#7f1d1d 55%,#3f1018)", color: "white",
     border: "5px solid #ef4444", boxShadow: "0 0 0 4px rgba(127,29,29,.20), 0 18px 42px rgba(127,29,29,.32)",
     borderRadius: "20px", padding: "clamp(18px,4vw,36px)",
