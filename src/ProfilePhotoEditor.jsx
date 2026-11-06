@@ -120,6 +120,30 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
   const previewCanvasRef = useRef(null);
   const exportCanvasRef = useRef(null);
   const dragRef = useRef(null);
+  const [visibleViewport, setVisibleViewport] = useState(null);
+
+  // The community deliberately retains a wide desktop layout on phones.
+  // CSS media queries then see the layout viewport instead of the narrow
+  // visual viewport, leaving the save buttons outside the visible screen.
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    const update = () => {
+      if (!viewport) return;
+      setVisibleViewport({
+        left: viewport.offsetLeft,
+        top: viewport.offsetTop,
+        width: viewport.width,
+        height: viewport.height
+      });
+    };
+    update();
+    viewport?.addEventListener("resize", update);
+    viewport?.addEventListener("scroll", update);
+    return () => {
+      viewport?.removeEventListener("resize", update);
+      viewport?.removeEventListener("scroll", update);
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -286,7 +310,7 @@ export default function ProfilePhotoEditor({ file, onCancel, onSave }) {
 
   if (!file) return null;
 
-  return <div className="ec-photo-editor-backdrop" role="dialog" aria-modal="true" aria-label="Profilbild anpassen">
+  return <div className={`ec-photo-editor-backdrop${visibleViewport && visibleViewport.width < 720 ? " ec-photo-editor-visual-mobile" : ""}`} style={visibleViewport && visibleViewport.width < 720 ? { left: visibleViewport.left, top: visibleViewport.top, width: visibleViewport.width, height: visibleViewport.height, right: "auto", bottom: "auto" } : undefined} role="dialog" aria-modal="true" aria-label="Profilbild anpassen">
     <section className="ec-photo-editor">
       <header>
         <div>
