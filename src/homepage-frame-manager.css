@@ -5,3 +5,12 @@
 .ec-home-layout-admin summary{font-weight:850;cursor:pointer;min-height:44px;padding:10px}
 .ec-home-layout-list{display:grid;gap:8px;margin-top:12px}.ec-home-layout-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;border:1px solid #d6e2eb;border-radius:11px;padding:10px}.ec-home-layout-row strong{flex:1 1 175px}.ec-home-layout-row button,.ec-home-layout-row select{min-height:44px;padding:6px 11px}.ec-home-layout-row label{display:flex;align-items:center;gap:7px}
 @media(max-width:800px){.ec-managed-home>.ec-managed-frame{width:100%!important}.ec-home-layout-row{gap:8px}}
+
+/* Manageable, visually separate homepage frames */
+.ec-managed-home>.ec-managed-frame:not([hidden]){border:2px solid #b8d5e5!important;border-radius:20px!important;box-shadow:0 9px 24px rgba(23,55,76,.10)!important;padding:18px!important;background-color:#fff!important}
+.ec-home-layout-admin{border:2px solid #3a91b9;box-shadow:0 12px 30px rgba(30,70,105,.14)}
+.ec-home-layout-admin>select{min-height:44px;margin:8px 10px;border-radius:9px;padding:8px}
+.ec-home-layout-row{background:#f7fbff;cursor:grab}
+.ec-home-layout-row:focus-within{outline:2px solid #2683bf;outline-offset:2px}
+.ec-home-layout-notice{padding:12px;border:1px solid #d7a14f;border-radius:10px;background:#fff9ec}
+@media(max-width:800px){.ec-managed-home>.ec-managed-frame:not([hidden]){padding:12px!important}.ec-home-layout-row{cursor:auto}}
