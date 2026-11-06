@@ -5,7 +5,8 @@ const QUESTION = "Soll Ennstal Connect online bleiben und weiterkämpfen oder of
 const INTRO = "Liebe Mitglieder! Ennstal Connect wurde geschaffen, um Menschen aus dem Ennstal und der Obersteiermark zu verbinden. In diese Community sind viel Zeit, Energie und Herzblut geflossen. Wir haben aktuell 49 registrierte Profile, aber nur wenig öffentlichen Austausch im Forum. Deshalb möchte ich euch alle um eine ehrliche Entscheidung bitten: Hat Ennstal Connect eine Zukunft? Niemandem wird ein Vorwurf gemacht – eure Stimme und eure Begründung helfen dabei, den richtigen Weg zu finden.";
 
 export default function CommunityFutureHighlight({ user }) {
-  const [votes, setVotes] = useState([]);
+  const [myVote, setMyVote] = useState(null);
+  const [counts, setCounts] = useState({ online: 0, offline: 0 });
   const [choice, setChoice] = useState("");
   const [reason, setReason] = useState("");
   const [loading, setLoading] = useState(true);
@@ -17,28 +18,27 @@ export default function CommunityFutureHighlight({ user }) {
     if (!supabase || !user?.id) { setLoading(false); return; }
     let cancelled = false;
     const refresh = async () => {
-      const { data, error: fetchError } = await supabase
-        .from("community_future_votes")
-        .select("user_id,choice,reason,updated_at")
-        .order("updated_at", { ascending: false });
+      const [mineResult, totalsResult] = await Promise.all([
+        supabase.from("community_future_votes").select("choice,reason").eq("user_id", user.id).maybeSingle(),
+        supabase.rpc("community_future_vote_totals")
+      ]);
       if (cancelled) return;
-      if (fetchError) setError("Die Abstimmung konnte nicht geladen werden: " + fetchError.message);
-      else {
-        const rows = data || [];
-        setVotes(rows);
-        const mine = rows.find((entry) => entry.user_id === user.id);
-        if (mine) { setChoice(mine.choice); setReason(mine.reason); }
+      if (mineResult.error || totalsResult.error) setError("Die Abstimmung konnte nicht geladen werden.");
+      if (mineResult.data) {
+        setMyVote(mineResult.data);
+        setChoice(mineResult.data.choice);
+        setReason(mineResult.data.reason);
       }
+      if (totalsResult.data?.[0]) setCounts({ online: Number(totalsResult.data[0].online_count), offline: Number(totalsResult.data[0].offline_count) });
       setLoading(false);
     };
     void refresh();
     return () => { cancelled = true; };
   }, [user?.id]);
 
-  const online = votes.filter((vote) => vote.choice === "ONLINE").length;
-  const offline = votes.filter((vote) => vote.choice === "OFFLINE").length;
-  const total = votes.length;
-  const myVote = votes.find((vote) => vote.user_id === user?.id);
+  const online = counts.online;
+  const offline = counts.offline;
+  const total = online + offline;
   async function submit(event) {
     event.preventDefault();
     setError(""); setSuccess("");
@@ -52,10 +52,10 @@ export default function CommunityFutureHighlight({ user }) {
     if (saveError) {
       setError("Deine Stimme konnte nicht gespeichert werden: " + saveError.message);
     } else {
-      const { data, error: reloadError } = await supabase.from("community_future_votes")
-        .select("user_id,choice,reason,updated_at").order("updated_at", { ascending: false });
+      const { data: totalsData, error: reloadError } = await supabase.rpc("community_future_vote_totals");
       if (reloadError) setError("Gespeichert, aber die Ergebnisse konnten nicht aktualisiert werden.");
-      else setVotes(data || []);
+      else if (totalsData?.[0]) setCounts({ online: Number(totalsData[0].online_count), offline: Number(totalsData[0].offline_count) });
+      setMyVote({ choice, reason: reason.trim() });
       setSuccess("Danke! Deine Stimme und deine Begründung wurden gespeichert.");
     }
     setSaving(false);
