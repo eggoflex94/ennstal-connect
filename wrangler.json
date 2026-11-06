@@ -15,5 +15,6 @@
       "pattern": "www.ennstal-connect.com",
       "custom_domain": true
     }
-  ]
+  ],
+  "main": "worker/index.js"
 }
