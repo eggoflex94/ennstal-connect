@@ -67,20 +67,20 @@ export default function CommunityFutureHighlight({ user }) {
     fontSize: "1rem", fontWeight: 700, textAlign: "left"
   });
   return <section aria-labelledby="ec-future-heading" style={{
-    background: "linear-gradient(135deg,#152033,#263751)", color: "white",
-    border: "3px solid #fb923c", boxShadow: "0 14px 35px rgba(0,0,0,.22)",
+    background: "linear-gradient(135deg,#450a0a,#7f1d1d 55%,#3f1018)", color: "white",
+    border: "5px solid #ef4444", boxShadow: "0 0 0 4px rgba(127,29,29,.20), 0 18px 42px rgba(127,29,29,.32)",
     borderRadius: "20px", padding: "clamp(18px,4vw,36px)",
-    marginBottom: "28px", position: "relative"
+    marginBottom: "32px", position: "relative", width: "100%", boxSizing: "border-box", isolation: "isolate"
   }}>
-    <div style={{display:"inline-block", background:"#fb923c", color:"#182032", fontWeight:900,
-      borderRadius:"999px",padding:"7px 13px",marginBottom:"12px",fontSize:".8rem"}}>
-      📣 WICHTIG · ALLE MITGLIEDER BITTE ABSTIMMEN
+    <div style={{display:"inline-block", background:"#dc2626", color:"#ffffff", fontWeight:900,
+      borderRadius:"8px",padding:"11px 17px",marginBottom:"16px",fontSize:"clamp(.9rem,2vw,1.05rem)",letterSpacing:".04em",boxShadow:"0 3px 14px rgba(0,0,0,.3)"}}>
+      🚨 WICHTIG – ALLE MITGLIEDER: BITTE JETZT ABSTIMMEN!
     </div>
-    <h1 id="ec-future-heading" style={{fontSize:"clamp(1.5rem,4vw,2.3rem)",color:"white",margin:"0 0 14px"}}>
+    <h1 id="ec-future-heading" style={{fontSize:"clamp(1.7rem,4vw,2.5rem)",color:"white",margin:"0 0 14px"}}>
       Zukunft von Ennstal Connect – eure Entscheidung zählt!
     </h1>
     <p style={{whiteSpace:"pre-line",lineHeight:1.7,fontSize:"1.02rem",maxWidth:"850px"}}>{INTRO}</p>
-    <p style={{fontWeight:800,fontSize:"1.12rem",color:"#fed7aa"}}>{QUESTION}</p>
+    <p style={{fontWeight:800,fontSize:"1.12rem",color:"#fecaca"}}>{QUESTION}</p>
     <form onSubmit={submit} style={{background:"#f8fafc",color:"#162236",padding:"20px",borderRadius:"16px"}}>
       <div style={{display:"flex",gap:"12px",flexWrap:"wrap",marginBottom:"18px"}}>
         <button type="button" aria-pressed={choice==="ONLINE"} onClick={()=>setChoice("ONLINE")} style={buttonStyle(choice==="ONLINE")}>
@@ -101,7 +101,7 @@ export default function CommunityFutureHighlight({ user }) {
         style={{width:"100%",boxSizing:"border-box",border:"1px solid #94a3b8",borderRadius:"10px",padding:"12px",background:"#fff",color:"#162236"}}/>
       <div style={{display:"flex",flexWrap:"wrap",gap:"12px",alignItems:"center",marginTop:"12px"}}>
         <button type="submit" disabled={saving || loading || !choice || reason.trim().length < 10}
-          style={{background:"#ea580c",color:"#fff",border:0,borderRadius:"10px",fontWeight:800,padding:"13px 21px",cursor:"pointer"}}>
+          style={{background:"#b91c1c",color:"#fff",border:0,borderRadius:"10px",fontWeight:800,padding:"13px 21px",cursor:"pointer"}}>
           {saving ? "Wird gespeichert…" : myVote ? "Stimme und Begründung aktualisieren" : "Verbindlich abstimmen"}
         </button>
         <span style={{fontSize:".86rem",color:"#475569"}}>Eine Stimme pro Mitglied. Du kannst deine Wahl ändern.</span>
